@@ -3,6 +3,8 @@
  * packages): the first English run, or `mergestory setup kokoro`, installs a locked package tree
  * into $MERGESTORY_HOME/plugins.
  */
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,10 +34,32 @@ export const KOKORO_PLUGIN_PACKAGES = {
   phonemizer: '1.2.1',
 } as const;
 
+/**
+ * Packages held at a newer version than the plugin packages ask for. transformers.js pulls in the
+ * image library sharp, which speech never uses; this release carries the security fixes of the
+ * image libraries bundled with it.
+ */
+export const KOKORO_PLUGIN_OVERRIDES = { sharp: '0.35.5' } as const;
+
 /** The plugin's package-lock.json, in the assets folder of the MergeStory package. */
 export const KOKORO_PLUGIN_LOCKFILE = fileURLToPath(
   new URL('../../assets/kokoro-plugin/package-lock.json', import.meta.url),
 );
+
+let lockFingerprint: string | null = null;
+
+/**
+ * A short fingerprint of the shipped lockfile. The completion marker keeps it, so an install made
+ * from an older lockfile (for example one with a package that has since been fixed) counts as out
+ * of date and is installed again.
+ */
+export function kokoroLockFingerprint(): string {
+  lockFingerprint ??= createHash('sha256')
+    .update(readFileSync(KOKORO_PLUGIN_LOCKFILE))
+    .digest('hex')
+    .slice(0, 16);
+  return lockFingerprint;
+}
 
 const LOADER_FILE = 'mergestory-kokoro-loader.mjs';
 
@@ -88,12 +112,13 @@ async function packagesVersion(dir: string): Promise<string | null> {
 
 /**
  * Version of the installed plugin, or null when it is not installed: the packages are missing,
- * the completion marker is missing, or either one is not the pinned version.
+ * the completion marker is missing, either one is not the pinned version, or the install was made
+ * from another lockfile.
  */
 export async function installedKokoroVersion(dir: string): Promise<string | null> {
   const pinned = KOKORO_PLUGIN_PACKAGES['kokoro-js'];
   const marker = await readJson(join(dir, KOKORO_INSTALLED_MARKER));
-  if (marker?.version !== pinned) return null;
+  if (marker?.version !== pinned || marker.lock !== kokoroLockFingerprint()) return null;
   return (await packagesVersion(dir)) === pinned ? pinned : null;
 }
 
@@ -151,9 +176,14 @@ function npmEnvironment(): NodeJS.ProcessEnv {
   return env;
 }
 
+/** What a finished install writes last: the pinned version and the lockfile it was made from. */
+export function completionMarker(): { version: string; lock: string } {
+  return { version: KOKORO_PLUGIN_PACKAGES['kokoro-js'], lock: kokoroLockFingerprint() };
+}
+
 /** How to install the plugin by hand, where the automatic install is not available. */
 export function kokoroManualInstall(dir: string): string {
-  return `Install by hand: create ${dir}/package.json with these exact dependencies: ${JSON.stringify(KOKORO_PLUGIN_PACKAGES)}, copy ${KOKORO_PLUGIN_LOCKFILE} next to it, run "npm ci --ignore-scripts" there, then create ${join(dir, KOKORO_INSTALLED_MARKER)} containing ${JSON.stringify({ version: KOKORO_PLUGIN_PACKAGES['kokoro-js'] })}.`;
+  return `Install by hand: create ${dir}/package.json with these exact dependencies: ${JSON.stringify(KOKORO_PLUGIN_PACKAGES)} and these overrides: ${JSON.stringify(KOKORO_PLUGIN_OVERRIDES)}, copy ${KOKORO_PLUGIN_LOCKFILE} next to it, run "npm ci --ignore-scripts" there, then create ${join(dir, KOKORO_INSTALLED_MARKER)} containing ${JSON.stringify(completionMarker())}.`;
 }
 
 export interface InstallDeps {
@@ -216,6 +246,7 @@ export async function installKokoro(ctx: RunContext, deps: InstallDeps = {}): Pr
     description: 'Optional MergeStory plugins. Managed by `mergestory setup`.',
     type: 'module',
     dependencies: KOKORO_PLUGIN_PACKAGES,
+    overrides: KOKORO_PLUGIN_OVERRIDES,
   };
   await writeAtomic(join(dir, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   await writeAtomic(join(dir, 'package-lock.json'), lockfile);
@@ -251,6 +282,6 @@ export async function installKokoro(ctx: RunContext, deps: InstallDeps = {}): Pr
     });
   }
   await ensureLoaderFile(dir);
-  await writeAtomic(join(dir, KOKORO_INSTALLED_MARKER), `${JSON.stringify({ version })}\n`);
+  await writeAtomic(join(dir, KOKORO_INSTALLED_MARKER), `${JSON.stringify(completionMarker())}\n`);
   return kokoroStatus(ctx);
 }
