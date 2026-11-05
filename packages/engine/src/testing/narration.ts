@@ -11,6 +11,7 @@ import type { MergeStoryError } from '../core/errors.ts';
 import type { TtsProvider, TtsRequest, TtsResult } from '../core/providers.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { EgressRecord, ProgressEvent, Timeline } from '../core/types.ts';
+import { kokoroLockFingerprint } from '../narration/kokoro-plugin.ts';
 import { encodeWavPcm16, int16ToPcmS16le } from '../narration/wav.ts';
 import { type TestContextOptions, testContext } from './context.ts';
 
@@ -68,7 +69,10 @@ export async function writeFakeKokoroInstall(pluginDir: string, version = '1.2.1
     join(modules, '@huggingface', 'transformers', 'package.json'),
     JSON.stringify({ name: '@huggingface/transformers', version: '3.8.1' }),
   );
-  await writeFile(join(pluginDir, 'mergestory-kokoro-installed.json'), JSON.stringify({ version }));
+  await writeFile(
+    join(pluginDir, 'mergestory-kokoro-installed.json'),
+    JSON.stringify({ version, lock: kokoroLockFingerprint() }),
+  );
 }
 
 /** A storyboard whose scenes only matter for their ids and narration text. */

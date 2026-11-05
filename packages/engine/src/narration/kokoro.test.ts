@@ -5,6 +5,7 @@ import type { MergeStoryError } from '../core/errors.ts';
 import { makeTestContext, mockFetch } from '../testing/narration.ts';
 import { createKokoroProvider, KOKORO_VOICES, type KokoroRuntime } from './kokoro.ts';
 import { kokoroModelDir, kokoroModelFiles } from './kokoro-model.ts';
+import { kokoroLockFingerprint } from './kokoro-plugin.ts';
 import { decodeWavToMono } from './wav.ts';
 
 /** A runtime that speaks 80 ms per character and records what it was asked. */
@@ -169,7 +170,7 @@ describe('kokoro provider', () => {
     );
     await writeFile(
       join(dir, '..', 'mergestory-kokoro-installed.json'),
-      JSON.stringify({ version: '1.2.1' }),
+      JSON.stringify({ version: '1.2.1', lock: kokoroLockFingerprint() }),
     );
     const mock = mockFetch(() => new Response('should not be asked', { status: 500 }));
     try {

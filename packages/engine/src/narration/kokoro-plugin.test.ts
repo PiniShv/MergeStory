@@ -5,12 +5,15 @@ import type { MergeStoryError } from '../core/errors.ts';
 import type { RunOptions, RunResult } from '../core/process.ts';
 import { makeTestContext } from '../testing/narration.ts';
 import {
+  completionMarker,
   ensureLoaderFile,
   installedKokoroVersion,
   installKokoro,
   KOKORO_INSTALLED_MARKER,
   KOKORO_PLUGIN_LOCKFILE,
+  KOKORO_PLUGIN_OVERRIDES,
   KOKORO_PLUGIN_PACKAGES,
+  kokoroLockFingerprint,
   kokoroManualInstall,
   kokoroStatus,
   pluginsDir,
@@ -29,7 +32,12 @@ async function fakeInstall(dir: string, version = '1.2.1', complete = false): Pr
     join(dir, 'node_modules', '@huggingface', 'transformers', 'package.json'),
     JSON.stringify({ name: '@huggingface/transformers', version: '3.8.1' }),
   );
-  if (complete) await writeFile(join(dir, KOKORO_INSTALLED_MARKER), JSON.stringify({ version }));
+  if (complete) {
+    await writeFile(
+      join(dir, KOKORO_INSTALLED_MARKER),
+      JSON.stringify({ version, lock: kokoroLockFingerprint() }),
+    );
+  }
 }
 
 const emptyResult: RunResult = { code: 0, stdout: '', stderr: '', stdoutBuffer: Buffer.alloc(0) };
@@ -105,6 +113,23 @@ describe('the completion marker', () => {
     await cleanup();
   });
 
+  it('counts an install made from an older lockfile as not installed, so it is installed again', async () => {
+    const { ctx, cleanup } = await makeTestContext();
+    const dir = pluginsDir(ctx);
+    await fakeInstall(dir, '1.2.1', true);
+    expect(await installedKokoroVersion(dir)).toBe('1.2.1');
+    // A marker from before the lockfile changed: the right version, another lockfile.
+    await writeFile(
+      join(dir, KOKORO_INSTALLED_MARKER),
+      JSON.stringify({ version: '1.2.1', lock: 'an-older-lock' }),
+    );
+    expect(await installedKokoroVersion(dir)).toBeNull();
+    // A marker from before the marker held the lockfile at all.
+    await writeFile(join(dir, KOKORO_INSTALLED_MARKER), JSON.stringify({ version: '1.2.1' }));
+    expect(await installedKokoroVersion(dir)).toBeNull();
+    await cleanup();
+  });
+
   it('is removed before npm runs and written only after a complete install', async () => {
     const { ctx, cleanup } = await makeTestContext();
     const dir = pluginsDir(ctx);
@@ -124,14 +149,33 @@ describe('the completion marker', () => {
     expect(status.installed).toBe(true);
     expect(JSON.parse(await readFile(join(dir, KOKORO_INSTALLED_MARKER), 'utf8'))).toEqual({
       version: '1.2.1',
+      lock: kokoroLockFingerprint(),
     });
     await cleanup();
   });
 
-  it('is part of the manual install', () => {
+  it('is part of the manual install, with the overrides', () => {
     const steps = kokoroManualInstall('/x/plugins');
     expect(steps).toContain(KOKORO_INSTALLED_MARKER);
-    expect(steps).toContain('{"version":"1.2.1"}');
+    expect(steps).toContain(JSON.stringify(completionMarker()));
+    expect(steps).toContain(JSON.stringify(KOKORO_PLUGIN_OVERRIDES));
+  });
+});
+
+describe('the shipped lockfile', () => {
+  it('holds every overridden package, and each of its prebuilt parts, at the pinned version', async () => {
+    const lock = JSON.parse(await readFile(KOKORO_PLUGIN_LOCKFILE, 'utf8')) as {
+      packages: Record<string, { version?: string }>;
+    };
+    for (const [name, version] of Object.entries(KOKORO_PLUGIN_OVERRIDES)) {
+      expect(lock.packages[`node_modules/${name}`]?.version).toBe(version);
+    }
+    // sharp ships its native code as @img/sharp-<platform> packages, which must match it.
+    const parts = Object.entries(lock.packages).filter(([path]) =>
+      /^node_modules\/@img\/sharp-(?!libvips)/.test(path),
+    );
+    expect(parts.length).toBeGreaterThan(0);
+    for (const [, entry] of parts) expect(entry.version).toBe(KOKORO_PLUGIN_OVERRIDES.sharp);
   });
 });
 
