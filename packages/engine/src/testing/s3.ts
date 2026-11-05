@@ -169,10 +169,14 @@ export function useMockedS3(): MockedS3 {
   return { s3Mock, puts, pageBody };
 }
 
+/** The real setTimeout, kept from before a test fakes it, for pauses in real time. */
+const realSetTimeout = globalThis.setTimeout;
+
 /**
- * Drive fake timers until the promise settles. Real file and module work needs the event loop
- * too, so time moves in small steps with a pause for real work in between. The loop ends when the
- * promise settles, not after a set number of steps, so a slow machine only makes it take longer.
+ * Drive fake timers until the promise settles. Real file and module work needs real time, so the
+ * fake clock moves one second at a time, after a short real pause. Fake time then never runs far
+ * ahead of the real work (a stall timer would fire too early), and a slow machine only makes the
+ * test take longer.
  */
 export async function withClock<T>(promise: Promise<T>): Promise<T> {
   let settled = false;
@@ -184,8 +188,8 @@ export async function withClock<T>(promise: Promise<T>): Promise<T> {
   const deadline = Date.now() + 60_000;
   while (!settled) {
     if (Date.now() > deadline) throw new Error('the promise did not settle while the clock ran');
-    await vi.advanceTimersByTimeAsync(5_000);
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await new Promise<void>((resolve) => realSetTimeout(resolve, 2));
+    await vi.advanceTimersByTimeAsync(1_000);
   }
   return tracked;
 }

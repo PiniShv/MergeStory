@@ -20,7 +20,7 @@ const TOKENS: [token: string, isToken: boolean][] = [
   ['rk_test_abcdefghijklmnop1234', true],
   ['xoxb-1234567890-abcdefghij', true],
   [fake('https://hooks.slack.com/services/', 'T00000000/B00000000/', 'X'.repeat(24)), true],
-  ['AIzaSyA1234567890abcdefghijklmnopqrstuv', true],
+  [fake('AIza', 'SyA1234567890abcdefghijklmnopqrstuv'), true],
   ['npm_abcdefghijklmnopqrstuvwxyz0123456789', true],
   ['SG.abcdefghijklmnop.qrstuvwxyz0123456789', true],
   [fake('SK', '0123456789abcdef0123456789abcdef'), true],

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConfigInput } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { isMergeStoryError, type MergeStoryError } from '../core/errors.ts';
@@ -73,8 +73,14 @@ async function expectError(promise: Promise<unknown>): Promise<MergeStoryError> 
   throw new Error('expected a MergeStoryError');
 }
 
+// The tests run as outside GitHub Actions unless they say otherwise: CI itself sets GITHUB_ACTIONS.
+beforeEach(() => {
+  vi.stubEnv('GITHUB_ACTIONS', '');
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 const block = (content: string, newline = '\n') =>
@@ -211,6 +217,18 @@ describe('upsertPullRequestComment', () => {
     const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
     expect(result.created).toBe(true);
     expect(calls.map((c) => c.method)).toEqual(['GET', 'POST']);
+  });
+
+  it('in GitHub Actions, updates the comment of github-actions[bot] when /user cannot be read', async () => {
+    vi.stubEnv('GITHUB_ACTIONS', 'true');
+    const { calls } = mockFetch(
+      route('GET', '/user', () => json({ message: 'Resource not accessible by integration' }, 403)),
+      route('GET', '/repos/acme/widgets/issues/7/comments', () => json([comment(5, `${MARKER}\nold`)])),
+      route('PATCH', '/repos/acme/widgets/issues/comments/5', () => json(comment(5, 'new'))),
+    );
+    const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
+    expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-5', created: false });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH']);
   });
 
   it('posts a new comment when the old one cannot be edited', async () => {
