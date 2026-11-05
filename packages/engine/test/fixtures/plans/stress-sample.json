@@ -1,0 +1,6801 @@
+{
+ "version": 1,
+ "width": 1920,
+ "height": 1080,
+ "fps": 30,
+ "durationSec": 148,
+ "theme": "dark",
+ "meta": {
+  "title": "Retry weather with backoff",
+  "repoLabel": "example/weather",
+  "changeLabel": "PR #42",
+  "headShort": "3f9c2ab",
+  "stats": {
+   "files": 4,
+   "additions": 120,
+   "deletions": 18
+  },
+  "engineVersion": "0.1.0"
+ },
+ "captions": {
+  "enabled": true,
+  "cues": [
+   {
+    "startSec": 0.8,
+    "endSec": 2,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 2.1,
+    "endSec": 3.3,
+    "text": "Narration line 2 of the code-wrap scene explains what is on screen right now."
+   },
+   {
+    "startSec": 3.4,
+    "endSec": 4.6,
+    "text": "Narration line 3 of the code-wrap scene explains what is on screen right now."
+   },
+   {
+    "startSec": 4.7,
+    "endSec": 5.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 6,
+    "endSec": 7.2,
+    "text": "Narration line 5 of the code-wrap scene explains what is on screen right now."
+   },
+   {
+    "startSec": 7.3,
+    "endSec": 8.5,
+    "text": "Narration line 6 of the code-wrap scene explains what is on screen right now."
+   },
+   {
+    "startSec": 9.3,
+    "endSec": 10.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 10.6,
+    "endSec": 11.799999999999999,
+    "text": "Narration line 2 of the code-diff scene explains what is on screen right now."
+   },
+   {
+    "startSec": 11.9,
+    "endSec": 13.1,
+    "text": "Narration line 3 of the code-diff scene explains what is on screen right now."
+   },
+   {
+    "startSec": 13.2,
+    "endSec": 14.399999999999999,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 14.5,
+    "endSec": 15.7,
+    "text": "Narration line 5 of the code-diff scene explains what is on screen right now."
+   },
+   {
+    "startSec": 15.8,
+    "endSec": 17,
+    "text": "Narration line 6 of the code-diff scene explains what is on screen right now."
+   },
+   {
+    "startSec": 17.8,
+    "endSec": 19,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 19.1,
+    "endSec": 20.3,
+    "text": "Narration line 2 of the code-side scene explains what is on screen right now."
+   },
+   {
+    "startSec": 20.4,
+    "endSec": 21.599999999999998,
+    "text": "Narration line 3 of the code-side scene explains what is on screen right now."
+   },
+   {
+    "startSec": 21.7,
+    "endSec": 22.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 23,
+    "endSec": 24.2,
+    "text": "Narration line 5 of the code-side scene explains what is on screen right now."
+   },
+   {
+    "startSec": 24.3,
+    "endSec": 25.5,
+    "text": "Narration line 6 of the code-side scene explains what is on screen right now."
+   },
+   {
+    "startSec": 26.3,
+    "endSec": 27.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 27.6,
+    "endSec": 28.8,
+    "text": "Narration line 2 of the arch-9 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 28.9,
+    "endSec": 30.099999999999998,
+    "text": "Narration line 3 of the arch-9 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 30.2,
+    "endSec": 31.4,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 31.5,
+    "endSec": 32.7,
+    "text": "Narration line 5 of the arch-9 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 32.8,
+    "endSec": 34,
+    "text": "Narration line 6 of the arch-9 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 34.8,
+    "endSec": 36,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 36.1,
+    "endSec": 37.300000000000004,
+    "text": "Narration line 2 of the arch-dense scene explains what is on screen right now."
+   },
+   {
+    "startSec": 37.4,
+    "endSec": 38.6,
+    "text": "Narration line 3 of the arch-dense scene explains what is on screen right now."
+   },
+   {
+    "startSec": 38.7,
+    "endSec": 39.900000000000006,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 40,
+    "endSec": 41.2,
+    "text": "Narration line 5 of the arch-dense scene explains what is on screen right now."
+   },
+   {
+    "startSec": 41.3,
+    "endSec": 42.5,
+    "text": "Narration line 6 of the arch-dense scene explains what is on screen right now."
+   },
+   {
+    "startSec": 43.3,
+    "endSec": 44.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 44.6,
+    "endSec": 45.800000000000004,
+    "text": "Narration line 2 of the arch-tb scene explains what is on screen right now."
+   },
+   {
+    "startSec": 45.9,
+    "endSec": 47.1,
+    "text": "Narration line 3 of the arch-tb scene explains what is on screen right now."
+   },
+   {
+    "startSec": 47.2,
+    "endSec": 48.400000000000006,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 48.5,
+    "endSec": 49.7,
+    "text": "Narration line 5 of the arch-tb scene explains what is on screen right now."
+   },
+   {
+    "startSec": 49.8,
+    "endSec": 51,
+    "text": "Narration line 6 of the arch-tb scene explains what is on screen right now."
+   },
+   {
+    "startSec": 51.8,
+    "endSec": 53,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 53.1,
+    "endSec": 54.300000000000004,
+    "text": "Narration line 2 of the flow-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 54.4,
+    "endSec": 55.6,
+    "text": "Narration line 3 of the flow-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 55.7,
+    "endSec": 56.900000000000006,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 57,
+    "endSec": 58.2,
+    "text": "Narration line 5 of the flow-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 58.3,
+    "endSec": 59.5,
+    "text": "Narration line 6 of the flow-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 60.3,
+    "endSec": 61.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 61.6,
+    "endSec": 62.800000000000004,
+    "text": "Narration line 2 of the checklist-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 62.9,
+    "endSec": 64.1,
+    "text": "Narration line 3 of the checklist-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 64.2,
+    "endSec": 65.4,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 65.5,
+    "endSec": 66.7,
+    "text": "Narration line 5 of the checklist-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 66.8,
+    "endSec": 68,
+    "text": "Narration line 6 of the checklist-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 68.8,
+    "endSec": 70,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 70.1,
+    "endSec": 71.3,
+    "text": "Narration line 2 of the bullets-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 71.4,
+    "endSec": 72.60000000000001,
+    "text": "Narration line 3 of the bullets-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 72.7,
+    "endSec": 73.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 74,
+    "endSec": 75.2,
+    "text": "Narration line 5 of the bullets-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 75.3,
+    "endSec": 76.5,
+    "text": "Narration line 6 of the bullets-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 77.3,
+    "endSec": 78.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 78.6,
+    "endSec": 79.8,
+    "text": "Narration line 2 of the files-16 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 79.9,
+    "endSec": 81.10000000000001,
+    "text": "Narration line 3 of the files-16 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 81.2,
+    "endSec": 82.4,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 82.5,
+    "endSec": 83.7,
+    "text": "Narration line 5 of the files-16 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 83.8,
+    "endSec": 85,
+    "text": "Narration line 6 of the files-16 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 85.8,
+    "endSec": 87,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 87.1,
+    "endSec": 88.3,
+    "text": "Narration line 2 of the mission-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 88.4,
+    "endSec": 89.60000000000001,
+    "text": "Narration line 3 of the mission-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 89.7,
+    "endSec": 90.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 91,
+    "endSec": 92.2,
+    "text": "Narration line 5 of the mission-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 92.3,
+    "endSec": 93.5,
+    "text": "Narration line 6 of the mission-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 94.3,
+    "endSec": 95.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 95.6,
+    "endSec": 96.8,
+    "text": "Narration line 2 of the summary-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 96.9,
+    "endSec": 98.10000000000001,
+    "text": "Narration line 3 of the summary-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 98.2,
+    "endSec": 99.4,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 99.5,
+    "endSec": 100.7,
+    "text": "Narration line 5 of the summary-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 100.8,
+    "endSec": 102,
+    "text": "Narration line 6 of the summary-5 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 102.8,
+    "endSec": 104,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 104.1,
+    "endSec": 105.3,
+    "text": "Narration line 2 of the title-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 105.4,
+    "endSec": 106.60000000000001,
+    "text": "Narration line 3 of the title-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 106.7,
+    "endSec": 107.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 108,
+    "endSec": 109.2,
+    "text": "Narration line 5 of the title-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 109.3,
+    "endSec": 110.5,
+    "text": "Narration line 6 of the title-long scene explains what is on screen right now."
+   },
+   {
+    "startSec": 111.3,
+    "endSec": 112.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 112.6,
+    "endSec": 113.8,
+    "text": "Narration line 2 of the terminal-12 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 113.9,
+    "endSec": 115.10000000000001,
+    "text": "Narration line 3 of the terminal-12 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 115.2,
+    "endSec": 116.4,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 116.5,
+    "endSec": 117.7,
+    "text": "Narration line 5 of the terminal-12 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 117.8,
+    "endSec": 119,
+    "text": "Narration line 6 of the terminal-12 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 119.8,
+    "endSec": 121,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 121.1,
+    "endSec": 122.3,
+    "text": "Narration line 2 of the browser-8 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 122.4,
+    "endSec": 123.60000000000001,
+    "text": "Narration line 3 of the browser-8 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 123.7,
+    "endSec": 124.9,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 125,
+    "endSec": 126.2,
+    "text": "Narration line 5 of the browser-8 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 126.3,
+    "endSec": 127.5,
+    "text": "Narration line 6 of the browser-8 scene explains what is on screen right now."
+   },
+   {
+    "startSec": 128.3,
+    "endSec": 129.5,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 129.6,
+    "endSec": 130.79999999999998,
+    "text": "Narration line 2 of the before-after-code scene explains what is on screen right now."
+   },
+   {
+    "startSec": 130.9,
+    "endSec": 132.1,
+    "text": "Narration line 3 of the before-after-code scene explains what is on screen right now."
+   },
+   {
+    "startSec": 132.2,
+    "endSec": 133.39999999999998,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 133.5,
+    "endSec": 134.7,
+    "text": "Narration line 5 of the before-after-code scene explains what is on screen right now."
+   },
+   {
+    "startSec": 134.8,
+    "endSec": 136,
+    "text": "Narration line 6 of the before-after-code scene explains what is on screen right now."
+   },
+   {
+    "startSec": 136.8,
+    "endSec": 138,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 138.1,
+    "endSec": 139.29999999999998,
+    "text": "Narration line 2 of the before-after-mixed scene explains what is on screen right now."
+   },
+   {
+    "startSec": 139.4,
+    "endSec": 140.6,
+    "text": "Narration line 3 of the before-after-mixed scene explains what is on screen right now."
+   },
+   {
+    "startSec": 140.7,
+    "endSec": 141.89999999999998,
+    "text": "Retry settings now live in one options object, and every wait is twice as long as the one before it."
+   },
+   {
+    "startSec": 142,
+    "endSec": 143.2,
+    "text": "Narration line 5 of the before-after-mixed scene explains what is on screen right now."
+   },
+   {
+    "startSec": 143.3,
+    "endSec": 144.5,
+    "text": "Narration line 6 of the before-after-mixed scene explains what is on screen right now."
+   }
+  ]
+ },
+ "chapters": [
+  {
+   "title": "Long lines wrap",
+   "startSec": 0
+  },
+  {
+   "title": "A wide diff",
+   "startSec": 8.5
+  },
+  {
+   "title": "A short snippet",
+   "startSec": 17
+  },
+  {
+   "title": "Nine components",
+   "startSec": 25.5
+  },
+  {
+   "title": "Eight components",
+   "startSec": 34
+  },
+  {
+   "title": "Top to bottom",
+   "startSec": 42.5
+  },
+  {
+   "title": "A long flow",
+   "startSec": 51
+  },
+  {
+   "title": "Five review items",
+   "startSec": 59.5
+  },
+  {
+   "title": "Five long bullets",
+   "startSec": 68
+  },
+  {
+   "title": "Sixteen files",
+   "startSec": 76.5
+  },
+  {
+   "title": "A long mission",
+   "startSec": 85
+  },
+  {
+   "title": "A long summary",
+   "startSec": 93.5
+  },
+  {
+   "title": "A long title",
+   "startSec": 102
+  },
+  {
+   "title": "A busy terminal",
+   "startSec": 110.5
+  },
+  {
+   "title": "A busy page",
+   "startSec": 119
+  },
+  {
+   "title": "Before and after",
+   "startSec": 127.5
+  },
+  {
+   "title": "Behaviour",
+   "startSec": 136
+  }
+ ],
+ "scenes": [
+  {
+   "id": "code-wrap",
+   "role": "under-the-hood",
+   "title": "Long lines wrap",
+   "startSec": 0,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "none",
+    "durationSec": 0
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 0.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the code-wrap scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 2.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the code-wrap scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 3.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the code-wrap scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 4.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the code-wrap scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 6,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the code-wrap scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 7.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the code-wrap scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "code",
+    "mode": "snippet",
+    "code": {
+     "path": "src/weather/client.ts",
+     "language": "typescript",
+     "side": "head",
+     "lines": [
+      {
+       "kind": "ctx",
+       "oldNumber": 1,
+       "newNumber": 1,
+       "tokens": [
+        {
+         "t": "import",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " { withRetry } ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "from",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'./retry'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 2,
+       "newNumber": 2,
+       "tokens": [
+        {
+         "t": "export",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "DEFAULT_RETRY",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "RetryOptions",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " { retries: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "3",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", baseDelayMs: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "250",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", maxDelayMs: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "4_000",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", jitter: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'full'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", retryOn: [",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "408",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "425",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "429",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "500",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "502",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "503",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "504",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": "] };",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 3,
+       "newNumber": 3,
+       "tokens": []
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 4,
+       "newNumber": 4,
+       "tokens": [
+        {
+         "t": "export",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "async",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "function",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "forecast",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "request",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "ForecastRequest",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "options",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "ClientOptions",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " {})",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "Promise",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": "<",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "Forecast",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": "> {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 5,
+       "newNumber": 5,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "requestId",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " options.requestId ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "??",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "randomUUID",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "();",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 6,
+       "newNumber": 6,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "url",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "config",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "apiUrl",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}/v1/forecast?city=${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "encodeURIComponent",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "request",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "cityName",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ")}&units=${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "request",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "units",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}&days=${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "request",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "days",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 7,
+       "newNumber": 7,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "fetch",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(url, { method: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'POST'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", headers: { ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'content-type'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'application/json'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'request-id'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": requestId, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'x-request-source'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'weather-client'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": " }, body: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "JSON",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "stringify",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(request) });",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 8,
+       "newNumber": 8,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "if",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " (",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "!",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": "response.ok) ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "throw",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "new",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "WeatherError",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`Forecast failed with status ${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "status",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}: ${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "text",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "()}`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", response.status, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "retryAfter",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(response));",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 9,
+       "newNumber": 9,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " (",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " response.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "json",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "()) ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "as",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "Forecast",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 10,
+       "newNumber": 10,
+       "tokens": [
+        {
+         "t": "}",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 11,
+       "newNumber": 11,
+       "tokens": []
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 12,
+       "newNumber": 12,
+       "tokens": [
+        {
+         "t": "function",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "retryAfter",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "Response",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ")",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "number",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "|",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "undefined",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 13,
+       "newNumber": 13,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "header",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " response.headers.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "get",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'retry-after'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ");",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 14,
+       "newNumber": 14,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " header ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "===",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "null",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "?",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "undefined",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " Number.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "parseInt",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(header, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "10",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ") ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "*",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "1000",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 15,
+       "newNumber": 15,
+       "tokens": [
+        {
+         "t": "}",
+         "c": null,
+         "s": 0
+        }
+       ]
+      }
+     ],
+     "masked": false,
+     "truncated": false
+    },
+    "focus": [
+     {
+      "startLine": 2,
+      "endLine": 2,
+      "note": "The default options in one line, including the status codes that are retried",
+      "beat": 1
+     },
+     {
+      "startLine": 6,
+      "endLine": 6,
+      "note": "A long URL built from the request",
+      "beat": 2
+     },
+     {
+      "startLine": 8,
+      "endLine": 8,
+      "note": "Headers on one line",
+      "beat": 3
+     },
+     {
+      "startLine": 9,
+      "endLine": 9,
+      "note": "Failures carry the Retry-After value",
+      "beat": 4
+     }
+    ],
+    "caption": null
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "code-diff",
+   "role": "under-the-hood",
+   "title": "A wide diff",
+   "startSec": 8.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 9.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the code-diff scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 10.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the code-diff scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 11.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the code-diff scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 13.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the code-diff scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 14.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the code-diff scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 15.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the code-diff scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "code",
+    "mode": "diff",
+    "code": {
+     "path": "src/weather/client.ts",
+     "language": "typescript",
+     "side": "head",
+     "lines": [
+      {
+       "kind": "del",
+       "oldNumber": 30,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "fetch",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "config",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "apiUrl",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}/v1/forecast`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 31,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "      method: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'POST'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ",",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 32,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "      headers: { ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'content-type'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'application/json'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": " },",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 33,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "      body: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "JSON",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "stringify",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(request),",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 34,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "      signal: AbortSignal.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "timeout",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".config.timeoutMs),",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 35,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "    });",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 36,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "if",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " (",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "!",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": "response.ok) {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 37,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "      ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "throw",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "new",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "WeatherError",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`Forecast failed with status ${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "status",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", response.status);",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 38,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "    }",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "del",
+       "oldNumber": 39,
+       "newNumber": null,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " (",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " response.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "json",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "()) ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "as",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "Forecast",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 30,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "// One key for every attempt, so the API can drop duplicates if a retry follows a lost response.",
+         "c": "#8b949e",
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 31,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "requestId",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "randomUUID",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "();",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 32,
+       "tokens": [
+        {
+         "t": "    ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "withRetry",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "async",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " () ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=>",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 33,
+       "tokens": [
+        {
+         "t": "      ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "await",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "fetch",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "config",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "apiUrl",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}/v1/forecast`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 34,
+       "tokens": [
+        {
+         "t": "        method: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'POST'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ",",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 35,
+       "tokens": [
+        {
+         "t": "        headers: { ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'content-type'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'application/json'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'request-id'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": requestId, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'x-attempt-source'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ": ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "'weather-client'",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": " },",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 36,
+       "tokens": [
+        {
+         "t": "        body: ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "JSON",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "stringify",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(request),",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 37,
+       "tokens": [
+        {
+         "t": "        signal: AbortSignal.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "timeout",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".config.timeoutMs),",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 38,
+       "tokens": [
+        {
+         "t": "      });",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 39,
+       "tokens": [
+        {
+         "t": "      ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "if",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " (",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "!",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": "response.ok) ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "throw",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "new",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "WeatherError",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "`Forecast failed with status ${",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "response",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ".",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": "status",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "}`",
+         "c": "#a5d6ff",
+         "s": 0
+        },
+        {
+         "t": ", response.status, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "retryAfter",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(response));",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "add",
+       "oldNumber": null,
+       "newNumber": 40,
+       "tokens": [
+        {
+         "t": "    }, isRetryable, ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "this",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ".config.retry);",
+         "c": null,
+         "s": 0
+        }
+       ]
+      }
+     ],
+     "masked": false,
+     "truncated": false
+    },
+    "focus": [
+     {
+      "startLine": 40,
+      "endLine": 40,
+      "note": "One request id key for the whole forecast",
+      "beat": 1
+     },
+     {
+      "startLine": 46,
+      "endLine": 46,
+      "note": "Same key on every attempt, plus a source header",
+      "beat": 3
+     }
+    ],
+    "caption": "The client now sends one request id key for every attempt of a forecast."
+   },
+   "refs": [
+    "src/weather/client.ts:35-57"
+   ],
+   "badges": []
+  },
+  {
+   "id": "code-side",
+   "role": "under-the-hood",
+   "title": "A short snippet",
+   "startSec": 17,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 17.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the code-side scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 19.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the code-side scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 20.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the code-side scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 21.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the code-side scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 23,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the code-side scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 24.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the code-side scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "code",
+    "mode": "snippet",
+    "code": {
+     "path": "src/weather/retry.ts",
+     "language": "typescript",
+     "side": "head",
+     "lines": [
+      {
+       "kind": "ctx",
+       "oldNumber": 14,
+       "newNumber": 14,
+       "tokens": [
+        {
+         "t": "export",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "function",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "backoffDelay",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "attempt",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "number",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ", ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "o",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "RetryOptions",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ") {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 15,
+       "newNumber": 15,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "const",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "cap",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " Math.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "min",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(o.maxDelayMs, o.baseDelayMs ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "*",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "2",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "**",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " attempt);",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 16,
+       "newNumber": 16,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " Math.",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "random",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "() ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "*",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " cap;",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 17,
+       "newNumber": 17,
+       "tokens": [
+        {
+         "t": "}",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 18,
+       "newNumber": 18,
+       "tokens": []
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 19,
+       "newNumber": 19,
+       "tokens": [
+        {
+         "t": "export",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "function",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "isRetryableStatus",
+         "c": "#d2a8ff",
+         "s": 0
+        },
+        {
+         "t": "(",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "status",
+         "c": "#ffa657",
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "number",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ")",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ":",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "boolean",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " {",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 20,
+       "newNumber": 20,
+       "tokens": [
+        {
+         "t": "  ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "return",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " status ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "===",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "429",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "||",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " status ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": ">=",
+         "c": "#ff7b72",
+         "s": 0
+        },
+        {
+         "t": " ",
+         "c": null,
+         "s": 0
+        },
+        {
+         "t": "500",
+         "c": "#79c0ff",
+         "s": 0
+        },
+        {
+         "t": ";",
+         "c": null,
+         "s": 0
+        }
+       ]
+      },
+      {
+       "kind": "ctx",
+       "oldNumber": 21,
+       "newNumber": 21,
+       "tokens": [
+        {
+         "t": "}",
+         "c": null,
+         "s": 0
+        }
+       ]
+      }
+     ],
+     "masked": false,
+     "truncated": false
+    },
+    "focus": [
+     {
+      "startLine": 15,
+      "endLine": 16,
+      "note": "Full jitter up to the cap",
+      "beat": 1
+     },
+     {
+      "startLine": 19,
+      "endLine": 20,
+      "note": "Only 429 and 5xx responses retry, everything else fails at once",
+      "beat": 3
+     }
+    ],
+    "caption": "Delays grow exponentially up to a cap."
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "arch-9",
+   "role": "under-the-hood",
+   "title": "Nine components",
+   "startSec": 25.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 26.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the arch-9 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 27.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the arch-9 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 28.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the arch-9 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 30.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the arch-9 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 31.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the arch-9 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 32.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the arch-9 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "architecture",
+    "direction": "TB",
+    "width": 2710,
+    "height": 1066,
+    "nodes": [
+     {
+      "id": "gateway",
+      "label": "Weather gateway adapter service",
+      "detail": "src/weather/gateway/adapter.ts",
+      "kind": "service",
+      "status": "modified",
+      "beat": 0,
+      "x": 2220,
+      "y": 147,
+      "w": 480,
+      "h": 238
+     },
+     {
+      "id": "client",
+      "label": "WeatherClient",
+      "detail": "src/weather/client.ts",
+      "kind": "module",
+      "status": "modified",
+      "beat": 1,
+      "x": 818,
+      "y": 533,
+      "w": 448,
+      "h": 188
+     },
+     {
+      "id": "retry",
+      "label": "RetryPolicy",
+      "detail": "withRetry(operation, options)",
+      "kind": "ui",
+      "status": "added",
+      "beat": 2,
+      "x": 1338,
+      "y": 919,
+      "w": 480,
+      "h": 188
+     },
+     {
+      "id": "ledger",
+      "label": "Ledger",
+      "detail": "Postgres, table ledger_entries",
+      "kind": "api",
+      "status": "unchanged",
+      "beat": 3,
+      "x": 1980,
+      "y": 533,
+      "w": 400,
+      "h": 188
+     },
+     {
+      "id": "queue",
+      "label": "Settlement queue",
+      "detail": "settlements.v2",
+      "kind": "database",
+      "status": "unchanged",
+      "beat": 4,
+      "x": 1980,
+      "y": 897,
+      "w": 400,
+      "h": 194
+     },
+     {
+      "id": "legacy",
+      "label": "Fixed delay helper",
+      "detail": "sleep(1000)",
+      "kind": "queue",
+      "status": "removed",
+      "beat": 0,
+      "x": 818,
+      "y": 919,
+      "w": 400,
+      "h": 194
+     },
+     {
+      "id": "provider",
+      "label": "Weather provider",
+      "detail": "Third party, HTTPS API",
+      "kind": "external",
+      "status": "unchanged",
+      "beat": 1,
+      "x": 2460,
+      "y": 533,
+      "w": 400,
+      "h": 188
+     },
+     {
+      "id": "audit",
+      "label": "AuditTrailPublisher",
+      "detail": "src/audit/publisher.ts",
+      "kind": "file",
+      "status": "added",
+      "beat": 2,
+      "x": 298,
+      "y": 919,
+      "w": 480,
+      "h": 238
+     },
+     {
+      "id": "web",
+      "label": "Dashboard web app",
+      "detail": "apps/web/dashboard",
+      "kind": "test",
+      "status": "unchanged",
+      "beat": 3,
+      "x": 818,
+      "y": 147,
+      "w": 400,
+      "h": 238
+     }
+    ],
+    "edges": [
+     {
+      "from": "web",
+      "to": "client",
+      "label": "forecast(request)",
+      "status": "unchanged",
+      "beat": 0,
+      "points": [
+       {
+        "x": 818,
+        "y": 266
+       },
+       {
+        "x": 818,
+        "y": 352.5
+       },
+       {
+        "x": 818,
+        "y": 439
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "retry",
+      "label": "wraps every attempt",
+      "status": "added",
+      "beat": 1,
+      "points": [
+       {
+        "x": 1042,
+        "y": 610.8
+       },
+       {
+        "x": 1338,
+        "y": 713.5
+       },
+       {
+        "x": 1338,
+        "y": 825
+       }
+      ]
+     },
+     {
+      "from": "retry",
+      "to": "gateway",
+      "label": "POST /v1/forecast with X-Request-Id",
+      "status": "added",
+      "beat": 2,
+      "points": [
+       {
+        "x": 1578,
+        "y": 919
+       },
+       {
+        "x": 1675,
+        "y": 919
+       },
+       {
+        "x": 1675,
+        "y": 147
+       },
+       {
+        "x": 1980,
+        "y": 147
+       }
+      ]
+     },
+     {
+      "from": "gateway",
+      "to": "provider",
+      "label": "HTTPS",
+      "status": "unchanged",
+      "beat": 3,
+      "points": [
+       {
+        "x": 2359,
+        "y": 266
+       },
+       {
+        "x": 2460,
+        "y": 352.5
+       },
+       {
+        "x": 2460,
+        "y": 439
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "legacy",
+      "label": "sleeps 1 s",
+      "status": "removed",
+      "beat": 4,
+      "points": [
+       {
+        "x": 818,
+        "y": 627
+       },
+       {
+        "x": 818,
+        "y": 713.5
+       },
+       {
+        "x": 818,
+        "y": 822
+       }
+      ]
+     },
+     {
+      "from": "gateway",
+      "to": "ledger",
+      "label": "records",
+      "status": "unchanged",
+      "beat": 0,
+      "points": [
+       {
+        "x": 2081,
+        "y": 266
+       },
+       {
+        "x": 1980,
+        "y": 352.5
+       },
+       {
+        "x": 1980,
+        "y": 439
+       }
+      ]
+     },
+     {
+      "from": "ledger",
+      "to": "queue",
+      "label": "publishes",
+      "status": "unchanged",
+      "beat": 1,
+      "points": [
+       {
+        "x": 1980,
+        "y": 627
+       },
+       {
+        "x": 1980,
+        "y": 713.5
+       },
+       {
+        "x": 1980,
+        "y": 800
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "audit",
+      "label": "emits events",
+      "status": "added",
+      "beat": 2,
+      "points": [
+       {
+        "x": 594,
+        "y": 610.8
+       },
+       {
+        "x": 298,
+        "y": 713.5
+       },
+       {
+        "x": 298,
+        "y": 800
+       }
+      ]
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "arch-dense",
+   "role": "under-the-hood",
+   "title": "Eight components",
+   "startSec": 34,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 34.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the arch-dense scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 36.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the arch-dense scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 37.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the arch-dense scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 38.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the arch-dense scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 40,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the arch-dense scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 41.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the arch-dense scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "architecture",
+    "direction": "TB",
+    "width": 1643,
+    "height": 697,
+    "nodes": [
+     {
+      "id": "web",
+      "label": "Dashboard",
+      "detail": "web/dashboard",
+      "kind": "service",
+      "status": "unchanged",
+      "beat": 0,
+      "x": 373.8,
+      "y": 84.5,
+      "w": 280,
+      "h": 113
+     },
+     {
+      "id": "client",
+      "label": "WeatherClient",
+      "detail": "src/client.ts",
+      "kind": "module",
+      "status": "modified",
+      "beat": 1,
+      "x": 373.8,
+      "y": 348.5,
+      "w": 345,
+      "h": 113
+     },
+     {
+      "id": "retry",
+      "label": "RetryPolicy",
+      "detail": "withRetry()",
+      "kind": "ui",
+      "status": "added",
+      "beat": 2,
+      "x": 559.5,
+      "y": 612.5,
+      "w": 281,
+      "h": 113
+     },
+     {
+      "id": "gateway",
+      "label": "Gateway",
+      "detail": "api/gateway.ts",
+      "kind": "api",
+      "status": "modified",
+      "beat": 3,
+      "x": 1241.2,
+      "y": 84.5,
+      "w": 286,
+      "h": 113
+     },
+     {
+      "id": "ledger",
+      "label": "Ledger",
+      "detail": "Postgres",
+      "kind": "database",
+      "status": "unchanged",
+      "beat": 4,
+      "x": 1047,
+      "y": 348.5,
+      "w": 260,
+      "h": 113
+     },
+     {
+      "id": "queue",
+      "label": "Settlements",
+      "detail": "settlements.v2",
+      "kind": "queue",
+      "status": "unchanged",
+      "beat": 0,
+      "x": 1047,
+      "y": 612.5,
+      "w": 290,
+      "h": 113
+     },
+     {
+      "id": "provider",
+      "label": "Weather provider",
+      "detail": "Third party",
+      "kind": "external",
+      "status": "unchanged",
+      "beat": 1,
+      "x": 1435.5,
+      "y": 348.5,
+      "w": 315,
+      "h": 113
+     },
+     {
+      "id": "audit",
+      "label": "AuditLog",
+      "detail": "src/audit.ts",
+      "kind": "file",
+      "status": "added",
+      "beat": 2,
+      "x": 188,
+      "y": 612.5,
+      "w": 260,
+      "h": 113
+     }
+    ],
+    "edges": [
+     {
+      "from": "web",
+      "to": "client",
+      "label": "forecast()",
+      "status": "unchanged",
+      "beat": 0,
+      "points": [
+       {
+        "x": 373.8,
+        "y": 141
+       },
+       {
+        "x": 373.8,
+        "y": 216.5
+       },
+       {
+        "x": 373.8,
+        "y": 292
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "retry",
+      "label": "wraps calls",
+      "status": "added",
+      "beat": 1,
+      "points": [
+       {
+        "x": 453.3,
+        "y": 405
+       },
+       {
+        "x": 559.5,
+        "y": 480.5
+       },
+       {
+        "x": 559.5,
+        "y": 556
+       }
+      ]
+     },
+     {
+      "from": "retry",
+      "to": "gateway",
+      "label": "POST /forecast",
+      "status": "added",
+      "beat": 2,
+      "points": [
+       {
+        "x": 700,
+        "y": 612.5
+       },
+       {
+        "x": 797,
+        "y": 612.5
+       },
+       {
+        "x": 797,
+        "y": 84.5
+       },
+       {
+        "x": 1098.2,
+        "y": 84.5
+       }
+      ]
+     },
+     {
+      "from": "gateway",
+      "to": "provider",
+      "label": "HTTPS",
+      "status": "unchanged",
+      "beat": 3,
+      "points": [
+       {
+        "x": 1324.3,
+        "y": 141
+       },
+       {
+        "x": 1435.5,
+        "y": 216.5
+       },
+       {
+        "x": 1435.5,
+        "y": 292
+       }
+      ]
+     },
+     {
+      "from": "gateway",
+      "to": "ledger",
+      "label": "records",
+      "status": "unchanged",
+      "beat": 4,
+      "points": [
+       {
+        "x": 1158.1,
+        "y": 141
+       },
+       {
+        "x": 1047,
+        "y": 216.5
+       },
+       {
+        "x": 1047,
+        "y": 292
+       }
+      ]
+     },
+     {
+      "from": "ledger",
+      "to": "queue",
+      "label": "publishes",
+      "status": "unchanged",
+      "beat": 0,
+      "points": [
+       {
+        "x": 1047,
+        "y": 405
+       },
+       {
+        "x": 1047,
+        "y": 480.5
+       },
+       {
+        "x": 1047,
+        "y": 556
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "audit",
+      "label": "emits events",
+      "status": "added",
+      "beat": 1,
+      "points": [
+       {
+        "x": 294.2,
+        "y": 405
+       },
+       {
+        "x": 188,
+        "y": 480.5
+       },
+       {
+        "x": 188,
+        "y": 556
+       }
+      ]
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "arch-tb",
+   "role": "under-the-hood",
+   "title": "Top to bottom",
+   "startSec": 42.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 43.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the arch-tb scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 44.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the arch-tb scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 45.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the arch-tb scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 47.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the arch-tb scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 48.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the arch-tb scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 49.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the arch-tb scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "architecture",
+    "direction": "TB",
+    "width": 1852,
+    "height": 866,
+    "nodes": [
+     {
+      "id": "gateway",
+      "label": "Weather gateway adapter service",
+      "detail": "src/weather/gateway/adapter.ts",
+      "kind": "service",
+      "status": "modified",
+      "beat": 0,
+      "x": 1562,
+      "y": 128.5,
+      "w": 480,
+      "h": 201
+     },
+     {
+      "id": "client",
+      "label": "WeatherClient",
+      "detail": "src/weather/client.ts",
+      "kind": "module",
+      "status": "modified",
+      "beat": 1,
+      "x": 574.5,
+      "y": 91,
+      "w": 437,
+      "h": 126
+     },
+     {
+      "id": "retry",
+      "label": "RetryPolicy",
+      "detail": "withRetry(operation, options)",
+      "kind": "ui",
+      "status": "added",
+      "beat": 2,
+      "x": 880,
+      "y": 395.5,
+      "w": 480,
+      "h": 161
+     },
+     {
+      "id": "ledger",
+      "label": "Ledger",
+      "detail": "Postgres, table ledger_entries",
+      "kind": "api",
+      "status": "unchanged",
+      "beat": 3,
+      "x": 1562,
+      "y": 470.5,
+      "w": 480,
+      "h": 161
+     },
+     {
+      "id": "queue",
+      "label": "Settlement queue",
+      "detail": "settlements.v2",
+      "kind": "database",
+      "status": "unchanged",
+      "beat": 4,
+      "x": 1562,
+      "y": 775,
+      "w": 413,
+      "h": 126
+     },
+     {
+      "id": "legacy",
+      "label": "Fixed delay helper",
+      "detail": "sleep(1000)",
+      "kind": "queue",
+      "status": "removed",
+      "beat": 0,
+      "x": 269,
+      "y": 395.5,
+      "w": 422,
+      "h": 126
+     }
+    ],
+    "edges": [
+     {
+      "from": "client",
+      "to": "retry",
+      "label": "wraps every attempt",
+      "status": "added",
+      "beat": 0,
+      "points": [
+       {
+        "x": 708.6,
+        "y": 154
+       },
+       {
+        "x": 880,
+        "y": 234.5
+       },
+       {
+        "x": 880,
+        "y": 315
+       }
+      ]
+     },
+     {
+      "from": "retry",
+      "to": "gateway",
+      "label": "POST /v1/forecast with X-Request-Id",
+      "status": "added",
+      "beat": 1,
+      "points": [
+       {
+        "x": 1120,
+        "y": 395.5
+       },
+       {
+        "x": 1217,
+        "y": 395.5
+       },
+       {
+        "x": 1217,
+        "y": 128.5
+       },
+       {
+        "x": 1322,
+        "y": 128.5
+       }
+      ]
+     },
+     {
+      "from": "client",
+      "to": "legacy",
+      "label": "sleeps 1 s",
+      "status": "removed",
+      "beat": 2,
+      "points": [
+       {
+        "x": 440.4,
+        "y": 154
+       },
+       {
+        "x": 269,
+        "y": 234.5
+       },
+       {
+        "x": 269,
+        "y": 332.5
+       }
+      ]
+     },
+     {
+      "from": "gateway",
+      "to": "ledger",
+      "label": "records",
+      "status": "unchanged",
+      "beat": 3,
+      "points": [
+       {
+        "x": 1562,
+        "y": 229
+       },
+       {
+        "x": 1562,
+        "y": 309.5
+       },
+       {
+        "x": 1562,
+        "y": 390
+       }
+      ]
+     },
+     {
+      "from": "ledger",
+      "to": "queue",
+      "label": "publishes",
+      "status": "unchanged",
+      "beat": 4,
+      "points": [
+       {
+        "x": 1562,
+        "y": 551
+       },
+       {
+        "x": 1562,
+        "y": 631.5
+       },
+       {
+        "x": 1562,
+        "y": 712
+       }
+      ]
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "flow-5",
+   "role": "under-the-hood",
+   "title": "A long flow",
+   "startSec": 51,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 51.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the flow-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 53.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the flow-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 54.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the flow-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 55.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the flow-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 57,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the flow-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 58.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the flow-5 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "flow",
+    "actors": [
+     {
+      "id": "a",
+      "label": "Dashboard web application",
+      "kind": "ui"
+     },
+     {
+      "id": "b",
+      "label": "WeatherClient",
+      "kind": "module"
+     },
+     {
+      "id": "c",
+      "label": "Retry policy helper",
+      "kind": "module"
+     },
+     {
+      "id": "d",
+      "label": "Weather API gateway",
+      "kind": "api"
+     },
+     {
+      "id": "e",
+      "label": "Weather provider",
+      "kind": "external"
+     }
+    ],
+    "steps": [
+     {
+      "from": "a",
+      "to": "b",
+      "label": "forecast(request)",
+      "detail": "city, units, days",
+      "kind": "request",
+      "beat": 0
+     },
+     {
+      "from": "b",
+      "to": "c",
+      "label": "withRetry(operation)",
+      "detail": "creates one request id key",
+      "kind": "call",
+      "beat": 1
+     },
+     {
+      "from": "c",
+      "to": "d",
+      "label": "POST /v1/forecast",
+      "detail": "X-Request-Id: 4f2c9a10",
+      "kind": "request",
+      "beat": 1
+     },
+     {
+      "from": "d",
+      "to": "e",
+      "label": "Fetch the forecast with a very long label that does not fit",
+      "detail": "attempt 1 of 4 with a long detail line as well",
+      "kind": "request",
+      "beat": 2
+     },
+     {
+      "from": "e",
+      "to": "d",
+      "label": "503 Service Unavailable",
+      "detail": "Retry-After: 2",
+      "kind": "response",
+      "beat": 2
+     },
+     {
+      "from": "c",
+      "to": "c",
+      "label": "Wait for the Retry-After value or a jittered backoff",
+      "detail": null,
+      "kind": "call",
+      "beat": 3
+     },
+     {
+      "from": "d",
+      "to": "a",
+      "label": "forecast.ready",
+      "detail": "after attempt 2",
+      "kind": "event",
+      "beat": 4
+     },
+     {
+      "from": "a",
+      "to": "a",
+      "label": "Show the receipt",
+      "detail": "no duplicate forecast",
+      "kind": "call",
+      "beat": 5
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "checklist-5",
+   "role": "under-the-hood",
+   "title": "Five review items",
+   "startSec": 59.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 60.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the checklist-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 61.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the checklist-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 62.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the checklist-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 64.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the checklist-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 65.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the checklist-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 66.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the checklist-5 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "checklist",
+    "items": [
+     {
+      "title": "Retries a POST request that changes state on the server",
+      "detail": "Safe only if the weather API deduplicates on the X-Request-Id header, which the change does not show.",
+      "severity": "high",
+      "refLabel": "src/weather/client.ts:36-42",
+      "beat": 0
+     },
+     {
+      "title": "Timeout is applied per attempt, not per forecast",
+      "detail": "Worst-case time per forecast grows with WEATHER_MAX_RETRIES and the backoff cap of four seconds.",
+      "severity": "medium",
+      "refLabel": "src/weather/client.ts:44",
+      "beat": 1
+     },
+     {
+      "title": "WeatherError constructor changed",
+      "detail": "It takes an optional retryAfterMs argument; other callers that build the error should still compile.",
+      "severity": "low",
+      "refLabel": "src/weather/client.ts:18-24",
+      "beat": 2
+     },
+     {
+      "title": "Backoff values are hard coded",
+      "detail": "3 retries, 250 ms base and a 4,000 ms cap. Confirm they fit the rate limits of the provider.",
+      "severity": "info",
+      "refLabel": "src/weather/retry.ts:8",
+      "beat": 3
+     },
+     {
+      "title": "Tests cover the happy path only",
+      "detail": "There is no test for a response with a Retry-After header that is larger than the cap.",
+      "severity": "medium",
+      "refLabel": "test/retry.test.ts:1-32",
+      "beat": 4
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "bullets-5",
+   "role": "under-the-hood",
+   "title": "Five long bullets",
+   "startSec": 68,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 68.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the bullets-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 70.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the bullets-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 71.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the bullets-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 72.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the bullets-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 74,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the bullets-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 75.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the bullets-5 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "bullets",
+    "heading": "What changes for callers of the weather client",
+    "items": [
+     {
+      "text": "Temporary failures (HTTP 429 and every 5xx) are retried automatically with exponential backoff and full jitter.",
+      "beat": 0
+     },
+     {
+      "text": "The Retry-After header wins over the computed delay when the provider sends one.",
+      "beat": 1
+     },
+     {
+      "text": "One request id key per forecast is sent on every attempt, so a retried forecast cannot be applied twice.",
+      "beat": 2
+     },
+     {
+      "text": "WEATHER_MAX_RETRIES controls how many retries happen; the default is three.",
+      "beat": 3
+     },
+     {
+      "text": "Everything else, such as a 400 or a 404, still fails at once and reaches the caller unchanged.",
+      "beat": 4
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "files-16",
+   "role": "under-the-hood",
+   "title": "Sixteen files",
+   "startSec": 76.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 77.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the files-16 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 78.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the files-16 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 79.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the files-16 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 81.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the files-16 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 82.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the files-16 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 83.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the files-16 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "files",
+    "caption": "Most of the change is in the client and the new retry policy",
+    "totals": {
+     "files": 23,
+     "additions": 411,
+     "deletions": 58
+    },
+    "groups": [
+     {
+      "component": "Client",
+      "files": [
+       {
+        "path": "src/weather/client.ts",
+        "status": "modified",
+        "additions": 48,
+        "deletions": 11,
+        "highlighted": true,
+        "trivial": false
+       },
+       {
+        "path": "src/weather/gateway/adapter/with-a-very-long-folder-name/retry-policy.ts",
+        "status": "added",
+        "additions": 62,
+        "deletions": 0,
+        "highlighted": true,
+        "trivial": false
+       },
+       {
+        "path": "src/weather/errors.ts",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "highlighted": false,
+        "trivial": false
+       },
+       {
+        "path": "src/weather/types.ts",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "highlighted": false,
+        "trivial": false
+       }
+      ]
+     },
+     {
+      "component": "Config",
+      "files": [
+       {
+        "path": "src/config/load-config.ts",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 1,
+        "highlighted": true,
+        "trivial": false
+       },
+       {
+        "path": "src/config/schema.ts",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": false
+       },
+       {
+        "path": ".env.example",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": false
+       }
+      ]
+     },
+     {
+      "component": "Tests",
+      "files": [
+       {
+        "path": "test/weather/retry-policy.test.ts",
+        "status": "added",
+        "additions": 120,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": false
+       },
+       {
+        "path": "test/weather/client.test.ts",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 8,
+        "highlighted": false,
+        "trivial": false
+       },
+       {
+        "path": "test/fixtures/forecasts/503-then-200.json",
+        "status": "added",
+        "additions": 22,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": false
+       }
+      ]
+     },
+     {
+      "component": "Docs",
+      "files": [
+       {
+        "path": "README.md",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 3,
+        "highlighted": false,
+        "trivial": true
+       },
+       {
+        "path": "docs/weather/retries-and-jitter.md",
+        "status": "added",
+        "additions": 80,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": true
+       }
+      ]
+     },
+     {
+      "component": "Other",
+      "files": [
+       {
+        "path": "package.json",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "highlighted": false,
+        "trivial": true
+       },
+       {
+        "path": "CHANGELOG.md",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "highlighted": false,
+        "trivial": true
+       },
+       {
+        "path": "old/legacy-sleep.ts",
+        "status": "deleted",
+        "additions": 0,
+        "deletions": 31,
+        "highlighted": false,
+        "trivial": false
+       },
+       {
+        "path": "src/index.ts",
+        "status": "renamed",
+        "additions": 1,
+        "deletions": 1,
+        "highlighted": false,
+        "trivial": false
+       }
+      ]
+     }
+    ],
+    "hiddenCount": 7
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "mission-long",
+   "role": "under-the-hood",
+   "title": "A long mission",
+   "startSec": 85,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 85.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the mission-long scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 87.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the mission-long scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 88.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the mission-long scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 89.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the mission-long scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 91,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the mission-long scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 92.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the mission-long scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "mission",
+    "problem": "Forecast requests sometimes fail with a 429 or a 503 during traffic spikes, and callers have to retry by hand, which is slow, error prone and sometimes asks the same question twice.",
+    "goal": "Retry temporary failures automatically with exponential backoff and jitter, and make sure that a retried forecast can never be applied twice by the weather provider.",
+    "points": [
+     {
+      "text": "Exponential backoff with full jitter between attempts",
+      "beat": 2
+     },
+     {
+      "text": "Retry-After is respected when the provider sends it",
+      "beat": 3
+     },
+     {
+      "text": "One request id key per forecast, shared by every attempt",
+      "beat": 4
+     },
+     {
+      "text": "New unit tests cover the retry rules and the limits",
+      "beat": 5
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "summary-5",
+   "role": "under-the-hood",
+   "title": "A long summary",
+   "startSec": 93.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 94.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the summary-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 95.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the summary-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 96.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the summary-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 98.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the summary-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 99.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the summary-5 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 100.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the summary-5 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "summary",
+    "points": [
+     {
+      "text": "429 and 5xx responses are retried with full-jitter backoff, up to three times by default.",
+      "beat": 0
+     },
+     {
+      "text": "The Retry-After header is respected, capped at four seconds.",
+      "beat": 1
+     },
+     {
+      "text": "One request id key per forecast keeps retried forecasts from being applied twice.",
+      "beat": 2
+     },
+     {
+      "text": "WeatherError carries the retry-after value; check callers that build it.",
+      "beat": 3
+     },
+     {
+      "text": "New unit tests cover the policy; the author reports that they pass.",
+      "beat": 4
+     }
+    ],
+    "closing": "Review the request id handling and the timeout behaviour first, then the new tests."
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "title-long",
+   "role": "under-the-hood",
+   "title": "A long title",
+   "startSec": 102,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 102.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the title-long scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 104.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the title-long scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 105.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the title-long scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 106.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the title-long scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 108,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the title-long scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 109.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the title-long scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "title",
+    "kicker": "feature/retry-with-backoff-and-jitter",
+    "heading": "Retry temporary failures with exponential backoff and request ids",
+    "subheading": "example-weather: WeatherClient.getForecast now survives traffic spikes without double charging",
+    "chips": [
+     "withRetry",
+     "X-Request-Id",
+     "WEATHER_MAX_RETRIES",
+     "Retry-After"
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "terminal-12",
+   "role": "under-the-hood",
+   "title": "A busy terminal",
+   "startSec": 110.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 111.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the terminal-12 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 112.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the terminal-12 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 113.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the terminal-12 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 115.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the terminal-12 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 116.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the terminal-12 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 117.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the terminal-12 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "terminal",
+    "title": "weather",
+    "lines": [
+     {
+      "kind": "command",
+      "text": "npm test -- --run test/weather/retry-policy.test.ts test/weather/client.test.ts --reporter=verbose",
+      "beat": 0
+     },
+     {
+      "kind": "output",
+      "text": "> weather@2.4.0 test /workspace/weather",
+      "beat": 1
+     },
+     {
+      "kind": "output",
+      "text": " ✓ retries a 503 and succeeds on attempt 2 after a jittered delay of at most 250 milliseconds (12 ms)",
+      "beat": 1
+     },
+     {
+      "kind": "output",
+      "text": " ✓ stops after the retry limit (9 ms)",
+      "beat": 2
+     },
+     {
+      "kind": "output",
+      "text": " ✓ does not retry client errors (3 ms)",
+      "beat": 2
+     },
+     {
+      "kind": "output",
+      "text": " ✓ respects the Retry-After header when it is larger than the computed delay (4 ms)",
+      "beat": 2
+     },
+     {
+      "kind": "output",
+      "text": " ✗ caps the Retry-After header at the maximum delay (FAILED)",
+      "beat": 3
+     },
+     {
+      "kind": "output",
+      "text": "   WARN  the worst-case time for one forecast is now 4 x 4 s plus the request time",
+      "beat": 3
+     },
+     {
+      "kind": "output",
+      "text": " Tests  5 passed | 1 failed (6)",
+      "beat": 4
+     },
+     {
+      "kind": "comment",
+      "text": "backoff grows 250 ms, 500 ms, 1000 ms, then caps at 4 s",
+      "beat": 4
+     },
+     {
+      "kind": "command",
+      "text": "git diff --stat",
+      "beat": 5
+     },
+     {
+      "kind": "output",
+      "text": " 7 files changed, 110 insertions(+), 11 deletions(-)",
+      "beat": 5
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "browser-8",
+   "role": "under-the-hood",
+   "title": "A busy page",
+   "startSec": 119,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 119.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the browser-8 scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 121.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the browser-8 scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 122.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the browser-8 scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 123.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the browser-8 scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 125,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the browser-8 scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 126.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the browser-8 scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "browser",
+    "url": "/settings/cities?status=all&page=1",
+    "pageTitle": "Saved cities for the Acme workspace",
+    "blocks": [
+     {
+      "kind": "heading",
+      "text": "Saved cities",
+      "items": [],
+      "emphasis": false,
+      "beat": 0
+     },
+     {
+      "kind": "badge",
+      "text": "Pro plan, billed monthly",
+      "items": [],
+      "emphasis": false,
+      "beat": 0
+     },
+     {
+      "kind": "text",
+      "text": "Your forecast refreshes every hour. Failed refreshes are retried automatically with exponential backoff for up to four days.",
+      "items": [],
+      "emphasis": false,
+      "beat": 1
+     },
+     {
+      "kind": "table",
+      "text": "",
+      "items": [
+       "Time | Temperature | Status",
+       "Oct 1 | 18 C | Loaded",
+       "Sep 1 | 18 C | Loaded after retry",
+       "Aug 1 | 18 C | Loaded",
+       "Jul 1 | 18 C | Loaded"
+      ],
+      "emphasis": false,
+      "beat": 2
+     },
+     {
+      "kind": "list",
+      "text": "Forecast methods",
+      "items": [
+       "Berlin (default)",
+       "Oslo"
+      ],
+      "emphasis": false,
+      "beat": 3
+     },
+     {
+      "kind": "button",
+      "text": "Update forecast method",
+      "items": [],
+      "emphasis": true,
+      "beat": 4
+     },
+     {
+      "kind": "panel",
+      "text": "Next refresh at 12:00 for 18 C",
+      "items": [],
+      "emphasis": false,
+      "beat": 4
+     },
+     {
+      "kind": "toast",
+      "text": "Forecast recovered after a retry",
+      "items": [],
+      "emphasis": true,
+      "beat": 5
+     }
+    ]
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": [
+    {
+     "kind": "simulated",
+     "text": "Simulated screen"
+    }
+   ]
+  },
+  {
+   "id": "before-after-code",
+   "role": "under-the-hood",
+   "title": "Before and after",
+   "startSec": 127.5,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 128.3,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the before-after-code scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 129.6,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the before-after-code scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 130.9,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the before-after-code scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 132.2,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the before-after-code scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 133.5,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the before-after-code scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 134.8,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the before-after-code scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "before-after",
+    "before": {
+     "label": "Before",
+     "kind": "code",
+     "code": {
+      "path": "src/weather/retry.ts",
+      "language": "typescript",
+      "side": "base",
+      "lines": [
+       {
+        "kind": "ctx",
+        "oldNumber": 1,
+        "newNumber": 1,
+        "tokens": [
+         {
+          "t": "import",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " { withRetry } ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "from",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'./retry'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ";",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 2,
+        "newNumber": 2,
+        "tokens": [
+         {
+          "t": "export",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "const",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "DEFAULT_RETRY",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "RetryOptions",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " { retries: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "3",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", baseDelayMs: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "250",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", maxDelayMs: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "4_000",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", jitter: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'full'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ", retryOn: [",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "408",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "425",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "429",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "500",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "502",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "503",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "504",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": "] };",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 3,
+        "newNumber": 3,
+        "tokens": []
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 4,
+        "newNumber": 4,
+        "tokens": [
+         {
+          "t": "export",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "async",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "function",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "forecast",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "request",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "ForecastRequest",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "options",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "ClientOptions",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " {})",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "Promise",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": "<",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "Forecast",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": "> {",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 5,
+        "newNumber": 5,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "const",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "requestId",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " options.requestId ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "??",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "randomUUID",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "();",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 6,
+        "newNumber": 6,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "const",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "url",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "`${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "this",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "config",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "apiUrl",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "}/v1/forecast?city=${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "encodeURIComponent",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "request",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "cityName",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ")}&units=${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "request",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "units",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "}&days=${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "request",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "days",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "}`",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ";",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 7,
+        "newNumber": 7,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "const",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "response",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "await",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "fetch",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(url, { method: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'POST'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ", headers: { ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'content-type'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ": ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'application/json'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'request-id'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ": requestId, ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'x-request-source'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ": ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "'weather-client'",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": " }, body: ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "JSON",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "stringify",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(request) });",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 8,
+        "newNumber": 8,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "if",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " (",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "!",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": "response.ok) ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "throw",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "new",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "WeatherError",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "`Forecast failed with status ${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "response",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "status",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "}: ${",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "await",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "response",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ".",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": "text",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "()}`",
+          "c": "#a5d6ff",
+          "s": 0
+         },
+         {
+          "t": ", response.status, ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "retryAfter",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(response));",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 9,
+        "newNumber": 9,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "return",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " (",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "await",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " response.",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "json",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "()) ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "as",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "Forecast",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ";",
+          "c": null,
+          "s": 0
+         }
+        ]
+       }
+      ],
+      "masked": false,
+      "truncated": false
+     },
+     "bullets": [],
+     "terminal": [],
+     "image": null,
+     "simulated": false
+    },
+    "after": {
+     "label": "After",
+     "kind": "code",
+     "code": {
+      "path": "src/weather/retry.ts",
+      "language": "typescript",
+      "side": "head",
+      "lines": [
+       {
+        "kind": "ctx",
+        "oldNumber": 1,
+        "newNumber": 1,
+        "tokens": [
+         {
+          "t": "export",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "function",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "backoffDelay",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "attempt",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "number",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ", ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "o",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "RetryOptions",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ") {",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 2,
+        "newNumber": 2,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "const",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "cap",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " Math.",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "min",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(o.maxDelayMs, o.baseDelayMs ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "*",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "2",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "**",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " attempt);",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 3,
+        "newNumber": 3,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "return",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " Math.",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "random",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "() ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "*",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " cap;",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 4,
+        "newNumber": 4,
+        "tokens": [
+         {
+          "t": "}",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 5,
+        "newNumber": 5,
+        "tokens": []
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 6,
+        "newNumber": 6,
+        "tokens": [
+         {
+          "t": "export",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "function",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "isRetryableStatus",
+          "c": "#d2a8ff",
+          "s": 0
+         },
+         {
+          "t": "(",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "status",
+          "c": "#ffa657",
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "number",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ")",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ":",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "boolean",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " {",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 7,
+        "newNumber": 7,
+        "tokens": [
+         {
+          "t": "  ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "return",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " status ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "===",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "429",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "||",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " status ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": ">=",
+          "c": "#ff7b72",
+          "s": 0
+         },
+         {
+          "t": " ",
+          "c": null,
+          "s": 0
+         },
+         {
+          "t": "500",
+          "c": "#79c0ff",
+          "s": 0
+         },
+         {
+          "t": ";",
+          "c": null,
+          "s": 0
+         }
+        ]
+       },
+       {
+        "kind": "ctx",
+        "oldNumber": 8,
+        "newNumber": 8,
+        "tokens": [
+         {
+          "t": "}",
+          "c": null,
+          "s": 0
+         }
+        ]
+       }
+      ],
+      "masked": false,
+      "truncated": false
+     },
+     "bullets": [],
+     "terminal": [],
+     "image": null,
+     "simulated": false
+    },
+    "caption": "A fixed one-second pause becomes a growing wait for recoverable errors only, with a cap and full jitter."
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  },
+  {
+   "id": "before-after-mixed",
+   "role": "under-the-hood",
+   "title": "Behaviour",
+   "startSec": 136,
+   "durationSec": 9,
+   "transitionIn": {
+    "type": "fade",
+    "durationSec": 0.5
+   },
+   "beats": [
+    {
+     "index": 0,
+     "startSec": 136.8,
+     "durationSec": 1.2,
+     "text": "Narration line 1 of the before-after-mixed scene explains what is on screen right now."
+    },
+    {
+     "index": 1,
+     "startSec": 138.1,
+     "durationSec": 1.2,
+     "text": "Narration line 2 of the before-after-mixed scene explains what is on screen right now."
+    },
+    {
+     "index": 2,
+     "startSec": 139.4,
+     "durationSec": 1.2,
+     "text": "Narration line 3 of the before-after-mixed scene explains what is on screen right now."
+    },
+    {
+     "index": 3,
+     "startSec": 140.7,
+     "durationSec": 1.2,
+     "text": "Narration line 4 of the before-after-mixed scene explains what is on screen right now."
+    },
+    {
+     "index": 4,
+     "startSec": 142,
+     "durationSec": 1.2,
+     "text": "Narration line 5 of the before-after-mixed scene explains what is on screen right now."
+    },
+    {
+     "index": 5,
+     "startSec": 143.3,
+     "durationSec": 1.2,
+     "text": "Narration line 6 of the before-after-mixed scene explains what is on screen right now."
+    }
+   ],
+   "visual": {
+    "type": "before-after",
+    "before": {
+     "label": "Before",
+     "kind": "bullets",
+     "code": null,
+     "bullets": [
+      "A single 503 fails the forecast at once",
+      "The caller must retry by hand",
+      "A retry may repeat work, because every request had a new delay"
+     ],
+     "terminal": [],
+     "image": null,
+     "simulated": false
+    },
+    "after": {
+     "label": "After",
+     "kind": "terminal",
+     "code": null,
+     "bullets": [],
+     "terminal": [
+      {
+       "kind": "command",
+       "text": "forecast --days 5",
+       "beat": 0
+      },
+      {
+       "kind": "output",
+       "text": "attempt 1: 503",
+       "beat": 1
+      },
+      {
+       "kind": "output",
+       "text": "attempt 2: 200 OK (same X-Request-Id)",
+       "beat": 1
+      }
+     ],
+     "image": null,
+     "simulated": true
+    },
+    "caption": null
+   },
+   "refs": [
+    "src/weather/retry.ts:8",
+    "withRetry (src/weather/retry.ts:21-36)",
+    "src/weather/client.ts:18-58"
+   ],
+   "badges": []
+  }
+ ],
+ "outro": {
+  "startSec": 145,
+  "durationSec": 3,
+  "tagline": "Every change has a story.",
+  "lines": [
+   "example/weather  PR #42",
+   "Made with MergeStory"
+  ]
+ }
+}

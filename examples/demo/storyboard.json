@@ -1,0 +1,643 @@
+{
+  "version": 1,
+  "title": "Retry temporary failures with exponential backoff",
+  "summary": "WeatherClient.getForecast now retries network errors, 429 and 5xx through a new withRetry helper, with full-jitter backoff and support for Retry-After. Other 4xx errors still fail at once.",
+  "style": "hybrid",
+  "language": "en",
+  "scenes": [
+    {
+      "id": "s1",
+      "role": "mission",
+      "title": "The mission",
+      "narration": [
+        {
+          "text": "The weather client now retries temporary failures on its own.",
+          "evidence": ["CM1", "F6", "TASK"]
+        }
+      ],
+      "visual": {
+        "type": "title",
+        "kicker": "feature/retry",
+        "heading": "Retry temporary failures with exponential backoff",
+        "subheading": "weather-client: WeatherClient.getForecast",
+        "chips": ["withRetry", "Retry-After", "WEATHER_RETRIES"]
+      },
+      "visualDescription": "Title card with the name of the change and three key ideas.",
+      "transition": "fade",
+      "targetSeconds": null
+    },
+    {
+      "id": "s2",
+      "role": "mission",
+      "title": "The problem",
+      "narration": [
+        {
+          "text": "When the API is busy, forecasts fail with 429, 503 or a network error. Callers retry by hand.",
+          "evidence": ["TASK"]
+        },
+        {
+          "text": "The task: retry those failures with exponential backoff, and respect Retry-After.",
+          "evidence": ["TASK", "S6"]
+        }
+      ],
+      "visual": {
+        "type": "mission",
+        "problem": "Forecast requests fail with 429, 503 or a network error when the API is busy, and callers retry by hand.",
+        "goal": "Retry temporary failures automatically, and fail fast on everything else.",
+        "points": [
+          {
+            "text": "Exponential backoff with full jitter",
+            "beat": 1
+          },
+          {
+            "text": "Retry-After is respected",
+            "beat": 1
+          },
+          {
+            "text": "Other 4xx errors fail at once",
+            "beat": 1
+          }
+        ]
+      },
+      "visualDescription": "Problem and goal cards, then the three parts of the solution.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s3",
+      "role": "big-picture",
+      "title": "Where the change lives",
+      "narration": [
+        {
+          "text": "The retry loop lives in a new helper, withRetry, so other calls can use it later.",
+          "evidence": ["F6", "S14", "NOTES"]
+        },
+        {
+          "text": "getForecast sends every request through it, and loadConfig reads three new retry settings.",
+          "evidence": ["F3.H3", "S6", "F4.H2", "S8"]
+        }
+      ],
+      "visual": {
+        "type": "architecture",
+        "direction": "LR",
+        "nodes": [
+          {
+            "id": "caller",
+            "label": "Your code",
+            "detail": "getForecast(city)",
+            "kind": "user",
+            "status": "unchanged",
+            "beat": 0,
+            "evidence": ["S6"]
+          },
+          {
+            "id": "client",
+            "label": "WeatherClient",
+            "detail": "src/client.ts",
+            "kind": "module",
+            "status": "modified",
+            "beat": 0,
+            "evidence": ["F3", "S5"]
+          },
+          {
+            "id": "retry",
+            "label": "withRetry",
+            "detail": "src/retry.ts",
+            "kind": "module",
+            "status": "added",
+            "beat": 0,
+            "evidence": ["F6", "S14"]
+          },
+          {
+            "id": "config",
+            "label": "loadConfig",
+            "detail": "WEATHER_RETRIES",
+            "kind": "config",
+            "status": "modified",
+            "beat": 1,
+            "evidence": ["F4.H2", "S8"]
+          },
+          {
+            "id": "api",
+            "label": "Weather API",
+            "detail": "GET /v1/forecast",
+            "kind": "external",
+            "status": "unchanged",
+            "beat": 0,
+            "evidence": ["F3.H3"]
+          }
+        ],
+        "edges": [
+          {
+            "from": "caller",
+            "to": "client",
+            "label": "getForecast()",
+            "status": "unchanged",
+            "beat": 0
+          },
+          {
+            "from": "client",
+            "to": "retry",
+            "label": "every attempt",
+            "status": "added",
+            "beat": 0
+          },
+          {
+            "from": "client",
+            "to": "api",
+            "label": "GET",
+            "status": "unchanged",
+            "beat": 0
+          },
+          {
+            "from": "config",
+            "to": "client",
+            "label": "retry options",
+            "status": "added",
+            "beat": 1
+          }
+        ]
+      },
+      "visualDescription": "The caller, the client, the new retry helper, the config and the weather API, with the new connections highlighted.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s4",
+      "role": "under-the-hood",
+      "title": "The retry loop",
+      "narration": [
+        {
+          "text": "withRetry fills in defaults from DEFAULT_RETRY, then runs the operation in a loop.",
+          "evidence": ["S14", "S10", "F6.H1"]
+        },
+        {
+          "text": "On a final error, or after the last allowed retry, it throws the error.",
+          "evidence": ["S14", "F6.H1"]
+        },
+        {
+          "text": "Otherwise it waits: afterMs if the decision has one, or else backoffDelay.",
+          "evidence": ["S14", "F6.H1"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": {
+          "path": "src/retry.ts",
+          "side": "head",
+          "startLine": 27,
+          "endLine": 43
+        },
+        "mode": "snippet",
+        "focus": [
+          {
+            "startLine": 32,
+            "endLine": 35,
+            "note": "Defaults, then the loop",
+            "beat": 0
+          },
+          {
+            "startLine": 37,
+            "endLine": 38,
+            "note": "Stop on a final error or the last retry",
+            "beat": 1
+          },
+          {
+            "startLine": 39,
+            "endLine": 40,
+            "note": "Wait: afterMs, else backoff",
+            "beat": 2
+          }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The withRetry function, with the loop, the stop rule and the wait highlighted in turn.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s5",
+      "role": "under-the-hood",
+      "title": "The retry policy",
+      "narration": [
+        {
+          "text": "The defaults: three retries, a 250 millisecond base delay and a four second cap.",
+          "evidence": ["S10", "R3", "F6.H1"]
+        },
+        {
+          "text": "isRetryableStatus accepts only 429 and 5xx.",
+          "evidence": ["S12", "F6.H1"]
+        },
+        {
+          "text": "backoffDelay picks a random wait below a limit that doubles each time. That is full jitter.",
+          "evidence": ["S13", "F6.H1", "NOTES"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": {
+          "path": "src/retry.ts",
+          "side": "head",
+          "startLine": 8,
+          "endLine": 25
+        },
+        "mode": "snippet",
+        "focus": [
+          {
+            "startLine": 8,
+            "endLine": 8,
+            "note": "3 retries, 250 ms base, 4 s cap",
+            "beat": 0
+          },
+          {
+            "startLine": 16,
+            "endLine": 19,
+            "note": "Only 429 and 5xx",
+            "beat": 1
+          },
+          {
+            "startLine": 21,
+            "endLine": 25,
+            "note": "Full jitter up to the cap",
+            "beat": 2
+          }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The default retry options, the retryable status check and the jittered backoff.",
+      "transition": "fade",
+      "targetSeconds": null
+    },
+    {
+      "id": "s6",
+      "role": "under-the-hood",
+      "title": "What is retried, and what is not",
+      "narration": [
+        {
+          "text": "retryDecision retries a WeatherError only for 429 and 5xx. A 404 fails at once.",
+          "evidence": ["S4", "F3.H2", "NOTES"]
+        },
+        {
+          "text": "A TypeError means fetch got no response, so it is retried as a network error.",
+          "evidence": ["S4", "F3.H2"]
+        },
+        {
+          "text": "retryAfterMs reads Retry-After, in seconds or as a date. That wait replaces the backoff.",
+          "evidence": ["S3", "F3.H2", "NOTES"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": {
+          "path": "src/client.ts",
+          "side": "head",
+          "startLine": 21,
+          "endLine": 37
+        },
+        "mode": "snippet",
+        "focus": [
+          {
+            "startLine": 31,
+            "endLine": 34,
+            "note": "HTTP errors: only 429 and 5xx",
+            "beat": 0
+          },
+          {
+            "startLine": 35,
+            "endLine": 36,
+            "note": "Network errors: TypeError",
+            "beat": 1
+          },
+          {
+            "startLine": 21,
+            "endLine": 27,
+            "note": "Retry-After as seconds or a date",
+            "beat": 2
+          }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The two new client helpers: the retry decision, then the Retry-After parser.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s7",
+      "role": "before-after",
+      "title": "One request during an outage",
+      "narration": [
+        {
+          "text": "Before, the first failure went straight back to the caller.",
+          "evidence": ["F3.H3"]
+        },
+        {
+          "text": "Now, in the first new test, no response means a backoff wait, and a 503 waits as Retry-After says.",
+          "evidence": ["F7.H1", "F3.H2", "F6.H1"]
+        },
+        {
+          "text": "The third attempt returns the forecast.",
+          "evidence": ["F7.H1", "F3.H3"]
+        }
+      ],
+      "visual": {
+        "type": "flow",
+        "actors": [
+          {
+            "id": "caller",
+            "label": "Your code",
+            "kind": "user"
+          },
+          {
+            "id": "client",
+            "label": "WeatherClient",
+            "kind": "module"
+          },
+          {
+            "id": "api",
+            "label": "Weather API",
+            "kind": "external"
+          }
+        ],
+        "steps": [
+          {
+            "from": "caller",
+            "to": "client",
+            "label": "getForecast('Lisbon')",
+            "detail": null,
+            "kind": "call",
+            "beat": 0,
+            "evidence": ["F7.H1"]
+          },
+          {
+            "from": "client",
+            "to": "api",
+            "label": "GET /v1/forecast",
+            "detail": "attempt 1",
+            "kind": "request",
+            "beat": 0,
+            "evidence": ["F3.H3"]
+          },
+          {
+            "from": "api",
+            "to": "client",
+            "label": "No response",
+            "detail": "TypeError",
+            "kind": "response",
+            "beat": 1,
+            "evidence": ["F7.H1"]
+          },
+          {
+            "from": "client",
+            "to": "api",
+            "label": "Retry after backoff",
+            "detail": "attempt 2",
+            "kind": "request",
+            "beat": 1,
+            "evidence": ["F6.H1"]
+          },
+          {
+            "from": "api",
+            "to": "client",
+            "label": "503 Service Unavailable",
+            "detail": "Retry-After: 0",
+            "kind": "response",
+            "beat": 1,
+            "evidence": ["F7.H1"]
+          },
+          {
+            "from": "client",
+            "to": "api",
+            "label": "Retry after Retry-After",
+            "detail": "attempt 3",
+            "kind": "request",
+            "beat": 2,
+            "evidence": ["F3.H2", "F6.H1"]
+          },
+          {
+            "from": "api",
+            "to": "client",
+            "label": "200 OK",
+            "detail": null,
+            "kind": "response",
+            "beat": 2,
+            "evidence": ["F7.H1"]
+          },
+          {
+            "from": "client",
+            "to": "caller",
+            "label": "Forecast",
+            "detail": null,
+            "kind": "response",
+            "beat": 2,
+            "evidence": ["F7.H1"]
+          }
+        ]
+      },
+      "visualDescription": "A sequence diagram: no response, then a 503, then a forecast on the third attempt.",
+      "transition": "wipe",
+      "targetSeconds": null
+    },
+    {
+      "id": "s8",
+      "role": "review",
+      "title": "What to review",
+      "narration": [
+        {
+          "text": "The timeout applies per attempt, so the worst case grows with every retry.",
+          "evidence": ["NOTES", "F3.H3"]
+        },
+        {
+          "text": "A long Retry-After is used as sent, without the maxDelayMs cap.",
+          "evidence": ["NOTES", "F6.H1"]
+        },
+        {
+          "text": "Timeouts are not retried, but any TypeError is, even one from a bug.",
+          "evidence": ["NOTES", "S4", "F3.H2"]
+        },
+        {
+          "text": "And WeatherError and WeatherConfig changed shape, so check the callers.",
+          "evidence": ["R1", "S2", "S7"]
+        }
+      ],
+      "visual": {
+        "type": "checklist",
+        "items": [
+          {
+            "title": "Timeout is per attempt",
+            "detail": "Each attempt waits up to WEATHER_TIMEOUT_MS, so the worst case grows with every retry.",
+            "severity": "medium",
+            "ref": {
+              "path": "src/client.ts",
+              "side": "head",
+              "startLine": 50,
+              "endLine": 53
+            },
+            "evidence": ["NOTES", "F3.H3"],
+            "beat": 0
+          },
+          {
+            "title": "Retry-After is not capped",
+            "detail": "A long Retry-After is used as sent. maxDelayMs only caps the backoff.",
+            "severity": "medium",
+            "ref": {
+              "path": "src/retry.ts",
+              "side": "head",
+              "startLine": 39,
+              "endLine": 40
+            },
+            "evidence": ["NOTES", "F6.H1"],
+            "beat": 1
+          },
+          {
+            "title": "Timeouts are not retried",
+            "detail": "A timed-out attempt fails at once. Confirm that is what callers want.",
+            "severity": "low",
+            "ref": {
+              "path": "src/client.ts",
+              "side": "head",
+              "startLine": 35,
+              "endLine": 36
+            },
+            "evidence": ["NOTES", "S4"],
+            "beat": 2
+          },
+          {
+            "title": "Any TypeError counts as a network error",
+            "detail": "retryDecision retries every TypeError, including one thrown by a bug.",
+            "severity": "low",
+            "ref": {
+              "path": "src/client.ts",
+              "side": "head",
+              "startLine": 35,
+              "endLine": 36
+            },
+            "evidence": ["F3.H2", "S4"],
+            "beat": 2
+          },
+          {
+            "title": "Two signatures changed",
+            "detail": "WeatherError takes an optional retryAfterMs. WeatherConfig gains the retry options.",
+            "severity": "low",
+            "ref": {
+              "path": "src/client.ts",
+              "side": "head",
+              "startLine": 10,
+              "endLine": 18
+            },
+            "evidence": ["R1", "S2", "S7"],
+            "beat": 3
+          }
+        ]
+      },
+      "visualDescription": "Five review items with severity and code references.",
+      "transition": "fade",
+      "targetSeconds": null
+    },
+    {
+      "id": "s9",
+      "role": "conclusion",
+      "title": "Wrap up",
+      "narration": [
+        {
+          "text": "Temporary failures now retry with jittered backoff. Other 4xx errors fail at once.",
+          "evidence": ["S6", "S4", "F6.H1"]
+        },
+        {
+          "text": "The coding agent reports that npm test passed.",
+          "evidence": ["T1", "F7.H1"]
+        }
+      ],
+      "visual": {
+        "type": "summary",
+        "points": [
+          {
+            "text": "Network errors, 429 and 5xx are retried",
+            "beat": 0
+          },
+          {
+            "text": "Full-jitter backoff, Retry-After first",
+            "beat": 0
+          },
+          {
+            "text": "Other 4xx errors fail at once",
+            "beat": 0
+          },
+          {
+            "text": "New tests for the retry rules",
+            "beat": 1
+          }
+        ],
+        "closing": "Review the timeout and Retry-After behaviour first."
+      },
+      "visualDescription": "A short summary and what to review first.",
+      "transition": "fade",
+      "targetSeconds": null
+    }
+  ],
+  "reviewChecklist": [
+    {
+      "title": "Timeout is per attempt",
+      "detail": "Each attempt waits up to WEATHER_TIMEOUT_MS, so the worst case grows with every retry.",
+      "severity": "medium",
+      "ref": {
+        "path": "src/client.ts",
+        "side": "head",
+        "startLine": 50,
+        "endLine": 53
+      },
+      "evidence": ["NOTES", "F3.H3"]
+    },
+    {
+      "title": "Retry-After is not capped",
+      "detail": "A long Retry-After is used as sent. maxDelayMs only caps the backoff.",
+      "severity": "medium",
+      "ref": {
+        "path": "src/retry.ts",
+        "side": "head",
+        "startLine": 39,
+        "endLine": 40
+      },
+      "evidence": ["NOTES", "F6.H1"]
+    },
+    {
+      "title": "Timeouts are not retried",
+      "detail": "A timed-out attempt fails at once. Confirm that is what callers want.",
+      "severity": "low",
+      "ref": {
+        "path": "src/client.ts",
+        "side": "head",
+        "startLine": 35,
+        "endLine": 36
+      },
+      "evidence": ["NOTES", "S4"]
+    },
+    {
+      "title": "Any TypeError counts as a network error",
+      "detail": "retryDecision retries every TypeError, including one thrown by a bug.",
+      "severity": "low",
+      "ref": {
+        "path": "src/client.ts",
+        "side": "head",
+        "startLine": 35,
+        "endLine": 36
+      },
+      "evidence": ["F3.H2", "S4"]
+    },
+    {
+      "title": "Two signatures changed",
+      "detail": "WeatherError takes an optional retryAfterMs. WeatherConfig gains the retry options.",
+      "severity": "low",
+      "ref": {
+        "path": "src/client.ts",
+        "side": "head",
+        "startLine": 10,
+        "endLine": 18
+      },
+      "evidence": ["R1", "S2", "S7"]
+    }
+  ],
+  "uncertainties": [
+    "The change does not show how long a Retry-After from the weather API can be; check the API documentation.",
+    "The worst-case time per forecast depends on WEATHER_TIMEOUT_MS and the retry settings; it is not measured here."
+  ]
+}

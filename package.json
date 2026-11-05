@@ -1,0 +1,24 @@
+{
+  "name": "mergestory-monorepo",
+  "private": true,
+  "type": "module",
+  "description": "MergeStory: every change has a story.",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w mergestory",
+    "test": "npm test -w mergestory",
+    "typecheck": "npm run typecheck -w mergestory",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

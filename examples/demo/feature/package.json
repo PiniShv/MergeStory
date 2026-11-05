@@ -1,0 +1,13 @@
+{
+  "name": "weather-client",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "A small client for a weather API.",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}

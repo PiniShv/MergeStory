@@ -1,0 +1,23 @@
+{
+  "name": "mergestory",
+  "owner": {
+    "name": "MergeStory"
+  },
+  "metadata": {
+    "description": "MergeStory: turn a pull request into a short, accurate, narrated video walkthrough.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "mergestory",
+      "source": "./",
+      "strict": false,
+      "description": "Explain a pull request as a short narrated video for reviewers.",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "category": "development",
+      "tags": ["pull-request", "code-review", "video"],
+      "skills": ["./skills/mergestory"]
+    }
+  ]
+}

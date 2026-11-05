@@ -1,0 +1,76 @@
+{
+  "name": "mergestory",
+  "version": "1.0.0",
+  "description": "Turn a pull request into a short, accurate, narrated video walkthrough. Every change has a story.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PiniShv/MergeStory.git",
+    "directory": "packages/engine"
+  },
+  "homepage": "https://github.com/PiniShv/MergeStory#readme",
+  "bugs": {
+    "url": "https://github.com/PiniShv/MergeStory/issues"
+  },
+  "type": "module",
+  "keywords": [
+    "pull-request",
+    "code-review",
+    "video",
+    "explainer",
+    "ai",
+    "agent-skills",
+    "github"
+  ],
+  "bin": {
+    "mergestory": "./dist/cli/main.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "assets",
+    "!dist/**/*.map",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.build.json && node scripts/build-runtime.mjs",
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p src/runtime/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "node src/cli/main.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.4.0",
+    "@aws-sdk/client-s3": "3.1161.0",
+    "@aws-sdk/lib-storage": "3.1161.0",
+    "@aws-sdk/s3-request-presigner": "3.1161.0",
+    "@dagrejs/dagre": "3.1.3",
+    "@fontsource/inter": "5.3.0",
+    "@fontsource/jetbrains-mono": "5.3.0",
+    "commander": "15.0.0",
+    "playwright-core": "1.64.1",
+    "shiki": "4.6.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "aws-sdk-client-mock": "4.1.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}
