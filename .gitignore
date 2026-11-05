@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Local MergeStory output (contains code excerpts, audio and video)
+.mergestory/
+mergestory-output/
+*.mp4
+*.wav
+*.aiff
+# The demo video that the README and the project site show
+!docs/demo/video.mp4
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example

@@ -1,0 +1,8 @@
+- Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.
+- Backoff uses "full jitter": a random wait between 0 and min(maxDelayMs, baseDelayMs * 2^attempt). This spreads retries out when many clients fail at once.
+- If the API sends Retry-After, in seconds or as an HTTP date, that wait is used instead of the computed backoff.
+- Only network errors, 429 and 5xx are retried. Other 4xx errors such as 400 or 404 fail at once.
+- A timeout is not retried: AbortSignal.timeout rejects with a TimeoutError, not a TypeError, and that attempt has already waited the full timeout.
+- getForecast is a GET with no side effects, so sending it again is safe.
+- WEATHER_RETRIES, WEATHER_BASE_DELAY_MS and WEATHER_MAX_DELAY_MS configure the retries (defaults 3, 250 and 4000).
+- Worth a careful review: the timeout applies per attempt, so the worst-case total time grows with retries; and a long Retry-After is used as sent, without the maxDelayMs cap.

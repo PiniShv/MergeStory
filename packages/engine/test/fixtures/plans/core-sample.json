@@ -1,0 +1,597 @@
+{
+  "version": 1,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationSec": 44.06,
+  "theme": "dark",
+  "meta": {
+    "title": "Add retry with exponential backoff to the weather client",
+    "repoLabel": "example/weather",
+    "changeLabel": "PR #418",
+    "headShort": "3f9c2ab",
+    "stats": {
+      "files": 13,
+      "additions": 479,
+      "deletions": 30
+    },
+    "engineVersion": "0.1.0"
+  },
+  "captions": {
+    "enabled": true,
+    "cues": [
+      {
+        "startSec": 0.7,
+        "endSec": 2.86,
+        "text": "Retries with backoff for the weather client."
+      },
+      {
+        "startSec": 3.04,
+        "endSec": 4.92,
+        "text": "Short outages no longer fail weather."
+      },
+      {
+        "startSec": 6.5,
+        "endSec": 8.38,
+        "text": "Short outages used to fail weather."
+      },
+      {
+        "startSec": 8.56,
+        "endSec": 10.72,
+        "text": "Now safe calls retry, with growing pauses."
+      },
+      {
+        "startSec": 10.9,
+        "endSec": 13.06,
+        "text": "Only temporary failures, up to four tries."
+      },
+      {
+        "startSec": 13.86,
+        "endSec": 15.74,
+        "text": "Most changes are in the client."
+      },
+      {
+        "startSec": 15.92,
+        "endSec": 17.8,
+        "text": "New retry code comes with tests."
+      },
+      {
+        "startSec": 19.26,
+        "endSec": 21.14,
+        "text": "A call times out or fails."
+      },
+      {
+        "startSec": 21.32,
+        "endSec": 22.92,
+        "text": "The client waits, then retries."
+      },
+      {
+        "startSec": 23.1,
+        "endSec": 24.42,
+        "text": "Jitter spreads retries apart."
+      },
+      {
+        "startSec": 24.6,
+        "endSec": 26.2,
+        "text": "The last error is raised."
+      },
+      {
+        "startSec": 27,
+        "endSec": 28.6,
+        "text": "First, are only temporary failures retried?"
+      },
+      {
+        "startSec": 28.78,
+        "endSec": 30.1,
+        "text": "Next, the worst-case delay."
+      },
+      {
+        "startSec": 30.28,
+        "endSec": 31.88,
+        "text": "Tests fix the random source."
+      },
+      {
+        "startSec": 32.06,
+        "endSec": 33.1,
+        "text": "Limits are configurable."
+      },
+      {
+        "startSec": 33.9,
+        "endSec": 35.78,
+        "text": "Calls retry up to four times."
+      },
+      {
+        "startSec": 35.96,
+        "endSec": 37.28,
+        "text": "Delays grow, with jitter."
+      },
+      {
+        "startSec": 37.46,
+        "endSec": 38.78,
+        "text": "Only temporary failures retry."
+      },
+      {
+        "startSec": 38.96,
+        "endSec": 40.56,
+        "text": "Outages no longer fail weather."
+      }
+    ]
+  },
+  "chapters": [
+    {
+      "title": "The change",
+      "startSec": 0
+    },
+    {
+      "title": "The mission",
+      "startSec": 5.8
+    },
+    {
+      "title": "What changed",
+      "startSec": 13.16
+    },
+    {
+      "title": "How retries work",
+      "startSec": 18.56
+    },
+    {
+      "title": "What to review",
+      "startSec": 26.3
+    },
+    {
+      "title": "Takeaways",
+      "startSec": 33.2
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1",
+      "role": "mission",
+      "title": "The change",
+      "startSec": 0,
+      "durationSec": 6.4,
+      "transitionIn": {
+        "type": "fade",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 0.7,
+          "durationSec": 2.16,
+          "text": "Retries with backoff for the weather client."
+        },
+        {
+          "index": 1,
+          "startSec": 3.04,
+          "durationSec": 1.88,
+          "text": "Short outages no longer fail weather."
+        }
+      ],
+      "visual": {
+        "type": "title",
+        "kicker": "Pull request #418",
+        "heading": "Add retry with exponential backoff to the weather client",
+        "subheading": "Short gateway errors no longer fail a forecast on the first try.",
+        "chips": [
+          "weather-client",
+          "resilience",
+          "tests"
+        ]
+      },
+      "refs": [],
+      "badges": []
+    },
+    {
+      "id": "s2",
+      "role": "mission",
+      "title": "The mission",
+      "startSec": 5.8,
+      "durationSec": 7.96,
+      "transitionIn": {
+        "type": "fade",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 6.5,
+          "durationSec": 1.88,
+          "text": "Short outages used to fail weather."
+        },
+        {
+          "index": 1,
+          "startSec": 8.56,
+          "durationSec": 2.16,
+          "text": "Now safe calls retry, with growing pauses."
+        },
+        {
+          "index": 2,
+          "startSec": 10.9,
+          "durationSec": 2.16,
+          "text": "Only temporary failures, up to four tries."
+        }
+      ],
+      "visual": {
+        "type": "mission",
+        "problem": "A single short gateway error failed the whole forecast on the very first try.",
+        "goal": "Retry safe calls a few times, with growing pauses, and then give up with a clear error.",
+        "points": [
+          {
+            "text": "Only temporary failures are retried",
+            "beat": 2
+          },
+          {
+            "text": "After four tries, the original error is raised",
+            "beat": 2
+          }
+        ]
+      },
+      "refs": [],
+      "badges": []
+    },
+    {
+      "id": "s3",
+      "role": "big-picture",
+      "title": "What changed",
+      "startSec": 13.16,
+      "durationSec": 6,
+      "transitionIn": {
+        "type": "slide",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 13.86,
+          "durationSec": 1.88,
+          "text": "Most changes are in the client."
+        },
+        {
+          "index": 1,
+          "startSec": 15.92,
+          "durationSec": 1.88,
+          "text": "New retry code comes with tests."
+        }
+      ],
+      "visual": {
+        "type": "files",
+        "caption": "Grouped by component. Highlighted files carry the core change.",
+        "totals": {
+          "files": 13,
+          "additions": 479,
+          "deletions": 30
+        },
+        "groups": [
+          {
+            "component": "Weather client",
+            "files": [
+              {
+                "path": "src/weather/client.ts",
+                "status": "modified",
+                "additions": 58,
+                "deletions": 11,
+                "highlighted": true,
+                "trivial": false
+              },
+              {
+                "path": "src/weather/retry.ts",
+                "status": "added",
+                "additions": 96,
+                "deletions": 0,
+                "highlighted": true,
+                "trivial": false
+              },
+              {
+                "path": "src/weather/backoff.ts",
+                "status": "added",
+                "additions": 37,
+                "deletions": 0,
+                "highlighted": true,
+                "trivial": false
+              },
+              {
+                "path": "src/weather/errors.ts",
+                "status": "modified",
+                "additions": 14,
+                "deletions": 2,
+                "highlighted": false,
+                "trivial": false
+              }
+            ]
+          },
+          {
+            "component": "Config",
+            "files": [
+              {
+                "path": "src/config/defaults.ts",
+                "status": "modified",
+                "additions": 9,
+                "deletions": 3,
+                "highlighted": false,
+                "trivial": false
+              }
+            ]
+          },
+          {
+            "component": "Tests",
+            "files": [
+              {
+                "path": "test/weather/retry.test.ts",
+                "status": "added",
+                "additions": 112,
+                "deletions": 0,
+                "highlighted": false,
+                "trivial": false
+              },
+              {
+                "path": "test/weather/client.test.ts",
+                "status": "modified",
+                "additions": 41,
+                "deletions": 6,
+                "highlighted": false,
+                "trivial": false
+              },
+              {
+                "path": "test/weather/backoff.test.ts",
+                "status": "added",
+                "additions": 46,
+                "deletions": 0,
+                "highlighted": false,
+                "trivial": false
+              }
+            ]
+          },
+          {
+            "component": "Docs",
+            "files": [
+              {
+                "path": "docs/retries.md",
+                "status": "added",
+                "additions": 34,
+                "deletions": 0,
+                "highlighted": false,
+                "trivial": false
+              },
+              {
+                "path": "CHANGELOG.md",
+                "status": "modified",
+                "additions": 6,
+                "deletions": 0,
+                "highlighted": false,
+                "trivial": true
+              },
+              {
+                "path": "package-lock.json",
+                "status": "modified",
+                "additions": 2,
+                "deletions": 2,
+                "highlighted": false,
+                "trivial": true
+              }
+            ]
+          }
+        ],
+        "hiddenCount": 2
+      },
+      "refs": [
+        "src/weather/retry.ts",
+        "src/weather/client.ts"
+      ],
+      "badges": []
+    },
+    {
+      "id": "s4",
+      "role": "under-the-hood",
+      "title": "How retries work",
+      "startSec": 18.56,
+      "durationSec": 8.34,
+      "transitionIn": {
+        "type": "slide",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 19.26,
+          "durationSec": 1.88,
+          "text": "A call times out or fails."
+        },
+        {
+          "index": 1,
+          "startSec": 21.32,
+          "durationSec": 1.6,
+          "text": "The client waits, then retries."
+        },
+        {
+          "index": 2,
+          "startSec": 23.1,
+          "durationSec": 1.32,
+          "text": "Jitter spreads retries apart."
+        },
+        {
+          "index": 3,
+          "startSec": 24.6,
+          "durationSec": 1.6,
+          "text": "The last error is raised."
+        }
+      ],
+      "visual": {
+        "type": "bullets",
+        "heading": "How a failed call is retried",
+        "items": [
+          {
+            "text": "A call fails with a timeout or a 5xx response",
+            "beat": 0
+          },
+          {
+            "text": "The client waits, then tries again; each wait is twice as long",
+            "beat": 1
+          },
+          {
+            "text": "Random jitter keeps many clients from retrying together",
+            "beat": 2
+          },
+          {
+            "text": "After the fourth try, the original error is raised",
+            "beat": 3
+          }
+        ]
+      },
+      "refs": [
+        "src/weather/retry.ts:12-48",
+        "src/weather/backoff.ts:5-22"
+      ],
+      "badges": []
+    },
+    {
+      "id": "s5",
+      "role": "review",
+      "title": "What to review",
+      "startSec": 26.3,
+      "durationSec": 7.5,
+      "transitionIn": {
+        "type": "fade",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 27,
+          "durationSec": 1.6,
+          "text": "First, are only temporary failures retried?"
+        },
+        {
+          "index": 1,
+          "startSec": 28.78,
+          "durationSec": 1.32,
+          "text": "Next, the worst-case delay."
+        },
+        {
+          "index": 2,
+          "startSec": 30.28,
+          "durationSec": 1.6,
+          "text": "Tests fix the random source."
+        },
+        {
+          "index": 3,
+          "startSec": 32.06,
+          "durationSec": 1.04,
+          "text": "Limits are configurable."
+        }
+      ],
+      "visual": {
+        "type": "checklist",
+        "items": [
+          {
+            "title": "Only temporary failures are retried",
+            "detail": "Confirm that GET /forecast is never retried after a 4xx answer.",
+            "severity": "high",
+            "refLabel": "src/weather/client.ts:88-112",
+            "beat": 0
+          },
+          {
+            "title": "Worst-case added latency",
+            "detail": "Four tries wait about 6 seconds in total. Check that this fits the caller timeout.",
+            "severity": "medium",
+            "refLabel": "src/weather/backoff.ts:5-22",
+            "beat": 1
+          },
+          {
+            "title": "Fixed random source in tests",
+            "detail": "Tests replace the jitter source with a fixed value, so timing stays stable.",
+            "severity": "low",
+            "refLabel": "test/weather/retry.test.ts:14-30",
+            "beat": 2
+          },
+          {
+            "title": "Retry limits are configurable",
+            "detail": "Defaults live in one place and can change without a code release.",
+            "severity": "info",
+            "refLabel": "src/config/defaults.ts:21-34",
+            "beat": 3
+          }
+        ]
+      },
+      "refs": [
+        "src/weather/client.ts:88-112",
+        "src/weather/backoff.ts:5-22",
+        "test/weather/retry.test.ts:14-30"
+      ],
+      "badges": []
+    },
+    {
+      "id": "s6",
+      "role": "conclusion",
+      "title": "Takeaways",
+      "startSec": 33.2,
+      "durationSec": 8.06,
+      "transitionIn": {
+        "type": "fade",
+        "durationSec": 0.6
+      },
+      "beats": [
+        {
+          "index": 0,
+          "startSec": 33.9,
+          "durationSec": 1.88,
+          "text": "Calls retry up to four times."
+        },
+        {
+          "index": 1,
+          "startSec": 35.96,
+          "durationSec": 1.32,
+          "text": "Delays grow, with jitter."
+        },
+        {
+          "index": 2,
+          "startSec": 37.46,
+          "durationSec": 1.32,
+          "text": "Only temporary failures retry."
+        },
+        {
+          "index": 3,
+          "startSec": 38.96,
+          "durationSec": 1.6,
+          "text": "Outages no longer fail weather."
+        }
+      ],
+      "visual": {
+        "type": "summary",
+        "points": [
+          {
+            "text": "Failed calls retry up to four times",
+            "beat": 0
+          },
+          {
+            "text": "Delays grow with jitter, capped at five seconds",
+            "beat": 1
+          },
+          {
+            "text": "Only temporary failures are retried (128 tests passed, as reported)",
+            "beat": 2
+          }
+        ],
+        "closing": "A short outage no longer fails a forecast."
+      },
+      "refs": [],
+      "badges": [
+        {
+          "kind": "reported",
+          "text": "Reported by caller"
+        }
+      ]
+    }
+  ],
+  "outro": {
+    "startSec": 40.66,
+    "durationSec": 3.4,
+    "tagline": "Every change has a story.",
+    "lines": [
+      "example/weather",
+      "PR #418",
+      "Commit 3f9c2ab",
+      "This video explains the change. It does not replace code review."
+    ]
+  }
+}
