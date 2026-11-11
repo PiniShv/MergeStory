@@ -5,7 +5,7 @@ MergeStory has two parts with a hard boundary between them:
 | Part | Where | Role |
 |---|---|---|
 | **Engine** | `packages/engine` (npm package `mergestory`) | The product. Analysis, storyboard, grounding, narration, visuals, rendering, publishing, GitHub integration. Exposed as a CLI, an HTTP API and a library. |
-| **Agent Skill** | `skills/mergestory` | An adapter for coding agents. It gathers context the agent knows, calls the engine CLI, and reports the result. It holds no video logic. |
+| **Agent Skill** | `plugins/mergestory/skills/mergestory` | An adapter for coding agents. It gathers context the agent knows, calls the engine CLI, and reports the result. It holds no video logic. |
 
 The engine works without the skill. GitHub Actions, other tools and people call the same CLI or API.
 
@@ -348,7 +348,7 @@ packages/engine/
   src/cli/         command-line interface
   src/doctor/      the checks of `mergestory doctor`, one file for each part of the setup
   src/testing/     fixtures shared by tests (not part of the build)
-skills/mergestory/ Agent Skill (SKILL.md + references)
+plugins/mergestory/ Claude Code plugin: its manifest and the Agent Skill (SKILL.md + references)
 docs/              documentation
 examples/          demo repository script, example storyboard and GitHub Actions workflow
 ```

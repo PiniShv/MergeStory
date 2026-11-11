@@ -44,8 +44,8 @@ reproduce. For a larger change, open an issue first so we can agree on the idea.
 ## Where things live
 
 See [docs/architecture.md](docs/architecture.md). In short: the engine is `packages/engine`, the
-Agent Skill is `skills/mergestory`, and shared types and contracts are in
-`packages/engine/src/core`. Change contracts in `src/core` with care: every module depends on them.
+Agent Skill is `plugins/mergestory/skills/mergestory` (the Claude Code plugin is the folder
+`plugins/mergestory`), and shared types and contracts are in `packages/engine/src/core`. Change contracts in `src/core` with care: every module depends on them.
 The user documentation is in `docs/`, and the main page is the [README](README.md).
 
 ## Working on visuals
@@ -73,7 +73,7 @@ that describes it:
 
 | If you change | Update |
 |---|---|
-| a command or a flag | [docs/cli.md](docs/cli.md) and the skill in `skills/mergestory` |
+| a command or a flag | [docs/cli.md](docs/cli.md) and the skill in `plugins/mergestory/skills/mergestory` |
 | a setting or an environment variable | [docs/configuration.md](docs/configuration.md) |
 | the storyboard format or its checks | [docs/storyboard.md](docs/storyboard.md) |
 | the HTTP API or the library exports | [docs/api.md](docs/api.md) |

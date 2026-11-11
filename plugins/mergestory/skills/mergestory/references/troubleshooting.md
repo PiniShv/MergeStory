@@ -68,13 +68,18 @@ work, or check `--base` and `--head`.
 - 404 on a private repository: set `GITHUB_TOKEN` (or run `gh auth login`). Without a token only
   public repositories work, with 60 requests per hour.
 - Rate limited: wait until the reset time in the hint, or use a token.
-- A pull request on another host: environment tokens are only sent to api.github.com or to the host
-  in `github.apiUrl`. Log in to that host with `gh auth login --hostname <host>`.
+- A pull request on a GitHub Enterprise host: environment tokens are only sent to api.github.com or to
+  the host in `github.apiUrl`. Log in to that host with `gh auth login --hostname <host>`.
+- "Not a pull request reference" for a link to Bitbucket, GitLab or another host: MergeStory reads pull
+  requests from GitHub only. Use the local repository path (`.`) with `--base <branch>` instead.
 
 ## Rendering problems
 
-- FFmpeg or the browser is missing (exit code 6): install FFmpeg, and Google Chrome or
-  `npx playwright install chromium-headless-shell`, or set `MERGESTORY_BROWSER_PATH`.
+- FFmpeg is missing (exit code 6): ask the user, then install it (macOS with Homebrew:
+  `brew install ffmpeg`; Debian or Ubuntu: `sudo apt-get install -y ffmpeg`; Windows:
+  `winget install --id Gyan.FFmpeg -e`), or set `MERGESTORY_FFMPEG_PATH` and `MERGESTORY_FFPROBE_PATH`.
+- The browser is missing (exit code 6): the user installs Google Chrome, or runs
+  `npx playwright install chromium-headless-shell`, or sets `MERGESTORY_BROWSER_PATH`.
 - A render is slow on a small machine: use `--quality draft`.
 - The first English run takes a few minutes longer: it installs the free Kokoro voice once (about
   400 MB, then the voice model). No action is needed. Without network access, use `--tts none`.
@@ -105,5 +110,5 @@ work, or check `--base` and `--head`.
 ## Network errors in a sandbox
 
 Some agents block network access by default. Tell the user which host to allow instead of retrying:
-the GitHub API (`api.github.com`), the npm registry (for `npx`, and once for the Kokoro voice
-packages), the storage endpoint, and `huggingface.co` once for the Kokoro voice model.
+the GitHub API (`api.github.com`), the npm registry (to install the engine, and once for the Kokoro
+voice packages), the storage endpoint, and `huggingface.co` once for the Kokoro voice model.
