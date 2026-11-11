@@ -140,6 +140,8 @@ export async function isInWorkFolder(path: string, work: string): Promise<boolea
   if (inside(resolve(work), resolve(path)) || inside(root, target)) return true;
   // A folder can have a second name that no path shows (another mount point, for example), so the
   // part of the path that exists is also compared by what it is on disk.
+  // shortcut: two separate mounts of one network share have different device numbers and count as
+  // two folders; upgrade to a token file in the work folder if that setup has to be covered.
   const workIdentity = await diskIdentity(work);
   if (workIdentity === null) return false;
   for (let dir = target; ; dir = dirname(dir)) {
