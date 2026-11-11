@@ -38,6 +38,8 @@ All notable changes to MergeStory are listed here, newest first.
 - The message for missing FFmpeg now has the install command for Windows.
 - The result of a finished run has `elapsedSec`, the time the run took. `generate` prints it as
   "Made in 1m 32s". Results from 1.0.0 do not have it, and `publish` still works with them.
+- The authoring guide (`AUTHORING.md`) now shows one example of every visual with all its fields, so a
+  storyboard is right in fewer tries.
 - New `mergestory runs` command: lists the videos on this machine. `mergestory runs delete <run-id>`
   deletes the folder of a run. It only deletes real run folders under the runs folder.
 
