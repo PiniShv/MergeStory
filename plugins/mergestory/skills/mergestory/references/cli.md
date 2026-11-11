@@ -6,9 +6,27 @@ MergeStory repository.
 
 ## Commands you will use
 
+These run without a question:
+
 | Command | What it does |
 |---|---|
 | `mergestory doctor --json` | Checks Node, git, FFmpeg, the browser, speech, LLM, GitHub access, publishing and disk space. Each check has `status` (pass, warn, fail) and a `fix`. Exit code 1 when a check fails. |
+| `mergestory agent analyze [source] --name <name> [--base <ref>] [--head <ref>] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into the work folder `~/.mergestory/work/<name>`, and prints it as `workDir`. Reads `task.md`, `notes.md` and `tests.json` from that folder. Free. |
+| `mergestory agent validate [source] --name <name> --json` | Checks `storyboard.json` in the work folder against the change, without rendering. Exit code 3 when it has errors. |
+| `mergestory agent render [source] --name <name> [flags] --json` | Makes the video on this machine from `storyboard.json` in the work folder. Never calls a model or a paid voice, never uploads and never comments. |
+
+For the `agent` commands, leave `[source]` out to explain the current branch, or give a pull request
+of this repository: its repository must be a git remote of the current folder, on GitHub. Anything
+else is refused with exit code 2. Give the same source, `--base` and `--head` to all three.
+`agent render` takes `--quality`, `--duration`, `--max-duration`, `--language`, `--theme`, `--style`,
+`--tts` (`auto`, `kokoro`, `say` or `none`), `--voice`, `--dry-run`, `--no-cache` and `--no-captions`.
+The agent commands refuse every flag that names a file, a folder, a model, a storage or a host.
+
+The user is asked to approve these. Use them for a pull request of another repository, a repository
+in another folder, or publishing:
+
+| Command | What it does |
+|---|---|
 | `mergestory analyze <source> --out <dir> [context flags] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into `<dir>`. Free. |
 | `mergestory validate <storyboard.json> <source> [context flags] --json` | Checks a storyboard against the change without rendering. Exit code 3 when it has errors. |
 | `mergestory generate <source> [context flags] [--storyboard <file>] --json` | Makes the video. Without `--storyboard` the engine writes the storyboard itself (offline, or with the configured LLM). |
@@ -23,8 +41,10 @@ are included.
 
 ## Context flags (analyze, validate and generate)
 
-Pass the same context flags to all three, so the evidence ids (TASK, NOTES, T1, SS1) match. If you
-pass `--duration`, `--max-duration` or `--language` to `generate`, pass the same to `validate`.
+The `agent` commands take no context flags: they read `task.md`, `notes.md` and `tests.json` from
+the work folder. For the other commands, pass the same context flags to all three, so the evidence
+ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or `--language` to
+`generate`, pass the same to `validate`.
 
 | Flag | Meaning |
 |---|---|
@@ -95,7 +115,7 @@ Failure (any command): `{ "ok": false, "error": { "code": "GROUNDING_FAILED", "m
 | 0 | Success | Report the result. |
 | 1 | Rendering or internal error, or `doctor` found a failed check | Show the message; retry once with `--quality draft`. |
 | 2 | Usage, config or source problem | Fix the command, the path or the ref. |
-| 3 | Storyboard failed validation | Read `errors` (from `validate`) or `error.details.errors` (from `generate`), fix the storyboard, validate again. |
+| 3 | Storyboard failed validation | Read `errors` (from `validate` or `agent validate`) or `error.details.errors` (from `generate` or `agent render`), fix the storyboard, validate again. |
 | 4 | Budget would be exceeded | Tell the user. Do not raise `--budget` on your own. |
 | 5 | A service failed (GitHub, LLM, speech, upload) | Read the hint; network or credentials are the usual cause. With `ok: true`, the video is published but the pull request was not updated (`--comment` or `--update-description`). |
 | 6 | FFmpeg or the browser is missing | For FFmpeg, ask the user and install it (see the skill, section 1). For the browser, show the hint. |

@@ -2,6 +2,18 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Skill and plugin 1.1.0
+
+The Agent Skill and the Claude Code plugin. They need engine 1.1.0.
+
+- The skill now uses the `mergestory agent` commands. After the one approval of the skill itself, Claude
+  Code asks no further question for a video of the repository you are in: these commands explain only
+  that repository, keep their files in one work folder and render on your machine.
+- A pull request of another repository, a repository in another folder and every upload still need your
+  approval.
+- The skill reads its own reference files without a question.
+- The skill installs `mergestory@1.1.0`, and the example GitHub Actions workflow runs that version.
+
 ## 1.1.0
 
 ### Safer with coding agents
