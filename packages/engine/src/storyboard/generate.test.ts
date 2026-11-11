@@ -8,11 +8,11 @@ import { MergeStoryError } from '../core/errors.ts';
 import { silentLogger } from '../core/logger.ts';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
-import { STORYBOARD_LIMITS, StoryboardSchema } from '../core/storyboard-schema.ts';
+import { STORYBOARD_LIMITS, StoryboardSchema, VisualSchema } from '../core/storyboard-schema.ts';
 import { countWords } from '../core/text.ts';
 import { testContext } from '../testing/context.ts';
 import { type Fixture, retryFixture } from '../testing/storyboard-fixtures.ts';
-import { AUTHORING_GUIDE, EXAMPLE_STORYBOARD } from './authoring.ts';
+import { AUTHORING_GUIDE, EXAMPLE_STORYBOARD, VISUAL_SHAPES } from './authoring.ts';
 import { estimateStoryboardCost, generateStoryboard } from './generate.ts';
 import { buildSystemPrompt, buildUserPrompt, sceneRange } from './prompts.ts';
 import { validateStoryboard } from './validate.ts';
@@ -120,6 +120,15 @@ describe('authoring guide', () => {
     const parsed = JSON.parse(block![1]!) as unknown;
     expect(parsed).toEqual(EXAMPLE_STORYBOARD);
     expect(StoryboardSchema.safeParse(parsed).success).toBe(true);
+  });
+
+  it('shows the exact fields of every visual', () => {
+    expect(new Set(VISUAL_SHAPES.map((shape) => shape.type)).size).toBe(VisualSchema.options.length);
+    for (const shape of VISUAL_SHAPES) {
+      // Parsing drops a field the schema does not know, so an equal result means every name is right.
+      expect(VisualSchema.parse(shape), shape.type).toEqual(shape);
+      expect(AUTHORING_GUIDE).toContain(JSON.stringify(shape));
+    }
   });
 
   it('shows an example that the grounding validator accepts as it is', async () => {
