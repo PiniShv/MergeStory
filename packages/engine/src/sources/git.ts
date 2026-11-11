@@ -9,7 +9,8 @@
  * The settings of a repository can also name programs (a filter, for example). Those of a normal
  * clone are the user's own. A repository that sits in a checked-out folder brings settings that
  * someone else wrote, so git only runs in a repository that a `.git` entry names: git never
- * checks out an entry with that name.
+ * checks out an entry with that name. It never runs in a repository in the work folder either,
+ * where a coding agent may write without asking.
  */
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -17,6 +18,7 @@ import { gitEnvironment } from '../core/child-env.ts';
 import { Semaphore } from '../core/concurrency.ts';
 import type { RunContext } from '../core/context.ts';
 import { CommandNotFoundError, MergeStoryError, OutputTooLargeError, TimedOutError } from '../core/errors.ts';
+import { isInWorkFolder } from '../core/paths.ts';
 import { findProgram, type RunResult, runCommand } from '../core/process.ts';
 
 /** Settings that make output stable, and stop git running programs named in configuration. */
@@ -68,7 +70,8 @@ async function isNamedByDotGit(start: string, gitDir: string): Promise<boolean> 
     if (info?.isDirectory()) {
       named = entry;
     } else if (info?.isFile() && info.size < 1024 * 1024) {
-      const target = /^gitdir: (.+)$/m.exec(await readFile(entry, 'utf8'))?.[1]?.trim();
+      const text = await readFile(entry, 'utf8').catch(() => '');
+      const target = /^gitdir: (.+)$/m.exec(text)?.[1]?.trim();
       named = target ? resolve(dir, target) : null;
     }
     if (named !== null && (await realpath(named).catch(() => null)) === gitDir) return true;
@@ -76,16 +79,19 @@ async function isNamedByDotGit(start: string, gitDir: string): Promise<boolean> 
   }
 }
 
+/** What a GitRunner needs from the run: cancelling, masking, and where the work folder is. */
+export type GitContext = Pick<RunContext, 'signal' | 'redactor' | 'home'>;
+
 export class GitRunner {
   readonly cwd: string;
-  private readonly ctx: Pick<RunContext, 'signal' | 'redactor'>;
+  private readonly ctx: GitContext;
   private readonly limiter = new Semaphore(MAX_PARALLEL_GIT);
   /** git, found once on PATH and started by its absolute path. */
   private program: Promise<string> | undefined;
   /** The repository check, made once: null when git may run here, else the failed lookup. */
   private checked: Promise<RunResult | null> | undefined;
 
-  constructor(cwd: string, ctx: Pick<RunContext, 'signal' | 'redactor'>) {
+  constructor(cwd: string, ctx: GitContext) {
     this.cwd = cwd;
     this.ctx = ctx;
   }
@@ -121,8 +127,9 @@ export class GitRunner {
 
   /**
    * Before the first command: ask git which repository it finds from this folder (`rev-parse` runs
-   * no program from the settings) and refuse one that no `.git` entry names. When git finds no
-   * repository, its answer stands in for every command here, which would fail the same way.
+   * no program from the settings) and refuse one that no `.git` entry names, or that is in the work
+   * folder. When git finds no repository, its answer stands in for every command here, which would
+   * fail the same way.
    */
   private async checkRepository(program: string, options: GitRunOptions): Promise<RunResult | null> {
     this.checked ??= (async () => {
@@ -140,14 +147,26 @@ export class GitRunner {
       );
       if (found.code !== 0) return found;
       const used = await realpath(found.stdout.trim()).catch(() => null);
-      if (used !== null && (await isNamedByDotGit(this.cwd, used))) return null;
-      throw new MergeStoryError(
-        'SOURCE_INVALID',
-        `The git repository found from ${this.cwd} is not one that a .git entry names.`,
-        {
-          hint: 'Run MergeStory in a normal clone or work tree. A bare repository, or one that sits inside a checked-out folder, is refused: its settings can name programs for git to run.',
-        },
-      );
+      if (used === null || !(await isNamedByDotGit(this.cwd, used))) {
+        throw new MergeStoryError(
+          'SOURCE_INVALID',
+          `The git repository found from ${this.cwd} is not one that a .git entry names.`,
+          {
+            hint: 'Run MergeStory in a normal clone or work tree. A bare repository, or one that sits inside a checked-out folder, is refused: its settings can name programs for git to run.',
+          },
+        );
+      }
+      const work = this.ctx.home.work;
+      if ((await isInWorkFolder(this.cwd, work)) || (await isInWorkFolder(used, work))) {
+        throw new MergeStoryError(
+          'SOURCE_INVALID',
+          'MergeStory does not read a git repository in its work folder.',
+          {
+            hint: `A coding agent may write in ${work} without asking, so a repository there is not treated as yours. Run MergeStory in your own clone or work tree.`,
+          },
+        );
+      }
+      return null;
     })();
     try {
       return await this.checked;

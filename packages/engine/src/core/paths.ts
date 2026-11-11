@@ -115,13 +115,20 @@ export async function resolvedLocation(path: string): Promise<string> {
   }
 }
 
+/**
+ * Whether `path` is the work folder `work` or lies in it. A path that does not exist yet is judged
+ * by its nearest existing parent, so a link on the way there does not hide it. Letter case is
+ * ignored: on a disk that ignores case, WORK and work are one folder.
+ */
+export async function isInWorkFolder(path: string, work: string): Promise<boolean> {
+  const [target, root] = await Promise.all([resolvedLocation(path), resolvedLocation(work)]);
+  const inside = (a: string, b: string): boolean => isInside(a.toLowerCase(), b.toLowerCase());
+  return inside(resolve(work), resolve(path)) || inside(root, target);
+}
+
 /** Refuse a run folder inside the work folders: an agent writes there without asking, and publish trusts a run folder. */
 export async function assertNotWorkFolder(dir: string, homeOverride?: string | null): Promise<void> {
-  const work = homeLayout(homeOverride).work;
-  // A folder that does not exist yet is checked by its nearest existing parent: a link or another
-  // letter case on the way there must not hide that it lies in the work folder.
-  const [target, root] = await Promise.all([resolvedLocation(dir), resolvedLocation(work)]);
-  if (isInside(resolve(work), resolve(dir)) || isInside(root, target)) {
+  if (await isInWorkFolder(dir, homeLayout(homeOverride).work)) {
     throw new MergeStoryError('USAGE', 'The work folder holds drafts. It cannot be a run folder.', {
       hint: 'Choose a folder outside the work folder of the MergeStory home.',
     });
