@@ -45,7 +45,8 @@ reproduce. For a larger change, open an issue first so we can agree on the idea.
 
 See [docs/architecture.md](docs/architecture.md). In short: the engine is `packages/engine`, the
 Agent Skill is `plugins/mergestory/skills/mergestory` (the Claude Code plugin is the folder
-`plugins/mergestory`), and shared types and contracts are in `packages/engine/src/core`. Change contracts in `src/core` with care: every module depends on them.
+`plugins/mergestory`), and shared types and contracts are in `packages/engine/src/core`. Change
+contracts in `src/core` with care: every module depends on them.
 The user documentation is in `docs/`, and the main page is the [README](README.md).
 
 ## Working on visuals
@@ -97,6 +98,23 @@ technical term. Use made-up names in examples (`acme/weather-app`, `/path/to/run
 - Never commit secrets, real customer code or generated videos.
 - Your contribution is licensed under the Apache License 2.0, like the rest of the project (section 5 of
   the license).
+
+## Releasing
+
+Maintainers release from CI, never from a laptop:
+
+1. Set the new version in `packages/engine/package.json` and `packages/engine/src/version.ts`, run
+   `npm install` so the lockfile follows, and add the section to the changelog. Merge that.
+2. Push a tag with the same version, for example `v1.2.3`.
+3. The `Release` workflow checks the tag against the version, runs every check, builds the package,
+   pins the version of every dependency in it (`npm-shrinkwrap.json`), renders a short video with
+   exactly those files, and stages the package on npm. It signs in to npm with a short-lived
+   identity from GitHub, so the repository holds no npm token.
+4. A maintainer approves the staged version on npmjs.com with two-step sign-in. Only then can users
+   install it.
+5. After that, update the version that the skill installs
+   (`plugins/mergestory/skills/mergestory/SKILL.md`), the plugin version
+   (`plugins/mergestory/.claude-plugin/plugin.json`) and the example workflow, in one pull request.
 
 ## Reporting security problems
 
