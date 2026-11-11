@@ -40,7 +40,7 @@ A local repository is read only when a `.git` entry names it: a normal clone, a 
 submodule. MergeStory does not run inside a bare repository (a work tree of one is fine), or in a
 repository that sits inside a checked-out folder, because its settings can name programs for git to
 run. A repository in `$MERGESTORY_HOME/work` is refused for the same reason: a coding agent may write
-there without asking.
+there without asking. That folder is recognised under every name it has on disk.
 
 **What is read and written.** MergeStory never writes into the repository it explains. Every run writes
 one folder, described in [Run folders](#run-folders). A run folder inside the repository is refused.
