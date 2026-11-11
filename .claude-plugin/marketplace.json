@@ -4,20 +4,15 @@
     "name": "MergeStory"
   },
   "metadata": {
-    "description": "MergeStory: turn a pull request into a short, accurate, narrated video walkthrough.",
-    "version": "1.0.0"
+    "description": "MergeStory: turn a pull request into a short, accurate, narrated video walkthrough."
   },
   "plugins": [
     {
       "name": "mergestory",
-      "source": "./",
-      "strict": false,
+      "source": "./plugins/mergestory",
       "description": "Explain a pull request as a short narrated video for reviewers.",
-      "version": "1.0.0",
-      "license": "Apache-2.0",
       "category": "development",
-      "tags": ["pull-request", "code-review", "video"],
-      "skills": ["./skills/mergestory"]
+      "tags": ["pull-request", "code-review", "video"]
     }
   ]
 }

@@ -18,7 +18,9 @@ what each command prints, and the exit code it ends with. The settings behind th
 
 ## The basics
 
-Install it with `npm install -g mergestory`, or run it without installing as `npx mergestory`. In a clone
+Install it with `npm install -g mergestory`, or run it without installing as `npx mergestory`. Use `npx`
+only in a folder you trust: when that folder has its own copy of a package, or its own npm settings,
+`npx` uses those instead of the published package. In a clone
 of this repository, run `node packages/engine/src/cli/main.ts <command>` (Node 22.18 or newer runs the
 TypeScript files directly).
 

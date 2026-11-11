@@ -1,0 +1,14 @@
+{
+  "name": "mergestory",
+  "displayName": "MergeStory",
+  "version": "1.0.1",
+  "description": "Explain a pull request as a short narrated video for reviewers.",
+  "author": {
+    "name": "MergeStory",
+    "url": "https://github.com/PiniShv/MergeStory"
+  },
+  "homepage": "https://github.com/PiniShv/MergeStory#readme",
+  "repository": "https://github.com/PiniShv/MergeStory",
+  "license": "Apache-2.0",
+  "keywords": ["pull-request", "code-review", "video"]
+}

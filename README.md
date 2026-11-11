@@ -28,7 +28,7 @@ the pull request.
 - **Private by default.** Nothing from your code or the change leaves your machine unless you
   configure it. Secrets are masked in every frame, caption and log. Shared links are private and
   expire.
-- **Works with any agent.** A portable [Agent Skill](skills/mergestory/SKILL.md) for Claude Code,
+- **Works with any agent.** A portable [Agent Skill](plugins/mergestory/skills/mergestory/SKILL.md) for Claude Code,
   Codex, Copilot, Cursor and others, plus a CLI, an HTTP API and a library.
 
 ## See it in action
@@ -77,7 +77,7 @@ The first English video installs the free voice once (about 400 MB, then the voi
 takes a minute or two longer. Nothing from the change is sent. To do it ahead of time, for example in CI,
 run `mergestory setup kokoro`.
 
-Or a local branch, without a pull request:
+Or a local branch, without a pull request. This works with every git host:
 
 ```bash
 mergestory generate . --base main --head feature/retry
@@ -104,9 +104,9 @@ opens a pull request.
 | Agent | Install |
 |---|---|
 | Many agents at once | `npx skills add PiniShv/MergeStory` (needs Node.js 22.20 or newer) |
-| Claude Code | `/plugin marketplace add PiniShv/MergeStory`, then `/plugin install mergestory@mergestory` |
-| Claude Code, by hand | copy `skills/mergestory` to `~/.claude/skills/mergestory` (all projects) or `<project>/.claude/skills/mergestory` (one project). Claude Code does not read `.agents/skills`. |
-| Codex, GitHub Copilot (VS Code, CLI and cloud agent), Cursor, OpenCode, Goose, Amp, Gemini CLI, Antigravity | copy `skills/mergestory` to `.agents/skills/mergestory` (one project) or `~/.agents/skills/mergestory` (all projects). Copilot also reads `.github/skills`, and Cursor also reads `.cursor/skills`. |
+| Claude Code | `/plugin install mergestory --marketplace PiniShv/MergeStory` (Claude Code 2.1.275 or newer). On older versions: `/plugin marketplace add PiniShv/MergeStory`, then `/plugin install mergestory@mergestory`. |
+| Claude Code, by hand | copy `plugins/mergestory/skills/mergestory` to `~/.claude/skills/mergestory` (all projects) or `<project>/.claude/skills/mergestory` (one project). Claude Code does not read `.agents/skills`. |
+| Codex, GitHub Copilot (VS Code, CLI and cloud agent), Cursor, OpenCode, Goose, Amp, Gemini CLI, Antigravity | copy `plugins/mergestory/skills/mergestory` to `.agents/skills/mergestory` (one project) or `~/.agents/skills/mergestory` (all projects). Copilot also reads `.github/skills`, and Cursor also reads `.cursor/skills`. |
 | GitHub CLI | `gh skill install PiniShv/MergeStory mergestory` (GitHub CLI 2.90 or newer) |
 | Windsurf (now Devin Desktop) | copy to `.devin/skills/mergestory`. It also reads `.agents/skills`. |
 | Kiro | copy to `.kiro/skills/mergestory` |
@@ -200,8 +200,8 @@ flowchart LR
   PU --> LINK[Link on the PR]
 ```
 
-The engine (`packages/engine`) is the product. The Agent Skill (`skills/mergestory`) is a thin
-adapter. Videos are rendered programmatically from a JSON plan by a deterministic HTML runtime and
+The engine (`packages/engine`) is the product. The Agent Skill (`plugins/mergestory/skills/mergestory`) is a thin
+adapter, packaged as a Claude Code plugin in `plugins/mergestory`. Videos are rendered programmatically from a JSON plan by a deterministic HTML runtime and
 FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs/architecture.md).
 
 ## Documentation
