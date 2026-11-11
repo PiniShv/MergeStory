@@ -684,7 +684,7 @@ describe('generate: the captions of the watch page', () => {
 });
 
 describe('output folders', () => {
-  const LINK = 'The work folder holds a symbolic link.';
+  const LINK = 'is a symbolic link or holds one.';
 
   it('never makes a work folder a run folder, but lets analyze write there', async () => {
     const work = join(home, 'work', 'draft');
@@ -698,6 +698,14 @@ describe('output folders', () => {
     );
     const result = await prepareAuthoring({ ...options({ withContext: false }), outDir: work });
     expect(result.runDir).toBe(work);
+  });
+
+  it('sees a work folder behind a link, also for a run folder that does not exist yet', async () => {
+    await mkdir(join(home, 'work'), { recursive: true });
+    await symlink(join(home, 'work'), join(base, 'elsewhere'));
+    await expect(plan({ config: { outDir: join(base, 'elsewhere', 'new-run') } })).rejects.toThrow(
+      'It cannot be a run folder.',
+    );
   });
 
   it.each([

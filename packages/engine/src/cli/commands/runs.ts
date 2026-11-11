@@ -75,7 +75,7 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
 }
 
 function formatRunList(runs: RunSummary[], style: Style): string {
-  if (runs.length === 0) return 'No videos on this machine yet. Make one with: mergestory generate\n';
+  if (runs.length === 0) return 'No videos in the runs folder yet. Make one with: mergestory generate\n';
   const rows = runs.map((r) => [
     r.runId,
     formatTime(r.createdAt)?.replace(' UTC', '') ?? '',
@@ -119,10 +119,12 @@ async function deletableRun(runsDir: string, id: string): Promise<string> {
       `${id} is not a run folder (it is a link or a file), so it was kept.`,
     );
   }
-  if (!existsSync(join(dir, RUN_FILE.result)) && !existsSync(join(dir, RUN_FILE.publishInput))) {
+  // A dry run leaves only the analysis, so that file also marks a folder MergeStory made.
+  const made = [RUN_FILE.result, RUN_FILE.publishInput, RUN_FILE.analysis];
+  if (!made.some((name) => existsSync(join(dir, name)))) {
     throw new MergeStoryError(
       'SOURCE_INVALID',
-      `${id} holds no ${RUN_FILE.result} or ${RUN_FILE.publishInput}, so it was kept.`,
+      `${id} holds none of the files of a run (${made.join(', ')}), so it was kept.`,
     );
   }
   return dir;

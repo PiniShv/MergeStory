@@ -267,8 +267,8 @@ to a file on this machine is never posted.
   `status`, `jobs`, `serve`, `cache`. `--json` prints one JSON object on stdout; logs go to stderr.
   Exit codes are listed in `src/core/errors.ts`. See [cli.md](cli.md).
   The `agent` group (`agent analyze`, `agent validate`, `agent render`) is the part a coding agent may run
-  without asking. It takes no flag that names a file, a folder, a program or a host. It reads and writes
-  only its work folder (`$MERGESTORY_HOME/work/<name>`, refused when it holds a symbolic link), explains
+  without asking. It takes no flag that names a file, a folder, a program or a host. Its drafts live in
+  its work folder (`$MERGESTORY_HOME/work/<name>`, refused when it holds a symbolic link). It explains
   only the repository of the current folder or a pull request of one of its remotes, and renders with
   fixed local settings (no model, a local voice, no upload, no comment). A work folder can never be a run
   folder, because `publish` trusts the files of a run folder.

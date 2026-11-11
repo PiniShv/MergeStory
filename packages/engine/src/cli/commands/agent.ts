@@ -1,21 +1,21 @@
 /**
  * mergestory agent: the commands a coding agent may run without asking. No argument can make them
- * read a file outside the work folder and the current repository, write outside the work folder
- * and the run folder, start a program, reach a host the user did not configure, upload, comment or
- * spend money. The general commands keep their flexible flags for people and CI.
+ * read the user's files (they read the current repository through git, their work folder and
+ * MergeStory's own files), write outside the MergeStory home and the system's temporary folder,
+ * start a program of the argument's choosing, reach a host the user did not configure, upload,
+ * comment or spend money. The general commands keep their flexible flags for people and CI.
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { type Command, InvalidArgumentError, Option } from 'commander';
-import { gitEnvironment } from '../../core/child-env.ts';
 import type { Config, ConfigInput } from '../../core/config.ts';
 import { MergeStoryError } from '../../core/errors.ts';
 import { assertNoLinks, ensureDir, homeLayout } from '../../core/paths.ts';
-import { findProgram, runCommand } from '../../core/process.ts';
 import { globalRedactor } from '../../core/redact.ts';
 import { isSameRepository } from '../../github/linked-issues.ts';
 import { parsePullRequestUrl, webHostFromApiUrl } from '../../github/pr-url.ts';
 import { sourceProblem } from '../../jobs/input-rules.ts';
+import { GitRunner } from '../../sources/git.ts';
 import { parseGitHubRemote } from '../../sources/remote.ts';
 import type { ContextFlags } from '../inputs.ts';
 import {
@@ -39,7 +39,7 @@ const LOCAL_VOICES = ['auto', 'kokoro', 'say', 'none'] as const;
 const NAME_PATTERN = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 
 /** The files of a work folder, found by name. */
-export const WORK_FILE = {
+const WORK_FILE = {
   task: 'task.md',
   notes: 'notes.md',
   tests: 'tests.json',
@@ -88,15 +88,24 @@ function nameFlag(value: string): string {
   return value;
 }
 
-/** Create `$MERGESTORY_HOME/work/<name>` (mode 0700) and check that no link leads out of it. */
-async function openWorkFolder(env: CommandEnv, name: string): Promise<{ dir: string; config: Config }> {
+/**
+ * `$MERGESTORY_HOME/work/<name>`, after checking that no link leads out of it. Only `agent analyze`
+ * creates it (mode 0700), so a mistyped name in the other commands leaves nothing behind.
+ */
+async function openWorkFolder(
+  env: CommandEnv,
+  name: string,
+  create: boolean,
+): Promise<{ dir: string; config: Config }> {
   const config = await loadConfig(env);
   const { work } = homeLayout(config.home);
   const dir = join(work, name);
   await assertNoLinks(work, false);
-  await ensureDir(work);
   await assertNoLinks(dir);
-  await ensureDir(dir);
+  if (create) {
+    await ensureDir(work);
+    await ensureDir(dir);
+  }
   return { dir, config };
 }
 
@@ -111,15 +120,9 @@ function notThisRepository(): MergeStoryError {
 }
 
 /** The GitHub repositories that the remotes of the current repository point at. */
-async function remotesOf(cwd: string, hosts: ReadonlySet<string>) {
-  const git = await findProgram('git', [cwd]);
-  const result = await runCommand(git, ['--no-pager', '-c', 'core.fsmonitor=false', 'remote', '-v'], {
-    cwd,
-    env: gitEnvironment(),
-    allowFailure: true,
-    timeoutMs: 10_000,
-    maxOutputBytes: 1024 * 1024,
-  });
+async function remotesOf(env: CommandEnv, hosts: ReadonlySet<string>) {
+  const git = new GitRunner(env.io.cwd, { signal: env.signal, redactor: globalRedactor });
+  const result = await git.run(['remote', '-v'], { timeoutMs: 10_000, maxOutputBytes: 1024 * 1024 });
   if (result.code !== 0) return [];
   // "origin<TAB>https://github.com/o/r.git (fetch)": the URL may hold a token, so only owner and name are kept.
   return result.stdout
@@ -145,7 +148,7 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
   const configured = webHostFromApiUrl(config.github.apiUrl);
   if (configured) hosts.add(configured);
   if (!hosts.has(ref.webHost)) throw notThisRepository();
-  const remotes = await remotesOf(env.io.cwd, hosts);
+  const remotes = await remotesOf(env, hosts);
   const known = remotes.some(
     (remote) =>
       remote.host === ref.webHost &&
@@ -170,8 +173,13 @@ function contextFiles(dir: string): ContextFlags {
 }
 
 /** Work folder, source and the options every agent command shares. */
-async function prepareAgent(env: CommandEnv, sourceArg: string | undefined, flags: AgentFlags) {
-  const { dir, config } = await openWorkFolder(env, flags.name);
+async function prepareAgent(
+  env: CommandEnv,
+  sourceArg: string | undefined,
+  flags: AgentFlags,
+  create = false,
+) {
+  const { dir, config } = await openWorkFolder(env, flags.name, create);
   const source = await agentSource(sourceArg, env, config);
   const context = contextFiles(dir);
   return { dir, source, context };
@@ -209,7 +217,7 @@ export function registerAgent(program: Command, rt: CliRuntime): void {
   addSourceFlags(analyze);
   analyze.action(async (sourceArg: string | undefined, flags: AgentFlags, cmd: Command) => {
     const env = rt.env(cmd);
-    const { dir, source, context } = await prepareAgent(env, sourceArg, flags);
+    const { dir, source, context } = await prepareAgent(env, sourceArg, flags, true);
     const common = await buildCommonOptions(
       source,
       { ...flags, ...context },

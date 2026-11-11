@@ -12,7 +12,7 @@
  */
 import { lstat, mkdir, readdir, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { MergeStoryError } from './errors.ts';
 import { isInside } from './posix.ts';
 
@@ -82,24 +82,45 @@ export function safeRepoPath(path: string): string | null {
 export async function assertNoLinks(dir: string, recursive = true): Promise<void> {
   const info = await lstat(dir).catch(() => null);
   if (!info) return;
-  const refuse = (): never => {
+  const refuse = (link: string): never => {
     throw new MergeStoryError(
       'USAGE',
-      'The work folder holds a symbolic link. MergeStory does not read or write through links.',
-      { hint: `Remove the link from ${dir}, or choose another folder.` },
+      `The folder ${dir} is a symbolic link or holds one. MergeStory does not read or write through links.`,
+      { hint: `Remove ${link}, or choose another folder.` },
     );
   };
-  if (info.isSymbolicLink()) refuse();
+  if (info.isSymbolicLink()) refuse(dir);
   if (!recursive || !info.isDirectory()) return;
   const entries = await readdir(dir, { recursive: true, withFileTypes: true });
-  if (entries.some((entry) => entry.isSymbolicLink())) refuse();
+  const link = entries.find((entry) => entry.isSymbolicLink());
+  if (link) refuse(join(link.parentPath, link.name));
+}
+
+/**
+ * A path with its links resolved, and with the letter case the disk has. The part that does not
+ * exist yet is kept as it is.
+ */
+export async function resolvedLocation(path: string): Promise<string> {
+  const missing: string[] = [];
+  let current = resolve(path);
+  for (;;) {
+    try {
+      return join(await realpath(current), ...missing.reverse());
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return resolve(path);
+      missing.push(basename(current));
+      current = parent;
+    }
+  }
 }
 
 /** Refuse a run folder inside the work folders: an agent writes there without asking, and publish trusts a run folder. */
 export async function assertNotWorkFolder(dir: string, homeOverride?: string | null): Promise<void> {
   const work = homeLayout(homeOverride).work;
-  const real = async (path: string): Promise<string> => realpath(path).catch(() => resolve(path));
-  const [target, root] = await Promise.all([real(dir), real(work)]);
+  // A folder that does not exist yet is checked by its nearest existing parent: a link or another
+  // letter case on the way there must not hide that it lies in the work folder.
+  const [target, root] = await Promise.all([resolvedLocation(dir), resolvedLocation(work)]);
   if (isInside(resolve(work), resolve(dir)) || isInside(root, target)) {
     throw new MergeStoryError('USAGE', 'The work folder holds drafts. It cannot be a run folder.', {
       hint: 'Choose a folder outside the work folder of the MergeStory home.',

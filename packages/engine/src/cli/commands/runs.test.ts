@@ -98,7 +98,14 @@ describe('mergestory runs delete', () => {
     expect((await run(['runs', 'delete', B])).stdout).toMatch(/Deleted .*freed/);
   });
 
-  it('refuses a bad id, a link, a folder without the two files and an id outside the runs folder', async () => {
+  it('deletes the folder of a dry run, which the list leaves out', async () => {
+    await makeRun(A, { 'analysis.json': {} });
+    expect(ids((await run(['runs', '--json'])).stdout)).toEqual([]);
+    expect((await run(['runs', 'delete', A])).code).toBe(0);
+    expect(await readdir(runsDir())).toEqual([]);
+  });
+
+  it('refuses a bad id, a link, a folder without a file of a run and an id outside the runs folder', async () => {
     const outside = join(dir, 'precious');
     await mkdir(outside);
     await writeFile(join(outside, 'result.json'), '{}');
