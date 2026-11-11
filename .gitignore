@@ -10,8 +10,7 @@ mergestory-output/
 *.mp4
 *.wav
 *.aiff
-# The demo video that the README and the project site show
-!docs/demo/video.mp4
+# Videos never go into the repository: they are published (for example to YouTube) and linked.
 
 # Local environment and secrets
 .env
