@@ -10,7 +10,7 @@
  *     credentials/    sign-in data from `mergestory setup youtube`
  *     work/<name>/    drafts of the `mergestory agent` commands (never a run folder)
  */
-import { lstat, mkdir, readdir, realpath } from 'node:fs/promises';
+import { lstat, mkdir, readdir, realpath, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { MergeStoryError } from './errors.ts';
@@ -115,15 +115,37 @@ export async function resolvedLocation(path: string): Promise<string> {
   }
 }
 
+/** What a file or folder is on disk, whatever it is called. Null when it does not exist. */
+const diskIdentity = async (path: string): Promise<string | null> =>
+  stat(path, { bigint: true }).then(
+    (info) => `${info.dev}:${info.ino}`,
+    () => null,
+  );
+
+/** Whether two paths are the same file or folder on disk. One folder can have several names. */
+export async function sameOnDisk(a: string, b: string): Promise<boolean> {
+  const [first, second] = await Promise.all([diskIdentity(a), diskIdentity(b)]);
+  return first !== null && first === second;
+}
+
 /**
  * Whether `path` is the work folder `work` or lies in it. A path that does not exist yet is judged
  * by its nearest existing parent, so a link on the way there does not hide it. Letter case is
- * ignored: on a disk that ignores case, WORK and work are one folder.
+ * ignored on every system, which is stricter than a disk that keeps case apart: on a disk that
+ * ignores case, WORK and work are one folder, and the two cannot be told apart from here.
  */
 export async function isInWorkFolder(path: string, work: string): Promise<boolean> {
   const [target, root] = await Promise.all([resolvedLocation(path), resolvedLocation(work)]);
   const inside = (a: string, b: string): boolean => isInside(a.toLowerCase(), b.toLowerCase());
-  return inside(resolve(work), resolve(path)) || inside(root, target);
+  if (inside(resolve(work), resolve(path)) || inside(root, target)) return true;
+  // A folder can have a second name that no path shows (another mount point, for example), so the
+  // part of the path that exists is also compared by what it is on disk.
+  const workIdentity = await diskIdentity(work);
+  if (workIdentity === null) return false;
+  for (let dir = target; ; dir = dirname(dir)) {
+    if ((await diskIdentity(dir)) === workIdentity) return true;
+    if (dirname(dir) === dir) return false;
+  }
 }
 
 /** Refuse a run folder inside the work folders: an agent writes there without asking, and publish trusts a run folder. */
