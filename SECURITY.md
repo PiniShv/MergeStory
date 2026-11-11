@@ -49,11 +49,15 @@ built so that nothing from your code or the change leaves your machine unless yo
   files, results or URLs, and no flag takes a secret. Config files that contain secret-like keys are
   rejected. The programs MergeStory starts (git, `gh`, the installer of the free voice) run without
   your keys and tokens.
-- **The config file has a fixed place.** MergeStory reads it only from `--config`, from
-  `MERGESTORY_CONFIG`, or from `$MERGESTORY_HOME/config.json` (by default `~/.mergestory/config.json`).
+- **The config file has a fixed place.** MergeStory reads it only from `MERGESTORY_CONFIG`,
+  or from `$MERGESTORY_HOME/config.json` (by default `~/.mergestory/config.json`).
   It never reads one from the current folder, because that is often the repository being explained, and
   a file there could point MergeStory at other programs, servers or API hosts. Every key in the file is
   checked, and an unknown key is an error.
+- **Some commands are safe to pre-approve for a coding agent.** `doctor`, `analyze`, `validate` and
+  `render` take no option that names a program, a host or a settings file, and `render` always runs
+  without a model, a paid voice, an upload or a comment. So extra flags cannot make them start another
+  program, send the change anywhere or spend money.
 - **Tokens go only where they belong.** A GitHub token from the environment is only sent to
   `api.github.com` or to the host you set in `github.apiUrl`, so a pull request URL can never send it to
   another server. A model address with a user name or password in it is refused, and so is plain `http`

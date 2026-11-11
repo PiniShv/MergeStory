@@ -1,5 +1,6 @@
 /** mergestory generate: make the video (or, with --dry-run, show the plan). */
 import type { Command } from 'commander';
+import { type ConfigInput, mergeConfigInputs } from '../../core/config.ts';
 import type { GenerateResult, PlanResult } from '../../core/types.ts';
 import type { JobOptions } from '../../jobs/model.ts';
 import { redactResult } from '../../jobs/view.ts';
@@ -57,27 +58,36 @@ export function registerGenerate(program: Command, rt: CliRuntime): void {
   addRunFlags(command);
   command.addHelpText('after', EXAMPLES);
   command.action(async (source: string, flags: GenerateFlags, cmd: Command) => {
-    const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, {
-      cwd: env.io.cwd,
-      configPath: env.configPath,
-      logger: env.logger,
-    });
-    const options: JobOptions = { ...common };
-    if (flags.storyboard)
-      options.storyboard = await readStoryboard(flags.storyboard, env.io.cwd, '--storyboard');
-    if (flags.dryRun) options.dryRun = true;
-    if (flags.async) {
-      await runInBackground(env, options);
-      return;
-    }
-    // Loaded here, so that --help and the small commands stay quick to start.
-    const { generate } = await import('../../pipeline/index.ts');
-    const result = await generate({ ...options, signal: env.signal, logger: env.logger });
-    const safe = redactResult(result);
-    if (env.json) env.emitJson(safe);
-    else
-      env.say(isPlanResult(safe) ? formatPlanResult(safe, env.style) : formatGenerateResult(safe, env.style));
-    if (!isPlanResult(safe)) reportFailedPullRequestUpdate(env, safe);
+    await makeVideo(rt.env(cmd), source, flags);
   });
+}
+
+/**
+ * Build the options, read the storyboard, run the pipeline and print the result. `forced` settings
+ * are merged over the flags (render uses them to stay on this machine).
+ */
+export async function makeVideo(
+  env: CommandEnv,
+  source: string,
+  flags: GenerateFlags,
+  forced?: ConfigInput,
+): Promise<void> {
+  const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
+  const options: JobOptions = { ...common };
+  if (forced) options.config = mergeConfigInputs(common.config, forced);
+  if (flags.storyboard)
+    options.storyboard = await readStoryboard(flags.storyboard, env.io.cwd, '--storyboard');
+  if (flags.dryRun) options.dryRun = true;
+  if (flags.async) {
+    await runInBackground(env, options);
+    return;
+  }
+  // Loaded here, so that --help and the small commands stay quick to start.
+  const { generate } = await import('../../pipeline/index.ts');
+  const result = await generate({ ...options, signal: env.signal, logger: env.logger });
+  const safe = redactResult(result);
+  if (env.json) env.emitJson(safe);
+  else
+    env.say(isPlanResult(safe) ? formatPlanResult(safe, env.style) : formatGenerateResult(safe, env.style));
+  if (!isPlanResult(safe)) reportFailedPullRequestUpdate(env, safe);
 }

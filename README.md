@@ -160,7 +160,7 @@ variable beats the config file. Common options:
 | Comment on the PR | `--comment` (needs an uploaded video) | `GITHUB_TOKEN` (or the `gh` CLI login) |
 | Budget per run | `--budget 0.25` | `MERGESTORY_BUDGET_USD` |
 | Quality | `--quality draft`, `standard`, `high` | `MERGESTORY_QUALITY` |
-| Config file | `--config <file>` | `MERGESTORY_CONFIG` (default: `~/.mergestory/config.json`) |
+| Config file | none | `MERGESTORY_CONFIG` (default: `~/.mergestory/config.json`) |
 
 Free local voice: English videos use Kokoro, an open neural voice that runs on your machine. The
 first English video installs it once (about 400 MB plus a one-time model download), and

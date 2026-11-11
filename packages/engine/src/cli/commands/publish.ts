@@ -114,7 +114,6 @@ export function registerPublish(program: Command, rt: CliRuntime): void {
       logger: env.logger,
     };
     if (overrides) options.config = overrides;
-    if (env.configPath) options.configPath = resolve(env.io.cwd, env.configPath);
     // Loaded here, so that --help and the small commands stay quick to start.
     const { publishRun } = await import('../../pipeline/index.ts');
     const result = await publishRun(options);

@@ -94,8 +94,8 @@ that is not listed here is an error, so a typo is never ignored.
 | `publish.visibility` | `private` or `public`. |
 | `github.comment`, `github.updateDescription` | `true` or `false`. |
 
-Everything else comes from the server's own settings: its environment variables and its config file (the
-`--config` flag of `mergestory serve`, `MERGESTORY_CONFIG`, or `$MERGESTORY_HOME/config.json`). So a server
+Everything else comes from the server's own settings: its environment variables and its config file (named
+by `MERGESTORY_CONFIG`, else `$MERGESTORY_HOME/config.json`). So a server
 that you start with `MERGESTORY_VISIBILITY=protected` makes protected links for every job that does not ask
 for something else. A request cannot ask for `youtube`, for protected links or for a model server address.
 Screenshots and dry runs are not part of the API either.

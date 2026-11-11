@@ -32,7 +32,7 @@ tell whether the repository is private, it treats it as private.
 
 ## Settings
 
-A flag beats an environment variable, and an environment variable beats the config file (`~/.mergestory/config.json`, or the file passed with `--config`). MergeStory never reads a config file from the current folder on its own.
+A flag beats an environment variable, and an environment variable beats the config file (`~/.mergestory/config.json`, or the file named by `MERGESTORY_CONFIG`). MergeStory never reads a config file from the current folder on its own.
 Keys and tokens never go into the config file: MergeStory refuses a config file that contains
 them.
 

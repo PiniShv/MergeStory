@@ -170,7 +170,7 @@ secret.
 
 ## Settings
 
-Put these in your config file (`~/.mergestory/config.json`, or a file you pass with `--config`). Secrets never go in the config file.
+Put these in your config file (`~/.mergestory/config.json`, or the file named by `MERGESTORY_CONFIG`). Secrets never go in the config file.
 
 ```json
 {

@@ -35,11 +35,7 @@ export function registerAnalyze(program: Command, rt: CliRuntime): void {
     .option('--out <dir>', 'write the files here instead of under the MergeStory home');
   command.action(async (source: string, flags: AnalyzeFlags, cmd: Command) => {
     const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, {
-      cwd: env.io.cwd,
-      configPath: env.configPath,
-      logger: env.logger,
-    });
+    const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
     // The follow-up commands name the source the way it was resolved, so they work from any directory.
     const shownSource = typeof common.source === 'string' ? common.source : source;
     const { source: followSource, args, contextArgs } = followUpFor(shownSource, flags, env.io.cwd);
@@ -87,11 +83,7 @@ export function registerValidate(program: Command, rt: CliRuntime): void {
     .option('--language <code>', 'narration language, for example en');
   command.action(async (storyboardPath: string, source: string, flags: ValidateFlags, cmd: Command) => {
     const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, {
-      cwd: env.io.cwd,
-      configPath: env.configPath,
-      logger: env.logger,
-    });
+    const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
     const storyboard = await readStoryboard(storyboardPath, env.io.cwd, 'storyboard file');
     const { checkStoryboard } = await import('../../pipeline/index.ts');
     const result = await checkStoryboard({ ...common, storyboard, signal: env.signal, logger: env.logger });

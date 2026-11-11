@@ -93,8 +93,6 @@ describe('generate: flags become GenerateOptions', () => {
       '--music',
       'music.mp3',
       '--dry-run',
-      '--config',
-      'my.config.json',
     ]);
     expect(code).toBe(0);
     const options = lastGenerateOptions();
@@ -116,7 +114,7 @@ describe('generate: flags become GenerateOptions', () => {
       render: { musicPath: join(dir, 'music.mp3') },
     });
     expect(options.dryRun).toBe(true);
-    expect(options.configPath).toBe(join(dir, 'my.config.json'));
+    expect(options.configPath).toBeUndefined();
   });
 
   it('does not switch anything on or off that was not asked for', async () => {
@@ -153,6 +151,26 @@ describe('generate: flags become GenerateOptions', () => {
       expect(result.stderr).not.toContain('pass@');
     }
     expect(generateMock).not.toHaveBeenCalled();
+  });
+
+  it('takes only an address on this machine in --llm-base-url', async () => {
+    for (const url of ['https://example.com/v1', 'http://10.0.0.5:11434/v1', 'http://app.localhost/v1']) {
+      const result = await run(['generate', '--llm-base-url', url]);
+      expect(result.code, url).toBe(2);
+      expect(result.stderr).toContain('only takes an address on this machine');
+    }
+    expect(generateMock).not.toHaveBeenCalled();
+    generateMock.mockResolvedValue(fakeResult());
+    for (const url of ['http://localhost:11434/v1', 'http://127.0.0.1:8080/v1', 'http://[::1]:8080/v1']) {
+      expect((await run(['generate', '--llm-base-url', url])).code, url).toBe(0);
+      expect(lastGenerateOptions().config?.llm?.baseUrl).toBe(url);
+    }
+  });
+
+  it('keeps any host for the LLM base URL from the environment', async () => {
+    generateMock.mockResolvedValue(fakeResult());
+    const { code } = await run(['generate'], { MERGESTORY_LLM_BASE_URL: 'https://llm.example.com/v1' });
+    expect(code).toBe(0);
   });
 
   it('refuses an --out folder inside the repository being explained', async () => {
@@ -353,5 +371,32 @@ describe('generate: context files', () => {
     expect(context?.notes).toContain('retries');
     expect(result.stderr).toMatch(/Masked 2 secret-like value/);
     expect(result.stderr).not.toContain(key);
+  });
+});
+
+describe('the removed --config option', () => {
+  it.each([['--config', 'my.json'], ['--config=my.json']])(
+    'explains the replacement for %s',
+    async (...words) => {
+      const { code, stderr } = await run(['generate', ...words]);
+      expect(code).toBe(2);
+      expect(stderr).toContain('removed in 1.1.0');
+      expect(stderr).toContain('MERGESTORY_CONFIG');
+      expect(generateMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('prints the usual JSON error with --json', async () => {
+    const { code, stdout } = await run(['--json', '--config', 'my.json', 'doctor']);
+    expect(code).toBe(2);
+    expect(JSON.parse(stdout)).toEqual({
+      ok: false,
+      error: {
+        code: 'USAGE',
+        message: 'The --config option was removed in 1.1.0.',
+        hint: 'Set MERGESTORY_CONFIG=<file> instead, or put the file at ~/.mergestory/config.json.',
+        details: null,
+      },
+    });
   });
 });

@@ -59,7 +59,7 @@ work, or check `--base` and `--head`.
   `MERGESTORY_*` variable, is wrong. Every key is checked, so a typo is an error and never ignored.
 - `Config key "..." looks like a secret`: secrets never go into the config file. Use the environment
   variable, for example `ANTHROPIC_API_KEY`.
-- The config file is ignored: MergeStory reads it only from `--config`, from `MERGESTORY_CONFIG`, or from
+- The config file is ignored: MergeStory reads it only from `MERGESTORY_CONFIG`, or from
   `$MERGESTORY_HOME/config.json` (default `~/.mergestory/config.json`). It never reads a file in the
   current folder.
 
