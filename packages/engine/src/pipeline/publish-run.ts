@@ -9,7 +9,7 @@ import { type Config, resolveConfig } from '../core/config.ts';
 import { createRunContext, type RunContext } from '../core/context.ts';
 import { describeProblem, MergeStoryError, toMergeStoryError } from '../core/errors.ts';
 import { RUN_ID_PATTERN } from '../core/ids.ts';
-import { homeLayout } from '../core/paths.ts';
+import { assertNotWorkFolder, homeLayout } from '../core/paths.ts';
 import { isInside } from '../core/posix.ts';
 import type { PublishBundle } from '../core/providers.ts';
 import { globalRedactor } from '../core/redact.ts';
@@ -328,6 +328,7 @@ export async function publishRun(
 ): Promise<GenerateResult> {
   const config = resolveConfig({ overrides: options.config, configPath: options.configPath });
   const runDir = resolveRunDir(options.run, config.home);
+  await assertNotWorkFolder(runDir, config.home);
   const folder = runFolder(runDir);
   const stored = await readStoredInput(runDir);
   const files = await runFilesIn(runDir);

@@ -24,7 +24,9 @@ async function runnerWithGit(script: string | null): Promise<GitRunner> {
     await chmod(file, 0o755);
   }
   vi.stubEnv('PATH', bin);
-  return new GitRunner(bin, testContext().ctx);
+  const repo = await mkdtemp(join(tmpdir(), 'mergestory-git-repo-'));
+  dirs.push(repo);
+  return new GitRunner(repo, testContext().ctx);
 }
 
 const failure = (promise: Promise<unknown>): Promise<unknown> => promise.catch((e: unknown) => e);
@@ -51,6 +53,16 @@ describe('GitRunner errors', () => {
       message: 'git printed more output than MergeStory reads.',
     });
     expect((error as MergeStoryError).hint).toContain('--base and --head');
+  });
+
+  it('refuses a git that lies inside the repository being explained', async () => {
+    const repo = await mkdtemp(join(tmpdir(), 'mergestory-git-repo-'));
+    dirs.push(repo);
+    await writeFile(join(repo, 'git'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    vi.stubEnv('PATH', repo);
+    const error = await failure(new GitRunner(repo, testContext().ctx).run(['status']));
+    expect(error).toMatchObject({ code: 'USAGE' });
+    expect((error as MergeStoryError).message).toContain('git was found inside');
   });
 
   it('returns a non-zero exit code instead of throwing', async () => {

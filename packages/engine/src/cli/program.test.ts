@@ -1,6 +1,7 @@
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
+import { resolveConfig } from '../core/config.ts';
 import { dir, fakePlan, fakeResult, generateMock, lastGenerateOptions, run } from '../testing/cli.ts';
 import { makePng } from '../testing/png.ts';
 
@@ -167,10 +168,24 @@ describe('generate: flags become GenerateOptions', () => {
     }
   });
 
-  it('keeps any host for the LLM base URL from the environment', async () => {
+  it('keeps any host for the LLM base URL from the environment or the config file', async () => {
     generateMock.mockResolvedValue(fakeResult());
-    const { code } = await run(['generate'], { MERGESTORY_LLM_BASE_URL: 'https://llm.example.com/v1' });
-    expect(code).toBe(0);
+    await writeFile(
+      join(dir, 'remote.json'),
+      JSON.stringify({ llm: { baseUrl: 'https://file.example.com/v1' } }),
+    );
+    for (const [env, url] of [
+      [{ MERGESTORY_LLM_BASE_URL: 'https://llm.example.com/v1' }, 'https://llm.example.com/v1'],
+      [{ MERGESTORY_CONFIG: 'remote.json' }, 'https://file.example.com/v1'],
+    ] as const) {
+      expect((await run(['generate'], env)).code).toBe(0);
+      const config = resolveConfig({
+        overrides: lastGenerateOptions().config,
+        env: { ...env, MERGESTORY_HOME: join(dir, 'home') },
+        cwd: dir,
+      });
+      expect(config.llm.baseUrl).toBe(url);
+    }
   });
 
   it('refuses an --out folder inside the repository being explained', async () => {
@@ -385,6 +400,34 @@ describe('the removed --config option', () => {
       expect(generateMock).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ['generate'],
+    ['publish', 'run1'],
+    ['analyze'],
+    ['validate', 'sb.json'],
+    ['schema'],
+    ['doctor'],
+    ['setup'],
+    ['status', 'job1'],
+    ['jobs'],
+    ['serve'],
+    ['cache', 'clear'],
+    ['agent', 'analyze', '--name', 'a'],
+    ['agent', 'validate', '--name', 'a'],
+    ['agent', 'render', '--name', 'a'],
+  ])('refuses --config before and after "%s", also with --json', async (...command) => {
+    for (const argv of [
+      ['--config', 'my.json', ...command],
+      [...command, '--config=my.json'],
+      ['--json', ...command, '--config', 'my.json'],
+    ]) {
+      const { code, stdout, stderr } = await run(argv);
+      expect(code, argv.join(' ')).toBe(2);
+      expect(`${stdout}${stderr}`).toContain('MERGESTORY_CONFIG');
+    }
+    expect(generateMock).not.toHaveBeenCalled();
+  });
 
   it('prints the usual JSON error with --json', async () => {
     const { code, stdout } = await run(['--json', '--config', 'my.json', 'doctor']);

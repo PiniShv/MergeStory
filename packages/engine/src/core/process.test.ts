@@ -1,6 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { delimiter, join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandNotFoundError, MergeStoryError, OutputTooLargeError, TimedOutError } from './errors.ts';
-import { runCommand } from './process.ts';
+import { findProgram, runCommand } from './process.ts';
 
 /** Larger than a pipe holds, so the write is still going when the child exits. */
 const BIG_INPUT = Buffer.alloc(5 * 1024 * 1024, 'x');
@@ -98,5 +101,50 @@ describe('runCommand failures', () => {
     expect(error).not.toBeInstanceOf(TimedOutError);
     expect(error).not.toBeInstanceOf(CommandNotFoundError);
     expect(error).not.toBeInstanceOf(OutputTooLargeError);
+  });
+});
+
+describe('findProgram', () => {
+  let root: string;
+  beforeEach(async () => {
+    root = await realpath(await mkdtemp(join(tmpdir(), 'mergestory-find-')));
+    for (const folder of ['bin', 'repo', 'cwd']) {
+      await mkdir(join(root, folder));
+      await writeFile(join(root, folder, 'tool'), '#!/bin/sh\n', { mode: 0o755 });
+    }
+  });
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it('returns the absolute path of a program on PATH', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(join(root, 'cwd'));
+    vi.stubEnv('PATH', join(root, 'bin'));
+    expect(await findProgram('tool', [join(root, 'repo')])).toBe(join(root, 'bin', 'tool'));
+  });
+
+  it('refuses a program inside the repository being explained', async () => {
+    vi.stubEnv('PATH', join(root, 'repo'));
+    await expect(findProgram('tool', [join(root, 'repo')])).rejects.toMatchObject({ code: 'USAGE' });
+    await expect(findProgram('tool', [join(root, 'repo')])).rejects.toThrow('tool was found inside');
+  });
+
+  it('accepts a program below the current folder when that folder is not the repository', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(root);
+    vi.stubEnv('PATH', join(root, 'bin'));
+    expect(await findProgram('tool', [join(root, 'repo')])).toBe(join(root, 'bin', 'tool'));
+  });
+
+  it('never takes a program from a PATH entry that is not absolute', async () => {
+    vi.spyOn(process, 'cwd').mockReturnValue(join(root, 'cwd'));
+    vi.stubEnv('PATH', ['.', '', join('..', 'cwd')].join(delimiter));
+    await expect(findProgram('tool')).rejects.toBeInstanceOf(CommandNotFoundError);
+  });
+
+  it('throws CommandNotFoundError when the program is missing', async () => {
+    vi.stubEnv('PATH', join(root, 'bin'));
+    await expect(findProgram('no-such-tool')).rejects.toBeInstanceOf(CommandNotFoundError);
   });
 });

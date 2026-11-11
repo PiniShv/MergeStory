@@ -10,7 +10,7 @@ import { gitEnvironment } from '../core/child-env.ts';
 import { Semaphore } from '../core/concurrency.ts';
 import type { RunContext } from '../core/context.ts';
 import { CommandNotFoundError, MergeStoryError, OutputTooLargeError, TimedOutError } from '../core/errors.ts';
-import { type RunResult, runCommand } from '../core/process.ts';
+import { findProgram, type RunResult, runCommand } from '../core/process.ts';
 
 /** Settings that make output stable, and stop git running programs named in configuration. */
 const BASE_CONFIG = [
@@ -50,6 +50,8 @@ export class GitRunner {
   readonly cwd: string;
   private readonly ctx: RunContext;
   private readonly limiter = new Semaphore(MAX_PARALLEL_GIT);
+  /** git, found once on PATH and started by its absolute path. */
+  private program: Promise<string> | undefined;
 
   constructor(cwd: string, ctx: RunContext) {
     this.cwd = cwd;
@@ -65,8 +67,10 @@ export class GitRunner {
       ...args,
     ];
     try {
+      this.program ??= findProgram('git', [this.cwd]);
+      const program = await this.program;
       return await this.limiter.run(() =>
-        runCommand('git', full, {
+        runCommand(program, full, {
           cwd: this.cwd,
           env: gitEnvironment(),
           signal: this.ctx.signal,

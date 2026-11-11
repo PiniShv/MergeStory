@@ -8,10 +8,13 @@
  *     models/         downloaded local models (for example Kokoro speech)
  *     plugins/        optional providers installed with `mergestory setup`
  *     credentials/    sign-in data from `mergestory setup youtube`
+ *     work/<name>/    drafts of the `mergestory agent` commands (never a run folder)
  */
-import { mkdir } from 'node:fs/promises';
+import { lstat, mkdir, readdir, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
+import { MergeStoryError } from './errors.ts';
+import { isInside } from './posix.ts';
 
 export function mergestoryHome(override?: string | null): string {
   const value = override ?? process.env.MERGESTORY_HOME;
@@ -29,6 +32,8 @@ export interface HomeLayout {
   plugins: string;
   /** Sign-in data written by `mergestory setup` (for example YouTube). Folder 0700, files 0600. */
   credentials: string;
+  /** Work folders of `mergestory agent`: drafts an agent may write without asking. */
+  work: string;
 }
 
 export function homeLayout(override?: string | null): HomeLayout {
@@ -41,6 +46,7 @@ export function homeLayout(override?: string | null): HomeLayout {
     models: join(home, 'models'),
     plugins: join(home, 'plugins'),
     credentials: join(home, 'credentials'),
+    work: join(home, 'work'),
   };
 }
 
@@ -66,4 +72,37 @@ export function safeRepoPath(path: string): string | null {
   const parts = posix.split('/');
   if (parts.some((p) => p === '..' || p === '')) return null;
   return posix;
+}
+
+/**
+ * Refuse a folder that is a symbolic link or holds one at any depth, so that writing (or reading)
+ * there cannot reach a file elsewhere. A folder that does not exist yet passes. With `recursive`
+ * false only the folder itself is checked.
+ */
+export async function assertNoLinks(dir: string, recursive = true): Promise<void> {
+  const info = await lstat(dir).catch(() => null);
+  if (!info) return;
+  const refuse = (): never => {
+    throw new MergeStoryError(
+      'USAGE',
+      'The work folder holds a symbolic link. MergeStory does not read or write through links.',
+      { hint: `Remove the link from ${dir}, or choose another folder.` },
+    );
+  };
+  if (info.isSymbolicLink()) refuse();
+  if (!recursive || !info.isDirectory()) return;
+  const entries = await readdir(dir, { recursive: true, withFileTypes: true });
+  if (entries.some((entry) => entry.isSymbolicLink())) refuse();
+}
+
+/** Refuse a run folder inside the work folders: an agent writes there without asking, and publish trusts a run folder. */
+export async function assertNotWorkFolder(dir: string, homeOverride?: string | null): Promise<void> {
+  const work = homeLayout(homeOverride).work;
+  const real = async (path: string): Promise<string> => realpath(path).catch(() => resolve(path));
+  const [target, root] = await Promise.all([real(dir), real(work)]);
+  if (isInside(resolve(work), resolve(dir)) || isInside(root, target)) {
+    throw new MergeStoryError('USAGE', 'The work folder holds drafts. It cannot be a run folder.', {
+      hint: 'Choose a folder outside the work folder of the MergeStory home.',
+    });
+  }
 }
