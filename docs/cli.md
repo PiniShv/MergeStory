@@ -457,6 +457,31 @@ Deletes the cache: speech clips (`tts`), model answers (`llm`) and file contents
 `$MERGESTORY_HOME/cache`. It never touches runs, jobs, models, plugins or sign-in data. A paid speech or
 model provider may bill again for work that was cached.
 
+## `mergestory runs`
+
+```
+mergestory runs [--limit <n>]
+```
+
+`runs` lists the videos in `$MERGESTORY_HOME/runs`, newest first: run id, date, title, length, where the
+video went ("this machine" or the provider) and its link. A folder without a readable `result.json` is
+left out. `--limit <n>` sets how many to show, from 1 to 500 (default 20). With `--json` it prints
+`{"ok": true, "runs": [{"runId", "runDir", "createdAt", "title", "durationSec", "video", "publish"}]}`,
+where `publish` is `{"provider", "watchUrl", "expiresAt"}` or `null`.
+
+## `mergestory runs delete`
+
+```
+mergestory runs delete <run-id...>
+```
+
+Removes the folders of the run ids you give, with everything in them, and prints how many
+bytes were freed. There is no option to delete all runs. An id is refused (exit code 2, nothing deleted
+for it) when it is not a plain run id, when the folder is a symbolic link, or when the folder holds
+neither `result.json` nor `publish-input.json`. The other ids are still deleted. With `--json` it prints
+`{"ok": true, "deleted": ["..."], "freedBytes": 0}`; when an id is refused, `ok` is `false` and `errors`
+lists them. This only removes files on this machine. It does not remove an uploaded video.
+
 ## Run folders
 
 Every run writes one folder: `$MERGESTORY_HOME/runs/<run id>/` (the default home is `~/.mergestory`), or the
@@ -514,6 +539,7 @@ published video: a signed link stops working without its signature, so it is kep
   "title": "Retry temporary failures with backoff",
   "summary": "Two sentences for reviewers.",
   "durationSec": 146.5,
+  "elapsedSec": 92.4,
   "chapters": [{ "title": "The mission", "startSec": 0 }],
   "storyboardSource": "agent",
   "files": {

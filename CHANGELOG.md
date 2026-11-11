@@ -28,6 +28,16 @@ All notable changes to MergeStory are listed here, newest first.
 - Every `git diff` passes `--no-ext-diff` and `--no-textconv`, so a `.gitattributes` file in a change cannot
   make git run a diff or text conversion program from your git settings. A test now keeps it that way.
 
+### Also new
+
+- A pull request link from another host, such as Bitbucket or GitLab, is still refused. The error now
+  says to pass the path of the local repository with `--base <branch>` instead.
+- The message for missing FFmpeg now has the install command for Windows.
+- The result of a finished run has `elapsedSec`, the time the run took. `generate` prints it as
+  "Made in 1m 32s". Results from 1.0.0 do not have it, and `publish` still works with them.
+- New `mergestory runs` command: lists the videos on this machine. `mergestory runs delete <run-id>`
+  deletes the folder of a run. It only deletes real run folders under the runs folder.
+
 ## Skill and plugin 1.0.1
 
 The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.

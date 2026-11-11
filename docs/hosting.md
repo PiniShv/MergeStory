@@ -374,7 +374,8 @@ warning. Google Chrome installed from its package can usually use the sandbox th
 ## Delete old videos
 
 Links expire, but the files stay in the bucket until you delete them. Deleting the files is the way to
-make a permanent link stop working for good.
+make a permanent link stop working for good. The copy on this machine is separate: list it with
+`mergestory runs` and remove it with `mergestory runs delete <run-id>`.
 
 If an upload fails after some files were sent, MergeStory tries to delete those files again. That needs
 permission to delete objects. When the deletion fails too, the error names the folder to check

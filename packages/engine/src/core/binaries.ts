@@ -31,7 +31,7 @@ export async function resolveFfmpeg(config: Pick<Config, 'render'>): Promise<Ffm
   if (!ffmpeg || !ffprobe) {
     throw new MergeStoryError('FFMPEG_NOT_FOUND', `${!ffmpeg ? 'ffmpeg' : 'ffprobe'} was not found.`, {
       hint:
-        'Install FFmpeg (macOS: brew install ffmpeg; Debian/Ubuntu: sudo apt-get install ffmpeg) ' +
+        'Install FFmpeg (macOS: brew install ffmpeg; Debian/Ubuntu: sudo apt-get install ffmpeg; Windows: winget install --id Gyan.FFmpeg -e) ' +
         'or set MERGESTORY_FFMPEG_PATH and MERGESTORY_FFPROBE_PATH.',
     });
   }

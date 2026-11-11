@@ -9,6 +9,7 @@ import { registerDoctor } from './commands/doctor.ts';
 import { registerGenerate } from './commands/generate.ts';
 import { registerJobCommands } from './commands/jobs.ts';
 import { registerPublish } from './commands/publish.ts';
+import { registerRuns } from './commands/runs.ts';
 import { registerServe } from './commands/serve.ts';
 import { registerSetup } from './commands/setup.ts';
 import { formatError } from './format.ts';
@@ -75,6 +76,7 @@ export function buildProgram(rt: CliRuntime): Command {
   registerJobCommands(program, rt);
   registerServe(program, rt);
   registerCache(program, rt);
+  registerRuns(program, rt);
   return program;
 }
 
