@@ -37,8 +37,8 @@ the pull request.
 [![MergeStory explains a change to a weather API client](docs/demo/poster.jpg)](https://pinishv.github.io/MergeStory/demo/)
 
 The video explains a change that adds retries with exponential backoff to a small weather API client.
-Open it on MergeStory's own [watch page](https://pinishv.github.io/MergeStory/demo/), with chapters,
-captions and the review checklist.
+[Watch it on YouTube](https://www.youtube.com/watch?v=yZaKPyuZN1Q), or open MergeStory's own
+[watch page](https://pinishv.github.io/MergeStory/demo/) with the chapters and the review checklist.
 
 ## What a video looks like
 
