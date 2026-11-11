@@ -115,17 +115,25 @@ export async function resolvedLocation(path: string): Promise<string> {
   }
 }
 
-/** What a file or folder is on disk, whatever it is called. Null when it does not exist. */
-const diskIdentity = async (path: string): Promise<string | null> =>
+/**
+ * What a file or folder is on disk, whatever it is called. Null when it does not exist, or when
+ * the file system gives no number for it (some report 0 for every file).
+ */
+export const diskIdentity = async (path: string): Promise<string | null> =>
   stat(path, { bigint: true }).then(
-    (info) => `${info.dev}:${info.ino}`,
+    (info) => (info.ino === 0n ? null : `${info.dev}:${info.ino}`),
     () => null,
   );
 
-/** Whether two paths are the same file or folder on disk. One folder can have several names. */
-export async function sameOnDisk(a: string, b: string): Promise<boolean> {
-  const [first, second] = await Promise.all([diskIdentity(a), diskIdentity(b)]);
-  return first !== null && first === second;
+/**
+ * Whether two paths are the same file or folder on disk. One folder can have several names. Where
+ * the disk gives no identity, the real paths are compared instead.
+ */
+export async function sameOnDisk(a: string, b: string, identity = diskIdentity): Promise<boolean> {
+  const [first, second] = await Promise.all([identity(a), identity(b)]);
+  if (first !== null && second !== null) return first === second;
+  const [realA, realB] = await Promise.all([a, b].map((path) => realpath(path).catch(() => null)));
+  return realA !== null && realA === realB;
 }
 
 /**
@@ -134,18 +142,19 @@ export async function sameOnDisk(a: string, b: string): Promise<boolean> {
  * ignored on every system, which is stricter than a disk that keeps case apart: on a disk that
  * ignores case, WORK and work are one folder, and the two cannot be told apart from here.
  */
-export async function isInWorkFolder(path: string, work: string): Promise<boolean> {
+export async function isInWorkFolder(path: string, work: string, identity = diskIdentity): Promise<boolean> {
   const [target, root] = await Promise.all([resolvedLocation(path), resolvedLocation(work)]);
   const inside = (a: string, b: string): boolean => isInside(a.toLowerCase(), b.toLowerCase());
   if (inside(resolve(work), resolve(path)) || inside(root, target)) return true;
   // A folder can have a second name that no path shows (another mount point, for example), so the
   // part of the path that exists is also compared by what it is on disk.
-  // shortcut: two separate mounts of one network share have different device numbers and count as
-  // two folders; upgrade to a token file in the work folder if that setup has to be covered.
-  const workIdentity = await diskIdentity(work);
+  // shortcut: a separate mount of the work folder (a network share mounted twice has another device
+  // number) and a mount of a folder inside it are not recognised; both need the user to mount
+  // something. Upgrade if such a setup has to be covered.
+  const workIdentity = await identity(work);
   if (workIdentity === null) return false;
   for (let dir = target; ; dir = dirname(dir)) {
-    if ((await diskIdentity(dir)) === workIdentity) return true;
+    if ((await identity(dir)) === workIdentity) return true;
     if (dirname(dir) === dir) return false;
   }
 }
