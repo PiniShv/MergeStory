@@ -431,6 +431,8 @@ describe('generate: publishing', () => {
     expect(result.publish).toEqual(uploaded);
     const stored = await readJson<GenerateResult>(join(runDir(), 'result.json'));
     expect(stored.publish).toEqual(uploaded);
+    expect(stored.elapsedSec).toBe(result.elapsedSec);
+    expect(result.elapsedSec).toBeGreaterThan(0);
     const input = await readJson<Record<string, unknown>>(join(runDir(), 'publish-input.json'));
     expect(input.files).toBeUndefined();
     expect(JSON.stringify(input)).not.toContain(home);

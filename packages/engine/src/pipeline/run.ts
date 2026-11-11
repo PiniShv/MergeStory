@@ -54,6 +54,7 @@ export async function generate(
   options: GenerateOptions,
   hooks: GenerateHooks = {},
 ): Promise<GenerateResult | PlanResult> {
+  const startedAt = performance.now();
   const p = await prepare(options, hooks, undefined, { checkPublishing: true, runFolder: true });
   const { ctx, config, changeSet, publishProblem } = p;
   const folder = runFolder(ctx.runDir);
@@ -206,6 +207,7 @@ export async function generate(
     title: storyboard.title,
     summary: storyboard.summary,
     durationSec: rendered.durationSec,
+    elapsedSec: Math.round((performance.now() - startedAt) / 100) / 10,
     chapters: plan.chapters,
     storyboardSource: choice.source,
     files: { ...resultFiles(ctx.runDir), poster: rendered.posterPath ? folder.poster : null },

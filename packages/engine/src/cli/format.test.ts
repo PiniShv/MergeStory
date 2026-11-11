@@ -69,6 +69,12 @@ describe('formatGenerateResult: where the video went', () => {
     expect(text).toMatch(/Shared +https:\/\/videos\.example\.com\/v\/index\.html {2}\(private\)/);
   });
 
+  it('says how long the run took, and nothing for a result from 1.0.0', () => {
+    expect(formatGenerateResult({ ...result(null), elapsedSec: 92.4 }, plain)).toMatch(/Made in +1m 32s/);
+    expect(formatGenerateResult({ ...result(null), elapsedSec: 45 }, plain)).toMatch(/Made in +45s/);
+    expect(formatGenerateResult(result(null), plain)).not.toContain('Made in');
+  });
+
   it('shows neither row when nothing was published', () => {
     const text = formatGenerateResult(result(null), plain);
     expect(text).not.toMatch(/Shared|Saved/);

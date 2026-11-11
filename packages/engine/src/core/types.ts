@@ -530,6 +530,8 @@ export interface GenerateResult {
   title: string;
   summary: string;
   durationSec: number;
+  /** Seconds the run took, one decimal. Absent in results stored by 1.0.0. */
+  elapsedSec?: number;
   chapters: Chapter[];
   storyboardSource: 'llm' | 'agent' | 'heuristic';
   files: {

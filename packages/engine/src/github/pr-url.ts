@@ -29,7 +29,9 @@ export function isValidRepoName(name: string): boolean {
 
 function invalid(reason: string): MergeStoryError {
   return new MergeStoryError('SOURCE_INVALID', `Not a pull request reference: ${reason}.`, {
-    hint: 'Use https://github.com/<owner>/<repo>/pull/<number> or <owner>/<repo>#<number>.',
+    hint:
+      'Use https://github.com/<owner>/<repo>/pull/<number> or <owner>/<repo>#<number>. ' +
+      'For a pull request on another host, pass the path of the local repository instead, with --base <branch>.',
   });
 }
 
