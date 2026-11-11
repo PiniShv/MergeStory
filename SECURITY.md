@@ -26,10 +26,11 @@ built so that nothing from your code or the change leaves your machine unless yo
   to a pull request only when you pass `--comment` or `--update-description`.
 - **Git runs only in a repository of your own.** The settings of a repository can name programs for
   git to run. MergeStory reads a repository only when a `.git` entry names it, as in a normal clone or
-  work tree. Git never checks out an entry with that name, so those settings are yours. A bare
-  repository, or one that sits inside a checked-out folder, is refused. So is a repository in
-  MergeStory's work folder, where a coding agent may write without asking. A `.git` folder that
-  arrived another way, for example inside an archive, is trusted as your own git commands trust it.
+  work tree. Git never checks out an entry with that name, so those settings are yours. MergeStory
+  does not run inside a bare repository (a work tree of one is fine), or in a repository that sits
+  inside a checked-out folder. The same goes for a repository in MergeStory's work folder, where a
+  coding agent may write without asking. A `.git` folder that arrived another way, for example
+  inside an archive, is trusted as your own git commands trust it.
 - **Remote providers are opt-in.** The default storyboard is written by your coding agent or built
   offline, and the default voice runs locally. A remote LLM or speech service is used only when you
   select it. Each run reports what was sent and where (`egress` in the result, and the dry-run plan).

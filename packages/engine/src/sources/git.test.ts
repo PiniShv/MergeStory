@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { appendFile, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { appendFile, chmod, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -147,13 +147,61 @@ describe('GitRunner: which repository', () => {
     expect(await toplevel(separate)).toBe(git(separate, 'rev-parse', '--show-toplevel'));
   });
 
+  it('works in a work tree of a bare clone, with a .git that is a link, and in a submodule', async () => {
+    const repo = await newRepo();
+    await writeFile(join(repo, 'a.txt'), 'a\n');
+    git(repo, 'add', '.');
+    git(repo, '-c', 'user.name=T', '-c', 'user.email=t@example.test', 'commit', '-q', '-m', 'first');
+    const same = async (dir: string): Promise<void> =>
+      expect(await toplevel(dir)).toBe(git(dir, 'rev-parse', '--show-toplevel'));
+
+    const bare = `${repo}-bare.git`;
+    const tree = `${repo}-bare-tree`;
+    dirs.push(bare, tree);
+    git(repo, 'clone', '-q', '--bare', repo, bare);
+    git(bare, 'worktree', 'add', '-q', tree);
+    await same(tree);
+
+    const viaLink = await mkdtemp(join(tmpdir(), 'mergestory-git-link-'));
+    dirs.push(viaLink);
+    await symlink(join(repo, '.git'), join(viaLink, '.git'));
+    await same(viaLink);
+
+    git(repo, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', bare, 'mod');
+    await same(join(repo, 'mod'));
+  });
+
+  // One folder can have two names that no link explains. macOS gives every path such a second name.
+  const SECOND_NAME = '/System/Volumes/Data';
+  it.runIf(existsSync(SECOND_NAME))('knows a folder under its second name', async () => {
+    const home = await realpath(await mkdtemp(join(tmpdir(), 'mergestory-git-home-')));
+    dirs.push(home);
+    const draft = join(home, 'work', 'draft');
+    await mkdir(draft, { recursive: true });
+    git(draft, 'init', '-q');
+    const refused = {
+      code: 'SOURCE_INVALID',
+      message: 'MergeStory does not run git in its work folder, or in a repository kept there.',
+    };
+    // The home under one name and the folder under the other, both ways round.
+    const renamedHome = testContext({ home: SECOND_NAME + home }).ctx;
+    expect(await failure(new GitRunner(draft, renamedHome).run(['status']))).toMatchObject(refused);
+    const plainHome = testContext({ home }).ctx;
+    expect(await failure(new GitRunner(SECOND_NAME + draft, plainHome).run(['status']))).toMatchObject(
+      refused,
+    );
+    // A normal clone works under its second name too.
+    const repo = await realpath(await newRepo());
+    expect((await new GitRunner(SECOND_NAME + repo, testContext().ctx).run(['status'])).code).toBe(0);
+  });
+
   it('refuses a repository in the work folder, where a coding agent writes without asking', async () => {
     const home = await mkdtemp(join(tmpdir(), 'mergestory-git-home-'));
     dirs.push(home);
     const { ctx } = testContext({ home });
     const refused = {
       code: 'SOURCE_INVALID',
-      message: 'MergeStory does not read a git repository in its work folder.',
+      message: 'MergeStory does not run git in its work folder, or in a repository kept there.',
     };
 
     // A whole repository there, with a real .git folder.

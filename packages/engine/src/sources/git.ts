@@ -12,13 +12,13 @@
  * checks out an entry with that name. It never runs in a repository in the work folder either,
  * where a coding agent may write without asking.
  */
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { gitEnvironment } from '../core/child-env.ts';
 import { Semaphore } from '../core/concurrency.ts';
 import type { RunContext } from '../core/context.ts';
 import { CommandNotFoundError, MergeStoryError, OutputTooLargeError, TimedOutError } from '../core/errors.ts';
-import { isInWorkFolder } from '../core/paths.ts';
+import { isInWorkFolder, sameOnDisk } from '../core/paths.ts';
 import { findProgram, type RunResult, runCommand } from '../core/process.ts';
 
 /** Settings that make output stable, and stop git running programs named in configuration. */
@@ -59,8 +59,9 @@ export interface GitRunOptions {
 }
 
 /**
- * Whether a `.git` entry at or above `start` names `gitDir` (a real path): as that folder itself,
- * or as the target of a `.git` file (a linked work tree, a submodule).
+ * Whether a `.git` entry at or above `start` names `gitDir`: as that folder itself, or as the
+ * target of a `.git` file (a linked work tree, a submodule). Folders are compared by what they are
+ * on disk, because one folder can have several names.
  */
 async function isNamedByDotGit(start: string, gitDir: string): Promise<boolean> {
   for (let dir = resolve(start); ; dir = dirname(dir)) {
@@ -74,7 +75,7 @@ async function isNamedByDotGit(start: string, gitDir: string): Promise<boolean> 
       const target = /^gitdir: (.+)$/m.exec(text)?.[1]?.trim();
       named = target ? resolve(dir, target) : null;
     }
-    if (named !== null && (await realpath(named).catch(() => null)) === gitDir) return true;
+    if (named !== null && (await sameOnDisk(named, gitDir))) return true;
     if (dirname(dir) === dir) return false;
   }
 }
@@ -146,13 +147,13 @@ export class GitRunner {
         },
       );
       if (found.code !== 0) return found;
-      const used = await realpath(found.stdout.trim()).catch(() => null);
-      if (used === null || !(await isNamedByDotGit(this.cwd, used))) {
+      const used = found.stdout.trim();
+      if (!(await isNamedByDotGit(this.cwd, used))) {
         throw new MergeStoryError(
           'SOURCE_INVALID',
           `The git repository found from ${this.cwd} is not one that a .git entry names.`,
           {
-            hint: 'Run MergeStory in a normal clone or work tree. A bare repository, or one that sits inside a checked-out folder, is refused: its settings can name programs for git to run.',
+            hint: 'Run MergeStory in a normal clone or work tree. It does not run inside a bare repository, or in a repository that sits inside a checked-out folder: its settings can name programs for git to run.',
           },
         );
       }
@@ -160,7 +161,7 @@ export class GitRunner {
       if ((await isInWorkFolder(this.cwd, work)) || (await isInWorkFolder(used, work))) {
         throw new MergeStoryError(
           'SOURCE_INVALID',
-          'MergeStory does not read a git repository in its work folder.',
+          'MergeStory does not run git in its work folder, or in a repository kept there.',
           {
             hint: `A coding agent may write in ${work} without asking, so a repository there is not treated as yours. Run MergeStory in your own clone or work tree.`,
           },
