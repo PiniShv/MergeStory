@@ -9,8 +9,8 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.0.0"
-allowed-tools: Bash(mergestory *) Bash(npx --yes mergestory@1.0.0 *)
+  version: "1.0.1"
+allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**)
 ---
 
 # MergeStory: explain a change as a video
@@ -23,24 +23,43 @@ Do not use it for text-only summaries, code review comments, or screen recording
 
 ## 1. Find the engine
 
-Run `mergestory --version`. If that fails, use `npx --yes mergestory@1.0.0` in place of
-`mergestory` in every command below. Do not chain the two forms with `||`.
+Run `mergestory --version`. If the command is missing, ask the user whether you may install it,
+then run `npm install -g mergestory@1.0.0`. Never start MergeStory with `npx`: inside a repository,
+`npx` can run that repository's own copy of a package instead of the published one.
 
-Then run `mergestory doctor --json`. Every check that fails comes with a fix hint. Tell the user
-about failed checks instead of working around them (for example FFmpeg or the browser missing).
+Run every `mergestory` command by itself, in the forms shown here, with real values in place of
+`<source>` and `<folder>`. A path may start with `~/`. Do not use shell variables, pipes,
+redirection, `&&` or `;` around a command, and do not add flags that the user did not ask for: the
+flags in this skill and in [references/cli.md](references/cli.md) are the ones to use. The user is
+asked to approve `analyze`, `validate` and `generate`, so a plain command is one they can read.
+
+Then run `mergestory doctor --json`. Every check that fails comes with a fix hint. Do not work
+around a failed check:
+
+- **FFmpeg is missing:** ask the user whether you may install it. After a yes, run the command
+  for their system (macOS with Homebrew: `brew install ffmpeg`; Debian or Ubuntu:
+  `sudo apt-get install -y ffmpeg`; Windows: `winget install --id Gyan.FFmpeg -e`), then run
+  `doctor` again. If the command asks for a password, give it to the user to run.
+- **Anything else** (Node.js too old, no browser): show the hint and stop. Do not install these
+  yourself.
 
 ## 2. Pick the source
 
-- A pull request: its URL, for example `https://github.com/acme/app/pull/42`, or the short form
-  `acme/app#42`. If you just opened it, get it with `gh pr view --json url --jq .url`.
-- No pull request yet: the local repository path (`.`), optionally with `--base main --head HEAD`.
-  Only committed changes are included.
+- A pull request on GitHub: its URL, for example `https://github.com/acme/app/pull/42`, or the
+  short form `acme/app#42`. Use the URL from this session when you have it. If you just opened the
+  pull request, get it with `gh pr view --json url --jq .url`.
+- No pull request yet, or a pull request on another host: the local repository path (`.`),
+  optionally with `--base main --head HEAD`. MergeStory reads pull requests from GitHub only; a
+  local path works with every git host. Only committed changes are included.
 
 ## 3. Write down what only you know
 
-Create a folder outside the repository (for example in the system temp directory):
+Make a folder for this change under `~/.mergestory/work/`, for example
+`~/.mergestory/work/retry-backoff`. Keep every working file there, never in the repository. Write
+and read these files with your file tools, not with shell commands:
 
-- `task.md`: the original task, in the user's words where possible.
+- `task.md`: the original task, in the user's words where possible. For a pull request on another
+  host, add its title and description.
 - `notes.md`: the key decisions you made and why, edge cases, and what deserves extra review.
 - `tests.json`: only if you actually ran tests in this session, as
   `[{"command": "npm test", "passed": true, "summary": "212 passed, 0 failed"}]`.
@@ -61,12 +80,11 @@ These become citable evidence (TASK, NOTES, T1) in the video.
    Fix every error and repeat until `ok` is true. Read `warnings` and `fixes` too: they show what
    the engine removed or changed on its own. A removed id such as `TASK` or `T1` means that a
    context flag is missing.
-5. `mergestory generate <source> --storyboard <folder>/storyboard.json --task-file <folder>/task.md --notes-file <folder>/notes.md --tests-file <folder>/tests.json --json`
+5. `mergestory generate <source> --storyboard <folder>/storyboard.json --task-file <folder>/task.md --notes-file <folder>/notes.md --tests-file <folder>/tests.json --publish local --json`
 
-Leave out `--tests-file` when there is no tests.json.
-
-If the team configured an LLM for MergeStory (`doctor` shows the provider), you may skip the
-storyboard steps and run step 5 without `--storyboard`; the engine then writes it.
+Leave out `--tests-file` when there is no tests.json. Always keep `--publish local`: it keeps the
+video on this machine, also when the team set up storage. Uploading is a separate step that the
+user approves (section 5).
 
 Rendering takes about one to three minutes. Run it with a long timeout or in the background.
 The first English video also installs the free voice once, so it takes a few minutes longer. This
@@ -75,24 +93,30 @@ needs no action. Without network access, add `--tts none`.
 ## 5. Publishing and the pull request (ask first)
 
 By default the video stays on this machine. Uploading or commenting is visible to others, so do
-it only when the user asks or has approved it. The simplest safe flow: render locally, show the
-user the local watch page, and publish the same run after they approve, without rendering again:
+it only when the user asks or has approved it.
+
+Uploading needs storage that the team has set up. When the `publish` check of `doctor` says
+`local` or `none` and the user has not named a team storage, do not upload anything: tell the user
+where the video file is (`files.video`), and that they can attach it to the pull request or post
+it in the team chat themselves.
+
+With team storage: show the user the local watch page of the run you rendered in section 4, and
+publish that same run after they approve, without rendering again:
 
 `mergestory publish <runDir> --publish s3 --comment --json`
 
 - `--publish s3` uploads to the team's configured storage. Links are private and expire, unless the
   team configured `--visibility protected` (permanent, behind a sign-in) or `public`.
-- `--publish youtube` uploads to the team's YouTube channel (unlisted by default).
-- `--comment` adds or updates one MergeStory comment on the pull request. It needs a pull request
-  as the source and a video that was published somewhere other than this machine.
+- `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
+  request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.
 
 ## 6. Report back
 
 Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and any `warnings`.
-The link is `publish.watchUrl` when `publish.provider` is `s3` or `youtube`. When it is `local`,
-nothing was shared: give the local files `files.watchPage` and `files.video` instead, and say that
-they are only on this machine. Say plainly that the video explains the change and does not
+When `publish` is null or `publish.provider` is `local`, nothing was shared: give the local
+files `files.watchPage` and `files.video`, and say that they are only on this machine. Otherwise
+the link is `publish.watchUrl`. Say plainly that the video explains the change and does not
 replace code review.
 
 ## Gotchas
@@ -102,9 +126,9 @@ replace code review.
   `error.details.errors` (from `generate`), fix, retry.
 - Exit code 4 means the budget would be exceeded: tell the user; do not raise `--budget` on your own.
 - Exit code 5 means a service failed. One case comes with a full result: when `ok` is `true` and
-  you passed `--comment`, the video is published but GitHub refused the comment. Report the link
-  and say that the comment is missing.
-- Exit code 6 means FFmpeg or the browser is missing: show the hint from the error.
+  you passed `--comment` or `--update-description`, the video is published but the pull request
+  was not updated. Report the link and say that the pull request update is missing.
+- Exit code 6 means FFmpeg or the browser is missing: go back to section 1.
 - Exit code 7 means publishing was blocked to protect a private repository: keep links private.
 - Network errors: tell the user which host to allow (the GitHub API, the npm registry, the
   storage endpoint, or `huggingface.co` once for the voice) instead of retrying in a loop.

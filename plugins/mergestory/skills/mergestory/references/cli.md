@@ -15,14 +15,16 @@ MergeStory repository.
 | `mergestory publish <run> --publish s3 [--comment] --json` | Uploads a video that was already rendered, and optionally comments on the pull request. No rendering. |
 | `mergestory status <job-id> --wait --json` | Waits for a job started with `generate --async`. |
 
-`<source>` is a pull request URL (`https://github.com/owner/repo/pull/42`), the short form
-`owner/repo#42`, or a local repository path (`.`). For a local path, `--base <ref>` and `--head <ref>`
+`<source>` is a GitHub pull request URL (`https://github.com/owner/repo/pull/42`), the short form
+`owner/repo#42`, or a local repository path (`.`). Pull requests on other hosts are not read: use the
+local path, which works with every git host. For a local path, `--base <ref>` and `--head <ref>`
 choose the range (default: the merge base with the default branch, and `HEAD`). Only committed changes
 are included.
 
 ## Context flags (analyze, validate and generate)
 
-Pass the same context flags to all three, so the evidence ids (TASK, NOTES, T1, SS1) match.
+Pass the same context flags to all three, so the evidence ids (TASK, NOTES, T1, SS1) match. If you
+pass `--duration`, `--max-duration` or `--language` to `generate`, pass the same to `validate`.
 
 | Flag | Meaning |
 |---|---|
@@ -39,7 +41,7 @@ Pass the same context flags to all three, so the evidence ids (TASK, NOTES, T1, 
 | `--duration <sec>`, `--max-duration <sec>` | Target length (20-600 seconds, default adapts to the change) and hard cap (20-600, default 150). |
 | `--tts auto\|kokoro\|say\|openai\|elevenlabs\|none` | Speech. `auto` only picks free local voices. |
 | `--llm none\|anthropic\|openai\|openai-compatible` | Who writes the storyboard when none is given. Paid providers need their key in the environment. |
-| `--publish local\|s3\|youtube\|none` | Where the video goes. `local` (default) keeps it on this machine. |
+| `--publish local\|s3\|none` | Where the video goes. `local` (default) keeps it on this machine. `s3` needs storage that the team set up. |
 | `--visibility private\|protected\|public` | S3 links: signed and expiring, permanent behind a sign-in, or permanent and open. |
 | `--comment`, `--update-description` | Write the link to the pull request. Needs a pull request source and a video that was published somewhere other than this machine. |
 | `--budget <usd>` | Cost cap for the run (default 0.25). |
@@ -95,7 +97,7 @@ Failure (any command): `{ "ok": false, "error": { "code": "GROUNDING_FAILED", "m
 | 2 | Usage, config or source problem | Fix the command, the path or the ref. |
 | 3 | Storyboard failed validation | Read `errors` (from `validate`) or `error.details.errors` (from `generate`), fix the storyboard, validate again. |
 | 4 | Budget would be exceeded | Tell the user. Do not raise `--budget` on your own. |
-| 5 | A service failed (GitHub, LLM, speech, upload) | Read the hint; network or credentials are the usual cause. With `ok: true`, the video is published but the pull request update failed. |
-| 6 | FFmpeg or the browser is missing | Show the install hint from the error. |
+| 5 | A service failed (GitHub, LLM, speech, upload) | Read the hint; network or credentials are the usual cause. With `ok: true`, the video is published but the pull request was not updated (`--comment` or `--update-description`). |
+| 6 | FFmpeg or the browser is missing | For FFmpeg, ask the user and install it (see the skill, section 1). For the browser, show the hint. |
 | 7 | Blocked to protect a private repository | Keep links private, or ask the user. |
 | 130 | Cancelled | Nothing to do. |

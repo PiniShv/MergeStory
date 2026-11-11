@@ -11,7 +11,7 @@ change fast and each has its own conventions. Video logic tied to one agent woul
 
 - All logic (analysis, storyboard, grounding, narration, rendering, publishing, GitHub) lives in
   the engine, `packages/engine`, exposed as a CLI, an HTTP API and a library.
-- The Agent Skill, `skills/mergestory`, only explains when and how to call the CLI, gathers what
+- The Agent Skill, `plugins/mergestory/skills/mergestory`, only explains when and how to call the CLI, gathers what
   the agent knows (task, decisions, test results it actually ran), and reports the result.
 - The skill follows the open Agent Skills format with only the six standard frontmatter keys, so
   one copy works across agents.

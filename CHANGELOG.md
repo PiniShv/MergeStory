@@ -2,6 +2,25 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Skill and plugin 1.0.1
+
+The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.
+
+- The plugin is now a small folder of its own, `plugins/mergestory`, with a manifest. Installing it no
+  longer copies the whole repository. The Agent Skill moved to `plugins/mergestory/skills/mergestory`.
+- When FFmpeg is missing, the skill asks and installs it, instead of stopping.
+- The skill installs the engine with `npm install -g`, after asking. It no longer uses `npx`, which can
+  run a copy of a package from the repository it is started in instead of the published one.
+- For a pull request that is not on GitHub, the skill uses the local repository.
+- The skill keeps its working files in `~/.mergestory/work`, so Claude Code does not ask about each file.
+- The skill no longer lets every `mergestory` command run without a question. Only the version check and
+  the machine check do. Claude Code asks before `analyze`, `validate` and `generate`, so a command with
+  options that the user did not ask for cannot run unseen.
+- The render step always keeps the video on this machine (`--publish local`), also when a team set up
+  storage as the default. Uploading is a separate step that the user approves.
+- Without team storage, the skill says where the video file is instead of offering an upload, and it no
+  longer offers YouTube.
+
 ## 1.0.0
 
 The first release.

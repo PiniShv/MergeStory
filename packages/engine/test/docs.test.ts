@@ -39,7 +39,7 @@ function files(dir: string, keep: (name: string) => boolean): string[] {
 
 /** Every Markdown page of the repository, except the files of the demo repository itself. */
 function markdownPages(): string[] {
-  const pages = ['docs', 'skills', 'examples']
+  const pages = ['docs', 'plugins', 'examples']
     .flatMap((dir) => files(join(repository, dir), (name) => name.endsWith('.md')))
     .filter((path) => !/examples[\\/]demo[\\/](base|feature)[\\/]/.test(path));
   for (const name of ['README.md', 'SECURITY.md', 'CONTRIBUTING.md', 'CHANGELOG.md']) {
@@ -337,7 +337,10 @@ describe.skipIf(!hasDocs)('the validator codes in the docs', () => {
 
   for (const [name, parts] of [
     ['docs/storyboard.md', ['docs', 'storyboard.md']],
-    ['the skill troubleshooting guide', ['skills', 'mergestory', 'references', 'troubleshooting.md']],
+    [
+      'the skill troubleshooting guide',
+      ['plugins', 'mergestory', 'skills', 'mergestory', 'references', 'troubleshooting.md'],
+    ],
   ] as const) {
     it(`are all emitted by the validator (${name})`, () => {
       const codes = codesInTables(read(...parts));
