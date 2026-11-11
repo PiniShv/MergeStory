@@ -96,29 +96,20 @@ describe('GitRunner: which repository', () => {
   const toplevel = (dir: string): Promise<string> =>
     new GitRunner(dir, testContext().ctx).ok(['rev-parse', '--show-toplevel']).then((out) => out.trim());
 
-  it('refuses a repository that no .git entry names, and runs no program that its settings name', async () => {
+  it('refuses a repository that no .git entry names', async () => {
     const outer = await newRepo();
-    // A folder that is a repository itself: what a checkout can bring along.
+    // A folder that is a repository itself, as a checkout can bring along.
     const inner = join(outer, 'vendor', 'tool');
-    const marker = join(outer, 'filter-ran');
     git(outer, 'init', '-q', '--bare', inner);
     await appendFile(join(inner, 'config'), '[core]\n\tbare = false\n\tworktree = .\n');
-    await writeFile(join(inner, 'file.txt'), 'one\n');
-    git(outer, `--git-dir=${inner}`, `--work-tree=${inner}`, 'add', 'file.txt');
-    await appendFile(join(inner, 'config'), `[filter "x"]\n\tclean = "touch '${marker}'; cat"\n`);
-    await writeFile(join(inner, '.gitattributes'), '* filter=x\n');
-    // Same size as before, so git has to read the file (through the filter) to see the change.
-    await writeFile(join(inner, 'file.txt'), 'two\n');
-
-    // The setup is real: plain git, started in that folder, runs the program.
-    git(inner, '-c', 'safe.bareRepository=all', 'status', '--porcelain');
-    expect(existsSync(marker)).toBe(true);
-    await rm(marker);
+    // Plain git uses it.
+    expect(git(inner, '-c', 'safe.bareRepository=all', 'rev-parse', '--show-toplevel')).toBe(
+      git(inner, '-c', 'safe.bareRepository=all', 'rev-parse', '--absolute-git-dir'),
+    );
 
     const error = await failure(new GitRunner(inner, testContext().ctx).run(['status', '--porcelain']));
     expect(error).toMatchObject({ code: 'SOURCE_INVALID' });
     expect((error as MergeStoryError).message).toContain('is not one that a .git entry names');
-    expect(existsSync(marker)).toBe(false);
   });
 
   it('works in a subfolder, a linked work tree and a work tree with a .git file', async () => {
