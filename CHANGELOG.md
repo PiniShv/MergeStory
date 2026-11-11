@@ -2,6 +2,21 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## 1.1.0
+
+### Safer with coding agents
+
+- The global `--config` option is removed. A settings file can name other programs and hosts, so a flag
+  added to an approved command could change what MergeStory runs and where it sends data. Set
+  `MERGESTORY_CONFIG=<file>` instead, or use `~/.mergestory/config.json`. Typing `--config` now gives an
+  error that says this.
+- `--llm-base-url` only takes an address on this machine. Before, the flag could send the evidence pack to
+  any https host. A server on another machine still works through `MERGESTORY_LLM_BASE_URL` or
+  `llm.baseUrl` in the config file.
+- New `mergestory render` command: makes the video on this machine from a storyboard. It never calls a
+  model or a paid voice, never uploads and never comments, whatever the environment or the config file
+  says. With `doctor`, `analyze` and `validate` it is safe to pre-approve for a coding agent.
+
 ## Skill and plugin 1.0.1
 
 The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.

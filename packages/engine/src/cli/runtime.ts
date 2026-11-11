@@ -16,14 +16,12 @@ export interface Globals {
   quiet: boolean;
   logLevel: LogLevel | undefined;
   logFormat: LogFormat | undefined;
-  config: string | undefined;
 }
 
 /** What a command needs while it runs. */
 export interface CommandEnv {
   readonly io: CliIo;
   readonly json: boolean;
-  readonly configPath: string | null;
   readonly logger: Logger;
   readonly style: Style;
   readonly signal: AbortSignal;
@@ -64,7 +62,6 @@ export class CliRuntime {
     const env: CommandEnv = {
       io,
       json,
-      configPath: globals.config ?? null,
       logger,
       style: createStyle(!json && colorEnabled(io.stdoutIsTty, io.env)),
       signal: this.signal,

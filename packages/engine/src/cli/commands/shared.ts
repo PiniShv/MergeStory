@@ -8,7 +8,7 @@ import type { CommandEnv } from '../runtime.ts';
 /** Resolve the configuration the way a run would: flags are not involved, environment and config file are. */
 export async function loadConfig(env: CommandEnv, overrides?: ConfigInput): Promise<Config> {
   const { resolveConfig } = await import('../../core/config.ts');
-  return resolveConfig({ overrides, configPath: env.configPath, env: env.io.env, cwd: env.io.cwd });
+  return resolveConfig({ overrides, env: env.io.env, cwd: env.io.cwd });
 }
 
 /** The job store under the configured MergeStory home. */

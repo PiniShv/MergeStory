@@ -277,7 +277,7 @@ to a file on this machine is never posted.
 ## Settings and files
 
 A flag beats an environment variable, an environment variable beats the config file, and the config
-file beats the defaults (`src/core/config.ts`). The config file is read only from `--config`,
+file beats the defaults (`src/core/config.ts`). The config file is read only from
 `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`, never from the current folder. Every key is
 validated, and a key that looks like a secret is rejected. [configuration.md](configuration.md) lists
 every setting.
@@ -311,7 +311,7 @@ whose price is unknown is counted at the highest listed rate, so it cannot slip 
 - Secrets come only from environment variables, are registered with a redactor, and never appear
   in logs, job files, results or URLs. Config files that contain secret-like keys are rejected.
   Child processes (git, `gh`, the installer of the free voice) start without them.
-- The config file is read only from `--config`, `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`,
+- The config file is read only from `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`,
   never from the repository or the current folder, so a repository cannot change how MergeStory runs.
 - Child processes run without a shell and with argument arrays; refs and paths are validated. The run
   folder must be outside the repository being explained.

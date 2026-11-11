@@ -61,7 +61,6 @@ export function registerServe(program: Command, rt: CliRuntime): void {
         token,
         allowRoots: roots.map((dir) => resolve(env.io.cwd, dir)),
         allowedHosts: hosts,
-        configPath: env.configPath,
         home: config.home,
         logger: env.logger,
         signal: env.signal,

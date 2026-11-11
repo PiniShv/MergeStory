@@ -129,7 +129,6 @@ describe('publish: flags become PublishRunOptions', () => {
   });
 
   it('maps every flag to the matching setting', async () => {
-    await writeFile(join(dir, 'my.config.json'), '{}');
     publishMock.mockResolvedValue(fakeResult());
     const { code } = await run([
       'publish',
@@ -140,8 +139,6 @@ describe('publish: flags become PublishRunOptions', () => {
       'protected',
       '--comment',
       '--update-description',
-      '--config',
-      'my.config.json',
     ]);
     expect(code).toBe(0);
     const options = lastOptions();
@@ -149,7 +146,7 @@ describe('publish: flags become PublishRunOptions', () => {
       publish: { provider: 's3', visibility: 'protected' },
       github: { comment: true, updateDescription: true },
     });
-    expect(options.configPath).toBe(join(dir, 'my.config.json'));
+    expect(options.configPath).toBeUndefined();
   });
 
   it.each([
@@ -186,10 +183,10 @@ describe('publish: flags become PublishRunOptions', () => {
     expect(lastOptions().run).toBe('20261104-101500-a1b2');
   });
 
-  it('reads the config file named with --config before it publishes, and reports a broken one', async () => {
+  it('reads the config file named in MERGESTORY_CONFIG before it publishes, and reports a broken one', async () => {
     await writeFile(join(dir, 'broken.json'), '{not json');
     for (const file of ['broken.json', 'missing.json']) {
-      const { code, stderr } = await run(['publish', 'r1', '--config', file]);
+      const { code, stderr } = await run(['publish', 'r1'], { MERGESTORY_CONFIG: file });
       expect(code, file).toBe(2);
       expect(stderr).toContain('error [CONFIG_INVALID]');
     }
@@ -198,7 +195,7 @@ describe('publish: flags become PublishRunOptions', () => {
 
   it('uses the publish provider of the config file', async () => {
     await writeFile(join(dir, 'ms.json'), JSON.stringify({ publish: { provider: 'none' } }));
-    const { code, stderr } = await run(['publish', 'r1', '--config', 'ms.json']);
+    const { code, stderr } = await run(['publish', 'r1'], { MERGESTORY_CONFIG: 'ms.json' });
     expect(code).toBe(2);
     expect(stderr).toContain('nowhere to publish');
     expect(publishMock).not.toHaveBeenCalled();

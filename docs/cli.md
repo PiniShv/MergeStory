@@ -10,7 +10,7 @@ what each command prints, and the exit code it ends with. The settings behind th
 | Check that this machine is ready | [`mergestory doctor`](#mergestory-doctor) |
 | Make a video from a pull request or a branch | [`mergestory generate`](#mergestory-generate) |
 | Upload a video I made earlier | [`mergestory publish`](#mergestory-publish) |
-| Write the storyboard myself, or let a coding agent write it | [`analyze`](#mergestory-analyze), [`validate`](#mergestory-validate) and [`schema`](#mergestory-schema) |
+| Write the storyboard myself, or let a coding agent write it | [`analyze`](#mergestory-analyze), [`validate`](#mergestory-validate), [`render`](#mergestory-render) and [`schema`](#mergestory-schema) |
 | Make a video in the background | `generate --async`, then [`status`](#mergestory-status) and [`jobs`](#mergestory-jobs) |
 | Offer MergeStory over HTTP | [`mergestory serve`](#mergestory-serve) |
 | Install the free voice, or sign in to YouTube | [`mergestory setup`](#mergestory-setup) |
@@ -52,12 +52,13 @@ These work with every command, before or after the command name.
 | `--json` | Print one JSON object on stdout and nothing else. Logs go to stderr. See [JSON output](#json-output). |
 | `--log-level <level>` | How much to log on stderr: `debug`, `info` (default), `warn`, `error` or `silent`. Environment variable: `MERGESTORY_LOG_LEVEL`. |
 | `--log-format <format>` | `pretty` (default) or `json`. Environment variable: `MERGESTORY_LOG_FORMAT`. |
-| `--config <file>` | Read settings from this file. Without it MergeStory uses `MERGESTORY_CONFIG`, then `$MERGESTORY_HOME/config.json`. It never searches the current folder. See [configuration.md](configuration.md#where-settings-come-from). |
 | `-q, --quiet` | Log errors only. Same as `--log-level error`. |
 | `-V, --version` | Print the version. |
 | `-h, --help` | Show help. |
 
-A flag you give beats an environment variable, and an environment variable beats the config file.
+A flag you give beats an environment variable, and an environment variable beats the config file. There is
+no flag for the config file: set `MERGESTORY_CONFIG`, or use `$MERGESTORY_HOME/config.json`. See
+[configuration.md](configuration.md#where-settings-come-from). The `--config` option was removed in 1.1.0.
 
 ### Context flags
 
@@ -122,7 +123,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 |---|---|---|
 | `--llm <provider>` | Who writes the storyboard: `none` (the free offline storyboard), `anthropic`, `openai` or `openai-compatible`. Paid providers need their key in the environment. | `none` |
 | `--model <name>` | The model. | `claude-haiku-5-5` for `anthropic`, `gpt-6-luna` for `openai`. `openai-compatible` has no default. |
-| `--llm-base-url <url>` | The address of an OpenAI-compatible server, for example `http://localhost:11434/v1`. Plain `http` is only accepted for this machine and private networks. No credentials in the URL. | none |
+| `--llm-base-url <url>` | The address of an OpenAI-compatible server on this machine, for example `http://localhost:11434/v1`. The flag takes only `localhost`, `127.x.x.x` or `::1`. For a server on another machine, set `MERGESTORY_LLM_BASE_URL` or `llm.baseUrl` in the config file. No credentials in the URL. | none |
 | `--tts <provider>` | Speech: `auto`, `kokoro`, `say`, `openai`, `elevenlabs` or `none`. `auto` only picks a free local voice: Kokoro for English (installed once on the first run), otherwise Kokoro if installed, then macOS `say`, then captions only. `say` and `none` never install anything. | `auto` |
 | `--voice <name>` | The voice name for the speech provider. | the provider's own voice |
 | `--publish <provider>` | Where the finished video goes: `local` (a folder on this machine), `s3` (S3-compatible storage), `youtube` (your channel) or `none` (nowhere). | `local` |
@@ -271,6 +272,34 @@ Otherwise the ids `TASK`, `NOTES`, `T1` and `SS1` do not exist, and the lines th
 It prints `errors` (these block rendering), `warnings` (something was removed or replaced) and `fixes` (every
 change made automatically). The exit code is 0 when there are no errors, even if there are warnings, and 3
 when there is at least one error. [storyboard.md](storyboard.md#what-the-checks-do) explains each code.
+
+## `mergestory render`
+
+```
+mergestory render [source] [flags]
+```
+
+Makes the video on this machine. It is `generate` without every option that can reach another host or spend
+money. It never calls a model or a paid voice, never uploads and never posts on the pull request. Whatever the
+environment or the config file says, it uses no model, a free local voice (`auto` unless you choose one) and
+the `local` publish target in the run folder. The paths of `ffmpeg` and the browser still come from your
+settings. Use it after `analyze` and `validate`, or give a coding agent permission to run it.
+
+| Flag | What it does | Default |
+|---|---|---|
+| `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). | none |
+| `--storyboard <file>` | The storyboard you wrote. Without it the free offline storyboard is used. | none |
+| `--style`, `--quality`, `--max-duration`, `--duration`, `--language`, `--theme` | As for `generate`. | as for `generate` |
+| `--tts <provider>` | `auto`, `kokoro`, `say` or `none`. | `auto` |
+| `--voice <name>` | The voice name for the speech provider. | the provider's default |
+| `--dry-run` | Show the plan and render nothing. | off |
+| `--no-cache` | Do not use or fill the cache. | cache on |
+| `--no-captions` | Leave captions out of the video. | captions on |
+
+It refuses `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--update-description`, `--budget`, `--async`, `--out` and `--music`. It prints the same result and ends with the
+same exit codes as `generate`.
 
 ## `mergestory schema`
 

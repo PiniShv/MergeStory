@@ -2,7 +2,7 @@
  * Configuration.
  *
  * Precedence (highest first): explicit options (CLI flags / API input) > environment variables
- * > config file (--config, MERGESTORY_CONFIG, or $MERGESTORY_HOME/config.json) > defaults.
+ * > config file (the configPath API option, MERGESTORY_CONFIG, or $MERGESTORY_HOME/config.json) > defaults.
  *
  * Secrets never live in the config file. They come from the environment only and are
  * registered with the redactor the moment they are read.
@@ -385,7 +385,7 @@ function assertNoSecrets(value: unknown, path: string[] = []): void {
 }
 
 /**
- * Read the config file: the explicit path (--config or MERGESTORY_CONFIG), else
+ * Read the config file: the explicit path (the configPath API option, else MERGESTORY_CONFIG), else
  * $MERGESTORY_HOME/config.json when it exists. The working directory is never searched.
  */
 export function readConfigFile(
@@ -487,7 +487,7 @@ export function resolveConfig(options: ResolveConfigOptions = {}): Config {
   if (!result.success) {
     const issues = describeIssues(result.error.issues).slice(0, 6).join('; ');
     throw new MergeStoryError('CONFIG_INVALID', `Invalid configuration: ${issues}`, {
-      hint: 'Check flags, MERGESTORY_* environment variables and the config file (--config or ~/.mergestory/config.json).',
+      hint: 'Check flags, MERGESTORY_* environment variables and the config file (MERGESTORY_CONFIG or ~/.mergestory/config.json).',
     });
   }
   return result.data;
