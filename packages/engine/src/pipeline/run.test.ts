@@ -691,6 +691,10 @@ describe('output folders', () => {
     await expect(plan({ config: { outDir: work } })).rejects.toThrow(
       'The work folder holds drafts. It cannot be a run folder.',
     );
+    // Another letter case names the same folder on a disk that ignores case, also before it exists.
+    await expect(plan({ config: { outDir: join(home, 'WORK', 'draft') } })).rejects.toThrow(
+      'It cannot be a run folder.',
+    );
     await mkdir(join(work, 'run'), { recursive: true });
     await writeFile(join(work, 'run', 'publish-input.json'), '{}');
     await expect(publishRun({ run: join(work, 'run'), config: { home } })).rejects.toThrow(

@@ -1,9 +1,9 @@
 /**
- * mergestory agent: the commands a coding agent may run without asking. No argument can make them
- * read the user's files (they read the current repository through git, their work folder and
- * MergeStory's own files), write outside the MergeStory home and the system's temporary folder,
- * start a program of the argument's choosing, reach a host the user did not configure, upload,
- * comment or spend money. The general commands keep their flexible flags for people and CI.
+ * mergestory agent: the commands a coding agent may run without asking. They read only the current
+ * repository (through git), their work folder and MergeStory's own files. They write only in the
+ * MergeStory home and the system's temporary folder. No argument can make them start a program of
+ * its choosing, reach a host the user did not configure, upload, comment or spend money. The
+ * general commands keep their flexible flags for people and CI.
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -120,8 +120,12 @@ function notThisRepository(): MergeStoryError {
 }
 
 /** The GitHub repositories that the remotes of the current repository point at. */
-async function remotesOf(env: CommandEnv, hosts: ReadonlySet<string>) {
-  const git = new GitRunner(env.io.cwd, { signal: env.signal, redactor: globalRedactor });
+async function remotesOf(env: CommandEnv, config: Config, hosts: ReadonlySet<string>) {
+  const git = new GitRunner(env.io.cwd, {
+    signal: env.signal,
+    redactor: globalRedactor,
+    home: homeLayout(config.home),
+  });
   const result = await git.run(['remote', '-v'], { timeoutMs: 10_000, maxOutputBytes: 1024 * 1024 });
   if (result.code !== 0) return [];
   // "origin<TAB>https://github.com/o/r.git (fetch)": the URL may hold a token, so only owner and name are kept.
@@ -148,7 +152,7 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
   const configured = webHostFromApiUrl(config.github.apiUrl);
   if (configured) hosts.add(configured);
   if (!hosts.has(ref.webHost)) throw notThisRepository();
-  const remotes = await remotesOf(env, hosts);
+  const remotes = await remotesOf(env, config, hosts);
   const known = remotes.some(
     (remote) =>
       remote.host === ref.webHost &&

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { appendFile, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MergeStoryError } from '../core/errors.ts';
 import { shellQuote } from '../core/text.ts';
@@ -142,5 +142,34 @@ describe('GitRunner: which repository', () => {
     dirs.push(separate, `${separate}-gitdir`);
     git(separate, 'init', '-q', `--separate-git-dir=${separate}-gitdir`);
     expect(await toplevel(separate)).toBe(git(separate, 'rev-parse', '--show-toplevel'));
+    // The same with a relative path and Windows line ends in the .git file, as a submodule has.
+    await writeFile(join(separate, '.git'), `gitdir: ../${basename(separate)}-gitdir\r\n`);
+    expect(await toplevel(separate)).toBe(git(separate, 'rev-parse', '--show-toplevel'));
+  });
+
+  it('refuses a repository in the work folder, where a coding agent writes without asking', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'mergestory-git-home-'));
+    dirs.push(home);
+    const { ctx } = testContext({ home });
+    const refused = {
+      code: 'SOURCE_INVALID',
+      message: 'MergeStory does not read a git repository in its work folder.',
+    };
+
+    // A whole repository there, with a real .git folder.
+    const draft = join(home, 'work', 'draft');
+    await mkdir(draft, { recursive: true });
+    git(draft, 'init', '-q');
+    expect(await failure(new GitRunner(draft, ctx).run(['status']))).toMatchObject(refused);
+
+    // A folder elsewhere whose .git file points into the work folder.
+    const elsewhere = await mkdtemp(join(tmpdir(), 'mergestory-git-work-'));
+    dirs.push(elsewhere);
+    git(elsewhere, 'init', '-q', `--separate-git-dir=${join(home, 'work', 'kept')}`);
+    expect(await failure(new GitRunner(elsewhere, ctx).run(['status']))).toMatchObject(refused);
+
+    // The same repository is fine for a home that keeps its work folder elsewhere.
+    const other = testContext({ home: `${home}-other` }).ctx;
+    expect((await new GitRunner(elsewhere, other).run(['status'])).code).toBe(0);
   });
 });
