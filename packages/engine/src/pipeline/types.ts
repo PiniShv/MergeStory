@@ -63,9 +63,10 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
   /**
    * The source and the flags (task, notes, tests, screenshots, refs) of the command line, as raw
    * words. AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
-   * same evidence ids as the analysis did. Without it the document says to repeat them.
+   * same evidence ids as the analysis did. Without it the document says to repeat them. With `agent`,
+   * it shows `mergestory agent validate` and `mergestory agent render`, which find the files by name.
    */
-  followUp?: { source: string; args: string[] };
+  followUp?: { source: string; args: string[]; agent?: boolean };
 }
 
 export interface PublishRunOptions {

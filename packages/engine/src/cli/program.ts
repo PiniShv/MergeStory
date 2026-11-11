@@ -2,13 +2,13 @@
 import { Command, CommanderError, Option } from 'commander';
 import { MergeStoryError } from '../core/errors.ts';
 import { ENGINE_VERSION } from '../version.ts';
+import { registerAgent } from './commands/agent.ts';
 import { registerAnalyze, registerSchema, registerValidate } from './commands/authoring.ts';
 import { registerCache } from './commands/cache.ts';
 import { registerDoctor } from './commands/doctor.ts';
 import { registerGenerate } from './commands/generate.ts';
 import { registerJobCommands } from './commands/jobs.ts';
 import { registerPublish } from './commands/publish.ts';
-import { registerRender } from './commands/render.ts';
 import { registerServe } from './commands/serve.ts';
 import { registerSetup } from './commands/setup.ts';
 import { formatError } from './format.ts';
@@ -64,8 +64,10 @@ export function buildProgram(rt: CliRuntime): Command {
   program.commandsGroup('Write the storyboard yourself:');
   registerAnalyze(program, rt);
   registerValidate(program, rt);
-  registerRender(program, rt);
   registerSchema(program, rt);
+
+  program.commandsGroup('For coding agents (safe to pre-approve):');
+  registerAgent(program, rt);
 
   program.commandsGroup('Environment and background work:');
   registerDoctor(program, rt);

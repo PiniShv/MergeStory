@@ -3,9 +3,10 @@
  * so branch names, paths and refs can never be interpreted as shell syntax.
  */
 import { spawn } from 'node:child_process';
-import { access, constants } from 'node:fs/promises';
-import { delimiter, join } from 'node:path';
+import { access, constants, realpath } from 'node:fs/promises';
+import { delimiter, isAbsolute, join, resolve } from 'node:path';
 import { CommandNotFoundError, MergeStoryError, OutputTooLargeError, TimedOutError } from './errors.ts';
+import { isInside } from './posix.ts';
 
 export interface RunOptions {
   cwd?: string;
@@ -102,12 +103,15 @@ export function runCommand(command: string, args: string[], options: RunOptions 
   });
 }
 
-/** Find an executable on PATH without spawning `which`. Returns an absolute path or null. */
+/**
+ * Find an executable on PATH without spawning `which`. Returns an absolute path or null. A PATH
+ * entry that is not absolute is skipped, so the current folder can never supply the program.
+ */
 export async function which(command: string): Promise<string | null> {
   if (command.includes('/') || command.includes('\\')) {
     return (await isExecutable(command)) ? command : null;
   }
-  const dirs = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  const dirs = (process.env.PATH ?? '').split(delimiter).filter((dir) => isAbsolute(dir));
   const exts = process.platform === 'win32' ? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT').split(';') : [''];
   for (const dir of dirs) {
     for (const ext of exts) {
@@ -116,6 +120,34 @@ export async function which(command: string): Promise<string | null> {
     }
   }
   return null;
+}
+
+/**
+ * The absolute path of a program on PATH, for starting it by that path: Windows looks in the
+ * current folder before PATH for a bare name. A program inside `untrusted` (the repository being
+ * explained) is refused, also when PATH names a folder there. Throws CommandNotFoundError when the
+ * program is missing, so callers keep their "not installed" messages.
+ */
+export async function findProgram(command: string, untrusted: readonly string[] = []): Promise<string> {
+  const found = await which(command);
+  if (found === null) throw new CommandNotFoundError(command);
+  const real = async (path: string): Promise<string> => realpath(path).catch(() => resolve(path));
+  // Started by the path found (a link keeps its name), checked by both that path and its target.
+  const program = resolve(found);
+  const target = await real(program);
+  for (const root of untrusted) {
+    const realRoot = await real(root);
+    if ([program, target].some((path) => isInside(resolve(root), path) || isInside(realRoot, path))) {
+      throw new MergeStoryError(
+        'USAGE',
+        `${command} was found inside ${root}, which MergeStory does not run.`,
+        {
+          hint: `Install ${command} outside the repository being explained, and put that folder on the PATH.`,
+        },
+      );
+    }
+  }
+  return program;
 }
 
 export async function isExecutable(path: string): Promise<boolean> {

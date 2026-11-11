@@ -54,7 +54,7 @@ export async function generate(
   options: GenerateOptions,
   hooks: GenerateHooks = {},
 ): Promise<GenerateResult | PlanResult> {
-  const p = await prepare(options, hooks, undefined, { checkPublishing: true });
+  const p = await prepare(options, hooks, undefined, { checkPublishing: true, runFolder: true });
   const { ctx, config, changeSet, publishProblem } = p;
   const folder = runFolder(ctx.runDir);
   const warnings: string[] = [];

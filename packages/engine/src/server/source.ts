@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { gitEnvironment } from '../core/child-env.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isInside } from '../core/posix.ts';
-import { runCommand } from '../core/process.ts';
+import { findProgram, runCommand } from '../core/process.ts';
 import type { SourceInput } from '../core/providers.ts';
 import { detectSourceInput } from '../sources/index.ts';
 import { ApiError, toApiError } from './http.ts';
@@ -34,8 +34,10 @@ export async function resolveAllowRoots(roots: readonly string[]): Promise<strin
  * tree there.
  */
 async function gitLocations(path: string): Promise<string[] | null> {
+  const git = await findProgram('git', [path]).catch(() => null);
+  if (git === null) return null;
   const result = await runCommand(
-    'git',
+    git,
     ['--no-pager', 'rev-parse', '--show-toplevel', '--absolute-git-dir', '--git-common-dir'],
     {
       cwd: path,

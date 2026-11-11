@@ -13,9 +13,20 @@ All notable changes to MergeStory are listed here, newest first.
 - `--llm-base-url` only takes an address on this machine. Before, the flag could send the evidence pack to
   any https host. A server on another machine still works through `MERGESTORY_LLM_BASE_URL` or
   `llm.baseUrl` in the config file.
-- New `mergestory render` command: makes the video on this machine from a storyboard. It never calls a
-  model or a paid voice, never uploads and never comments, whatever the environment or the config file
-  says. With `doctor`, `analyze` and `validate` it is safe to pre-approve for a coding agent.
+- New `mergestory agent analyze`, `agent validate` and `agent render` commands for coding agents. They work
+  in a work folder under `~/.mergestory/work`, explain only the repository of the current folder, and take
+  no flag that names a file, a folder, a program or a host. `agent render` never calls a model or a paid
+  voice, never uploads and never comments, whatever the environment or the config file says. With
+  `mergestory --version` and `mergestory doctor --json` they are safe to pre-approve.
+- `generate --out` and `publish` refuse a folder inside `~/.mergestory/work`. Before, a draft folder that an
+  agent may write to could become a run folder, and `publish` trusts the files of a run folder.
+- MergeStory no longer writes into an existing output folder (`--out`, or a work folder) that is a symbolic
+  link or holds one. Before, a link placed there could make a written file land elsewhere.
+- `git` and `gh` are started by their absolute path from `PATH`. A `PATH` entry that is not absolute is
+  ignored, and a copy inside the repository being explained is refused. Before, on Windows, a program
+  with that name in the current folder could run instead.
+- Every `git diff` passes `--no-ext-diff` and `--no-textconv`, so a `.gitattributes` file in a change cannot
+  make git run a diff or text conversion program from your git settings. A test now keeps it that way.
 
 ## Skill and plugin 1.0.1
 

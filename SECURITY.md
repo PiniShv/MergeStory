@@ -54,10 +54,16 @@ built so that nothing from your code or the change leaves your machine unless yo
   It never reads one from the current folder, because that is often the repository being explained, and
   a file there could point MergeStory at other programs, servers or API hosts. Every key in the file is
   checked, and an unknown key is an error.
-- **Some commands are safe to pre-approve for a coding agent.** `doctor`, `analyze`, `validate` and
-  `render` take no option that names a program, a host or a settings file, and `render` always runs
-  without a model, a paid voice, an upload or a comment. So extra flags cannot make them start another
-  program, send the change anywhere or spend money.
+- **Some commands are safe to pre-approve for a coding agent:** `mergestory --version`,
+  `mergestory doctor --json` and every `mergestory agent ...` command. A coding agent can be steered by
+  text in a pull request, so whatever arguments it adds, these commands do not read a file outside the
+  current repository and their work folder, do not write outside the work folder and the run folder, do
+  not start a program other than the ones MergeStory needs, and never upload, comment or spend money.
+  They contact two kinds of host only: GitHub, to read a pull request of the current repository, and the
+  hosts of the one-time voice download, which sends nothing from the change. `agent render` always runs without a model, with a local voice
+  and without an upload or a comment, whatever the environment or the config file says. The general
+  commands (`analyze`, `validate`, `generate`, `publish`) have flags that name files, folders and hosts,
+  so approve each of them when it runs.
 - **Tokens go only where they belong.** A GitHub token from the environment is only sent to
   `api.github.com` or to the host you set in `github.apiUrl`, so a pull request URL can never send it to
   another server. A model address with a user name or password in it is refused, and so is plain `http`
