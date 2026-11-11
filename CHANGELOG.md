@@ -22,11 +22,13 @@ All notable changes to MergeStory are listed here, newest first.
   agent may write to could become a run folder, and `publish` trusts the files of a run folder.
 - MergeStory no longer writes into an existing output folder (`--out`, or a work folder) that is a symbolic
   link or holds one. Before, a link placed there could make a written file land elsewhere.
-- `git` and `gh` are started by their absolute path from `PATH`. A `PATH` entry that is not absolute is
-  ignored, and a copy inside the repository being explained is refused. Before, on Windows, a program
+- A local repository is read only when a `.git` entry names it: a normal clone, a linked work tree or a
+  submodule. A bare repository, or one that sits inside a checked-out folder, is refused. Before, the
+  settings of such a repository could name a program that git then ran.
+- Every program that MergeStory starts by name (`git`, `gh`, FFmpeg, the browser, and `npm` for the voice
+  install) is found on `PATH` and started by its full path. A `PATH` entry that is not a full path is
+  ignored, and a `git` inside the repository being explained is refused. Before, on Windows, a program
   with that name in the current folder could run instead.
-- Every `git diff` passes `--no-ext-diff` and `--no-textconv`, so a `.gitattributes` file in a change cannot
-  make git run a diff or text conversion program from your git settings. A test now keeps it that way.
 
 ### Also new
 

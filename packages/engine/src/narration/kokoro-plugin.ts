@@ -12,7 +12,7 @@ import { SECRET_ENV_VARS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { randomToken } from '../core/ids.ts';
-import { runCommand } from '../core/process.ts';
+import { findProgram, runCommand } from '../core/process.ts';
 import { isKokoroModelCached, type KokoroDtype, kokoroDtype } from './kokoro-model.ts';
 
 export interface LocalVoiceStatus {
@@ -255,7 +255,8 @@ export async function installKokoro(ctx: RunContext, deps: InstallDeps = {}): Pr
   ctx.egress.record(KOKORO_PACKAGES_HOST, 'voice package download', 0, []);
   try {
     await run(
-      'npm',
+      // By its full path, like every program MergeStory starts by name.
+      await findProgram('npm'),
       [
         'ci',
         '--prefix',

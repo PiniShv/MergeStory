@@ -4,11 +4,12 @@
  * Only git's object database is read (diff, log, cat-file, ls-tree). Nothing is written to the
  * repository and its working tree is never touched.
  */
-import { realpath, stat } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { stat } from 'node:fs/promises';
+import { basename, resolve } from 'node:path';
 import { mapLimit } from '../core/concurrency.ts';
 import type { RunContext } from '../core/context.ts';
 import { MergeStoryError } from '../core/errors.ts';
+import { resolvedLocation } from '../core/paths.ts';
 import { isInside } from '../core/posix.ts';
 import type { LoadedSource, SourceInput, SourceProvider } from '../core/providers.ts';
 import { decodeTextBlob } from '../core/text.ts';
@@ -502,22 +503,6 @@ async function findToplevel(repoPath: string, shown: string, ctx: RunContext): P
   throw new MergeStoryError('SOURCE_INVALID', `"${shown}" is not inside a git work tree.`, {
     hint: 'Run MergeStory inside a git repository, pass the path of one, or give a pull request URL.',
   });
-}
-
-/** A path with its links resolved. The part that does not exist yet is kept as it is. */
-async function resolvedLocation(path: string): Promise<string> {
-  const missing: string[] = [];
-  let current = resolve(path);
-  for (;;) {
-    try {
-      return join(await realpath(current), ...missing.reverse());
-    } catch {
-      const parent = dirname(current);
-      if (parent === current) return resolve(path);
-      missing.push(basename(current));
-      current = parent;
-    }
-  }
 }
 
 /**

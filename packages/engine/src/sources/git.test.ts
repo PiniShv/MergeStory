@@ -1,4 +1,6 @@
-import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { appendFile, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -14,18 +16,25 @@ afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
-/** A GitRunner whose "git" is the script given here (or none): the only program on the PATH. */
+/**
+ * A GitRunner whose "git" is the script given here (or none): the only program on the PATH. The
+ * script answers the runner's first question (which repository is this?) with the folder's `.git`.
+ */
 async function runnerWithGit(script: string | null): Promise<GitRunner> {
+  const repo = await mkdtemp(join(tmpdir(), 'mergestory-git-repo-'));
   const bin = await mkdtemp(join(tmpdir(), 'mergestory-git-bin-'));
-  dirs.push(bin);
+  dirs.push(repo, bin);
+  await mkdir(join(repo, '.git'));
   if (script !== null) {
     const file = join(bin, 'git');
-    await writeFile(file, `#!/bin/sh\nexec ${shellQuote(process.execPath)} -e ${shellQuote(script)}\n`);
+    const gitDir = `case " $* " in *" --absolute-git-dir "*) echo ${shellQuote(join(repo, '.git'))}; exit 0;; esac`;
+    await writeFile(
+      file,
+      `#!/bin/sh\n${gitDir}\nexec ${shellQuote(process.execPath)} -e ${shellQuote(script)}\n`,
+    );
     await chmod(file, 0o755);
   }
   vi.stubEnv('PATH', bin);
-  const repo = await mkdtemp(join(tmpdir(), 'mergestory-git-repo-'));
-  dirs.push(repo);
   return new GitRunner(repo, testContext().ctx);
 }
 
@@ -68,5 +77,70 @@ describe('GitRunner errors', () => {
   it('returns a non-zero exit code instead of throwing', async () => {
     const runner = await runnerWithGit('process.exit(7);');
     expect((await runner.run(['status'])).code).toBe(7);
+  });
+});
+
+describe('GitRunner: which repository', () => {
+  /** Real git, without the developer's own settings. */
+  const git = (cwd: string, ...args: string[]): string => {
+    vi.stubEnv('GIT_CONFIG_GLOBAL', '/dev/null');
+    vi.stubEnv('GIT_CONFIG_NOSYSTEM', '1');
+    return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  };
+  const newRepo = async (): Promise<string> => {
+    const repo = await mkdtemp(join(tmpdir(), 'mergestory-git-repo-'));
+    dirs.push(repo);
+    git(repo, 'init', '-q');
+    return repo;
+  };
+  const toplevel = (dir: string): Promise<string> =>
+    new GitRunner(dir, testContext().ctx).ok(['rev-parse', '--show-toplevel']).then((out) => out.trim());
+
+  it('refuses a repository that no .git entry names, and runs no program that its settings name', async () => {
+    const outer = await newRepo();
+    // A folder that is a repository itself: what a checkout can bring along.
+    const inner = join(outer, 'vendor', 'tool');
+    const marker = join(outer, 'filter-ran');
+    git(outer, 'init', '-q', '--bare', inner);
+    await appendFile(join(inner, 'config'), '[core]\n\tbare = false\n\tworktree = .\n');
+    await writeFile(join(inner, 'file.txt'), 'one\n');
+    git(outer, `--git-dir=${inner}`, `--work-tree=${inner}`, 'add', 'file.txt');
+    await appendFile(join(inner, 'config'), `[filter "x"]\n\tclean = "touch '${marker}'; cat"\n`);
+    await writeFile(join(inner, '.gitattributes'), '* filter=x\n');
+    // Same size as before, so git has to read the file (through the filter) to see the change.
+    await writeFile(join(inner, 'file.txt'), 'two\n');
+
+    // The setup is real: plain git, started in that folder, runs the program.
+    git(inner, '-c', 'safe.bareRepository=all', 'status', '--porcelain');
+    expect(existsSync(marker)).toBe(true);
+    await rm(marker);
+
+    const error = await failure(new GitRunner(inner, testContext().ctx).run(['status', '--porcelain']));
+    expect(error).toMatchObject({ code: 'SOURCE_INVALID' });
+    expect((error as MergeStoryError).message).toContain('is not one that a .git entry names');
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  it('works in a subfolder, a linked work tree and a work tree with a .git file', async () => {
+    const repo = await newRepo();
+    await mkdir(join(repo, 'src', 'deep'), { recursive: true });
+    await writeFile(join(repo, 'src', 'deep', 'a.txt'), 'a\n');
+    git(repo, 'add', '.');
+    git(repo, '-c', 'user.name=T', '-c', 'user.email=t@example.test', 'commit', '-q', '-m', 'first');
+    const real = git(repo, 'rev-parse', '--show-toplevel');
+    expect(await toplevel(join(repo, 'src', 'deep'))).toBe(real);
+    // A stray, empty .git folder on the way up: git skips it, and so does the check.
+    await mkdir(join(repo, 'src', '.git'));
+    expect(await toplevel(join(repo, 'src', 'deep'))).toBe(real);
+
+    const linked = `${repo}-linked`;
+    dirs.push(linked);
+    git(repo, 'worktree', 'add', '-q', linked);
+    expect(await toplevel(linked)).toBe(git(linked, 'rev-parse', '--show-toplevel'));
+
+    const separate = await mkdtemp(join(tmpdir(), 'mergestory-git-work-'));
+    dirs.push(separate, `${separate}-gitdir`);
+    git(separate, 'init', '-q', `--separate-git-dir=${separate}-gitdir`);
+    expect(await toplevel(separate)).toBe(git(separate, 'rev-parse', '--show-toplevel'));
   });
 });

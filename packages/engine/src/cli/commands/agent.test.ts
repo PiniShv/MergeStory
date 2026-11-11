@@ -58,7 +58,7 @@ function gitRepo(remotes: Record<string, string>): void {
 }
 
 const NOT_HERE = 'The agent commands only explain the repository of the current folder.';
-const LINK = 'The work folder holds a symbolic link. MergeStory does not read or write through links.';
+const LINK = 'is a symbolic link or holds one. MergeStory does not read or write through links.';
 
 describe('agent: the work folder', () => {
   it.each([
@@ -165,13 +165,15 @@ describe('agent: the work folder', () => {
     expect(code).toBe(2);
     expect(stderr).toContain('There is no storyboard.json in the work folder');
     expect(validateMock).not.toHaveBeenCalled();
+    // A mistyped name leaves no folder behind: only `agent analyze` creates one.
+    expect(existsSync(work())).toBe(false);
   });
 
   it('renders the offline storyboard when there is no storyboard.json', async () => {
     generateMock.mockResolvedValue(fakeResult());
     expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
     expect(lastGenerateOptions().storyboard).toBeUndefined();
-    expect(existsSync(work())).toBe(true);
+    expect(existsSync(work())).toBe(false);
   });
 });
 

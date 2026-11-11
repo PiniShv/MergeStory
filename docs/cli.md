@@ -36,6 +36,10 @@ For a local repository, `--base` and `--head` choose the range. Only committed c
 changes are never included. For a pull request, MergeStory reads the change through the GitHub API and
 clones nothing. Passing `--base` or `--head` with a pull request is an error.
 
+A local repository is read only when a `.git` entry names it: a normal clone, a linked work tree or a
+submodule. A bare repository, or one that sits inside a checked-out folder, is refused, because its
+settings can name programs for git to run.
+
 **What is read and written.** MergeStory never writes into the repository it explains. Every run writes
 one folder, described in [Run folders](#run-folders). A run folder inside the repository is refused.
 
@@ -277,10 +281,21 @@ when there is at least one error. [storyboard.md](storyboard.md#what-the-checks-
 ## Commands for coding agents
 
 A coding agent can be steered by text in a pull request. So the general commands, with their flexible
-flags, should run only with your approval. The `mergestory agent` commands are the safe part to pre-approve:
-no argument can make them read a file elsewhere, write outside their own folders, start a program, upload,
-comment or spend money. The only hosts they contact are GitHub, to read a pull request of the current
-repository, and the hosts of the one-time voice download.
+flags, should run only with your approval. The `mergestory agent` commands are the safe part to pre-approve.
+Whatever arguments they get:
+
+- They read the current repository (through git), their work folder and MergeStory's own files: the
+  settings, the cache and the voice.
+- They write only in the MergeStory home (the work folder, the run folder, the cache and the one-time voice
+  install) and in the system's temporary folder. During that one install, npm also fills its own cache.
+- They start only the programs MergeStory itself uses: git, `gh`, FFmpeg, a browser, the local voice and,
+  once, npm to install that voice. No argument can name a program.
+- They never upload, comment or spend money.
+- The only hosts they contact are GitHub, to read a pull request of the current repository, and the hosts of
+  the one-time voice download.
+
+This holds for the plain command. A variable set in front of it, such as `MERGESTORY_CONFIG=<file>`, changes
+what it does, so do not pre-approve that form.
 
 ```
 mergestory agent analyze  [source] --name <name> [--base <ref>] [--head <ref>]
@@ -464,8 +479,8 @@ mergestory runs [--limit <n>]
 ```
 
 `runs` lists the videos in `$MERGESTORY_HOME/runs`, newest first: run id, date, title, length, where the
-video went ("this machine" or the provider) and its link. A folder without a readable `result.json` is
-left out. `--limit <n>` sets how many to show, from 1 to 500 (default 20). With `--json` it prints
+video went ("this machine" or the provider) and its link. A folder without a readable `result.json`, such
+as the folder of a dry run, is left out. `--limit <n>` sets how many to show, from 1 to 500 (default 20). With `--json` it prints
 `{"ok": true, "runs": [{"runId", "runDir", "createdAt", "title", "durationSec", "video", "publish"}]}`,
 where `publish` is `{"provider", "watchUrl", "expiresAt"}` or `null`.
 
@@ -477,8 +492,8 @@ mergestory runs delete <run-id...>
 
 Removes the folders of the run ids you give, with everything in them, and prints how many
 bytes were freed. There is no option to delete all runs. An id is refused (exit code 2, nothing deleted
-for it) when it is not a plain run id, when the folder is a symbolic link, or when the folder holds
-neither `result.json` nor `publish-input.json`. The other ids are still deleted. With `--json` it prints
+for it) when it is not a plain run id, when the folder is a symbolic link, or when the folder holds none
+of `result.json`, `publish-input.json` and `analysis.json`. The other ids are still deleted. With `--json` it prints
 `{"ok": true, "deleted": ["..."], "freedBytes": 0}`; when an id is refused, `ok` is `false` and `errors`
 lists them. This only removes files on this machine. It does not remove an uploaded video.
 
