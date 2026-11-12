@@ -125,8 +125,13 @@ export async function runGoogleSignIn(options: SignInOptions, service: ServiceSi
     io.say('Using the OAuth client id and secret from the environment.');
   } else {
     io.say(
-      `You need an OAuth client of the type "Desktop app" from your own Google Cloud project (see ${docsRef(provider)}).`,
+      `You need an OAuth client of the type "Desktop app" from a Google Cloud project (see ${docsRef(provider)}).`,
     );
+    if (provider.id === 'drive')
+      io.say(
+        `In a company, an admin can create one client for everyone and set ${names.clientId} and ` +
+          `${names.clientSecret} for all users; then each person only picks an account and clicks Allow.`,
+      );
     io.say('What you type here is hidden, and it is not saved in your shell history.');
     if (!clientId) clientId = await io.askHidden('OAuth client id: ');
     if (!clientSecret)

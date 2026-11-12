@@ -108,7 +108,7 @@ describe('mergestory setup youtube', () => {
     expect(code).toBe(2);
     expect(stderr).toContain('needs a person at a terminal');
     expect(stderr).toContain('MERGESTORY_YOUTUBE_REFRESH_TOKEN');
-    expect(stderr).toContain('docs/youtube.md in the MergeStory repository');
+    expect(stderr).toContain('MergeStory/blob/main/docs/youtube.md');
     expect(stdout).toBe('');
   });
 

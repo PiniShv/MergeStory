@@ -21,7 +21,7 @@ export function setupCommand(provider: GoogleProvider): string {
   return `mergestory setup ${provider.id}`;
 }
 
-/** "docs/youtube.md in the MergeStory repository" */
+/** The guide for this service, as a link that also works for an installed package. */
 export function docsRef(provider: GoogleProvider): string {
-  return `docs/${provider.id}.md in the MergeStory repository`;
+  return `https://github.com/PiniShv/MergeStory/blob/main/docs/${provider.id}.md`;
 }

@@ -5,7 +5,8 @@ import { type BrowserExecutable, locateBrowser } from './browser.ts';
 import { ChromiumRenderer } from './chromium-renderer.ts';
 
 export type { BrowserExecutable } from './browser.ts';
-export { ChromiumRenderer } from './chromium-renderer.ts';
+export { SHORT_FRAME_HINT } from './browser.ts';
+export { ChromiumRenderer, captureTestFrame } from './chromium-renderer.ts';
 
 export function createRenderer(config: Config): Renderer {
   return new ChromiumRenderer(config);

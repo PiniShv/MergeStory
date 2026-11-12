@@ -41,7 +41,15 @@ export const TOKEN_SHAPES: readonly TokenShape[] = [
   { name: 'openai-key', pattern: /\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}/g },
   { name: 'stripe-key', pattern: /\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g },
   { name: 'slack-token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
-  { name: 'slack-webhook', pattern: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/_-]+/g },
+  // Webhook addresses are credentials: Slack (services, workflows, triggers), Teams, Discord, Zapier
+  // and others. A URL counts when it mentions "hook" and has a token-like segment (10+ characters with
+  // a digit, or 20+ letters and digits), so documentation links such as .../webhooks/about-webhooks stay. Slashes may be escaped
+  // (https:\/\/...) as JSON writers often do.
+  {
+    name: 'webhook-url',
+    pattern:
+      /https?:(?:\\?\/){2}(?=[^\s"'`<>()]{0,256}?hook)(?=[^\s"'`<>()]{0,512}?(?:\/|=)(?:[A-Za-z0-9_-]{0,40}[0-9][A-Za-z0-9_-]{9,}|[A-Za-z0-9_]{20,}))[^\s"'`<>()]{1,512}/gi,
+  },
   { name: 'google-api-key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g },
   { name: 'npm-token', pattern: /\bnpm_[A-Za-z0-9]{36}\b/g },
   { name: 'sendgrid-key', pattern: /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}\b/g },
@@ -66,6 +74,13 @@ export const TOKEN_SHAPES: readonly TokenShape[] = [
 
 const RULES: Rule[] = [
   ...TOKEN_SHAPES,
+  // ?token=... and similar secrets in a URL's query string -> mask the value
+  {
+    name: 'url-query-secret',
+    pattern:
+      /[?&](?:access[_-]?token|token|api[_-]?key|apikey|key|secret|client[_-]?secret|sig|signature|password)=([^&\s"'`#<>]{8,512})/gi,
+    group: 1,
+  },
   // scheme://user:password@host -> mask the password
   {
     name: 'url-credentials',
@@ -180,6 +195,19 @@ function looksRandom(value: string): boolean {
   return classes >= 2 && shannonEntropy(value) >= 4.0;
 }
 
+/**
+ * A name made of words, such as updateInvoiceApprovalStatus or run_nightly_cleanup_job: long and mixed
+ * case, so it can look random, but every part is a word. Generated tokens break into many one- or
+ * two-letter pieces.
+ */
+function looksLikeIdentifier(value: string): boolean {
+  const parts = value.match(/[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+/g) ?? [];
+  if (parts.join('') !== value.replace(/[_-]/g, '')) return false;
+  const short = parts.filter((part) => part.length <= 2 && /^[A-Za-z]/.test(part)).length;
+  const numbers = parts.filter((part) => /^[0-9]/.test(part)).length;
+  return parts.length >= 2 && short <= 1 && numbers <= 1;
+}
+
 /** Find secrets in a string. Overlapping matches are merged. */
 export function findSecrets(text: string): SecretMatch[] {
   const matches: SecretMatch[] = [];
@@ -221,7 +249,7 @@ export function findSecrets(text: string): SecretMatch[] {
   QUOTED_LITERAL.lastIndex = 0;
   for (const m of text.matchAll(QUOTED_LITERAL)) {
     const literal = m[1]!;
-    if (looksRandom(literal)) {
+    if (looksRandom(literal) && !looksLikeIdentifier(literal)) {
       const start = (m.index ?? 0) + 1;
       matches.push({ rule: 'high-entropy-literal', start, end: start + literal.length });
     }

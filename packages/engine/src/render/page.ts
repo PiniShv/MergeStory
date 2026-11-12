@@ -9,6 +9,7 @@ import type { Browser, BrowserContext, CDPSession } from 'playwright-core';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
 import type { MergeStoryRuntimeApi, RenderPlan } from '../core/render-plan.ts';
+import { detectImage } from '../visuals/image.ts';
 
 export const PAGE_CSP =
   "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'";
@@ -63,6 +64,39 @@ async function within<T>(work: Promise<T>, ms: number, what: string): Promise<T>
   }
 }
 
+/**
+ * Some browsers (Google Chrome 157 on macOS, for one) draw the page in a window shorter than the
+ * emulated viewport, so every frame comes out a fixed number of pixels short. Sizing the window's
+ * content area to the frame fixes it. A browser that already draws the full frame is left alone, and
+ * one that knows neither command is still caught by the renderer's frame-size check.
+ */
+export async function fitWindow(cdp: CDPSession, width: number, height: number): Promise<void> {
+  const send = cdp.send.bind(cdp) as (method: string, params?: object) => Promise<Record<string, unknown>>;
+  const capturedHeight = async (): Promise<number> => {
+    const { data } = await send('Page.captureScreenshot', { format: 'png' });
+    return detectImage(Buffer.from(String(data), 'base64'))?.height ?? height;
+  };
+  try {
+    const shortBy = height - (await capturedHeight());
+    if (shortBy <= 0) return;
+    const { windowId, bounds } = (await send('Browser.getWindowForTarget')) as {
+      windowId: number;
+      bounds: { width?: number; height?: number };
+    };
+    try {
+      await send('Browser.setContentsSize', { windowId, width, height });
+    } catch {
+      // Older browsers: grow the window by the missing pixels instead.
+      await send('Browser.setWindowBounds', {
+        windowId,
+        bounds: { width: bounds.width, height: (bounds.height ?? height) + shortBy },
+      });
+    }
+  } catch {
+    // Not supported: the frame-size check reports it with a hint.
+  }
+}
+
 /** What the page offers to code that runs inside it (the engine's TypeScript has no DOM types). */
 interface BrowserGlobals {
   __MERGESTORY__: MergeStoryRuntimeApi;
@@ -110,6 +144,8 @@ export class PlanPage {
         if (message.type() === 'error') instance?.errors.push(message.text());
       });
       await page.setContent(html, { waitUntil: 'load' });
+      // After the content: a page that never painted cannot be captured to measure.
+      await fitWindow(cdp, plan.width, plan.height);
       // Fonts of scenes that are not visible yet would otherwise load late and flash in a frame.
       await page.evaluate(() => {
         const host = globalThis as unknown as BrowserGlobals;

@@ -97,4 +97,22 @@ describe('runtime and tools', () => {
     expect(byId(silent.checks, 'browser').status).toBe('pass');
     expect(byId(silent.checks, 'browser').detail).toContain('version unknown');
   });
+
+  it('fails a browser that draws short frames, or does not start, with an actionable fix', async () => {
+    const short = await doctor({}, { captureTestFrame: async () => ({ width: 1280, height: 633 }) });
+    expect(byId(short.checks, 'browser')).toMatchObject({ status: 'fail' });
+    expect(byId(short.checks, 'browser').detail).toContain('1280x633');
+    expect(byId(short.checks, 'browser').fix).toContain('chromium-headless-shell');
+
+    const dead = await doctor(
+      {},
+      {
+        captureTestFrame: async () => {
+          throw new Error('crashed');
+        },
+      },
+    );
+    expect(byId(dead.checks, 'browser')).toMatchObject({ status: 'fail' });
+    expect(byId(dead.checks, 'browser').detail).toContain('did not start');
+  });
 });

@@ -6,7 +6,8 @@ import { isMergeStoryError } from '../core/errors.ts';
 import { check } from './check.ts';
 import type { DoctorCheck, DoctorContext } from './types.ts';
 
-const SETUP = 'Run: mergestory setup drive (see docs/drive.md in the MergeStory repository).';
+const SETUP =
+  'Run: mergestory setup drive (see https://github.com/PiniShv/MergeStory/blob/main/docs/drive.md).';
 const VISIBILITY = {
   private: 'only you can open the link',
   protected: 'people in your Google Workspace organization can open the link',
