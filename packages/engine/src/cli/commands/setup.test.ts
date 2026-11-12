@@ -70,7 +70,7 @@ const result: SignInResult = {
 };
 
 describe('mergestory setup', () => {
-  it('lists YouTube next to Kokoro, with Kokoro first', async () => {
+  it('lists YouTube and Google Drive next to Kokoro, with Kokoro first', async () => {
     const { code, stdout } = await runReal(['setup']);
     expect(code).toBe(0);
     expect(stdout).toContain('mergestory setup kokoro');
@@ -80,6 +80,7 @@ describe('mergestory setup', () => {
     expect(JSON.parse(json.stdout).targets.map((t: { name: string }) => t.name)).toEqual([
       'kokoro',
       'youtube',
+      'drive',
     ]);
   });
 
@@ -87,7 +88,7 @@ describe('mergestory setup', () => {
     const { code, stderr } = await runReal(['setup', 'whisper']);
     expect(code).toBe(2);
     expect(stderr).toContain('whisper');
-    expect(stderr).toContain('kokoro, youtube');
+    expect(stderr).toContain('kokoro, youtube, drive');
   });
 });
 
@@ -161,15 +162,17 @@ describe('mergestory setup youtube', () => {
     expect(signIn.mock.calls[0]?.[0].ctx.config.publish.youtube.playlistId).toBe('PLabcdefghijklmn');
   });
 
-  it('prints one JSON document with the file and the scopes, and nothing else', async () => {
-    const { stdout } = await runWith(['--json', 'setup', 'youtube'], {
+  it('prints one JSON document with the file and the scopes, and the steps on stderr', async () => {
+    const { stdout, stderr } = await runWith(['--json', 'setup', 'youtube'], {
       terminal: () => ({ interactive: true, askHidden: async () => '' }),
       signIn: async (options) => {
-        options.io.say('This is dropped in JSON mode.');
+        options.io.say('Open this address in your browser to sign in:');
         return result;
       },
     });
     expect(JSON.parse(stdout)).toEqual({ ok: true, youtube: result });
+    // An agent that runs setup with --json can still show the sign-in address to the person.
+    expect(stderr).toContain('Open this address in your browser');
     expect(stdout).not.toContain('refresh');
     expect(stdout).not.toContain('token');
   });
@@ -192,5 +195,40 @@ describe('mergestory setup youtube', () => {
       signIn,
     });
     expect(stdout).not.toContain('Kokoro');
+  });
+});
+
+describe('mergestory setup drive', () => {
+  it('runs the Google Drive sign-in, tells it whether CI is set, and prints the result under "drive"', async () => {
+    for (const [env, ci] of [
+      [{ CI: 'true' }, true],
+      [{}, false],
+    ] as const) {
+      const signIn = vi.fn(async (_options: SignInOptions) => result);
+      const { stdout } = await runWith(
+        ['--json', 'setup', 'drive'],
+        { terminal: () => ({ interactive: false, askHidden: async () => '' }), signIn },
+        env,
+      );
+      const options = signIn.mock.calls[0]?.[0];
+      expect(options?.io.interactive).toBe(false);
+      expect(options?.io.ci).toBe(ci);
+      expect(JSON.parse(stdout)).toEqual({ ok: true, drive: result });
+    }
+  });
+
+  it('refuses without a terminal when nothing comes from the environment', async () => {
+    const before = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+    let outcome: Awaited<ReturnType<typeof runReal>>;
+    try {
+      outcome = await runReal(['setup', 'drive']);
+    } finally {
+      if (before) Object.defineProperty(process.stdin, 'isTTY', before);
+      else Reflect.deleteProperty(process.stdin, 'isTTY');
+    }
+    expect(outcome.code).toBe(2);
+    expect(outcome.stderr).toContain('Signing in to Google Drive needs a person at a terminal');
+    expect(outcome.stderr).toContain('MERGESTORY_DRIVE_REFRESH_TOKEN');
   });
 });

@@ -1,7 +1,7 @@
 # Hosting your videos
 
 By default a video stays on your machine. This guide shows how to share it: with a link that
-expires, with a permanent link behind your team's sign-in, or on YouTube.
+expires, with a permanent link behind your team's sign-in, on YouTube, or in Google Drive.
 
 The settings below follow each provider's own documentation. MergeStory's tests run against a
 local fake S3 server, so if a provider behaves differently today, check its current docs.
@@ -16,6 +16,7 @@ local fake S3 server, so if a provider behaves differently today, check its curr
 | To keep everything on your own servers | [Self-hosted S3](#self-hosted-s3-servers) | signed, or permanent behind your proxy | depends on your setup |
 | Another S3 service | [Backblaze B2](#backblaze-b2) or [Google Cloud Storage](#google-cloud-storage) | signed, or permanent | anyone with the link, or your team |
 | To post on your channel | [YouTube](#youtube) | a YouTube link | depends on the privacy setting |
+| To share in your Google Workspace, with no bucket | [Google Drive](#google-drive) | a Drive link | you, your organization, or anyone with the link |
 
 ## The three kinds of link
 
@@ -335,6 +336,15 @@ people with the link can watch. YouTube makes a video public when no setting is 
 never leaves it out. You sign in once with `mergestory setup youtube` (it needs a browser), and
 `mergestory doctor` tells you whether the sign-in is in place. The Google Cloud project and the
 sign-in are explained in [youtube.md](youtube.md).
+
+## Google Drive
+
+`--publish drive` uploads the video to a `MergeStory` folder in your own Google Drive. MergeStory asks
+Google only for the `drive.file` permission, so it reaches only the files it made. `--visibility`
+works as for S3: `private` (the default) is only you, `protected` is everyone in your Google Workspace
+organization who has the link, and `public` is anyone with the link. You sign in once with
+`mergestory setup drive`. The Google Cloud project, the settings for a whole organization and the
+sign-in are explained in [drive.md](drive.md).
 
 ## What it costs
 

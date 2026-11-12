@@ -14,6 +14,8 @@ import { abortedError, MergeStoryError } from '../../core/errors.ts';
 export const CALLBACK_PATH = '/oauth2callback';
 
 export interface LoopbackOptions {
+  /** The command that starts the sign-in again, for hints. */
+  setupCommand: string;
   /** The random value that was put in the sign-in address. */
   state: string;
   timeoutMs: number;
@@ -153,7 +155,7 @@ export async function receiveAuthorizationCode(options: LoopbackOptions): Promis
                 ? 'The sign-in was cancelled in the browser.'
                 : `Google did not complete the sign-in (${reason}).`,
               {
-                hint: 'Run `mergestory setup youtube` again and allow the permissions that Google asks for.',
+                hint: `Run \`${options.setupCommand}\` again and allow the permissions that Google asks for.`,
               },
             ),
           ),
@@ -177,7 +179,7 @@ export async function receiveAuthorizationCode(options: LoopbackOptions): Promis
     () =>
       fail(
         new MergeStoryError('CONFIG_INVALID', 'The sign-in timed out.', {
-          hint: `Run \`mergestory setup youtube\` again and finish the sign-in in the browser within ${Math.max(1, Math.round(options.timeoutMs / 60_000))} minutes.`,
+          hint: `Run \`${options.setupCommand}\` again and finish the sign-in in the browser within ${Math.max(1, Math.round(options.timeoutMs / 60_000))} minutes.`,
         }),
       ),
     options.timeoutMs,

@@ -1,5 +1,5 @@
 /**
- * Resumable uploads for the YouTube Data API (plain HTTP, no client library).
+ * Resumable uploads for the Google APIs (plain HTTP, no client library).
  *
  *   1. POST the metadata to the start address; the answer carries a session address (Location).
  *   2. PUT the file to the session address in chunks. Every chunk but the last is a multiple of
@@ -33,6 +33,8 @@ export const DEFAULT_CHUNK_BYTES = 8 * 1024 * 1024;
 const MIN_BYTES_PER_SEC = 20_000;
 
 export interface ResumableUpload {
+  /** The service, for messages: "YouTube". */
+  label: string;
   /** The address that starts the session (it already carries uploadType=resumable). */
   startUrl: string;
   /** The JSON resource sent with the start request. */
@@ -64,18 +66,18 @@ function fail(message: string, hint: string, details?: Record<string, unknown>):
 }
 
 /** The session address must stay on the API's own origin or on googleapis.com, because the token is sent to it. */
-export function checkedSessionUrl(location: string, startUrl: string): string {
+export function checkedSessionUrl(location: string, startUrl: string, label: string): string {
   let url: URL;
   try {
     url = new URL(location, startUrl);
   } catch {
-    throw fail('YouTube sent an upload address that cannot be read.', 'Try again in a few minutes.');
+    throw fail(`${label} sent an upload address that cannot be read.`, 'Try again in a few minutes.');
   }
   const sameOrigin = url.origin === new URL(startUrl).origin;
   const google = url.protocol === 'https:' && /(^|\.)googleapis\.com$/i.test(url.hostname);
   if (!sameOrigin && !google) {
     throw fail(
-      'YouTube sent an upload address on an unexpected host, so the upload was stopped.',
+      `${label} sent an upload address on an unexpected host, so the upload was stopped.`,
       'Check your network for a proxy that changes responses, then try again.',
     );
   }
@@ -83,12 +85,12 @@ export function checkedSessionUrl(location: string, startUrl: string): string {
 }
 
 /** The number of bytes Google has, from "Range: bytes=0-N". No header means nothing arrived yet. */
-export function confirmedBytes(range: string | null): number {
+export function confirmedBytes(range: string | null, label: string): number {
   if (range === null) return 0;
   const match = /^bytes=0-(\d+)$/.exec(range.trim());
   if (!match?.[1]) {
     throw fail(
-      'YouTube sent a progress report that MergeStory does not understand.',
+      `${label} sent a progress report that MergeStory does not understand.`,
       'Try again in a few minutes.',
     );
   }
@@ -132,9 +134,9 @@ async function startSession(upload: ResumableUpload): Promise<string> {
   );
   const location = answer.headers.get('location');
   if (!location) {
-    throw fail('YouTube did not send an upload address.', 'Try again in a few minutes.');
+    throw fail(`${upload.label} did not send an upload address.`, 'Try again in a few minutes.');
   }
-  const session = checkedSessionUrl(location, upload.startUrl);
+  const session = checkedSessionUrl(location, upload.startUrl, upload.label);
   // The session address works like a key to this upload: keep it out of logs.
   upload.redactor.add(new URL(session).searchParams.get('upload_id'));
   return session;
@@ -226,9 +228,9 @@ export async function uploadResumable(upload: ResumableUpload): Promise<UploadOu
         const status = response.status;
         if (status === 200 || status === 201) return { status, json: parseJson(text) };
         if (status === 308) {
-          const received = confirmedBytes(response.headers.get('range'));
+          const received = confirmedBytes(response.headers.get('range'), upload.label);
           if (received > total) {
-            throw fail('YouTube reported more bytes than were sent.', 'Try again in a few minutes.');
+            throw fail(`${upload.label} reported more bytes than were sent.`, 'Try again in a few minutes.');
           }
           refreshed = false;
           if (!query) {
@@ -237,7 +239,7 @@ export async function uploadResumable(upload: ResumableUpload): Promise<UploadOu
               stalls = 0;
               upload.onProgress?.(received, total);
             } else if (++stalls > upload.timing.maxRetries) {
-              throw fail('YouTube is not accepting the video data.', 'Try again in a few minutes.');
+              throw fail(`${upload.label} is not accepting the video data.`, 'Try again in a few minutes.');
             }
           }
           offset = received;
@@ -245,8 +247,8 @@ export async function uploadResumable(upload: ResumableUpload): Promise<UploadOu
           query = received >= total;
           if (query && ++stalls > upload.timing.maxRetries) {
             throw fail(
-              'YouTube did not confirm the finished upload.',
-              'Check YouTube Studio for the video, then try again if it is missing.',
+              `${upload.label} did not confirm the finished upload.`,
+              `Check ${upload.label} for the video, then try again if it is missing.`,
             );
           }
           continue;

@@ -135,11 +135,14 @@ You can also upload while you generate: `mergestory generate <pull request> --pu
   (`--visibility protected`), or public links for public code.
 - **YouTube:** `--publish youtube` uploads to your own channel. The video is unlisted unless you choose
   otherwise.
+- **Google Drive:** `--publish drive` uploads to a `MergeStory` folder in your own Drive. The link is
+  private by default; `--visibility protected` opens it to your Google Workspace organization.
 - **The pull request:** `--comment` posts one comment with the link, and `--update-description` adds a
   short section to the description. Both need a video that is not only on your machine.
 
 Public links for a private repository are blocked unless you allow them. Set-up guides:
-[hosting your videos](docs/hosting.md) and [publishing to YouTube](docs/youtube.md).
+[hosting your videos](docs/hosting.md), [publishing to YouTube](docs/youtube.md) and
+[publishing to Google Drive](docs/drive.md).
 
 ## Use it in CI
 
@@ -156,7 +159,7 @@ variable beats the config file. Common options:
 |---|---|---|
 | Storyboard by an LLM | `--llm anthropic` (or `openai`, `openai-compatible`) | `MERGESTORY_LLM_PROVIDER`, plus `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` |
 | Voice | `--tts kokoro` (local), `say` (macOS), `openai`, `elevenlabs`, `none` | `MERGESTORY_TTS_PROVIDER` |
-| Upload | `--publish s3` (or `youtube`) | `MERGESTORY_PUBLISH_PROVIDER`, `MERGESTORY_S3_BUCKET`, `MERGESTORY_S3_ENDPOINT`, credentials |
+| Upload | `--publish s3` (or `youtube`, `drive`) | `MERGESTORY_PUBLISH_PROVIDER`, `MERGESTORY_S3_BUCKET`, `MERGESTORY_S3_ENDPOINT`, credentials |
 | Comment on the PR | `--comment` (needs an uploaded video) | `GITHUB_TOKEN` (or the `gh` CLI login) |
 | Budget per run | `--budget 0.25` | `MERGESTORY_BUDGET_USD` |
 | Quality | `--quality draft`, `standard`, `high` | `MERGESTORY_QUALITY` |
@@ -214,6 +217,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [HTTP API and library](docs/api.md)
 - [Hosting your videos](docs/hosting.md)
 - [Publishing to YouTube](docs/youtube.md)
+- [Publishing to Google Drive](docs/drive.md)
 - [The demo](examples/demo/README.md)
 - [Security](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)

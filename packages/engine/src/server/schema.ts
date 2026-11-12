@@ -74,9 +74,9 @@ const Options = z
       .optional(),
     publish: z
       .object({
-        // Narrower than the engine on purpose: an API caller cannot ask for YouTube, whose
-        // credentials are the operator's, or for "protected" links, which need the operator's proxy.
-        provider: z.enum(PUBLISH_PROVIDERS).exclude(['youtube']).optional(),
+        // Narrower than the engine on purpose: an API caller cannot ask for YouTube or Google Drive,
+        // whose credentials are the operator's, or for "protected" links, which need the operator's proxy.
+        provider: z.enum(PUBLISH_PROVIDERS).exclude(['youtube', 'drive']).optional(),
         visibility: z.enum(VISIBILITIES).exclude(['protected']).optional(),
       })
       .strict()

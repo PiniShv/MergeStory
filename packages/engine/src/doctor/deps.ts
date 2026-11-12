@@ -86,6 +86,8 @@ export function defaultDoctorDeps(env: NodeJS.ProcessEnv): DoctorDeps {
         refreshToken: found.refreshToken !== '',
       };
     },
+    driveDomain: async (config, ctx) =>
+      new (await import('../publish/drive/publisher.ts')).DrivePublisher(config).accountDomain(ctx),
     publisher: async (config) => (await import('../publish/index.ts')).createPublisher(config),
   };
 }

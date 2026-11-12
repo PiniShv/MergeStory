@@ -5,18 +5,31 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { RunContext } from '../../core/context.ts';
 import { MergeStoryError } from '../../core/errors.ts';
-import type { YouTubeCredentials } from './credentials.ts';
+import type { GoogleCredentials } from './credentials.ts';
 import {
+  type GoogleEndpoints,
   type HttpEnv,
   parseApiFailure,
   readAnswerBody,
   sendRequest,
   type TokenProvider,
-  toYouTubeError,
+  toGoogleError,
   withRetries,
-  type YouTubeEndpoints,
 } from './google-api.ts';
-import { parseScopes } from './scopes.ts';
+import type { GoogleProvider } from './provider.ts';
+
+export const SCOPE_PREFIX = 'https://www.googleapis.com/auth/';
+
+/** The scope without its URL prefix, for messages: "youtube.upload". */
+export function shortScope(scope: string): string {
+  return scope.startsWith(SCOPE_PREFIX) ? scope.slice(SCOPE_PREFIX.length) : scope;
+}
+
+/** Split a space-separated scope string. null when it is empty or missing (unknown). */
+export function parseScopes(value: string | null | undefined): string[] | null {
+  const scopes = (value ?? '').split(/\s+/).filter(Boolean);
+  return scopes.length > 0 ? scopes : null;
+}
 
 /** A code verifier and its S256 challenge (RFC 7636). */
 export interface Pkce {
@@ -79,7 +92,8 @@ export interface TokenGrant {
 }
 
 export interface OAuthEnv extends HttpEnv {
-  endpoints: YouTubeEndpoints;
+  endpoints: GoogleEndpoints;
+  provider: GoogleProvider;
 }
 
 function unreadable(): MergeStoryError {
@@ -160,13 +174,13 @@ export async function exchangeCode(
     ctx.redactor.add(grant.refreshToken);
     return grant;
   } catch (err) {
-    throw toYouTubeError(err, 'Signing in to YouTube', ctx, 'exchange');
+    throw toGoogleError(err, `Signing in to ${env.provider.label}`, ctx, env.provider, 'exchange');
   }
 }
 
 /** Get a new access token with the refresh token. */
 export async function refreshGrant(
-  credentials: Pick<YouTubeCredentials, 'clientId' | 'clientSecret' | 'refreshToken'>,
+  credentials: Pick<GoogleCredentials, 'clientId' | 'clientSecret' | 'refreshToken'>,
   env: OAuthEnv,
   ctx: Pick<RunContext, 'redactor' | 'signal'>,
 ): Promise<TokenGrant> {
@@ -184,7 +198,7 @@ export async function refreshGrant(
     ctx.redactor.add(grant.accessToken);
     return grant;
   } catch (err) {
-    throw toYouTubeError(err, 'Signing in to YouTube', ctx, 'refresh');
+    throw toGoogleError(err, `Signing in to ${env.provider.label}`, ctx, env.provider, 'refresh');
   }
 }
 
@@ -196,7 +210,7 @@ const EXPIRY_MARGIN_MS = 120_000;
  * expire, which matters for uploads that take longer than the token lasts (about an hour).
  */
 export class AccessTokens implements TokenProvider {
-  private readonly credentials: YouTubeCredentials;
+  private readonly credentials: GoogleCredentials;
   private readonly env: OAuthEnv;
   private readonly ctx: Pick<RunContext, 'redactor' | 'signal'>;
   private token: string | null = null;
@@ -204,7 +218,7 @@ export class AccessTokens implements TokenProvider {
   private granted: string[] | null = null;
   private pending: Promise<string> | null = null;
 
-  constructor(credentials: YouTubeCredentials, env: OAuthEnv, ctx: Pick<RunContext, 'redactor' | 'signal'>) {
+  constructor(credentials: GoogleCredentials, env: OAuthEnv, ctx: Pick<RunContext, 'redactor' | 'signal'>) {
     this.credentials = credentials;
     this.env = env;
     this.ctx = ctx;

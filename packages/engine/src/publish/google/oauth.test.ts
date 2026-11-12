@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REDACTED, Redactor } from '../../core/redact.ts';
 import { FAST_TIMING } from '../../testing/youtube.ts';
-import { GOOGLE_ENDPOINTS, type YouTubeEndpoints } from './google-api.ts';
+import { YOUTUBE } from '../youtube/provider.ts';
+import { GOOGLE_ENDPOINTS, type GoogleEndpoints } from './google-api.ts';
 import {
   AccessTokens,
   buildAuthUrl,
@@ -40,7 +41,12 @@ const json = (status: number, body: unknown, headers: Record<string, string> = {
 function setup() {
   const redactor = new Redactor();
   const ctx = { redactor, signal: new AbortController().signal };
-  const env = { endpoints: GOOGLE_ENDPOINTS as YouTubeEndpoints, signal: ctx.signal, timing: FAST_TIMING };
+  const env = {
+    endpoints: GOOGLE_ENDPOINTS as GoogleEndpoints,
+    provider: YOUTUBE,
+    signal: ctx.signal,
+    timing: FAST_TIMING,
+  };
   return { redactor, ctx, env };
 }
 
@@ -225,7 +231,12 @@ describe('refreshGrant', () => {
       throw init.signal?.reason ?? new Error('aborted');
     });
     const redactor = new Redactor();
-    const env = { endpoints: GOOGLE_ENDPOINTS, signal: controller.signal, timing: FAST_TIMING };
+    const env = {
+      endpoints: GOOGLE_ENDPOINTS,
+      provider: YOUTUBE,
+      signal: controller.signal,
+      timing: FAST_TIMING,
+    };
     await expect(
       refreshGrant(credentials, env, { redactor, signal: controller.signal }),
     ).rejects.toMatchObject({

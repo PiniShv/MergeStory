@@ -39,7 +39,7 @@ export const QUALITIES = ['draft', 'standard', 'high'] as const;
 export const THEMES = ['dark', 'light'] as const;
 export const LLM_PROVIDERS = ['none', 'anthropic', 'openai', 'openai-compatible'] as const;
 export const TTS_PROVIDERS = ['auto', 'kokoro', 'say', 'openai', 'elevenlabs', 'none'] as const;
-export const PUBLISH_PROVIDERS = ['local', 's3', 'youtube', 'none'] as const;
+export const PUBLISH_PROVIDERS = ['local', 's3', 'youtube', 'drive', 'none'] as const;
 export const VISIBILITIES = ['private', 'protected', 'public'] as const;
 
 /**
@@ -225,6 +225,9 @@ export const SECRET_ENV_VARS = [
   'MERGESTORY_YOUTUBE_CLIENT_ID',
   'MERGESTORY_YOUTUBE_CLIENT_SECRET',
   'MERGESTORY_YOUTUBE_REFRESH_TOKEN',
+  'MERGESTORY_DRIVE_CLIENT_ID',
+  'MERGESTORY_DRIVE_CLIENT_SECRET',
+  'MERGESTORY_DRIVE_REFRESH_TOKEN',
 ] as const;
 
 export type SecretName = (typeof SECRET_ENV_VARS)[number];

@@ -107,14 +107,15 @@ in that order. `none` means that the setting has no flag, or no variable.
 
 ### Publishing (`publish`)
 
-See [hosting.md](hosting.md) for storage set-ups and [youtube.md](youtube.md) for YouTube.
+See [hosting.md](hosting.md) for storage set-ups, [youtube.md](youtube.md) for YouTube and
+[drive.md](drive.md) for Google Drive.
 
 | Key | Default | What it does | Flag, environment variable |
 |---|---|---|---|
-| `publish.provider` | `local` | Where the video goes: `local`, `s3`, `youtube` or `none`. | `--publish`, `MERGESTORY_PUBLISH_PROVIDER` |
-| `publish.visibility` | `private` | Who can open an S3 link: `private` (signed, 7 days at most), `protected` (permanent, behind your sign-in proxy) or `public` (permanent, open to anyone). | `--visibility`, `MERGESTORY_VISIBILITY` |
+| `publish.provider` | `local` | Where the video goes: `local`, `s3`, `youtube`, `drive` or `none`. | `--publish`, `MERGESTORY_PUBLISH_PROVIDER` |
+| `publish.visibility` | `private` | Who can open an S3 link: `private` (signed, 7 days at most), `protected` (permanent, behind your sign-in proxy) or `public` (permanent, open to anyone). For Google Drive: `private` (only you), `protected` (your Google Workspace organization) or `public` (anyone with the link). | `--visibility`, `MERGESTORY_VISIBILITY` |
 | `publish.linkExpirySec` | `604800` | How long a private S3 link works, from 60 seconds to 604800 (7 days). With temporary credentials it can be shorter, and MergeStory warns you. | none, `MERGESTORY_LINK_EXPIRY_SEC` |
-| `publish.allowPublicForPrivateRepos` | `false` | Allows a link that anyone can open (a `public` S3 link, or a YouTube video that is not `private`) for a repository that is private, or whose privacy MergeStory cannot tell. Leave it off unless anyone with the link may watch. | none, none |
+| `publish.allowPublicForPrivateRepos` | `false` | Allows a link that anyone can open (a `public` S3 or Google Drive link, or a YouTube video that is not `private`) for a repository that is private, or whose privacy MergeStory cannot tell. Leave it off unless anyone with the link may watch. | none, none |
 | `publish.localDir` | `null` | The folder for the `local` publisher. `null` means `publish/` in the run folder. MergeStory only overwrites files that an earlier run wrote. A folder that holds other files is refused. | none, none |
 
 **S3-compatible storage** (`publish.s3`):
@@ -205,6 +206,7 @@ your shell history, and the config file refuses secret-like keys.
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` | The usual AWS variables. When the two `MERGESTORY_S3_` keys are not set, the AWS credential chain is used: these variables, a profile, single sign-on or a role. |
 | `MERGESTORY_API_TOKEN` | `mergestory serve`. The name can be changed with `--token-env`. |
 | `MERGESTORY_YOUTUBE_CLIENT_ID`, `MERGESTORY_YOUTUBE_CLIENT_SECRET`, `MERGESTORY_YOUTUBE_REFRESH_TOKEN` | Uploading to YouTube from CI. See [youtube.md](youtube.md). |
+| `MERGESTORY_DRIVE_CLIENT_ID`, `MERGESTORY_DRIVE_CLIENT_SECRET`, `MERGESTORY_DRIVE_REFRESH_TOKEN` | Uploading to Google Drive. The client id and secret can be set for a whole organization; the refresh token is for CI only. See [drive.md](drive.md). |
 
 The moment MergeStory reads one of these, it registers the value with its redactor, so the value is
 masked in logs, results, job files and error messages. The programs it starts (git, `gh` and the installer of

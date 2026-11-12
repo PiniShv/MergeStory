@@ -43,6 +43,7 @@ export function healthyDeps(overrides: Partial<DoctorDeps> = {}): Partial<Doctor
     headBucket: async () => ({ kind: 'ok', httpStatus: 200, code: null }),
     probeAccess: async () => PROTECTED_PROBE,
     readYouTubeLogin: async () => null,
+    driveDomain: async () => null,
     publisher: async () => null,
     ...overrides,
   };

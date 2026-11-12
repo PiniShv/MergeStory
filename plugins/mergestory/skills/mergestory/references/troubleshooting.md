@@ -108,8 +108,14 @@ work, or check `--base` and `--head`.
 
 ## Publishing problems
 
-- "Skipped the PR update: the video is only on this machine": publish first, with `--publish s3` (or
-  later with `mergestory publish <run> --publish s3 --comment`). "this run was not made from a GitHub
+- "Google Drive: not signed in": ask the user, then run `mergestory setup drive`. A Google page opens;
+  they sign in with their company account and click Allow.
+- "Protected links need a Google Workspace account": the user signed in with a personal Google
+  account. Sign in again with the company account.
+- The video uploaded but stayed private: the company does not allow link sharing in Drive. The video
+  is in the user's Drive, in the MergeStory folder; they can share it there.
+- "Skipped the PR update: the video is only on this machine": publish first (later with
+  `mergestory publish <run> --comment`, which uses the team's storage). "this run was not made from a GitHub
   pull request" means there is no pull request to write to.
 - Blocked to protect a private repository (exit code 7): a link that anyone can open (`--visibility public`,
   or a YouTube video that is not `private`) for a private or unknown repository needs

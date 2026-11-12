@@ -2,7 +2,31 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Skill and plugin 1.1.0
+## 1.2.0
+
+### Sharing
+
+- New `--publish drive` uploads the video to a `MergeStory` folder in your own Google Drive. It asks
+  Google only for the `drive.file` permission, so it reaches only the files it created.
+- `--visibility` decides who can open a Drive link: `private` (the default) is only you, `protected` is
+  your Google Workspace organization, and `public` is anyone with the link. A public link for a private
+  repository is blocked unless you allow it.
+- If Drive refuses to share a file, the upload still counts: the file stays private and a warning says why.
+- New `mergestory setup drive` signs in once. Organizations can give every laptop the client id and
+  secret through `MERGESTORY_DRIVE_CLIENT_ID` and `MERGESTORY_DRIVE_CLIENT_SECRET`. See
+  [docs/drive.md](docs/drive.md).
+- `mergestory setup youtube` and `mergestory setup drive` now also run without a terminal, for example
+  for a coding agent, when the client id and secret both come from the environment and `CI` is not set.
+- `mergestory doctor` checks the Drive sign-in, and with `--online` shows the organization of the account.
+
+## Skill and plugin 1.2.0
+
+- When the team set up Google Drive, the skill shares a video there after you approve, and asks you
+  to sign in to Google once per machine.
+- Sharing uses the storage the team set up, without naming it in the command.
+- The skill installs `mergestory@1.2.0`, and the example GitHub Actions workflow runs that version.
+
+## Skill and plugin 1.1.0 (2026-11-12)
 
 The Agent Skill and the Claude Code plugin. They need engine 1.1.0.
 
@@ -14,7 +38,7 @@ The Agent Skill and the Claude Code plugin. They need engine 1.1.0.
 - The skill reads its own reference files without a question.
 - The skill installs `mergestory@1.1.0`, and the example GitHub Actions workflow runs that version.
 
-## 1.1.0
+## 1.1.0 (2026-11-12)
 
 ### Safer with coding agents
 

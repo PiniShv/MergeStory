@@ -140,6 +140,20 @@ describe('buildPrComment', () => {
       expect(footer({ provider: 's3', visibility: 'private' })).not.toContain('channel owner');
     });
 
+    it('says that a Google Drive link opens in Google Drive, and who can open a private one', () => {
+      expect(footer({ provider: 'drive', visibility: 'protected', linkExpiresAt: null })).toBe(
+        '<sub>Commit `3f9c2ab`. The video explains the change; it does not replace code review. The link needs a team sign-in. Watch on Google Drive.</sub>',
+      );
+      expect(footer({ provider: 'drive', visibility: 'private', linkExpiresAt: null })).toContain(
+        'Watch on Google Drive: only the uploader can open this video.',
+      );
+      const whole = buildPrComment(
+        sampleComment({ provider: 'drive', visibility: 'protected', posterUrl: null }),
+      );
+      expect(whole).toContain('Watch on Google Drive.');
+      expect(whole).not.toContain('preview');
+    });
+
     it('says nothing about expiry or sign-in for a public link', () => {
       const text = footer({ visibility: 'public', linkExpiresAt: null });
       expect(text).not.toContain('expires');

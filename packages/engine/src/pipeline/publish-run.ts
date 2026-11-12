@@ -294,7 +294,8 @@ function dependsOnPublicRepository(config: RunContext['config']): boolean {
   const { publish } = config;
   return (
     (publish.provider === 's3' && publish.visibility === 'public') ||
-    (publish.provider === 'youtube' && publish.youtube.privacyStatus !== 'private')
+    (publish.provider === 'youtube' && publish.youtube.privacyStatus !== 'private') ||
+    (publish.provider === 'drive' && publish.visibility === 'public')
   );
 }
 

@@ -9,7 +9,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -23,8 +23,8 @@ Do not use it for text-only summaries, code review comments, or screen recording
 
 ## 1. Find the engine
 
-Run `mergestory --version`. It must print 1.1.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.1.0`. Never start
+Run `mergestory --version`. It must print 1.2.0 or newer. If the command is missing or older, ask
+the user whether you may install it, then run `npm install -g mergestory@1.2.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -104,10 +104,13 @@ it in the team chat themselves.
 With team storage: show the user the local watch page of the run you rendered, and publish that
 same run after they approve, without rendering again:
 
-`mergestory publish <runDir> --publish s3 --comment --json`
+`mergestory publish <runDir> --comment --json`
 
-- `--publish s3` uploads to the team's configured storage. Links are private and expire, unless the
-  team configured `--visibility protected` (permanent, behind a sign-in) or `public`.
+- Without `--publish`, the video goes to the storage the team set up: Google Drive or S3. Do not add
+  `--publish` or `--visibility` unless the user asks for them.
+- Google Drive: when `doctor` says "Google Drive: not signed in", ask the user, then run
+  `mergestory setup drive`. A Google page opens in their browser; they sign in with their company
+  account and click Allow. This happens once per machine. Then publish.
 - `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
   request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.

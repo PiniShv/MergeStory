@@ -133,15 +133,16 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--llm-base-url <url>` | The address of an OpenAI-compatible server on this machine, for example `http://localhost:11434/v1`. The flag takes only `localhost`, `127.x.x.x` or `::1`. For a server on another machine, set `MERGESTORY_LLM_BASE_URL` or `llm.baseUrl` in the config file. No credentials in the URL. | none |
 | `--tts <provider>` | Speech: `auto`, `kokoro`, `say`, `openai`, `elevenlabs` or `none`. `auto` only picks a free local voice: Kokoro for English (installed once on the first run), otherwise Kokoro if installed, then macOS `say`, then captions only. `say` and `none` never install anything. | `auto` |
 | `--voice <name>` | The voice name for the speech provider. | the provider's own voice |
-| `--publish <provider>` | Where the finished video goes: `local` (a folder on this machine), `s3` (S3-compatible storage), `youtube` (your channel) or `none` (nowhere). | `local` |
-| `--visibility <visibility>` | Who can open an S3 link: `private` (signed, expires in 7 days at most), `protected` (permanent, behind your sign-in proxy) or `public` (permanent, open to anyone). | `private` |
+| `--publish <provider>` | Where the finished video goes: `local` (a folder on this machine), `s3` (S3-compatible storage), `youtube` (your channel), `drive` (your Google Drive) or `none` (nowhere). | `local` |
+| `--visibility <visibility>` | Who can open an S3 link: `private` (signed, expires in 7 days at most), `protected` (permanent, behind your sign-in proxy) or `public` (permanent, open to anyone). For Google Drive: `private` (only you), `protected` (your Google Workspace organization) or `public` (anyone with the link). | `private` |
 | `--comment` | Post one comment with the video link on the pull request, or update it. | off |
 | `--update-description` | Add or update a section with the link in the pull request description. | off |
 | `--budget <usd>` | The most this run may spend, in US dollars (0 to 100). See [configuration.md](configuration.md#budget). | 0.25 |
 
 `--comment` and `--update-description` need a pull request as the source and a video that is not only on
-this machine (`--publish s3` or `youtube`). Otherwise MergeStory skips the update and adds a warning. See
-[hosting.md](hosting.md) for the storage options and [youtube.md](youtube.md) for YouTube.
+this machine (`--publish s3`, `youtube` or `drive`). Otherwise MergeStory skips the update and adds a warning. See
+[hosting.md](hosting.md) for the storage options, [youtube.md](youtube.md) for YouTube and [drive.md](drive.md)
+for Google Drive.
 
 **Run.**
 
@@ -203,8 +204,8 @@ add up what was spent and sent before.
 
 | Flag | What it does | Default |
 |---|---|---|
-| `--publish <provider>` | `local`, `s3` or `youtube`. | `publish.provider` from the environment or config file, otherwise `local` |
-| `--visibility <visibility>` | `private`, `protected` or `public`. S3 only. | `private` |
+| `--publish <provider>` | `local`, `s3`, `youtube` or `drive`. | `publish.provider` from the environment or config file, otherwise `local` |
+| `--visibility <visibility>` | `private`, `protected` or `public`. S3 and Google Drive. | `private` |
 | `--comment` | Post or update the comment on the pull request. | off |
 | `--update-description` | Add or update the section in the pull request description. | off |
 
@@ -229,6 +230,7 @@ mergestory publish ~/.mergestory/runs/20261104-101500-a1b2 --publish s3 --visibi
 
 ```bash
 mergestory publish ./my-run --publish youtube
+mergestory publish ./my-run --publish drive --visibility protected --comment
 ```
 
 ## `mergestory analyze`
@@ -399,7 +401,7 @@ environment variables and never prints their values.
 
 | Flag | What it does |
 |---|---|
-| `--online` | Also contact the services you set up: it asks the storage service about the bucket, and for protected links it runs the sign-in check. Without it, nothing is sent over the network. |
+| `--online` | Also contact the services you set up: it asks the storage service about the bucket, for protected links it runs the sign-in check, and for Google Drive it shows the organization domain of the account. Without it, nothing is sent over the network. |
 
 The exit code is 1 when any check fails. Warnings do not change it. A config file with a mistake is reported
 as a failed `config` check, and the other checks still run with the defaults.
@@ -415,7 +417,8 @@ Installs optional extras and signs in to services. Without a target it lists the
 | Target | What it does |
 |---|---|
 | `kokoro` | Installs the free local voice ahead of time, for example in CI. Without it, the first English video installs the voice itself. It waits while another run is installing it. It adds about 400 MB of files under the MergeStory home. The speech model (about 90 MB, or about 330 MB for the full-precision model that is the default on Apple Silicon) downloads from `huggingface.co` the first time a video uses it. Set `MERGESTORY_KOKORO_DTYPE` to `q8` (small) or `fp32` (full) to choose. English only. No repository content is sent anywhere. |
-| `youtube` | Signs in to YouTube once, so videos can be uploaded to your channel. It needs a person at a terminal and a browser, and it installs nothing. See [youtube.md](youtube.md). |
+| `youtube` | Signs in to YouTube once, so videos can be uploaded to your channel. It needs a browser and installs nothing. Without a terminal it runs only when the client id and secret both come from the environment and `CI` is not set. See [youtube.md](youtube.md). |
+| `drive` | Signs in to Google Drive once, so videos can be uploaded to your Drive. It asks only for the `drive.file` permission. Same rules as `youtube` without a terminal. See [drive.md](drive.md). |
 
 ## `mergestory status`
 
@@ -631,7 +634,7 @@ request update would be skipped.
 | `agent analyze` | `{"ok": true, "name", "workDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary"}`. `agent validate` and `agent render` print the same object as `validate` and `generate`. |
 | `validate` | `{"ok", "errors", "warnings", "fixes", "groundedClaims"}`. `ok` is `false` when there is an error. Each error and warning has `path` (for example `scenes[3].visual.ref`), `code` and `message`. `fixes` is a list of strings. |
 | `doctor` | `{"ok", "online", "version", "summary": {"pass", "warn", "fail"}, "checks": [{"id", "name", "status", "detail", "fix"}]}` |
-| `setup` | `{"ok": true, "targets": [{"name", "summary"}]}`. `setup kokoro` gives `{"ok": true, "kokoro": {"installed", "location", "version", "modelCached"}}`. `setup youtube` gives `{"ok": true, "youtube": {"credentialsFile", "scopes"}}`. Never a token. |
+| `setup` | `{"ok": true, "targets": [{"name", "summary"}]}`. `setup kokoro` gives `{"ok": true, "kokoro": {"installed", "location", "version", "modelCached"}}`. `setup youtube` gives `{"ok": true, "youtube": {"credentialsFile", "scopes"}}`, and `setup drive` gives `{"ok": true, "drive": {"credentialsFile", "scopes"}}`. Never a token. |
 | `status` | `{"id", "status", "createdAt", "updatedAt", "startedAt", "finishedAt", "options", "progress": {"stage", "message", "progress"}, "result", "error"}`. `result` is a result or plan object once the job has succeeded. `error` is `{code, message, hint}` for a failed job. A storyboard in `options` is shown as `"[provided]"`. |
 | `jobs` | `{"jobs": [{"id", "status", "createdAt", "updatedAt", "progress", "title", "error"}]}` |
 | `serve` | `{"ok": true, "url", "host", "port", "auth", "allowRoots"}` once, at start. The server then runs until you stop it. |
