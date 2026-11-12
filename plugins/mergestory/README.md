@@ -18,9 +18,10 @@ an MP4 and a watch page with the chapters and the checklist.
 You need Node.js 22.12 or newer, git, FFmpeg, and Chrome or another Chromium browser. If the engine
 or FFmpeg is missing, Claude asks before it installs it.
 
-Claude Code asks for your approval before the skill runs, and before each engine step that reads
-the change (`analyze`, `validate`, `generate`). Uploading a video is always a separate step that
-you approve.
+Claude Code asks for your approval once, before the skill runs. After that its own steps run without
+a question: they explain only the repository you are in, keep their files under `~/.mergestory`, and
+render on your machine. Installing the engine or FFmpeg, explaining a pull request of another
+repository, and uploading a video are separate steps that you approve.
 
 ## Data
 

@@ -5,16 +5,18 @@ to see the state of the environment.
 
 ## The storyboard does not validate (exit code 3)
 
-`validate` and `generate --storyboard` report three lists. Only `errors` stop a run. `warnings` and
+`agent validate`, `validate` and `generate --storyboard` report three lists. Only `errors` stop a run. `warnings` and
 `fixes` say what the engine removed or changed on its own, so read them too: a line can disappear
 without any error.
 
 - **An evidence id that is not in `evidence.md` is not an error.** The engine removes it and adds a
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
-- **A removed `TASK`, `NOTES`, `T1` or `SS1` means a context flag is missing.** Use the same
-  `--task-file`, `--notes-file`, `--tests-file` and `--screenshot` flags for `validate` and `generate`
-  that you used for `analyze`. Otherwise those ids do not exist.
+- **A removed `TASK`, `NOTES`, `T1` or `SS1` means that context is missing.** With the `agent`
+  commands, `task.md`, `notes.md` and `tests.json` must be in the work folder before `agent analyze`
+  runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file` and
+  `--screenshot` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  do not exist.
 
 These codes are errors:
 
@@ -53,6 +55,21 @@ repository.
 "There are no changes to explain": for a local repository only committed changes count. Commit the
 work, or check `--base` and `--head`.
 
+## The agent commands refuse to run (exit code 2)
+
+- "The agent commands only explain the repository of the current folder": the source is a pull
+  request of another repository, a path, or a pull request on another host. Run the command in a clone
+  of that repository, or use `mergestory analyze`, `validate` and `generate`, which the user approves.
+- "... is a symbolic link or holds one": the work folder must not hold links. Remove the link that
+  the hint names, or use another `--name`.
+- "... is not one that a .git entry names": the current folder belongs to a bare repository, or to a
+  repository that sits inside a checked-out folder. Run the command from a normal clone or work tree.
+- "MergeStory does not run git in its work folder, or in a repository kept there": run the command
+  from the user's clone, never from a folder under `~/.mergestory/work`.
+- "There is no storyboard.json in the work folder": write it first, or check the `--name`.
+- "unknown option": the agent commands take no flag that names a file, a folder, a model, a storage
+  or a host. Leave it out, or use the general command, which the user approves.
+
 ## Settings problems (exit code 2)
 
 - `Unrecognized key "..." (did you mean "...")`: a key in the config file, or a value from a
@@ -61,7 +78,7 @@ work, or check `--base` and `--head`.
   variable, for example `ANTHROPIC_API_KEY`.
 - The config file is ignored: MergeStory reads it only from `MERGESTORY_CONFIG`, or from
   `$MERGESTORY_HOME/config.json` (default `~/.mergestory/config.json`). It never reads a file in the
-  current folder.
+  current folder, and there is no `--config` option.
 
 ## GitHub problems (exit code 5)
 
