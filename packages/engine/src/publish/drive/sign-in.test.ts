@@ -121,6 +121,9 @@ describe('mergestory setup drive', () => {
     expect(text).toContain('drive.file: only the files and the folder that MergeStory creates');
     expect(text).toContain('MERGESTORY_DRIVE_REFRESH_TOKEN');
     expect(run.asked).toEqual(['OAuth client id: ', 'OAuth client secret (Enter to skip): ']);
+    expect(text).toContain(
+      'In this environment: MERGESTORY_DRIVE_CLIENT_ID is not set, MERGESTORY_DRIVE_CLIENT_SECRET is not set.',
+    );
   });
 });
 
@@ -138,6 +141,8 @@ describe('the sign-in without a terminal', () => {
       const result = await signIn(run.options);
       expect(run.asked).toEqual([]);
       expect(run.said.join('\n')).toContain('Open this address in your browser to sign in:');
+      // An admin-provided client: no warning about External test apps.
+      expect(run.said.join('\n')).not.toContain('7 days');
       expect(result.credentialsFile.endsWith(`${name}.json`)).toBe(true);
     });
 
@@ -154,6 +159,10 @@ describe('the sign-in without a terminal', () => {
         expect((error as MergeStoryError).message).toContain('needs a person at a terminal');
         expect((error as MergeStoryError).hint).toContain(`${prefix}_REFRESH_TOKEN`);
         expect((error as MergeStoryError).hint).toContain(`docs/${name}.md`);
+        const id = `${prefix}_CLIENT_ID` in secrets ? 'set' : 'not set';
+        expect((error as MergeStoryError).hint).toContain(`${prefix}_CLIENT_ID is ${id}`);
+        // Names only: the hint never carries a value.
+        expect((error as MergeStoryError).hint).not.toContain(FAKE_CLIENT_ID);
         expect(fake.requests).toEqual([]);
       });
     }

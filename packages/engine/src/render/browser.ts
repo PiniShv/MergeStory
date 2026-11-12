@@ -14,6 +14,12 @@ import { MergeStoryError } from '../core/errors.ts';
 import { which } from '../core/process.ts';
 import { loadPlaywright } from './playwright.ts';
 
+/** What to do when a browser draws frames of the wrong size. */
+export const SHORT_FRAME_HINT =
+  'This browser does not draw full frames. Install the headless browser with ' +
+  '"npx playwright install chromium-headless-shell" (run it outside a repository), ' +
+  'then set MERGESTORY_BROWSER_PATH to the chrome-headless-shell program it downloaded.';
+
 export interface BrowserExecutable {
   path: string;
   /** Where it was found: "config", "env", "playwright-cache", "system". */

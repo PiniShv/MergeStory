@@ -9,7 +9,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.2.0"
+  version: "1.2.2"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -23,8 +23,8 @@ Do not use it for text-only summaries, code review comments, or screen recording
 
 ## 1. Find the engine
 
-Run `mergestory --version`. It must print 1.2.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.2.0`. Never start
+Run `mergestory --version`. It must print 1.2.2 or newer. If the command is missing or older, ask
+the user whether you may install it, then run `npm install -g mergestory@1.2.2`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -110,10 +110,16 @@ same run after they approve, without rendering again:
 - Without `--publish`, the video goes to the storage the team set up: Google Drive or S3. Do not add
   `--publish` or `--visibility` unless the user asks for them.
 - Google Drive: when `doctor` warns "Google Drive: not signed in", making the video still works.
-  Sign in only when the user wants to share: ask, then run `mergestory setup drive` with a timeout of
-  at least 6 minutes (it waits up to 5 for the browser). A Google page opens; they pick their company
-  account and click Allow. This happens once per machine. Then publish. If `setup drive` refuses to
-  run, show its message to the user and stop.
+  Sign in only when the user wants to share: ask, then run `mergestory setup drive` yourself, in
+  your own shell, with a timeout of at least 6 minutes (it waits up to 5 for the browser). Do not
+  send the user to their terminal: variables from Claude Code's managed settings reach only your
+  shell, not the user's own terminal. A Google page opens; the user picks their company account and
+  clicks Allow. This happens once per machine. Then publish. If your sandbox blocks opening the
+  browser or the local `127.0.0.1` sign-in port, ask to allow it for this one command.
+- If `setup drive` refuses to run, or says `MERGESTORY_DRIVE_CLIENT_ID` or
+  `MERGESTORY_DRIVE_CLIENT_SECRET` is not set, show its message to the user and stop: an admin has
+  to set them (https://github.com/PiniShv/MergeStory/blob/main/docs/drive.md). If they were added
+  only now, a new Claude Code session picks them up. Never ask the user for these values.
 - `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
   request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.

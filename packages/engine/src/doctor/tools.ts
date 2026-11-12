@@ -1,5 +1,6 @@
 /** Checks of the programs a video needs: Node.js, git, FFmpeg with its H.264 encoder, and a browser. */
 import { isMergeStoryError } from '../core/errors.ts';
+import { SHORT_FRAME_HINT } from '../render/browser.ts';
 import { check, firstLine } from './check.ts';
 import type { DoctorCheck, DoctorContext } from './types.ts';
 
@@ -100,10 +101,29 @@ export async function checkBrowser({ config, deps }: DoctorContext): Promise<Doc
   }
   const version = await deps.run(found.path, ['--version']);
   const shown = version.code === 0 ? firstLine(version.stdout) : 'version unknown';
-  return check(
-    'browser',
-    'Browser for rendering',
-    'pass',
-    `${shown || 'found'} (${found.source}) at ${found.path}`,
-  );
+  const where = `${shown || 'found'} (${found.source}) at ${found.path}`;
+  let frame: { width: number; height: number } | null;
+  try {
+    frame = await deps.captureTestFrame(found.path);
+  } catch (err) {
+    const hint = isMergeStoryError(err) ? err.hint : undefined;
+    return check(
+      'browser',
+      'Browser for rendering',
+      'fail',
+      `${where}, but it did not start: ${err instanceof Error ? err.message : String(err)}`,
+      hint ?? 'Install Chrome or Chromium, or set MERGESTORY_BROWSER_PATH.',
+    );
+  }
+  if (frame?.width !== 1280 || frame.height !== 720) {
+    const got = frame ? `${frame.width}x${frame.height}` : 'an unreadable';
+    return check(
+      'browser',
+      'Browser for rendering',
+      'fail',
+      `${where}, but it drew ${got} frame for 1280x720`,
+      SHORT_FRAME_HINT,
+    );
+  }
+  return check('browser', 'Browser for rendering', 'pass', where);
 }

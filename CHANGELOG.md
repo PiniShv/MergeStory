@@ -2,6 +2,60 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## 1.2.2
+
+- `mergestory setup drive` and `setup youtube` say which of the client id and client secret
+  variables are set, by name only, both when they ask for the values and when they refuse to run
+  without a terminal. A variable that did not reach the shell is now easy to spot.
+- The Drive guide explains that values in Claude Code's managed settings reach only the shells Claude
+  Code starts, so the coding agent runs the sign-in and the person only clicks Allow.
+- After a Drive upload, one line says who can open the video: people in the organization with the
+  link (protected), anyone with the link (public), or only you (private).
+- The warning that Google ends a sign-in after 7 days for External apps in "Testing" now shows only
+  when the client id was typed in. A client that an admin set for everyone is usually an Internal app,
+  where the limit does not apply.
+
+## Skill and plugin 1.2.2
+
+- The skill runs `mergestory setup drive` in its own shell instead of sending the user to a terminal,
+  where managed settings do not apply, and asks to allow the browser and the local sign-in port when
+  a sandbox blocks them.
+- The skill installs `mergestory@1.2.2`.
+
+## 1.2.1
+
+### Privacy
+
+- Webhook addresses are masked wherever code is shown or sent: Slack (services, workflows and
+  triggers), Microsoft Teams, Discord and similar services, also when a JSON file writes the slashes
+  as `\/`. Before, only one Slack form was caught, so a webhook on a changed or removed line of a
+  configuration file could reach the evidence pack.
+- Secrets in a URL's query string (`?token=`, `?key=`, `?signature=` and similar) are masked too.
+- Long names such as `updateInvoiceApprovalStatusForCustomer` are no longer masked as if they were
+  random keys. Real keys without a telling name are still masked.
+
+### Rendering
+
+- Google Chrome on macOS could draw every frame 87 pixels short, so the render failed with "The browser
+  captured a 1920x993 frame instead of 1920x1080". MergeStory now sizes the browser window to the frame.
+- `mergestory doctor` draws one test frame and fails the browser check, with the steps to fix it, when
+  the browser cannot draw full frames.
+- The render error for frames of the wrong size now says exactly what to install and set.
+
+### Google Drive
+
+- Hints that pointed to `docs/*.md in the MergeStory repository` now give the full link, so they also
+  work for the installed package, which does not include the docs.
+- `mergestory setup drive` says that an admin can set one OAuth client for the whole company, so each
+  person only picks an account and clicks Allow.
+
+## Skill and plugin 1.2.1
+
+- The skill installs `mergestory@1.2.1`.
+- If `setup drive` asks for an OAuth client id, the skill stops and explains that an admin sets it,
+  instead of asking the user for it.
+- The troubleshooting guide covers renders that fail with a frame of the wrong size.
+
 ## 1.2.0
 
 ### Sharing

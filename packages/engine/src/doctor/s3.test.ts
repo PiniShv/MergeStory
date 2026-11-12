@@ -71,7 +71,7 @@ describe('publishing: s3 settings', () => {
       expect(check.detail).toContain('protected links, but no public base URL is set');
       expect(check.fix).toContain('MERGESTORY_S3_PUBLIC_BASE_URL');
       expect(check.fix).toContain('access proxy');
-      expect(check.fix).toContain('docs/hosting.md in the MergeStory repository');
+      expect(check.fix).toContain('MergeStory/blob/main/docs/hosting.md');
       expect(report.ok).toBe(false);
     });
 

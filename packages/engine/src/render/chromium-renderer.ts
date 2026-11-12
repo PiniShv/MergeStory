@@ -26,10 +26,10 @@ import type { Renderer, RenderInput, RenderOutput } from '../core/providers.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
 import { RUN_FILE } from '../core/run-folder.ts';
 import { detectImage } from '../visuals/image.ts';
-import { locateBrowser } from './browser.ts';
+import { locateBrowser, SHORT_FRAME_HINT } from './browser.ts';
 import { concatAndMux, concatListText, probeDuration, SegmentEncoder, segmentEncodeArgs } from './ffmpeg.ts';
 import { fontFacesCss } from './fonts.ts';
-import { buildPageHtml, type CaptureFormat, PlanPage } from './page.ts';
+import { buildPageHtml, type CaptureFormat, fitWindow, PlanPage } from './page.ts';
 import { loadPlaywright } from './playwright.ts';
 import { loadRuntimeBundle } from './runtime-bundle.ts';
 
@@ -379,9 +379,42 @@ class RenderRun {
       throw new MergeStoryError(
         'RENDER_FAILED',
         `The browser captured a ${info ? `${info.width}x${info.height}` : 'unreadable'} frame instead of ${plan.width}x${plan.height}.`,
-        { hint: 'Try another browser with MERGESTORY_BROWSER_PATH.' },
+        { hint: SHORT_FRAME_HINT },
       );
     }
+  }
+}
+
+/**
+ * Start the browser, draw one blank frame and return its size. "mergestory doctor" uses it to find a
+ * browser that draws short frames before a render does.
+ */
+export async function captureTestFrame(
+  executablePath: string,
+  logger: Logger,
+  width = 1280,
+  height = 720,
+): Promise<{ width: number; height: number } | null> {
+  let browser: Browser;
+  try {
+    browser = await launchChromium(executablePath, logger);
+  } catch (err) {
+    throw browserStartError(err);
+  }
+  try {
+    const context = await browser.newContext({
+      viewport: { width, height },
+      deviceScaleFactor: 1,
+      offline: true,
+    });
+    const page = await context.newPage();
+    const cdp = await context.newCDPSession(page);
+    await page.setContent('<!doctype html><body style="margin:0;background:#fff"></body>');
+    await fitWindow(cdp, width, height);
+    const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
+    return detectImage(Buffer.from(data, 'base64'));
+  } finally {
+    await browser.close().catch(() => undefined);
   }
 }
 

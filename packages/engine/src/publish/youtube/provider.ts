@@ -33,7 +33,7 @@ function explain(err: GoogleApiError): Explanation | null {
     return {
       code: 'CONFIG_INVALID',
       message: 'The YouTube Data API is not turned on for the Google Cloud project.',
-      hint: 'Enable "YouTube Data API v3" for the project that owns the OAuth client (see docs/youtube.md in the MergeStory repository), wait a minute, and try again.',
+      hint: 'Enable "YouTube Data API v3" for the project that owns the OAuth client (see https://github.com/PiniShv/MergeStory/blob/main/docs/youtube.md), wait a minute, and try again.',
     };
   }
   if (err.has('forbiddenPrivacySetting')) {

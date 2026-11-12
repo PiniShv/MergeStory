@@ -107,7 +107,7 @@ describe('publishing: youtube', () => {
     expect(check.status).toBe('fail');
     expect(check.detail).toContain('refresh token: missing');
     expect(check.fix).toContain('mergestory setup youtube');
-    expect(check.fix).toContain('docs/youtube.md in the MergeStory repository');
+    expect(check.fix).toContain('MergeStory/blob/main/docs/youtube.md');
     expect(check.fix).toContain('MERGESTORY_YOUTUBE_REFRESH_TOKEN');
     expect(report.ok).toBe(false);
   });

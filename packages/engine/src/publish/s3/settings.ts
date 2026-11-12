@@ -29,7 +29,7 @@ function publicBaseProblem(value: string | null, visibility: Visibility): MergeS
     return new MergeStoryError('CONFIG_INVALID', 'Protected links need a public base URL.', {
       hint:
         'Set MERGESTORY_S3_PUBLIC_BASE_URL (publish.s3.publicBaseUrl) to the custom domain of the bucket, the one that ' +
-        'sits behind your access proxy, for example https://videos.example.com. See docs/hosting.md in the MergeStory repository. ' +
+        'sits behind your access proxy, for example https://videos.example.com. See https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md. ' +
         'Or use private links, which are signed and expire.',
     });
   }

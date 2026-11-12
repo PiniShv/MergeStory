@@ -185,7 +185,7 @@ describe('S3Publisher with protected links', () => {
       const hint = (error as MergeStoryError).hint ?? '';
       expect(hint).toContain('answered HTTP 404');
       expect(hint).toContain('Cloudflare Access');
-      expect(hint).toContain('docs/hosting.md in the MergeStory repository');
+      expect(hint).toContain('MergeStory/blob/main/docs/hosting.md');
       expect(hint).toContain('--visibility private');
       expect(hint).toContain('publish.s3.verifyProtection');
       expect(hint).toContain('MERGESTORY_S3_VERIFY_PROTECTION=false');
@@ -359,7 +359,7 @@ describe('S3Publisher with protected links', () => {
       expect(error.message).toBe('Protected links need a public base URL.');
       expect(error.hint).toContain('MERGESTORY_S3_PUBLIC_BASE_URL');
       expect(error.hint).toContain('publish.s3.publicBaseUrl');
-      expect(error.hint).toContain('docs/hosting.md in the MergeStory repository');
+      expect(error.hint).toContain('MergeStory/blob/main/docs/hosting.md');
       expect(s3Mock.calls()).toHaveLength(0);
       expect(probed).toHaveLength(0);
     });

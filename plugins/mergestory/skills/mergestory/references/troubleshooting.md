@@ -97,6 +97,12 @@ work, or check `--base` and `--head`.
   `winget install --id Gyan.FFmpeg -e`), or set `MERGESTORY_FFMPEG_PATH` and `MERGESTORY_FFPROBE_PATH`.
 - The browser is missing (exit code 6): the user installs Google Chrome, or runs
   `npx playwright install chromium-headless-shell`, or sets `MERGESTORY_BROWSER_PATH`.
+- `RENDER_FAILED` with "The browser captured a 1920x993 frame instead of 1920x1080" (or similar): this
+  browser draws frames that are too short. MergeStory 1.2.1 and newer fix this for Google Chrome. If it
+  still happens, ask the user, then run `npx playwright install chromium-headless-shell` from a folder
+  outside any repository (so `npx` cannot pick up a repository's own copy), and run MergeStory with
+  `MERGESTORY_BROWSER_PATH` set to the `chrome-headless-shell` program it downloaded. `mergestory doctor`
+  draws one test frame and reports this before a render.
 - A render is slow on a small machine: use `--quality draft`.
 - The first English run takes a few minutes longer: it installs the free Kokoro voice once (about
   400 MB, then the voice model). No action is needed. Without network access, use `--tts none`.

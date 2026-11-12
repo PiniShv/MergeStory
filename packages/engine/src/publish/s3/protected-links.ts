@@ -41,8 +41,8 @@ function addressAdvice(host: string, settings: S3Settings): string {
 function protectionBlocked(result: AccessProbeResult, settings: S3Settings): MergeStoryError {
   const open = result.verdict === 'not-protected';
   const fix = open
-    ? 'Put the address behind an access proxy such as Cloudflare Access before you upload (see docs/hosting.md in the MergeStory repository), or use private links that expire (--visibility private).'
-    : 'Check that the address is the custom domain of the bucket and that an access policy covers it (see docs/hosting.md in the MergeStory repository), or use private links that expire (--visibility private).';
+    ? 'Put the address behind an access proxy such as Cloudflare Access before you upload (see https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md), or use private links that expire (--visibility private).'
+    : 'Check that the address is the custom domain of the bucket and that an access policy covers it (see https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md), or use private links that expire (--visibility private).';
   return new MergeStoryError(
     'PRIVACY_BLOCKED',
     open

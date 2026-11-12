@@ -16,7 +16,7 @@ const YOUTUBE_VALUES = [
 ] as const;
 
 const YOUTUBE_SETUP =
-  'Run: mergestory setup youtube (on a machine with a browser; see docs/youtube.md in the MergeStory repository). For CI, set MERGESTORY_YOUTUBE_CLIENT_ID, MERGESTORY_YOUTUBE_CLIENT_SECRET and MERGESTORY_YOUTUBE_REFRESH_TOKEN.';
+  'Run: mergestory setup youtube (on a machine with a browser; see https://github.com/PiniShv/MergeStory/blob/main/docs/youtube.md). For CI, set MERGESTORY_YOUTUBE_CLIENT_ID, MERGESTORY_YOUTUBE_CLIENT_SECRET and MERGESTORY_YOUTUBE_REFRESH_TOKEN.';
 
 export async function checkYouTube({ config, secrets, ctx, deps }: DoctorContext): Promise<DoctorCheck[]> {
   const { privacyStatus } = config.publish.youtube;

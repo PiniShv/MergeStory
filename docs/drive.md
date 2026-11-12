@@ -107,6 +107,11 @@ Give every laptop the same client id and secret through environment variables, f
   token stays on their laptop. It never goes into managed settings.
 - With `MERGESTORY_PUBLISH_PROVIDER=drive`, `mergestory publish <run> --comment` uploads to Drive
   without a `--publish` flag.
+- Values in Claude Code's managed settings reach **only the shells that Claude Code starts**, and only
+  in sessions started after the change. They do not reach a person's own terminal. So with the
+  MergeStory skill, the coding agent runs `mergestory setup drive` itself, and the person only picks
+  the account and clicks Allow in the browser. Someone who runs `mergestory` in their own terminal
+  exports the same variables there.
 
 ## Sign in: `mergestory setup drive`
 
@@ -132,7 +137,9 @@ What happens:
 **Without a terminal**, for example when a coding agent runs the command for you, the sign-in still
 runs when both the client id and the client secret come from the environment, so nothing has to be
 typed, and the `CI` variable is not set. You finish the sign-in in the browser. In every other case
-it refuses and says what to do.
+it refuses and says what to do. Both the refusal and the interactive prompt say which of the two
+variables are set, by name only, so a missing variable is easy to see. If the agent runs in a
+sandbox, it needs to open the browser and to listen on `127.0.0.1` for this one command.
 
 For CI, sign in on your own machine and store the values as the secrets
 `MERGESTORY_DRIVE_CLIENT_ID`, `MERGESTORY_DRIVE_CLIENT_SECRET` and `MERGESTORY_DRIVE_REFRESH_TOKEN`.
