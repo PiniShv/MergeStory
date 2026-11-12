@@ -364,7 +364,8 @@ describe('runYouTubeSignIn', () => {
     await runYouTubeSignIn(h.options);
     expect((await saved())?.clientSecret).toBeNull();
     const output = h.said.join('\n');
-    expect(output).not.toContain('MERGESTORY_YOUTUBE_CLIENT_SECRET');
+    // No CI command for a secret that does not exist.
+    expect(output).not.toContain('gh secret set MERGESTORY_YOUTUBE_CLIENT_SECRET');
     expect(new URLSearchParams(tokenRequests()[0]?.body.toString('utf8')).has('client_secret')).toBe(false);
   });
 
