@@ -25,6 +25,12 @@ All notable changes to MergeStory are listed here, newest first.
 - A new website at https://mergestory.pinishv.com, served from the `docs/` folder.
 - The README and the npm page explain the cost of a video.
 
+## Skill and plugin 1.2.3
+
+- The skill installs `mergestory@1.2.3`, which reads short words in capitals as words and starts
+  the voice after 1.5 seconds.
+- The plugin's home page is https://mergestory.pinishv.com.
+
 ## 1.2.2
 
 - `mergestory setup drive` and `setup youtube` say which of the client id and client secret
