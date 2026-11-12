@@ -2,6 +2,29 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## 1.2.3
+
+### Narration
+
+- Short words in capitals are spoken as words. The local voice spelled a word of two or three
+  capitals letter by letter, so "DEV mode" sounded like "D, E, V mode" and MAX_RETRIES like
+  "M, A, X retries". Common words and code words (DEV, ZIP, MAX, KEY, NEW, NOT) are now read as
+  words, and abbreviations people say as a word (RAM, GIF, LAN) too.
+- Most abbreviations are now spelled, even in a short phrase. In "the API, CLI and SDK" the voice
+  read some of them as words ("cly"). Their letters are now joined for the voice ("C-L-I").
+  Abbreviations with an A after the first letter, such as QA and SLA, keep their written form, so
+  the voice can still read some of them as a word.
+- Product terms are read the way people say them: SaaS and PaaS as words, A/B and CI/CD letter by
+  letter, MoM, QoQ, YoY and WoW as "month over month" and so on.
+- The voice starts after 1.5 seconds instead of 0.8, so the title settles before the first words.
+- Captions still show the text exactly as written.
+
+### Documentation
+
+- New: [what MergeStory costs, and why it is so cheap](docs/cost.md).
+- A new website at https://mergestory.pinishv.com, served from the `docs/` folder.
+- The README and the npm page explain the cost of a video.
+
 ## 1.2.2
 
 - `mergestory setup drive` and `setup youtube` say which of the client id and client secret

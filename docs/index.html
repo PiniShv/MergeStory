@@ -1,0 +1,1298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-src https://www.youtube-nocookie.com; base-uri 'none'; form-action 'none'">
+<title>MergeStory: every change has a story</title>
+<meta name="description" content="MergeStory turns a pull request into a short narrated video: what changed, why, and what to review. $0 per video. Free, open source, and it runs on your machine.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://mergestory.pinishv.com/">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mergestory.pinishv.com/">
+<meta property="og:site_name" content="MergeStory">
+<meta property="og:title" content="MergeStory: every change has a story">
+<meta property="og:description" content="Turn a pull request into a short narrated video. What changed, why, and what to review. $0 per video. Free, open source, runs on your machine.">
+<meta property="og:image" content="https://mergestory.pinishv.com/assets/social-preview.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="MergeStory. Every change has a story.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MergeStory: every change has a story">
+<meta name="twitter:description" content="Turn a pull request into a short narrated video. $0 per video. Free and open source.">
+<meta name="twitter:image" content="https://mergestory.pinishv.com/assets/social-preview.png">
+<meta name="twitter:image:alt" content="MergeStory. Every change has a story.">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="MergeStory">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"MergeStory","url":"https://mergestory.pinishv.com/","description":"Turns a pull request into a short narrated video that explains what changed, why, and what to review. Runs on your machine.","applicationCategory":"DeveloperApplication","operatingSystem":"Any system with Node.js 22.12 or newer","license":"https://spdx.org/licenses/Apache-2.0.html","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"downloadUrl":"https://www.npmjs.com/package/mergestory","image":"https://mergestory.pinishv.com/assets/social-preview.png","sameAs":"https://github.com/PiniShv/MergeStory"}
+</script>
+<script>document.documentElement.className="js"</script>
+<style>
+/* ---------- Tokens. Light by default, dark by preference. .dk marks a block that is dark in both. ---------- */
+:root{
+  color-scheme:light dark;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sec:#fff;--sec-alt:#f5f5f7;--card:#f5f5f7;--card-alt:#fff;
+  --text:#1d1d1f;--muted:#636366;--line:rgba(0,0,0,.16);--line2:rgba(0,0,0,.09);
+  --accent:#0066cc;--btn:#0071e3;--btn-h:#0066cc;--btn-fg:#fff;--focus:#0071e3;
+  --ok:#1e7e34;--warn:#8a5a00;--bad:#c4281c;--chip:rgba(0,0,0,.06);
+  --nav:rgba(255,255,255,.92);--nav-solid:#fff;
+  --glow:rgba(0,113,227,.13);--glow2:rgba(34,211,238,.10);--glow3:rgba(46,125,246,.08);
+  --grad:linear-gradient(95deg,#0066cc 0%,#5b4fe0 50%,#a23bd0 100%);
+  --inv-bg:#1d1d1f;--inv-text:#f5f5f7;--inv-muted:#a1a1a6;--inv-chip:rgba(255,255,255,.12);
+  --film-shadow:0 0 0 1px rgba(0,0,0,.06),0 60px 120px -50px rgba(0,60,150,.55),0 24px 48px -30px rgba(0,0,0,.45);
+  --t-bg:#1c1c1e;--t-bar:#2c2c2e;--t-line:rgba(255,255,255,.14);--t-text:#f5f5f7;--t-muted:#a1a1a6;--t-ok:#30d158;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --sec:#000;--sec-alt:#101012;--card:#1c1c1e;--card-alt:#1c1c1e;
+    --text:#f5f5f7;--muted:#a1a1a6;--line:rgba(255,255,255,.2);--line2:rgba(255,255,255,.1);
+    --accent:#2997ff;--focus:#64b5ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff6961;--chip:rgba(255,255,255,.1);
+    --nav:rgba(22,22,23,.92);--nav-solid:#161617;
+    --glow:rgba(41,151,255,.32);--glow2:rgba(34,211,238,.13);--glow3:rgba(46,125,246,.16);
+    --grad:linear-gradient(90deg,#5ac8fa 0%,#7d7aff 45%,#bf5af2 100%);
+    --inv-bg:#f5f5f7;--inv-text:#1d1d1f;--inv-muted:#515154;--inv-chip:rgba(0,0,0,.07);
+    --film-shadow:0 0 0 1px rgba(255,255,255,.12),0 50px 120px -40px rgba(41,151,255,.55),0 30px 60px -30px rgba(0,0,0,.9);
+  }
+  .sec+.sec:not(.stage){border-top:1px solid var(--line2)}
+}
+.dk{
+  color:var(--text);
+  --sec:#000;--sec-alt:#000;--card:#1c1c1e;--card-alt:#1c1c1e;
+  --text:#f5f5f7;--muted:#a1a1a6;--line:rgba(255,255,255,.2);--line2:rgba(255,255,255,.1);
+  --accent:#2997ff;--focus:#64b5ff;--ok:#30d158;--warn:#ffd60a;--bad:#ff6961;--chip:rgba(255,255,255,.1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:68px;background:var(--sec)}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--sec);color:var(--text);font:400 1.0625rem/1.47 var(--sans);-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+img,video{max-width:100%}
+figure{margin:0}
+a{color:var(--accent);text-underline-offset:.2em}
+a:hover{text-decoration-thickness:2px}
+code,kbd{font-family:var(--mono)}
+p{margin:0 0 1em}
+h1,h2,h3{margin:0;font-weight:700;text-wrap:balance}
+.lead,.sub,.intro,.tile p,.ba p.d,.steps p,.steps3 p{text-wrap:pretty}
+ul,ol{margin:0;padding:0}
+[role=list]{list-style:none}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+main:focus{outline:none}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.nw{display:inline-block}
+.i{width:1.1em;height:1.1em;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-.17em}
+.skip{position:absolute;left:16px;top:-5em;z-index:50;background:var(--btn);color:var(--btn-fg);padding:.7rem 1.1rem;border-radius:999px;font-weight:600;text-decoration:none}
+.skip:focus{top:10px}
+.wrap{width:100%;max-width:1200px;margin-inline:auto;padding-inline:clamp(16px,5vw,40px)}
+.wrap.film-w{max-width:1360px}
+:where(p,li,dd,summary) code{padding:.1em .4em;border-radius:6px;background:var(--chip);font-size:.88em;white-space:nowrap}
+kbd{padding:.1em .45em;border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;font-size:.85em}
+
+/* ---------- Type scale ---------- */
+.eyebrow-s{margin:0 0 14px;font-size:1.0625rem;font-weight:600;letter-spacing:-.005em;color:var(--accent)}
+h2{font-size:clamp(2.125rem,1.1rem + 3.9vw,4rem);line-height:1.05;letter-spacing:-.04em}
+h3{font-size:1.5rem;line-height:1.15;letter-spacing:-.022em}
+.intro{margin:20px auto 0;max-width:34em;color:var(--muted);font-size:clamp(1.1875rem,1.05rem + .55vw,1.5rem);line-height:1.38;letter-spacing:-.012em}
+.head{text-align:center;margin-bottom:clamp(40px,6vw,72px)}
+.sec{position:relative;padding-block:clamp(80px,11vw,160px);background:var(--sec);color:var(--text)}
+.sec.alt{background:var(--sec-alt);--card:var(--card-alt)}
+.more{margin:20px 0 0;color:var(--muted);font-size:1rem}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:52px;padding:0 30px;border-radius:999px;border:1px solid transparent;font:500 1.0625rem/1.2 var(--sans);letter-spacing:-.01em;text-decoration:none;cursor:pointer;white-space:nowrap}
+.btn .i{width:1.05em;height:1.05em}
+.btn-primary{background:var(--btn);color:var(--btn-fg)}
+.btn-primary:hover{background:var(--btn-h);text-decoration:none}
+.btn-ghost{border-color:var(--accent);color:var(--accent);background:transparent}
+.btn-ghost:hover{background:var(--chip);text-decoration:none}
+.btn-ghost .i{fill:currentColor;stroke:none}
+
+/* ---------- Local nav ---------- */
+.top{position:sticky;top:0;z-index:40;background:var(--nav-solid);color:var(--text);border-bottom:1px solid var(--line2)}
+@supports (backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px)){.top{background:var(--nav);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}}
+.bar{display:flex;align-items:center;gap:8px;min-height:52px}
+.brand{display:inline-flex;align-items:center;gap:10px;margin-right:auto;min-height:44px;color:var(--text);text-decoration:none;font-size:1.3125rem;font-weight:600;letter-spacing:-.02em}
+.brand:hover{text-decoration:none}
+.brand img{display:block;width:26px;height:26px}
+.links ul{display:flex;align-items:center;gap:clamp(2px,1vw,14px)}
+.links a{display:inline-flex;align-items:center;min-height:44px;padding:0 8px;color:var(--muted);text-decoration:none;font-size:.8125rem;letter-spacing:-.005em;white-space:nowrap;border-radius:6px}
+.links a:hover,.links a[aria-current=true]{color:var(--text)}
+.inst{display:inline-flex;align-items:center;min-height:32px;margin-left:8px;padding:0 15px;border-radius:999px;background:var(--btn);color:#fff;font-size:.8125rem;font-weight:500;text-decoration:none;white-space:nowrap}
+.inst:hover{background:var(--btn-h);text-decoration:none}
+.mnav{display:none}
+.mnav summary{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 10px;color:var(--text);font-size:.9375rem;cursor:pointer;list-style:none;border-radius:999px}
+.mnav summary::-webkit-details-marker{display:none}
+.mnav summary::after{content:"";width:7px;height:7px;margin:-3px 0 0 2px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.mnav details[open] summary::after{transform:rotate(225deg);margin-top:3px}
+.mnav ul{position:absolute;left:0;right:0;top:100%;padding:6px clamp(16px,5vw,40px) 18px;background:var(--nav-solid);border-bottom:1px solid var(--line2);max-height:calc(100vh - 53px);overflow:auto;box-shadow:0 30px 40px -30px rgba(0,0,0,.35)}
+.mnav li+li{border-top:1px solid var(--line2)}
+.mnav li a{display:flex;align-items:center;min-height:52px;color:var(--text);text-decoration:none;font-size:1.375rem;font-weight:600;letter-spacing:-.02em}
+@media (max-width:859px){.links{display:none}.mnav{display:block}}
+@media (max-width:359px){.brand{font-size:1.125rem;gap:8px}.brand img{width:22px;height:22px}.mnav summary{padding:0 6px}.inst{padding:0 12px;margin-left:2px}}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;isolation:isolate;overflow:hidden;padding:clamp(36px,4.6vw,68px) 0 0;text-align:center;background:var(--sec)}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;background:
+  radial-gradient(60% 46% at 50% -4%,var(--glow),transparent 72%),
+  radial-gradient(38% 30% at 92% 12%,var(--glow2),transparent 72%),
+  radial-gradient(40% 30% at 6% 18%,var(--glow3),transparent 72%)}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;max-width:100%;margin:0 0 clamp(18px,2.4vw,26px);padding:6px 16px 6px 7px;border-radius:999px;background:var(--chip);border:1px solid var(--line2);color:var(--text);font-size:.9375rem;line-height:1.35;text-decoration:none;text-align:left}
+.eyebrow:hover{border-color:var(--line);text-decoration:none}
+.eyebrow b{flex:none;padding:2px 10px;border-radius:999px;background:var(--btn);color:#fff;font-size:.8125rem;font-weight:600}
+.eyebrow code{background:none;padding:0;font-size:.9em;color:var(--text)}
+.eyebrow .i{color:var(--accent)}
+h1{font-size:clamp(2.5rem,1.15rem + 6.2vw,5rem);line-height:1.02;letter-spacing:-.045em;max-width:12.5em;margin:0 auto}
+.grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+@media (forced-colors:active){.grad{background:none;-webkit-text-fill-color:currentColor;color:inherit}}
+.lead{margin:clamp(18px,2.2vw,26px) auto 0;max-width:24em;font-size:clamp(1.3125rem,1.05rem + 1.2vw,1.875rem);line-height:1.25;letter-spacing:-.02em;font-weight:500}
+.sub{margin:14px auto 0;max-width:40em;color:var(--muted);font-size:clamp(1.0625rem,1rem + .3vw,1.25rem);line-height:1.4}
+.cta{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-top:clamp(24px,3.2vw,34px)}
+@media (max-width:479px){.cta{flex-direction:column;align-items:stretch}.cta .btn{width:100%}}
+.film-wrap{margin-top:clamp(36px,5vw,64px)}
+
+/* ---------- Terminal cards (dark in both themes) ---------- */
+.term{background:var(--t-bg);color:var(--t-text);border-radius:22px;border:1px solid var(--t-line);overflow:hidden;min-width:0;box-shadow:0 40px 80px -40px rgba(0,0,0,.5)}
+.term :focus-visible{outline-color:#64b5ff}
+.term a{color:#64b5ff}
+.term-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;min-height:52px;background:var(--t-bar);border-bottom:1px solid rgba(255,255,255,.08)}
+.dots{display:flex;gap:8px;flex:none}
+.dots i{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.dots i:nth-child(2){background:#febc2e}
+.dots i:nth-child(3){background:#28c840}
+.term-title{font:500 .8125rem var(--mono);color:var(--t-muted);overflow-wrap:anywhere}
+.p{color:var(--t-ok);margin-right:.6em;user-select:none;-webkit-user-select:none}
+
+/* Install */
+.install{padding-top:clamp(64px,8vw,120px)}
+.js .install .term-title{display:none}
+.tabs{display:none;gap:6px}
+.js .tabs{display:flex;flex-wrap:wrap}
+.tabs button{min-height:36px;padding:0 16px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--t-muted);font:600 .8125rem var(--mono);cursor:pointer}
+.tabs button:hover{color:var(--t-text)}
+.tabs button[aria-selected=true]{color:#fff;background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+.panel{padding:22px clamp(16px,3vw,28px) 20px;text-align:left}
+html:not(.js) .panel[hidden]{display:block!important}
+html:not(.js) .panel+.panel{border-top:1px solid var(--t-line)}
+.plabel{display:block;margin:0 0 10px;font:600 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--t-muted)}
+.js .plabel{display:none}
+.cmdrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start}
+.cmdrow+.cmdrow{margin-top:14px}
+.ps{color:var(--t-ok);font:700 1rem/1.6 var(--mono);user-select:none;-webkit-user-select:none}
+.cmd{display:block;font:500 .9375rem/1.6 var(--mono);color:var(--t-text);overflow-wrap:anywhere;user-select:all;-webkit-user-select:all}
+.js .ps,.js .cmd{padding-top:9px}
+.copy{display:none;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 20px;border-radius:999px;border:1px solid #0071e3;background:#0071e3;color:#fff;font:500 .9375rem var(--sans);cursor:pointer}
+.js .copy{display:inline-flex}
+.copy:hover{background:#0a84ff;border-color:#0a84ff}
+.copy.done{background:#30d158;border-color:#30d158;color:#04210d}
+.hint{margin:16px 0 0;color:var(--t-muted);font-size:.9375rem}
+.term :where(p,li) code{padding:0;background:none;color:var(--t-text);white-space:normal}
+@media (max-width:559px){.cmdrow{grid-template-columns:auto minmax(0,1fr)}.js .ps,.js .cmd{padding-top:0}.copy{grid-column:1/-1;width:100%}}
+.install-wrap{max-width:820px;margin:0 auto}
+.fine{margin:0 auto;max-width:62ch;color:var(--muted);font-size:1rem;text-align:center}
+.fine summary{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer;color:var(--accent);list-style:none}
+.fine summary::-webkit-details-marker{display:none}
+.fine[open] summary .i{transform:rotate(180deg)}
+.fine p{margin:4px 0 0;text-align:left}
+.works{margin:clamp(28px,4vw,40px) auto 0;max-width:40em;text-align:center;color:var(--muted);font-size:1rem}
+.works b{color:var(--text);font-weight:600}
+
+/* ---------- At a glance ---------- */
+.glance{padding:clamp(56px,7vw,96px) 0 0;background:var(--sec)}
+.glance ul{display:grid;gap:22px 32px;grid-template-columns:minmax(0,1fr);padding-block:clamp(28px,4vw,44px);border-block:1px solid var(--line)}
+.glance li{padding-top:20px;border-top:1px solid var(--line2)}
+.glance li:first-child{padding-top:0;border-top:0}
+.glance strong{display:block;font-size:clamp(1.375rem,1.15rem + .6vw,1.625rem);line-height:1.1;font-weight:700;letter-spacing:-.03em;overflow-wrap:normal}
+.glance span{display:block;margin-top:8px;color:var(--muted);font-size:.9375rem;line-height:1.4}
+@media (min-width:640px){
+  .glance ul{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .glance li,.glance li:first-child{grid-column:span 2;padding-top:0;border-top:0}
+  .glance li:nth-child(n+4){grid-column:span 3}
+}
+@media (min-width:1000px){
+  .glance ul{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .glance li,.glance li:first-child,.glance li:nth-child(n+4){grid-column:auto;padding-left:24px;border-left:1px solid var(--line2)}
+  .glance li:first-child{padding-left:0;border-left:0}
+}
+
+/* ---------- Statement: without and with ---------- */
+.statement{text-align:center}
+.big{margin:0 auto;max-width:16em;font-size:clamp(2.125rem,.9rem + 4.6vw,4.25rem);line-height:1.05;letter-spacing:-.042em;font-weight:700}
+.big .l1{display:block}
+.big .l2{color:var(--muted)}
+.ba{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:minmax(0,1fr);max-width:1080px;margin:clamp(48px,6vw,80px) auto 0;text-align:left}
+@media (min-width:760px){.ba{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.ba article{display:flex;flex-direction:column;justify-content:space-between;gap:40px;min-height:clamp(260px,28vw,360px);padding:clamp(26px,3.6vw,48px);border-radius:clamp(24px,3vw,36px);background:var(--card)}
+.ba .label{margin:0 0 16px;color:var(--muted);font-size:.9375rem;font-weight:600}
+.ba h3{font-size:clamp(1.75rem,1.2rem + 1.8vw,2.625rem);line-height:1.08;letter-spacing:-.034em;max-width:11em}
+.ba p.d{margin:16px 0 0;color:var(--muted);font-size:1.1875rem;line-height:1.38;max-width:24em}
+.ba .with{background:var(--inv-bg);color:var(--inv-text);--muted:var(--inv-muted)}
+.pills{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0}
+.pills span{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--chip);font-size:.9375rem;font-weight:600}
+.with .pills span{background:var(--inv-chip)}
+.pills i{width:8px;height:8px;border-radius:50%;background:#30d158}
+.pills .off i{background:var(--muted)}
+.pills .arr{padding:0;background:none;color:var(--muted);font-weight:400}
+
+/* ---------- Bento ---------- */
+.bento{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:repeat(12,minmax(0,1fr))}
+.tile{position:relative;grid-column:span 12;display:flex;flex-direction:column;min-width:0;overflow:hidden;padding:clamp(26px,3.4vw,44px);border-radius:clamp(24px,3vw,36px);background:var(--card);color:var(--text)}
+.tile .lab{margin:0 0 10px;font-size:.9375rem;font-weight:600;color:var(--muted);letter-spacing:-.005em}
+.tile h3{font-size:clamp(1.5rem,1.1rem + 1.2vw,2.125rem);line-height:1.1;letter-spacing:-.03em;max-width:14em}
+.tile p{margin:14px 0 0;color:var(--muted);font-size:1.0625rem;line-height:1.45;max-width:30em}
+.tile .vis{margin-top:auto;padding-top:clamp(28px,4vw,48px)}
+.tdk{background:#08142b linear-gradient(165deg,#0b1d3d 0%,#050b18 70%);color:#f5f5f7;--muted:#b4b4ba;--accent:#64b5ff;--ok:#30d158;--chip:rgba(255,255,255,.1);--focus:#64b5ff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.tblue{background:#0a4fae linear-gradient(160deg,#0a62c9 0%,#0b3b8f 100%);color:#fff;--muted:#fff;--accent:#fff;--chip:rgba(0,0,0,.24);--focus:#fff;--ok:#fff}
+.tblue p{color:#fff}
+@media (min-width:640px) and (max-width:899px){.t-c,.t-d{grid-column:span 6}}
+@media (min-width:900px){.t-a{grid-column:span 7}.t-b{grid-column:span 5}.t-c,.t-d,.t-e{grid-column:span 4}.t-f{grid-column:span 12;flex-direction:row;align-items:center;gap:clamp(24px,4vw,64px)}.t-f>div:first-child{flex:1 1 0}.t-f .vis{flex:1 1 0;margin:0;padding:0}.tile{min-height:340px}.t-a,.t-b{min-height:480px}.t-f{min-height:0}}
+
+/* mini windows */
+.sk{display:block;height:8px;border-radius:4px;background:rgba(255,255,255,.12)}
+.sk.w1{width:78%}.sk.w2{width:52%}.sk.w3{width:64%}
+
+.stage{background:radial-gradient(70% 55% at 50% 58%,rgba(41,151,255,.13),transparent 72%),#000}
+.steps3{display:grid;gap:clamp(28px,4vw,48px);margin-top:clamp(56px,8vw,96px);grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.steps3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.steps3 li{padding-top:22px;border-top:1px solid var(--line)}
+.num{display:block;margin-bottom:14px;font:600 .9375rem var(--mono);color:var(--accent)}
+.steps3 h3{font-size:1.375rem}
+.steps3 p{margin:10px 0 0;color:var(--muted)}
+.steps3 code{white-space:normal}
+/* ---------- Set up ---------- */
+.steps{display:grid;gap:clamp(32px,4vw,56px);grid-template-columns:minmax(0,1fr);counter-reset:s}
+@media (min-width:860px){.steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.steps li{counter-increment:s}
+.steps li::before{content:counter(s);content:counter(s) / "";display:block;margin-bottom:10px;font-size:clamp(4rem,3rem + 4vw,6.5rem);line-height:1;font-weight:700;letter-spacing:-.05em;color:var(--accent)}
+.steps h3{font-size:1.5rem}
+.steps p{margin:12px 0 0;color:var(--muted)}
+.steps code{white-space:normal}
+.note{display:flex;gap:14px;margin-top:clamp(36px,5vw,56px);padding:20px 24px;background:var(--card);border-radius:22px;border:1px solid var(--line2)}
+.note .i{margin-top:.2em;color:var(--accent);width:1.3em;height:1.3em}
+.note p{margin:0;color:var(--muted)}
+.note strong{color:var(--text)}
+.sub-h{margin:clamp(64px,9vw,112px) 0 clamp(20px,3vw,32px);text-align:center;font-size:clamp(1.75rem,1.2rem + 2vw,2.75rem);letter-spacing:-.035em}
+.cmdlist{padding:6px 0}
+.cmdlist li{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:6px 28px;align-items:baseline;padding:14px 22px}
+.cmdlist li+li{border-top:1px solid rgba(255,255,255,.08)}
+.cmdlist code{font:500 .9375rem/1.55 var(--mono);overflow-wrap:anywhere;background:none;padding:0;color:var(--t-text);white-space:normal}
+.cmdlist code::before{content:"$";content:"$" / "";margin-right:.6em;color:var(--t-ok)}
+.cmdlist .d{color:var(--t-muted);font-size:.9375rem}
+@media (max-width:699px){.cmdlist li{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- Apps ---------- */
+.apps{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:repeat(12,minmax(0,1fr))}
+.app{grid-column:span 12;padding:clamp(24px,3vw,40px);border-radius:clamp(24px,3vw,32px);background:var(--card);min-width:0}
+.app h3{display:flex;align-items:center;gap:10px;font-size:1.75rem;letter-spacing:-.03em;color:var(--text)}
+.app h3 .i{width:1em;height:1em}
+.app p{margin:10px 0 0;color:var(--muted);font-size:1rem}
+.app p code{white-space:normal}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chips li{padding:6px 14px;border-radius:999px;background:var(--sec);border:1px solid var(--line2);font-size:.9375rem}
+.blurb{margin:clamp(28px,4vw,40px) auto 0;max-width:50em;color:var(--muted)}
+
+/* ---------- Safety ---------- */
+.specs{border-bottom:1px solid var(--line)}
+.specs>li{display:grid;gap:10px 48px;padding:clamp(26px,3.4vw,40px) 0;border-top:1px solid var(--line);grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.specs>li{grid-template-columns:minmax(0,4fr) minmax(0,8fr)}}
+.spec-k{display:flex;align-items:center;align-self:start;gap:10px;padding-top:.45em;font-size:.9375rem;font-weight:600;color:var(--accent)}
+.spec-k .i{width:1.4em;height:1.4em}
+.specs h3{font-size:clamp(1.375rem,1.1rem + 1vw,1.875rem);letter-spacing:-.028em;line-height:1.15}
+.specs p{margin:12px 0 0;color:var(--muted);max-width:42em}
+.specs p code{white-space:normal}
+.verify{display:grid;gap:28px 48px;margin-top:clamp(56px,8vw,96px);align-items:center;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.verify{grid-template-columns:minmax(0,6fr) minmax(0,6fr)}.verify .term{order:-1}}
+.verify p{color:var(--muted)}
+.verify p code{white-space:normal}
+.verify h3{margin-bottom:14px;font-size:clamp(1.75rem,1.2rem + 2vw,2.75rem);letter-spacing:-.035em}
+.code{padding:20px 22px;font:500 .875rem/1.8 var(--mono)}
+.code p{margin:0;overflow-wrap:anywhere;color:var(--t-text)}
+
+/* ---------- Catch ---------- */
+.split{display:grid;gap:clamp(32px,5vw,64px);grid-template-columns:minmax(0,1fr)}
+@media (min-width:960px){.split{grid-template-columns:minmax(0,5fr) minmax(0,6fr);align-items:center}}
+.split h2{font-size:clamp(2rem,1.1rem + 3.2vw,3.5rem)}
+.split .lede{margin:20px 0 0;color:var(--muted);font-size:1.1875rem;line-height:1.4}
+.tell{display:grid;gap:14px;margin-top:28px}
+.tell li{display:flex;gap:12px;align-items:flex-start;color:var(--muted)}
+.tell li::before{content:"\2713";content:"\2713" / "";flex:none;font-weight:700;color:var(--ok);margin-top:.05em}
+.tell strong{color:var(--text)}
+.nots{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:minmax(0,1fr)}
+@media (min-width:640px){.nots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1000px){.nots{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.nots li{display:flex;gap:12px;align-items:flex-start;padding:22px 24px;border-radius:24px;background:var(--card);color:var(--muted)}
+.nots li::before{content:"\2715";content:"\2715" / "";flex:none;font-weight:700;color:var(--bad);margin-top:.05em}
+.nots strong{color:var(--text)}
+
+/* ---------- FAQ ---------- */
+.faq{max-width:820px;margin:0 auto;border-bottom:1px solid var(--line)}
+.faq details{border-top:1px solid var(--line)}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:64px;padding:18px 4px;font-size:clamp(1.1875rem,1.05rem + .5vw,1.4375rem);font-weight:600;letter-spacing:-.018em;line-height:1.25;cursor:pointer;list-style:none;border-radius:8px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary:focus-visible{outline-offset:-3px}
+.faq summary::after{content:"+";content:"+" / "";flex:none;font:300 2rem/1 var(--sans);color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.faq summary::after{transition:transform .25s}.fine summary .i{transition:transform .2s}}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq .a{padding:0 4px 28px;color:var(--muted);max-width:44em}
+.faq .a p{margin:0 0 .9em}
+.faq .a p:last-child{margin:0}
+
+/* ---------- Closer: a dark card in both themes ---------- */
+.closer{padding-block:clamp(56px,8vw,112px)}
+.cta-card{position:relative;isolation:isolate;overflow:hidden;text-align:center;padding:clamp(56px,9vw,120px) clamp(18px,5vw,64px);border-radius:clamp(28px,4vw,44px);background:#000;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.cta-card::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(60% 55% at 50% 0%,rgba(41,151,255,.32),transparent 72%),radial-gradient(50% 50% at 50% 110%,rgba(34,211,238,.16),transparent 72%)}
+.cta-card h2{font-size:clamp(2.5rem,1.2rem + 6vw,5rem);letter-spacing:-.045em}
+.cta-card .tagline{margin:16px auto 0;font-size:clamp(1.25rem,1.05rem + .9vw,1.75rem);line-height:1.25;letter-spacing:-.02em;font-weight:600}
+.cta-card .tagline span{color:var(--muted)}
+.cta-card .intro{max-width:28em;font-size:clamp(1.0625rem,1rem + .3vw,1.25rem)}
+.cta-card .install-wrap{margin-top:clamp(32px,5vw,56px);max-width:760px}
+.cta-card .small{margin:20px auto 0;max-width:36em;color:var(--muted);font-size:1rem}
+.cta-card .small a{white-space:nowrap}
+
+/* ---------- Footer ---------- */
+.foot{background:var(--sec-alt);color:var(--muted);padding:clamp(40px,6vw,64px) 0 36px;font-size:.875rem;border-top:1px solid var(--line2)}
+.foot-top{display:grid;gap:24px 48px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:860px){.foot-top{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);align-items:start}}
+.foot .brand{font-size:1.25rem}
+.foot-top p{margin:12px 0 0;max-width:26em;font-size:.9375rem}
+.foot ul{display:flex;flex-wrap:wrap;gap:0 24px}
+@media (min-width:860px){.foot ul{justify-content:flex-end}}
+.foot li a{display:inline-flex;align-items:center;min-height:44px;font-size:.9375rem;color:var(--muted);text-decoration:none}
+.foot li a:hover{color:var(--text);text-decoration:underline}
+.legal{margin-top:28px;padding-top:20px;border-top:1px solid var(--line);font-size:.8125rem}
+.legal p{margin:0 0 6px}
+
+/* ---------- Scroll-in reveals. Off for reduced motion and without JS. ---------- */
+@media (prefers-reduced-motion:no-preference){
+  .js .rv{opacity:0;transform:translateY(32px);transition:opacity .9s cubic-bezier(.2,.7,.2,1) calc(var(--d,0)*90ms),transform .9s cubic-bezier(.2,.7,.2,1) calc(var(--d,0)*90ms)}
+  .js .rv.in{opacity:1;transform:none}
+  .rv-init .rv{transition:none!important}
+}
+@media print{.js .rv{opacity:1!important;transform:none!important}}
+
+/* ---------- Forced colours ---------- */
+@media (forced-colors:active){
+  .term,.film,.tile,.app,.nots li,.note,.eyebrow,.chips li,.btn-ghost,.ba article,.cta-card,.pills span,.mnav ul{border:1px solid CanvasText}
+  .btn-primary,.inst,.copy,.ctl,.bigplay{border:1px solid ButtonText}
+  .dots i{forced-color-adjust:none}
+  .tabs button[aria-selected=true],.links a[aria-current=true]{border-color:Highlight;text-decoration:underline}
+}
+
+:root{
+  /* Poster images for the films. */
+  --poster-hero:url(assets/film-poster.jpg);--poster-cost:url(assets/cost-film-poster.jpg);--poster-demo:url(demo/poster.jpg);
+}
+.brand img{border-radius:6px}
+
+/* Video player: a poster that loads the YouTube player only after a click */
+.shot{position:relative;background:#000;line-height:0;aspect-ratio:16/9}
+.shot iframe{display:block;width:100%;height:100%;border:0;background:#000}
+.shot:fullscreen{aspect-ratio:auto}
+.poster{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000 var(--poster) center/cover no-repeat;text-decoration:none;color:#1d1d1f}
+.poster::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.38)}
+.poster>*{position:relative}
+.p-hero{--poster:var(--poster-hero)}.p-cost{--poster:var(--poster-cost)}.p-demo{--poster:var(--poster-demo)}
+.bigplay{display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);min-height:58px;padding:0 28px 0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(245,245,247,.94);color:#1d1d1f;font:600 1.0625rem/1.2 var(--sans);box-shadow:0 20px 50px -10px rgba(0,0,0,.6)}
+.poster:hover .bigplay{background:#fff}
+.poster:focus-visible{outline:3px solid #64b5ff;outline-offset:-6px}
+.bigplay .i{width:22px;height:22px;fill:currentColor;stroke:none;color:#0066cc}
+.ctl{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#f5f5f7;font:500 .875rem/1 var(--sans);text-decoration:none;cursor:pointer}
+.ctl:hover{background:rgba(255,255,255,.16);color:#fff}
+.ctl .i{fill:currentColor;stroke:none}
+.ctl.cc .i,.ctl.fs .i{fill:none;stroke:currentColor}
+.cc[aria-pressed=true]{border-color:rgba(41,151,255,.7);background:rgba(41,151,255,.2);color:#fff}
+.film{width:100%;max-width:1280px;margin:0 auto;background:#000;color:var(--t-text);border-radius:clamp(18px,3vw,34px);overflow:hidden;box-shadow:var(--film-shadow)}
+.film :focus-visible{outline-color:#64b5ff}
+.film-bar{display:none;flex-wrap:wrap;align-items:center;gap:8px;padding:12px clamp(12px,2vw,20px);background:#111113;border-top:1px solid rgba(255,255,255,.1)}
+.js .film-bar{display:flex}
+.film-bar .yt{margin-left:auto;color:#a1a1a6}
+.film.started .vbtn,.film.started .cc{display:none}
+.film figcaption.cap{padding:14px clamp(14px,2vw,22px);background:#111113;border-top:1px solid rgba(255,255,255,.1);color:var(--t-muted);font-size:.9375rem;line-height:1.5}
+.film figcaption.cap a{color:#64b5ff}
+.film.small{max-width:1040px;border-radius:clamp(18px,2.6vw,30px);box-shadow:0 0 0 1px rgba(255,255,255,.08),0 30px 60px -30px rgba(0,0,0,.5)}
+@media (max-width:420px){.ctl{padding:0 12px}.film-bar .ccl{display:none}}
+@media (max-width:379px){.bigplay{padding:0 20px 0 14px;font-size:1rem}.film-bar{gap:6px;padding:8px}}
+.cost-film{margin-top:clamp(40px,6vw,72px)}
+
+/* Gradient eyebrow numerals and the big $0 */
+.big0{margin:0;text-align:center;font-size:clamp(6rem,3rem + 16vw,13rem);line-height:.95;font-weight:700;letter-spacing:-.06em}
+.big0-l{margin:8px 0 0;text-align:center;color:var(--muted);font-size:clamp(1.25rem,1.05rem + .9vw,1.75rem);letter-spacing:-.015em}
+
+/* Cost step cards */
+.steps5{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:minmax(0,1fr);margin-top:clamp(48px,6vw,80px)}
+@media (min-width:640px){.steps5{grid-template-columns:repeat(6,minmax(0,1fr))}.steps5>li{grid-column:span 2}.steps5>li:nth-child(n+4){grid-column:span 3}}
+@media (min-width:1000px){.steps5{grid-template-columns:repeat(5,minmax(0,1fr))}.steps5>li,.steps5>li:nth-child(n+4){grid-column:auto}}
+.steps5 li{display:flex;flex-direction:column;gap:6px;padding:24px;border-radius:24px;background:var(--card)}
+.steps5 .k{font-size:.9375rem;font-weight:600;color:var(--muted)}
+.steps5 .v{font-size:2.25rem;font-weight:700;letter-spacing:-.04em;line-height:1.05}
+.steps5 .d{margin:6px 0 0;color:var(--muted);font-size:.9375rem;line-height:1.4}
+.pricehead{margin:clamp(56px,8vw,96px) 0 12px;text-align:center;font-size:clamp(1.75rem,1.2rem + 2vw,2.75rem);letter-spacing:-.035em}
+.pricecap{margin:0 auto clamp(20px,3vw,32px);max-width:36em;text-align:center;color:var(--muted)}
+.prices{max-width:900px;margin:0 auto}
+.prices .cmdlist li{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.prices .cmdlist code::before{content:none}
+.prices .cmdlist .d b{color:var(--t-text);font-weight:600}
+.budget{display:flex;gap:16px;align-items:flex-start;max-width:900px;margin:clamp(20px,3vw,28px) auto 0;padding:22px 26px;border-radius:24px;background:var(--card)}
+.budget .i{flex:none;margin-top:.15em;width:1.5em;height:1.5em;color:var(--accent)}
+.budget p{margin:0;color:var(--muted)}
+.budget strong{color:var(--text)}
+.budget h3{margin:0 0 6px;font-size:1.375rem}
+.cost-link{margin:clamp(28px,4vw,40px) 0 0;text-align:center;font-size:1.1875rem;font-weight:500}
+.cost-link a{display:inline-flex;min-height:44px;align-items:center}
+
+/* Pipeline */
+.pipe{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);counter-reset:p}
+@media (min-width:600px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1080px){.pipe{grid-template-columns:repeat(6,minmax(0,1fr));gap:26px}}
+.pipe li{position:relative;counter-increment:p;padding:20px 20px 22px;border-radius:20px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);min-width:0}
+.pipe li::before{content:"0" counter(p);content:"0" counter(p) "";display:block;margin-bottom:10px;font:600 .8125rem var(--mono);color:var(--accent)}
+.pipe b{display:block;font-size:1.125rem;font-weight:600;letter-spacing:-.015em;overflow-wrap:anywhere}
+.pipe span{display:block;margin-top:6px;color:var(--muted);font-size:.9375rem;line-height:1.4}
+.pipe li.you{border-color:rgba(125,122,255,.7);background:rgba(125,122,255,.12)}
+@media (min-width:1080px){.pipe li:not(:last-child)::after{content:"\2192";content:"\2192" / "";position:absolute;right:-22px;top:50%;transform:translateY(-50%);color:#7d7aff;font:700 1.125rem var(--mono)}}
+
+/* Bento illustrations */
+.cmpd{display:grid;gap:10px}
+.cn{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);font:600 .875rem var(--mono);color:#f5f5f7;overflow-wrap:anywhere}
+.cn small{font:600 .6875rem var(--sans);padding:2px 9px;border-radius:999px;background:rgba(41,151,255,.25);color:#9fd0ff;white-space:nowrap}
+.cn.chg{border-color:rgba(41,151,255,.7);background:rgba(41,151,255,.12)}
+.carr{justify-self:center;color:#64b5ff;font:700 1rem var(--mono);line-height:1}
+.codeb{border-radius:16px;background:var(--t-bg);border:1px solid rgba(255,255,255,.12);padding:14px 0;font:500 .8125rem/1.7 var(--mono);color:#d1d1d6;overflow:hidden}
+.codeb div{display:flex;gap:14px;padding:0 16px;white-space:pre;overflow:hidden}
+.codeb i{flex:none;width:1.4em;font-style:normal;color:#6e6e73;text-align:right}
+.codeb .hl{background:rgba(41,151,255,.22);box-shadow:inset 3px 0 0 #2997ff;color:#fff}
+.codeb .dim{opacity:.45}
+.ba2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ba2 div{padding:14px;border-radius:16px;background:var(--t-bg);border:1px solid rgba(255,255,255,.1);color:var(--t-text);font:600 .75rem var(--sans);display:grid;gap:8px;align-content:start}
+.ba2 em{font-style:normal;color:var(--t-muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:.6875rem}
+.ba2 .ok em{color:var(--t-ok)}
+.ba2 .sk{height:7px}
+.chk{display:grid;gap:10px}
+.chk div{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(0,0,0,.24);font:500 .8125rem var(--mono);color:#fff;overflow-wrap:anywhere}
+.chk div::before{content:"";flex:none;width:18px;height:18px;border-radius:6px;border:2px solid rgba(255,255,255,.8)}
+.capmock{display:grid;place-items:end center;min-height:150px;padding:18px;border-radius:16px;background:linear-gradient(160deg,#1c1c1e,#0b0b0d);border:1px solid rgba(255,255,255,.1)}
+.capmock span{display:inline-block;padding:8px 14px;border-radius:10px;background:rgba(0,0,0,.78);color:#fff;font:600 .9375rem/1.35 var(--sans);text-align:center}
+.wp{display:grid;gap:12px}
+.wp .chips{margin:0}
+.wp .chips li{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);font-size:.8125rem;padding:5px 12px}
+.claim{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);font-size:.875rem;color:#f5f5f7}
+.claim code{flex:none;font:600 .75rem var(--mono);color:#64b5ff;white-space:nowrap}
+.tile.t-f .vis{min-width:0}
+
+/* Agents */
+.app .cmdi{display:block;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--t-bg);color:var(--t-text);font:500 .875rem/1.5 var(--mono);overflow-wrap:anywhere}
+.app .cmdi + .cmdi{margin-top:8px}
+.app .note2{margin-top:12px;color:var(--muted);font-size:.9375rem}
+@media (min-width:900px){.a-1{grid-column:span 7}.a-2{grid-column:span 5}.a-3{grid-column:span 12}.a-4{grid-column:span 5}.a-5{grid-column:span 7}.a-6{grid-column:span 12}}
+
+/* Share */
+.share{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.share{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:1100px){.share{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.share li{padding:28px;border-radius:28px;background:var(--card)}
+.share .i{width:1.7em;height:1.7em;color:var(--accent);margin-bottom:14px}
+.share h3{font-size:1.5rem}
+.share p{margin:10px 0 0;color:var(--muted);font-size:1rem}
+
+/* Catch card */
+.need{display:grid;gap:0;padding:8px 0}
+.need li{display:flex;justify-content:space-between;gap:18px;padding:16px 22px;font-size:1rem}
+.need li+li{border-top:1px solid rgba(255,255,255,.08)}
+.need span{color:var(--t-muted);text-align:right}
+.need b{font-weight:600}
+.cap{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--t-muted);font-size:.9375rem;line-height:1.5}
+.glance span code,.sub code{white-space:normal}
+
+h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
+.big0 .grad{display:inline-block;padding:0 .08em}
+.note code,.faq code,.app code,.hint code,.blurb code{white-space:normal;overflow-wrap:anywhere}
+</style>
+</head>
+<body id="top">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></symbol>
+<symbol id="i-fs" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+<symbol id="i-cc" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10.5 10.2a2.2 2.2 0 1 0 0 3.6M17.5 10.2a2.2 2.2 0 1 0 0 3.6"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+<symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="m1 1 22 22"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+<symbol id="i-cloud" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+<symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M15 9.5c0-1.4-1.3-2-3-2s-3 .8-3 2.2 1.3 1.8 3 2.3 3 .9 3 2.3-1.3 2.2-3 2.2-3-.7-3-2"/></symbol>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+<div class="wrap bar">
+<a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="26" height="26"><span>MergeStory</span></a>
+<nav class="links" aria-label="Main">
+<ul role="list">
+<li><a href="#how-it-works">How it works</a></li>
+<li><a href="#cost">Cost</a></li>
+<li><a href="#agents">Agents</a></li>
+<li><a href="#privacy">Privacy</a></li>
+<li><a href="#faq">FAQ</a></li>
+</ul>
+</nav>
+<nav class="mnav" aria-label="Main">
+<details>
+<summary>Menu</summary>
+<ul role="list">
+<li><a href="#how-it-works">How it works</a></li>
+<li><a href="#cost">Cost</a></li>
+<li><a href="#agents">Agents</a></li>
+<li><a href="#privacy">Privacy</a></li>
+<li><a href="#faq">FAQ</a></li>
+</ul>
+</details>
+</nav>
+<a class="inst" href="#install">Install</a>
+</div>
+</header>
+
+<main id="main" tabindex="-1">
+
+<!-- Hero -->
+<section class="hero" aria-labelledby="h-hero">
+<div class="wrap">
+<a class="eyebrow" href="#cost"><b>New</b><span>$0 per video, by design</span><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></a>
+<h1 id="h-hero"><span class="nl">Every change</span> <span class="grad nl">has a story.</span></h1>
+<p class="lead">MergeStory turns a pull request into a short narrated video. What changed, why, and what to review.</p>
+<p class="sub">Free, open source, and it runs on your machine.</p>
+<div class="cta">
+<a class="btn btn-primary" href="#install">Install</a>
+<a class="btn btn-ghost" href="#film"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Watch the film</a>
+</div>
+</div>
+
+<div class="wrap film-w film-wrap">
+<figure class="film" id="film" data-yt="Ylp5W4oaAqM" data-title="MergeStory: every change has a story (film)">
+<div class="shot">
+<a class="poster p-hero" href="https://www.youtube.com/watch?v=Ylp5W4oaAqM" target="_blank" rel="noopener"><span class="bigplay"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Play the film<span class="sr"> (opens YouTube)</span></span></a>
+</div>
+<div class="film-bar">
+<button type="button" class="ctl vbtn" hidden><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span>Play</span><span class="sr"> the film</span></button>
+<button type="button" class="ctl cc" aria-pressed="false" title="Start with captions on" hidden><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg><span class="ccl" aria-hidden="true">Captions</span><span class="sr">Start with captions on</span></button>
+<button type="button" class="ctl fs" title="Full screen" hidden><svg class="i" aria-hidden="true"><use href="#i-fs"/></svg><span class="fsl">Full screen</span><span class="sr"> (play the film in full screen)</span></button>
+<a class="ctl yt" href="https://www.youtube.com/watch?v=Ylp5W4oaAqM" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
+</div>
+</figure>
+</div>
+</section>
+
+<!-- Install -->
+<section class="sec install" id="install" aria-labelledby="h-install">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-install">Install it with one command.</h2>
+<p class="intro">Pick the way you work. Then run <code>mergestory doctor</code> to check your setup.</p>
+</div>
+<div class="install-wrap rv">
+<div class="term">
+<div class="term-bar">
+<span class="dots"><i></i><i></i><i></i></span>
+<span class="term-title">Install</span>
+<div class="tabs" role="tablist" aria-label="Install method">
+<button type="button" role="tab" id="tab-npm" aria-selected="true" aria-controls="panel-npm">npm</button>
+<button type="button" role="tab" id="tab-cc" aria-selected="false" aria-controls="panel-cc" tabindex="-1">Claude Code</button>
+<button type="button" role="tab" id="tab-other" aria-selected="false" aria-controls="panel-other" tabindex="-1">Other agents</button>
+</div>
+</div>
+<div class="panel" role="tabpanel" id="panel-npm" aria-labelledby="tab-npm">
+<span class="plabel">npm</span>
+<div class="cmdrow">
+<span class="ps" aria-hidden="true">$</span>
+<code class="cmd" id="cmd-npm">npm install -g mergestory</code>
+<button type="button" class="copy" data-target="cmd-npm"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy</span><span class="sr"> the npm command</span></button>
+</div>
+<p class="hint">Paste it into your terminal. Then run <code>mergestory doctor</code>.</p>
+</div>
+<div class="panel" role="tabpanel" id="panel-cc" aria-labelledby="tab-cc" hidden>
+<span class="plabel">Claude Code</span>
+<div class="cmdrow">
+<span class="ps" aria-hidden="true">&gt;</span>
+<code class="cmd" id="cmd-cc">/plugin install mergestory --marketplace PiniShv/MergeStory</code>
+<button type="button" class="copy" data-target="cmd-cc"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy</span><span class="sr"> the Claude Code command</span></button>
+</div>
+<p class="hint">Type it inside Claude Code (2.1.275 or newer). Then ask: explain this pull request as a video.</p>
+</div>
+<div class="panel" role="tabpanel" id="panel-other" aria-labelledby="tab-other" hidden>
+<span class="plabel">Other agents</span>
+<div class="cmdrow">
+<span class="ps" aria-hidden="true">$</span>
+<code class="cmd" id="cmd-other">npx skills add PiniShv/MergeStory</code>
+<button type="button" class="copy" data-target="cmd-other"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy</span><span class="sr"> the skills command</span></button>
+</div>
+<p class="hint">Needs Node.js 22.20 or newer. It adds the MergeStory skill for your coding agents.</p>
+</div>
+</div>
+<details class="fine">
+<summary>New to the terminal? <svg class="i" aria-hidden="true"><use href="#i-down"/></svg></summary>
+<p>You need Node.js 22.12 or newer, git, FFmpeg, and Google Chrome or another Chromium browser. Open a terminal, paste the line and press <kbd>Return</kbd>. <code>mergestory doctor</code> then tells you what is missing and how to fix it. <a href="#quick-start">See the three steps</a>.</p>
+</details>
+<p class="works">Works with <b>Claude Code</b>, <b>Codex</b>, <b>GitHub Copilot</b>, <b>Cursor</b> and <a href="#agents">more</a>. Or use it on its own.</p>
+</div>
+</div>
+</section>
+
+<!-- At a glance -->
+<section class="glance" aria-labelledby="h-glance">
+<div class="wrap">
+<h2 id="h-glance" class="sr">At a glance</h2>
+<ul role="list">
+<li class="rv" style="--d:0"><strong>Free.</strong><span>No paid service is called by default.</span></li>
+<li class="rv" style="--d:1"><strong>Local.</strong><span>Voice and rendering run on your machine.</span></li>
+<li class="rv" style="--d:2"><strong>Private.</strong><span>Nothing leaves unless you set it up.</span></li>
+<li class="rv" style="--d:3"><strong>Grounded.</strong><span>Every line cites the code.</span></li>
+<li class="rv" style="--d:4"><strong>Open source.</strong><span>Apache-2.0 licence.</span></li>
+</ul>
+</div>
+</section>
+
+<!-- Problem and answer -->
+<section class="sec statement" aria-labelledby="h-problem">
+<div class="wrap">
+<h2 class="big rv" id="h-problem"><span class="l1">A big pull request is hard to read.</span> <span class="l2">A short video does the first pass.</span></h2>
+<div class="ba">
+<article class="rv" style="--d:0">
+<div>
+<p class="label">Without MergeStory</p>
+<h3>Rebuild the author's thinking.</h3>
+<p class="d">You open the diff and work out what changed and why. It takes time, and a risky line is easy to miss.</p>
+</div>
+<p class="pills" aria-hidden="true"><span class="off"><i></i>Open the diff</span><span class="arr">→</span><span class="off"><i></i>Guess why</span></p>
+</article>
+<article class="with rv" style="--d:1">
+<div>
+<p class="label">With MergeStory</p>
+<h3>Watch one short video.</h3>
+<p class="d">A narrator explains what changed, why, and what to review. You know where to look before you open the diff.</p>
+</div>
+<p class="pills" aria-hidden="true"><span><i></i>What changed</span><span><i></i>Why</span><span><i></i>What to review</span></p>
+</article>
+</div>
+</div>
+</section>
+
+<!-- What you get -->
+<section class="sec alt" id="video" aria-labelledby="h-video">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-video">One video. Everything a reviewer needs.</h2>
+<p class="intro">Usually 45 seconds to 3 minutes. You also get captions, a poster image and a watch page.</p>
+</div>
+<div class="bento">
+
+<article class="tile tdk t-a rv" style="--d:0">
+<p class="lab">The big picture</p>
+<h3>See which parts changed.</h3>
+<p>Animated diagrams show the components that changed and how they connect. The changed parts stand out.</p>
+<div class="vis cmpd" aria-hidden="true">
+<div class="cn">client.ts<small>unchanged</small></div>
+<span class="carr">↓</span>
+<div class="cn chg">retry.ts<small>changed</small></div>
+<span class="carr">↓</span>
+<div class="cn">weather-api<small>unchanged</small></div>
+</div>
+</article>
+
+<article class="tile t-b rv" style="--d:1">
+<p class="lab">Under the hood</p>
+<h3>The real code, line by line.</h3>
+<p>The important code is highlighted as the narrator explains it. It is read from your repository, never generated.</p>
+<div class="vis codeb" aria-hidden="true">
+<div class="dim"><i>12</i>async function fetchWeather(city) {</div>
+<div class="dim"><i>13</i>  for (let n = 0; n &lt; 4; n++) {</div>
+<div class="hl"><i>14</i>    const wait = base * 2 ** n;</div>
+<div class="hl"><i>15</i>    await sleep(wait);</div>
+<div class="dim"><i>16</i>  }</div>
+</div>
+</article>
+
+<article class="tile t-c rv" style="--d:0">
+<p class="lab">Before and after</p>
+<h3>Behaviour, side by side.</h3>
+<p>Shown only when there is something real to show.</p>
+<div class="vis ba2" aria-hidden="true">
+<div><em>Before</em><span class="sk w1"></span><span class="sk w2"></span></div>
+<div class="ok"><em>After</em><span class="sk w1"></span><span class="sk w3"></span></div>
+</div>
+</article>
+
+<article class="tile tblue t-d rv" style="--d:1">
+<p class="lab">What to review</p>
+<h3>Know where to look.</h3>
+<p>Risky or subtle spots, each with a link to the file and line.</p>
+<div class="vis chk" aria-hidden="true">
+<div>retry.ts:14</div>
+<div>client.ts:42</div>
+<div>retry.test.ts:8</div>
+</div>
+</article>
+
+<article class="tile t-e rv" style="--d:2">
+<p class="lab">Captions</p>
+<h3>Watch without sound.</h3>
+<p>Every video comes with captions, as VTT and SRT files.</p>
+<div class="vis capmock" aria-hidden="true"><span>Each retry waits twice as long.</span></div>
+</article>
+
+<article class="tile tdk t-f rv" style="--d:0">
+<div>
+<p class="lab">The watch page</p>
+<h3>Every claim, linked to the code.</h3>
+<p>A page next to the video lists the chapters, the review checklist and every claim, with links to the code it is based on.</p>
+</div>
+<div class="vis wp" aria-hidden="true">
+<ul class="chips" role="list"><li>The mission</li><li>The big picture</li><li>Under the hood</li><li>Before and after</li><li>What to review</li><li>Conclusion</li></ul>
+<div class="claim"><span>Each retry waits twice as long.</span><code>retry.ts:14</code></div>
+<div class="claim"><span>Failed requests are tried again.</span><code>client.ts:42</code></div>
+</div>
+</article>
+
+</div>
+<p class="more rv" style="text-align:center">The pictures here are illustrations. <a href="#demo">See a real video</a>.</p>
+</div>
+</section>
+
+<!-- Demo -->
+<section class="sec" id="demo" aria-labelledby="h-demo">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-demo">See a real one.</h2>
+<p class="intro">A weather client learns to retry with exponential backoff.</p>
+</div>
+<figure class="film small rv" data-yt="yZaKPyuZN1Q" data-title="MergeStory demo: a weather client learns to retry with exponential backoff">
+<div class="shot">
+<a class="poster p-demo" href="https://www.youtube.com/watch?v=yZaKPyuZN1Q" target="_blank" rel="noopener"><span class="bigplay"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Play the demo<span class="sr"> (opens YouTube)</span></span></a>
+</div>
+<div class="film-bar">
+<button type="button" class="ctl vbtn" hidden><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span>Play</span><span class="sr"> the demo</span></button>
+<button type="button" class="ctl cc" aria-pressed="false" title="Start with captions on" hidden><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg><span class="ccl" aria-hidden="true">Captions</span><span class="sr">Start with captions on</span></button>
+<button type="button" class="ctl fs" title="Full screen" hidden><svg class="i" aria-hidden="true"><use href="#i-fs"/></svg><span class="fsl">Full screen</span><span class="sr"> (play the demo in full screen)</span></button>
+<a class="ctl yt" href="https://www.youtube.com/watch?v=yZaKPyuZN1Q" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
+</div>
+<figcaption class="cap">A weather client learns to retry with exponential backoff. <a href="demo/">Open the watch page</a> for the chapters, the review checklist and every claim, linked to the code.</figcaption>
+</figure>
+</div>
+</section>
+
+<!-- How it works -->
+<section class="sec dk stage" id="how-it-works" aria-labelledby="h-how">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-how">Reads. Tells. Checks.</h2>
+<p class="intro">Your coding agent writes the story. The engine checks every claim before it draws a single frame.</p>
+</div>
+<ol class="pipe rv" role="list">
+<li><b>Analyzer</b><span>Reads the pull request or branch and builds an evidence pack.</span></li>
+<li class="you"><b>Storyboard</b><span>The script. Your coding agent writes it from the evidence pack.</span></li>
+<li><b>Grounding checks</b><span>Every claim and every line reference is checked.</span></li>
+<li><b>Narration</b><span>A free voice reads the script on your machine.</span></li>
+<li><b>Renderer</b><span>Your browser draws each frame. FFmpeg encodes the video.</span></li>
+<li><b>Publish</b><span>Local by default. Share it only if you choose.</span></li>
+</ol>
+<ol class="steps3" role="list">
+<li class="rv" style="--d:0"><span class="num" aria-hidden="true">01</span><h3>Your agent already knows the change.</h3><p>It made the change, or it reviews it. So it writes the storyboard. Without an agent, MergeStory builds one offline from the analysis.</p></li>
+<li class="rv" style="--d:1"><span class="num" aria-hidden="true">02</span><h3>The engine checks every claim.</h3><p>Each narration line must cite evidence from the change. Each line reference must point at real code. Claims nobody can check, like "all tests pass", are removed unless real test results were supplied.</p></li>
+<li class="rv" style="--d:2"><span class="num" aria-hidden="true">03</span><h3>Then it renders, on your machine.</h3><p>The same input gives the same video. Code on screen is read from your repository. Simulated visuals are labelled.</p></li>
+</ol>
+</div>
+</section>
+
+<!-- Cost -->
+<section class="sec" id="cost" aria-labelledby="h-cost">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-cost">$0. By design.</h2>
+<p class="intro">A default run calls no paid service at all. No account. No key for your first video.</p>
+</div>
+<p class="big0 rv" aria-hidden="true"><span class="grad">$0</span></p>
+<p class="big0-l rv">per video</p>
+<ul class="steps5" role="list">
+<li class="rv" style="--d:0"><span class="k">Storyboard</span><span class="v">$0</span><p class="d">Written by the coding agent you already use. No extra bill.</p></li>
+<li class="rv" style="--d:1"><span class="k">Voice</span><span class="v">$0</span><p class="d">Kokoro, an open English voice that runs on your own CPU. Installed once.</p></li>
+<li class="rv" style="--d:2"><span class="k">Rendering</span><span class="v">$0</span><p class="d">Your own browser draws each frame. FFmpeg encodes.</p></li>
+<li class="rv" style="--d:3"><span class="k">Checks</span><span class="v">$0</span><p class="d">Every claim and line reference is checked on your machine.</p></li>
+<li class="rv" style="--d:4"><span class="k">Sharing</span><span class="v">$0</span><p class="d">On your own YouTube channel or Google Drive. A fraction of a cent a month on R2 or S3.</p></li>
+</ul>
+
+<h3 class="pricehead rv">Why it is so cheap.</h3>
+<ul class="specs" role="list">
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>The agent</div>
+<div><h3>The expensive part is already done.</h3>
+<p>Understanding the change and writing the story is the costly work. Your coding agent has done it, so it writes the storyboard. No second model reads the whole change again. Its usage is part of the session you already run.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-code"/></svg>Local software</div>
+<div><h3>Everything else is ordinary.</h3>
+<p>An open voice model on your CPU, the browser you already have, and FFmpeg. No render farm. No cloud GPU.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-coin"/></svg>Opt-in</div>
+<div><h3>Paid services are one setting each.</h3>
+<p>You can let a model write the storyboard, or use a cloud voice. The default is the cheapest capable model.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Honest</div>
+<div><h3>Every run reports its cost.</h3>
+<p>It also lists every outbound transfer: the host, the purpose and the size.</p></div>
+</li>
+</ul>
+
+<h3 class="pricehead rv">When you want more.</h3>
+<p class="pricecap rv">Both are opt-in. These are the built-in prices, checked in November 2026. You can override them in the config.</p>
+<div class="prices rv">
+<div class="term">
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Opt-in prices</span></div>
+<ul class="cmdlist" role="list">
+<li><code>--llm anthropic</code><span class="d"><b>Claude Haiku 5.5 storyboard:</b> usually under $0.01 per video ($0.10 per million input tokens, $0.50 per million output tokens)</span></li>
+<li><code>--tts openai</code><span class="d"><b>OpenAI gpt-4o-mini-tts:</b> $18 per million characters, about $0.015 per minute of speech</span></li>
+<li><code>--tts elevenlabs</code><span class="d"><b>ElevenLabs Flash:</b> $40 per million characters</span></li>
+<li><code>--tts elevenlabs</code><span class="d"><b>ElevenLabs v3 and Multilingual v2:</b> $80 per million characters</span></li>
+</ul>
+<p class="cap">A 2-minute narration is roughly 1,600 characters.</p>
+</div>
+</div>
+<div class="budget rv">
+<svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>
+<div><h3>A $0.25 budget, checked before every paid call.</h3>
+<p>No paid call can take a run over its budget. A model with an unknown price is counted at the highest rate, so the budget still holds. Change it with <code class="nw">--budget</code>.</p></div>
+</div>
+
+<figure class="film small cost-film rv" data-yt="6X5-zCe8PbU" data-title="MergeStory: what it costs and why (film)">
+<div class="shot">
+<a class="poster p-cost" href="https://www.youtube.com/watch?v=6X5-zCe8PbU" target="_blank" rel="noopener"><span class="bigplay"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Play the cost film<span class="sr"> (opens YouTube)</span></span></a>
+</div>
+<div class="film-bar">
+<button type="button" class="ctl vbtn" hidden><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span>Play</span><span class="sr"> the cost film</span></button>
+<button type="button" class="ctl cc" aria-pressed="false" title="Start with captions on" hidden><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg><span class="ccl" aria-hidden="true">Captions</span><span class="sr">Start with captions on</span></button>
+<button type="button" class="ctl fs" title="Full screen" hidden><svg class="i" aria-hidden="true"><use href="#i-fs"/></svg><span class="fsl">Full screen</span><span class="sr"> (play the cost film in full screen)</span></button>
+<a class="ctl yt" href="https://www.youtube.com/watch?v=6X5-zCe8PbU" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
+</div>
+</figure>
+<p class="cost-link rv"><a href="https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md">How the cost works <span aria-hidden="true">&nbsp;›</span></a></p>
+</div>
+</section>
+
+<!-- Quick start -->
+<section class="sec alt" id="quick-start" aria-labelledby="h-start">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-start">Three steps.</h2>
+<p class="intro">Or ask your agent: "explain this pull request as a video".</p>
+</div>
+<ol class="steps" role="list">
+<li class="rv" style="--d:0"><h3>Install it.</h3><p><code class="nw">npm install -g mergestory</code></p></li>
+<li class="rv" style="--d:1"><h3>Check your setup.</h3><p><code class="nw">mergestory doctor</code> lists anything missing, with a fix for each.</p></li>
+<li class="rv" style="--d:2"><h3>Make a video.</h3><p><code class="nw">mergestory generate &lt;pull&nbsp;request&nbsp;URL&gt;</code></p></li>
+</ol>
+<div class="note rv">
+<svg class="i" aria-hidden="true"><use href="#i-info"/></svg>
+<p><strong>You need</strong> Node.js 22.12 or newer, git, FFmpeg, and Google Chrome or another Chromium browser. No pull request? Run <code>mergestory generate . --base main --head feature/retry</code> on a local branch. It works with every git host. Add <code>--dry-run</code> to see the plan, the cost estimate and what would leave your machine, without rendering.</p>
+</div>
+<p class="more rv" style="text-align:center">Quality presets: draft is 1280x720 at 24 fps. Standard, the default, is 1920x1080 at 30 fps. High is 1920x1080 at 60 fps.</p>
+</div>
+</section>
+
+<!-- Agents -->
+<section class="sec" id="agents" aria-labelledby="h-agents">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-agents">Will it work with your agent?</h2>
+<p class="intro">MergeStory is an Agent Skill. Install it in the place your agent reads.</p>
+</div>
+<div class="apps">
+<div class="app a-1 rv" style="--d:0">
+<h3>Claude Code</h3>
+<p>Install the plugin from inside Claude Code 2.1.275 or newer.</p>
+<code class="cmdi">/plugin install mergestory --marketplace PiniShv/MergeStory</code>
+<p class="note2">On an older version: <code>/plugin marketplace add PiniShv/MergeStory</code>, then <code>/plugin install mergestory@mergestory</code>. Or copy the skill to <code>~/.claude/skills/mergestory</code>.</p>
+</div>
+<div class="app a-2 rv" style="--d:1">
+<h3>Many agents, one command</h3>
+<p>Needs Node.js 22.20 or newer.</p>
+<code class="cmdi">npx skills add PiniShv/MergeStory</code>
+</div>
+<div class="app a-3 rv" style="--d:0">
+<h3>A shared skills folder</h3>
+<p>Copy <code>plugins/mergestory/skills/mergestory</code> to <code>.agents/skills/mergestory</code> for one project, or <code>~/.agents/skills/mergestory</code> for all projects.</p>
+<ul class="chips" role="list"><li>Codex</li><li>GitHub Copilot</li><li>Cursor</li><li>OpenCode</li><li>Goose</li><li>Amp</li><li>Gemini CLI</li><li>Antigravity</li></ul>
+<p class="note2">Copilot also reads <code>.github/skills</code>. Cursor also reads <code>.cursor/skills</code>.</p>
+</div>
+<div class="app a-4 rv" style="--d:0">
+<h3>GitHub CLI</h3>
+<p>Needs GitHub CLI 2.90 or newer.</p>
+<code class="cmdi">gh skill install PiniShv/MergeStory mergestory</code>
+</div>
+<div class="app a-5 rv" style="--d:1">
+<h3>Their own folders</h3>
+<p>Copy the same skill folder here.</p>
+<ul class="chips" role="list"><li>Windsurf: <code>.devin/skills/mergestory</code></li><li>Kiro: <code>.kiro/skills/mergestory</code></li><li>Cline: <code>.cline/skills/mergestory</code></li></ul>
+</div>
+<div class="app a-6 rv" style="--d:0">
+<h3>No agent? No problem.</h3>
+<p>The engine works on its own. Use it from the command line, over an HTTP API, as a library, or in GitHub Actions.</p>
+<ul class="chips" role="list"><li>CLI</li><li>HTTP API</li><li>Library</li><li>GitHub Actions</li></ul>
+</div>
+</div>
+<p class="blurb rv">With the skill, the agent writes the storyboard itself from MergeStory's evidence pack. The skill runs the <code>mergestory</code> command, and asks before it installs it. The engine still checks every claim and every line reference before rendering. Windsurf is now Devin Desktop. Gemini CLI and Google's Antigravity CLI both read <code>.agents/skills</code>.</p>
+</div>
+</section>
+
+<!-- Privacy -->
+<section class="sec alt" id="privacy" aria-labelledby="h-privacy">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-privacy">Private by default.</h2>
+<p class="intro">Your code stays on your machine unless you decide otherwise.</p>
+</div>
+<ul class="specs" role="list">
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-ban"/></svg>Telemetry</div>
+<div><h3>No telemetry.</h3>
+<p>MergeStory does not report what you do or what you make.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-lock"/></svg>Your code</div>
+<div><h3>Nothing leaves unless you set it up.</h3>
+<p>Nothing from your code or the change goes anywhere until you turn on a model, a cloud voice or an upload. The only download is the free voice, once. It sends nothing from the change.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-file"/></svg>Sensitive files</div>
+<div><h3>Never shown, never sent.</h3>
+<p>Files like <code>.env</code>, keys and credentials are left out of every video.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-eyeoff"/></svg>Secrets</div>
+<div><h3>Masked everywhere.</h3>
+<p>Secrets and e-mail addresses are masked in every frame, caption and log.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg>Links</div>
+<div><h3>Links you control.</h3>
+<p>Private S3 links stop working after 7 days at most. Google Drive and YouTube links do not expire. Public links for a private repository are blocked unless you allow them.</p></div>
+</li>
+<li class="rv">
+<div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>Your repository</div>
+<div><h3>Read-only.</h3>
+<p>MergeStory never changes your repository or its git state.</p></div>
+</li>
+</ul>
+<div class="verify">
+<div class="rv">
+<h3>Check it yourself.</h3>
+<p>Run any command with <code>--dry-run</code>. It shows the plan, the cost estimate and what would leave your machine, and renders nothing.</p>
+<p>Or read the code. MergeStory is open source under the Apache-2.0 licence. <a href="https://github.com/PiniShv/MergeStory">Read it on GitHub</a>. <a href="https://github.com/PiniShv/MergeStory/blob/main/SECURITY.md">Security policy</a></p>
+</div>
+<div class="term rv" style="--d:1">
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title" aria-hidden="true">Terminal</span></div>
+<div class="code">
+<p><span class="p" aria-hidden="true">$</span>mergestory generate &lt;pull request URL&gt; --dry-run</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Sharing -->
+<section class="sec" id="sharing" aria-labelledby="h-share">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-share">Share it when you are ready.</h2>
+<p class="intro">A video stays on your machine until you choose to share it.</p>
+</div>
+<ul class="share" role="list">
+<li class="rv" style="--d:0"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><h3>YouTube</h3><p>Your own channel. The video is unlisted unless you choose otherwise.</p></li>
+<li class="rv" style="--d:1"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><h3>Google Drive</h3><p>A MergeStory folder in your own Drive. Private by default, or open to your Google Workspace organization.</p></li>
+<li class="rv" style="--d:2"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg><h3>S3-compatible storage</h3><p>Cloudflare R2, Amazon S3, Backblaze B2, Google Cloud Storage or your own server. Private links expire in 7 days at most.</p></li>
+<li class="rv" style="--d:3"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><h3>The pull request</h3><p>Add <code class="nw">--comment</code> to post one comment with the link.</p></li>
+</ul>
+</div>
+</section>
+
+<!-- The catch -->
+<section class="sec alt" id="trade-off" aria-labelledby="h-trade">
+<div class="wrap">
+<div class="split">
+<div class="rv">
+<p class="eyebrow-s">Know before you install</p>
+<h2 id="h-trade">One catch: the first video takes longer.</h2>
+<p class="lede">The first English video installs the free voice once. That is about 400 MB, then the voice model, so it takes a minute or two longer. Nothing from the change is sent.</p>
+<ul class="tell" role="list">
+<li><span><strong>Do it ahead of time.</strong> Run <code>mergestory setup kokoro</code>, for example in CI.</span></li>
+<li><span><strong>It needs FFmpeg and a browser.</strong> Google Chrome or another Chromium browser draws the frames.</span></li>
+<li><span><strong>The free voice speaks English.</strong> The offline storyboard is English only too.</span></li>
+</ul>
+</div>
+<figure class="term rv" style="--d:1">
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title" aria-hidden="true">What you need</span></div>
+<ul class="need" role="list">
+<li><b>Node.js</b><span>22.12 or newer</span></li>
+<li><b>git</b><span>to read the change</span></li>
+<li><b>FFmpeg</b><span>to encode the video</span></li>
+<li><b>A browser</b><span>Chrome or another Chromium</span></li>
+<li><b>The free voice</b><span>about 400 MB, once</span></li>
+</ul>
+<figcaption class="cap"><code>mergestory doctor</code> checks all of this. <a href="https://github.com/PiniShv/MergeStory#get-started">Get started in the README</a></figcaption>
+</figure>
+</div>
+<h3 class="sub-h rv">What MergeStory is not</h3>
+<ul class="nots" role="list">
+<li class="rv" style="--d:0"><span><strong>Not a reviewer.</strong> It points to what to review. You decide.</span></li>
+<li class="rv" style="--d:1"><span><strong>Not a service.</strong> There is no account. It runs on your machine.</span></li>
+<li class="rv" style="--d:2"><span><strong>Not free in every language.</strong> The free voice is English only.</span></li>
+<li class="rv" style="--d:3"><span><strong>Not a cheerleader.</strong> Claims it cannot check are removed.</span></li>
+</ul>
+</div>
+</section>
+
+<!-- FAQ -->
+<section class="sec" id="faq" aria-labelledby="h-faq">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-faq">Questions before you install.</h2>
+<p class="intro">Short answers. <a href="https://github.com/PiniShv/MergeStory/tree/main/docs">The documentation has the rest.</a></p>
+</div>
+<div class="faq rv">
+<details open>
+<summary>Does my code leave my machine?</summary>
+<div class="a"><p>Not by default. The analysis, the checks, the voice and the rendering all run on your machine. There is no telemetry.</p>
+<p>Something leaves only if you turn it on: a model that writes the storyboard, a cloud voice, or an upload. Run <code class="nw">--dry-run</code> to see what would leave. Your coding agent already sees the change in your session. MergeStory adds no other service.</p></div>
+</details>
+<details>
+<summary>What does it cost?</summary>
+<div class="a"><p>$0 per video by default. No paid service is called. If you opt in to a model for the storyboard, Claude Haiku 5.5 usually costs under $0.01 per video. Cloud voices are priced per million characters. A budget of $0.25 per run is checked before every paid call. <a href="#cost">See the full cost</a>.</p></div>
+</details>
+<details>
+<summary>Which agents does it work with?</summary>
+<div class="a"><p>It is an Agent Skill for Claude Code, Codex, GitHub Copilot, Cursor, OpenCode, Goose, Amp, Gemini CLI, Windsurf, Kiro and Cline. <a href="#agents">See where each one reads it from</a>.</p></div>
+</details>
+<details>
+<summary>Can I use it without an agent?</summary>
+<div class="a"><p>Yes. Run <code class="nw">mergestory generate</code> on a pull request URL or a local branch. Without an agent, it builds the storyboard offline from the analysis. You can also use the HTTP API or the library.</p></div>
+</details>
+<details>
+<summary>Where do the videos go?</summary>
+<div class="a"><p>They stay on your machine. You get an MP4 video, captions (VTT and SRT), a poster image and a local watch page. Share one when you are happy with it: YouTube, Google Drive, S3-compatible storage, or a comment on the pull request.</p></div>
+</details>
+<details>
+<summary>Is the narration accurate?</summary>
+<div class="a"><p>Every narration line cites evidence from the change, and the code on screen is read from your repository. Claims nobody can check, like "all tests pass", are removed unless real test results were supplied. The checks run on your machine before rendering.</p>
+<p>It checks claims against the change. It cannot judge whether the change is a good idea, so use the review checklist as a starting point.</p></div>
+</details>
+<details>
+<summary>Can I run it in CI?</summary>
+<div class="a"><p>Yes. The GitHub Actions example makes a video when a maintainer adds a label to a pull request. It uploads the video to your own storage and posts one comment with the link. <a href="https://github.com/PiniShv/MergeStory/blob/main/docs/github-actions.md">Read the guide</a>.</p></div>
+</details>
+<details>
+<summary>What does it need?</summary>
+<div class="a"><p>Node.js 22.12 or newer, git, FFmpeg, and Google Chrome or another Chromium browser. The first English video also installs the free voice once, about 400 MB plus the voice model. Run <code>mergestory doctor</code> to check.</p></div>
+</details>
+</div>
+</div>
+</section>
+
+<!-- Closer -->
+<section class="closer" aria-labelledby="h-cta">
+<div class="wrap">
+<div class="cta-card dk">
+<h2 id="h-cta" class="rv">Every change has a story.</h2>
+<p class="tagline rv">Reads. Tells. Checks. <span>Free, on your machine.</span></p>
+<p class="intro rv">Install MergeStory and turn your next pull request into a video.</p>
+<div class="install-wrap rv">
+<div class="term">
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Install</span></div>
+<div class="panel">
+<div class="cmdrow">
+<span class="ps" aria-hidden="true">$</span>
+<code class="cmd" id="cmd-npm2">npm install -g mergestory</code>
+<button type="button" class="copy" data-target="cmd-npm2"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy</span><span class="sr"> the npm command</span></button>
+</div>
+<div class="cmdrow">
+<span class="ps" aria-hidden="true">&gt;</span>
+<code class="cmd" id="cmd-cc2">/plugin install mergestory --marketplace PiniShv/MergeStory</code>
+<button type="button" class="copy" data-target="cmd-cc2"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span class="lbl">Copy</span><span class="sr"> the Claude Code command</span></button>
+</div>
+<p class="hint">Use npm in a terminal, or the second line inside Claude Code. Then run <code>mergestory doctor</code>.</p>
+</div>
+</div>
+</div>
+<p class="small rv"><a href="https://github.com/PiniShv/MergeStory">Read the code on GitHub</a> · <a href="#install">All install options</a> · <a href="demo/">Watch page demo</a></p>
+</div>
+</div>
+</section>
+
+</main>
+
+<footer class="foot">
+<div class="wrap">
+<div class="foot-top">
+<div>
+<a class="brand" href="#top"><img src="assets/logo.svg" alt="" width="26" height="26"><span>MergeStory</span></a>
+<p>Every change has a story.</p>
+</div>
+<nav aria-label="Project links">
+<ul role="list">
+<li><a href="https://github.com/PiniShv/MergeStory">GitHub</a></li>
+<li><a href="https://www.npmjs.com/package/mergestory">npm</a></li>
+<li><a href="https://github.com/PiniShv/MergeStory/tree/main/docs">Documentation</a></li>
+<li><a href="https://github.com/PiniShv/MergeStory/blob/main/SECURITY.md">Security</a></li>
+<li><a href="https://github.com/PiniShv/MergeStory/blob/main/CHANGELOG.md">Changelog</a></li>
+<li><a href="https://github.com/PiniShv/MergeStory/blob/main/LICENSE">Licence (Apache-2.0)</a></li>
+</ul>
+</nav>
+</div>
+<div class="legal">
+<p>Apache-2.0 licence. Bundled fonts Inter and JetBrains Mono are under the SIL Open Font Licence 1.1.</p>
+</div>
+</div>
+</footer>
+
+<div class="sr" role="status" aria-live="polite" id="live"></div>
+
+<script>
+(function(){
+var d=document,live=d.getElementById('live');
+function say(t){live.textContent='';setTimeout(function(){live.textContent=t},50)}
+
+/* Install tabs */
+var tabs=[].slice.call(d.querySelectorAll('[role=tab]'));
+function show(t,focus){
+  tabs.forEach(function(x){
+    var on=x===t;
+    x.setAttribute('aria-selected',on?'true':'false');
+    x.tabIndex=on?0:-1;
+    d.getElementById(x.getAttribute('aria-controls')).hidden=!on;
+  });
+  if(focus)t.focus();
+}
+tabs.forEach(function(t,i){
+  t.addEventListener('click',function(){show(t)});
+  t.addEventListener('keydown',function(e){
+    var n,k=e.key;
+    if(k==='ArrowRight'||k==='ArrowDown')n=tabs[(i+1)%tabs.length];
+    else if(k==='ArrowLeft'||k==='ArrowUp')n=tabs[(i-1+tabs.length)%tabs.length];
+    else if(k==='Home')n=tabs[0];
+    else if(k==='End')n=tabs[tabs.length-1];
+    if(n){e.preventDefault();show(n,true)}
+  });
+});
+
+/* Copy buttons. If the clipboard is not available, select the text instead. */
+[].forEach.call(d.querySelectorAll('.copy'),function(btn){
+  var el=d.getElementById(btn.getAttribute('data-target'));
+  var lbl=btn.querySelector('.lbl');
+  var panel=btn.closest('.panel'),hint=panel&&panel.querySelector('.hint');
+  var orig=hint?hint.innerHTML:'',timer;
+  function done(ok){
+    lbl.textContent=ok?'Copied':'Selected';
+    btn.classList.toggle('done',ok);
+    if(hint)hint.textContent=ok?'Copied. Paste it and press Return.':'Copy did not work here. The command is selected: press Cmd or Ctrl + C.';
+    say(ok?'Copied to the clipboard.':'The command is selected. Press Command or Control and C to copy it.');
+    clearTimeout(timer);
+    timer=setTimeout(function(){lbl.textContent='Copy';btn.classList.remove('done');if(hint)hint.innerHTML=orig},4000);
+  }
+  function fallback(){
+    var ok=false;
+    try{
+      var r=d.createRange(),s=window.getSelection();
+      r.selectNodeContents(el);s.removeAllRanges();s.addRange(r);
+      ok=d.execCommand('copy');
+    }catch(e){}
+    done(!!ok);
+  }
+  btn.addEventListener('click',function(){
+    var text=el.textContent.trim();
+    if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(text).then(function(){done(true)},fallback);
+    else fallback();
+  });
+});
+
+/* Films. A poster and a play button. The YouTube player (privacy-friendly domain) loads only after a click.
+   Without JavaScript the poster is a plain link to YouTube. */
+[].forEach.call(d.querySelectorAll('[data-yt]'),function(root){
+  var id=root.getAttribute('data-yt'),shot=root.querySelector('.shot'),poster=root.querySelector('.poster');
+  var play=root.querySelector('.vbtn'),cc=root.querySelector('.cc'),fs=root.querySelector('.fs'),caps=false,started=false;
+  function start(){
+    if(started)return;started=true;
+    var f=d.createElement('iframe');
+    f.src='https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?autoplay=1&rel=0&modestbranding=1'+(caps?'&cc_load_policy=1':'');
+    f.title=root.getAttribute('data-title');
+    f.allow='autoplay; picture-in-picture; encrypted-media';
+    f.setAttribute('allowfullscreen','');
+    f.referrerPolicy='strict-origin-when-cross-origin';
+    shot.replaceChildren(f);
+    root.classList.add('started');
+    f.focus();
+  }
+  poster.addEventListener('click',function(e){if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();start()});
+  play.hidden=false;play.addEventListener('click',start);
+  cc.hidden=false;cc.addEventListener('click',function(){caps=!caps;cc.setAttribute('aria-pressed',caps?'true':'false')});
+  if(shot.requestFullscreen){
+    fs.hidden=false;
+    fs.addEventListener('click',function(){start();shot.requestFullscreen()});
+  }
+});
+
+/* Phone menu: close it after a choice, or with Escape. */
+var menu=d.querySelector('.mnav details');
+if(menu){
+  [].forEach.call(menu.querySelectorAll('a'),function(a){a.addEventListener('click',function(){menu.open=false})});
+  d.addEventListener('keydown',function(e){if(e.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus()}});
+}
+
+/* Local nav: mark the section that crosses a line 40% down the screen. */
+var links=[].slice.call(d.querySelectorAll('.links a')),secs=[],tick=0;
+links.forEach(function(a){var s=d.getElementById(a.getAttribute('href').slice(1));if(s)secs.push([s,a])});
+function mark(){
+  tick=0;var y=window.innerHeight*.4,cur=null;
+  secs.forEach(function(p){var r=p[0].getBoundingClientRect();if(r.top<=y&&r.bottom>y)cur=p[1]});
+  links.forEach(function(a){if(a===cur)a.setAttribute('aria-current','true');else a.removeAttribute('aria-current')});
+}
+if(secs.length){
+  window.addEventListener('scroll',function(){if(!tick)tick=requestAnimationFrame(mark)},{passive:true});
+  window.addEventListener('resize',mark);
+  mark();
+}
+
+/* Scroll-in reveals. What is on screen at load shows at once. Nothing fades when the device asks for less motion. */
+var mq=window.matchMedia('(prefers-reduced-motion: reduce)');
+var rv=[].slice.call(d.querySelectorAll('.rv')),root=d.documentElement;
+if(rv.length){
+  if(!('IntersectionObserver' in window)||mq.matches){rv.forEach(function(e){e.classList.add('in')})}
+  else{
+    root.classList.add('rv-init');
+    var h=window.innerHeight||800;
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
+    },{rootMargin:'0px 0px -8% 0px'});
+    rv.forEach(function(e){
+      if(e.getBoundingClientRect().top<h)e.classList.add('in');else io.observe(e);
+    });
+    requestAnimationFrame(function(){requestAnimationFrame(function(){root.classList.remove('rv-init')})});
+  }
+}
+})();
+</script>
+</body>
+</html>

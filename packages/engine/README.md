@@ -44,6 +44,20 @@ mergestory generate . --dry-run
 By default no paid service is called, speech and rendering run locally, and links are private.
 Run `mergestory --help` or `mergestory <command> --help` for every option.
 
+## What it costs
+
+**$0 per video by default.** No paid service is called. Speech and rendering run on your machine.
+
+| Step | Default | Cost |
+|---|---|---|
+| Storyboard | written by your coding agent, or built offline | $0 |
+| Voice and rendering | local | $0 |
+| Storyboard with Claude Haiku 5.5 (opt-in) | `--llm anthropic` | usually under $0.01 |
+
+Every run prints its cost, and stops before any call that would go over the budget ($0.25 by default).
+Read more at https://mergestory.pinishv.com and in
+https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md.
+
 ## License
 
 Apache-2.0. See `LICENSE` and `NOTICE`.

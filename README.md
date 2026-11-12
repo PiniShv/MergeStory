@@ -1,60 +1,71 @@
 <div align="center">
 
-# MergeStory
+<img src="docs/assets/hero.png" alt="MergeStory. Every change has a story." width="100%">
 
 [![CI](https://github.com/PiniShv/MergeStory/actions/workflows/ci.yml/badge.svg)](https://github.com/PiniShv/MergeStory/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/mergestory.svg)](https://www.npmjs.com/package/mergestory)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Every change has a story.**
+# Your pull request. Explained.
 
-MergeStory turns a pull request into a short, narrated video that explains what changed, why,
-and what to review: animated architecture diagrams, the real code, captions and a review checklist.
+[Website](https://mergestory.pinishv.com) · [Watch the film](https://www.youtube.com/watch?v=Ylp5W4oaAqM) · [Watch the demo](https://www.youtube.com/watch?v=yZaKPyuZN1Q) · [Get started](#get-started)
 
 </div>
 
-> **Not sure what changed? Watch the 2-minute MergeStory.**
+<br>
 
-Reviewing a large diff means rebuilding the author's thinking in your head. MergeStory does that
-part for you. When a coding agent (or a person) opens a pull request, MergeStory analyses the
-change, writes a grounded storyboard, narrates it, renders an MP4, and returns a link to post on
-the pull request.
+MergeStory turns a pull request into a short narrated video. It shows what changed, why, and what to review.
 
-- **Accurate by design.** Every narration line cites evidence from the change. Code on screen is
-  read from the repository, never generated. Claims nobody can check ("all tests pass") are
-  removed unless real test results were supplied.
-- **Very cheap.** By default no paid service is called at all: the coding agent writes the
-  storyboard, speech and rendering run locally. Paid models are opt-in and capped by a budget.
-- **Private by default.** Nothing from your code or the change leaves your machine unless you
-  configure it. Secrets are masked in every frame, caption and log. Shared links are private and
-  expire.
-- **Works with any agent.** A portable [Agent Skill](plugins/mergestory/skills/mergestory/SKILL.md) for Claude Code,
-  Codex, Copilot, Cursor and others, plus a CLI, an HTTP API and a library.
+A typical video runs from 45 seconds to 3 minutes. It has animated architecture diagrams, the real code highlighted line by line, captions and a review checklist.
+
+## Reads. Tells. Checks.
+
+MergeStory **reads** the change. Your coding agent **tells** the story. The engine **checks** every claim before it renders a single frame.
+
+Then you get an MP4, captions (VTT and SRT), a poster image and a local watch page.
+
+## Every line cites the code.
+
+Every narration line cites evidence from the change. Code on screen is read from the repository, never generated.
+
+Claims nobody can check, like "all tests pass", are removed unless real test results were supplied.
+
+## $0. By design.
+
+By default, MergeStory calls no paid service at all. [See what it costs and why.](#what-it-costs)
+
+## Private by default.
+
+No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in every frame, caption and log.
+
+## Works with your agent.
+
+An Agent Skill for Claude Code, Codex, GitHub Copilot, Cursor, OpenCode, Goose, Amp, Gemini CLI, Windsurf, Kiro and Cline. Also a CLI, an HTTP API, a library and a GitHub Actions example.
+
+---
 
 ## See it in action
 
 <!-- demo-video -->
-[![MergeStory explains a change to a weather API client](docs/demo/poster.jpg)](https://pinishv.github.io/MergeStory/demo/)
+[![MergeStory explains a change to a weather API client](docs/demo/poster.jpg)](https://mergestory.pinishv.com/demo/)
 
 The video explains a change that adds retries with exponential backoff to a small weather API client.
-[Watch it on YouTube](https://www.youtube.com/watch?v=yZaKPyuZN1Q), or open MergeStory's own
-[watch page](https://pinishv.github.io/MergeStory/demo/) with the chapters and the review checklist.
+[Watch it on YouTube](https://www.youtube.com/watch?v=yZaKPyuZN1Q), or open the
+[watch page](https://mergestory.pinishv.com/demo/) with the chapters and the review checklist.
 
 ## What a video looks like
-
-A typical video is 45 seconds to 3 minutes, depending on the size of the change:
 
 1. **The mission:** the task and the problem it solves.
 2. **The big picture:** which components changed and how they connect.
 3. **Under the hood:** the most important code, highlighted line by line.
-4. **Before and after:** how behaviour changes (when there is something real to show).
+4. **Before and after:** how behaviour changes (only when there is something real to show).
 5. **What to review:** risky or subtle spots, with file and line links.
 6. **Conclusion:** a short, review-oriented summary.
 
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
 to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.
 
-## Quick start
+## Get started
 
 Requirements: Node.js 22.12+, git, [FFmpeg](https://ffmpeg.org/download.html), and Google Chrome or
 another Chromium browser (or `npx playwright install chromium-headless-shell`).
@@ -118,7 +129,8 @@ Gemini CLI is now for Code Assist. Other people use Google's Antigravity CLI (`a
 With the skill, the agent writes the storyboard itself from MergeStory's evidence pack. The agent
 knows why it made each decision, so the story is better, and no extra model is paid for. The engine
 still checks every claim and every line reference before rendering. See [the storyboard
-format](docs/storyboard.md).
+format](docs/storyboard.md). The skill itself is in
+[plugins/mergestory/skills/mergestory/SKILL.md](plugins/mergestory/skills/mergestory/SKILL.md).
 
 ## Share the video
 
@@ -173,15 +185,29 @@ Full reference: [docs/configuration.md](docs/configuration.md) and [docs/cli.md]
 
 ## What it costs
 
-| Step | Default | Typical cost per video |
-|---|---|---|
-| Storyboard | written by your coding agent, or built offline | $0 |
-| Storyboard with Claude Haiku 5.5 (opt-in) | `--llm anthropic` | under $0.01 |
-| Voice | local | $0 |
-| Rendering | local | $0 |
-| Hosting on Cloudflare R2 or S3 | opt-in | a fraction of a cent per month |
+A default run costs **$0** per video. No paid service is called.
 
-Every run prints its real cost, and stops before any call that would go over the budget.
+| Step | Default | Cost |
+|---|---|---|
+| Storyboard (the script) | Written by the coding agent you already use, from MergeStory's evidence pack. Without an agent, built offline from the analysis. | $0 extra |
+| Voice | Kokoro, an open neural voice for English that runs on your own CPU. Installed once (about 400 MB plus the model download). | $0 |
+| Rendering | Your own browser draws each frame from a JSON plan. FFmpeg encodes. Same input, same video. | $0 |
+| Checks | Every claim and line reference is checked locally. | $0 |
+| Sharing | Local by default. YouTube or Google Drive on your own account, or object storage. | $0 on your own channel or Drive. A fraction of a cent per month on Cloudflare R2 or S3. |
+
+### Why it is so cheap
+
+- The agent already understands the change, so it writes the story. No second model reads the change again.
+- The voice is open and runs on your CPU.
+- Your own browser and FFmpeg render the video. No render farm, no cloud GPU.
+- The checks run on your machine.
+- A budget guard stops any paid call that would go over. Every run prints its cost.
+
+Paid services are opt-in. A storyboard by Claude Haiku 5.5 (`--llm anthropic`) usually costs under $0.01 per video. The default budget is $0.25 per run, checked before every paid call.
+
+Read [the full cost breakdown](docs/cost.md).
+
+▶ [Watch the 70-second film: $0. By design.](https://www.youtube.com/watch?v=6X5-zCe8PbU)
 
 ## Privacy and security
 
@@ -212,6 +238,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [Architecture](docs/architecture.md)
 - [CLI reference](docs/cli.md)
 - [Configuration](docs/configuration.md)
+- [What it costs](docs/cost.md)
 - [Storyboard format](docs/storyboard.md)
 - [GitHub Actions](docs/github-actions.md)
 - [HTTP API and library](docs/api.md)
