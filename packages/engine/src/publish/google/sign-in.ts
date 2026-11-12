@@ -104,12 +104,16 @@ export async function runGoogleSignIn(options: SignInOptions, service: ServiceSi
 
   let clientId = ctx.secrets.get(names.clientId);
   let clientSecret = ctx.secrets.get(names.clientSecret);
+  // Names only, never values: shows at a glance when the environment did not reach this shell.
+  const found =
+    `In this environment: ${names.clientId} is ${clientId ? 'set' : 'not set'}, ` +
+    `${names.clientSecret} is ${clientSecret ? 'set' : 'not set'}.`;
   // Without a terminal (a coding agent), nothing can be typed: only both values from the environment
   // will do, and never in CI, where no person can finish the sign-in in a browser.
   if (!io.interactive && !(clientId && clientSecret && io.ci === false)) {
     throw new MergeStoryError('USAGE', `Signing in to ${provider.label} needs a person at a terminal.`, {
       hint:
-        `Run \`${setup}\` in an interactive terminal on a machine with a browser. For CI, sign in there once, ` +
+        `${found} Run \`${setup}\` in an interactive terminal on a machine with a browser. For CI, sign in there once, ` +
         `then store the refresh token as the secret ${names.refreshToken} (see ${docsRef(provider)}).`,
     });
   }
@@ -124,6 +128,7 @@ export async function runGoogleSignIn(options: SignInOptions, service: ServiceSi
   if (clientId && clientSecret) {
     io.say('Using the OAuth client id and secret from the environment.');
   } else {
+    io.say(found);
     io.say(
       `You need an OAuth client of the type "Desktop app" from a Google Cloud project (see ${docsRef(provider)}).`,
     );
