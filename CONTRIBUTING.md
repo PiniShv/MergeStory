@@ -99,6 +99,14 @@ technical term. Use made-up names in examples (`acme/weather-app`, `/path/to/run
 - Your contribution is licensed under the Apache License 2.0, like the rest of the project (section 5 of
   the license).
 
+## How changes land
+
+- `main` is protected. Every change goes through a pull request.
+- The CI `check` job and CodeQL must pass, and the branch must be up to date with `main`.
+- Pull requests are squash-merged. The pull request title and description become the commit
+  message, so write them as a good commit message: what changed and why.
+- Only maintainers can create `v*` release tags. Pushing a tag starts the npm release (see below).
+
 ## Releasing
 
 Maintainers release from CI, never from a laptop:
