@@ -43,7 +43,7 @@ All notable changes to MergeStory are listed here, newest first.
 - New `mergestory runs` command: lists the videos on this machine. `mergestory runs delete <run-id>`
   deletes the folder of a run. It only deletes real run folders under the runs folder.
 
-## Skill and plugin 1.0.1
+## Skill and plugin 1.0.1 (2026-11-11)
 
 The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.
 
@@ -62,7 +62,7 @@ The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.
 - Without team storage, the skill says where the video file is instead of offering an upload, and it no
   longer offers YouTube.
 
-## 1.0.0
+## 1.0.0 (2026-11-05)
 
 The first release.
 

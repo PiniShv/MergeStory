@@ -148,9 +148,8 @@ export async function isInWorkFolder(path: string, work: string, identity = disk
   if (inside(resolve(work), resolve(path)) || inside(root, target)) return true;
   // A folder can have a second name that no path shows (another mount point, for example), so the
   // part of the path that exists is also compared by what it is on disk.
-  // shortcut: a separate mount of the work folder (a network share mounted twice has another device
-  // number) and a mount of a folder inside it are not recognised; both need the user to mount
-  // something. Upgrade if such a setup has to be covered.
+  // shortcut: some mount setups that only an administrator can create are not recognised. Upgrade
+  // if such a setup has to be covered.
   const workIdentity = await identity(work);
   if (workIdentity === null) return false;
   for (let dir = target; ; dir = dirname(dir)) {

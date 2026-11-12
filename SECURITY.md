@@ -30,9 +30,9 @@ built so that nothing from your code or the change leaves your machine unless yo
   does not run inside a bare repository (a work tree of one is fine), or in a repository that sits
   inside a checked-out folder. The same goes for a repository in MergeStory's work folder, where a
   coding agent may write without asking. That folder is recognised by what it is on disk, also under
-  a second name. Not covered: a separate mount of it (for example a network share mounted twice), or
-  a mount of a folder inside it. A `.git` folder that arrived another way, for example inside an
-  archive, is trusted as your own git commands trust it.
+  a second name. Not covered: unusual mount setups that only an administrator can create. A `.git`
+  folder that arrived another way, for example inside an archive, is trusted as your own git
+  commands trust it.
 - **Remote providers are opt-in.** The default storyboard is written by your coding agent or built
   offline, and the default voice runs locally. A remote LLM or speech service is used only when you
   select it. Each run reports what was sent and where (`egress` in the result, and the dry-run plan).

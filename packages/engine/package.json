@@ -1,7 +1,7 @@
 {
   "name": "mergestory",
   "version": "1.1.0",
-  "description": "Turn a pull request into a short, accurate, narrated video walkthrough. Every change has a story.",
+  "description": "Turn a pull request into a short, narrated explainer video: the real code, animated diagrams, captions and a review checklist. Free, local and private by default.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -17,8 +17,10 @@
     "pull-request",
     "code-review",
     "video",
-    "explainer",
-    "ai",
+    "explainer-video",
+    "cli",
+    "developer-tools",
+    "claude-code",
     "agent-skills",
     "github"
   ],
