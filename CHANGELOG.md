@@ -9,6 +9,11 @@ All notable changes to MergeStory are listed here, newest first.
   without a terminal. A variable that did not reach the shell is now easy to spot.
 - The Drive guide explains that values in Claude Code's managed settings reach only the shells Claude
   Code starts, so the coding agent runs the sign-in and the person only clicks Allow.
+- After a Drive upload, one line says who can open the video: people in the organization with the
+  link (protected), anyone with the link (public), or only you (private).
+- The warning that Google ends a sign-in after 7 days for External apps in "Testing" now shows only
+  when the client id was typed in. A client that an admin set for everyone is usually an Internal app,
+  where the limit does not apply.
 
 ## Skill and plugin 1.2.2
 

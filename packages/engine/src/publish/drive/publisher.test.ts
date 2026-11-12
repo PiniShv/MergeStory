@@ -25,7 +25,7 @@ import {
 import { CHUNK_UNIT } from '../google/upload.ts';
 import { createPublisher } from '../index.ts';
 import { BUNDLE_CONTAINS } from '../types.ts';
-import { DrivePublisher } from './publisher.ts';
+import { DrivePublisher, whoCanOpen } from './publisher.ts';
 
 const SECRETS: Partial<Record<SecretName, string>> = {
   MERGESTORY_DRIVE_CLIENT_ID: FAKE_CLIENT_ID,
@@ -405,5 +405,15 @@ describe('DrivePublisher', () => {
   it('reads the organization domain for doctor, never more', async () => {
     const { publisher, ctx } = await setup({ fake: { email: 'dev@Acme.example' } });
     expect(await publisher.accountDomain(ctx)).toBe('acme.example');
+  });
+});
+
+describe('whoCanOpen', () => {
+  it('says who can open the video, with the organization for protected links', () => {
+    expect(whoCanOpen('protected', 'example.com')).toBe(
+      'Shared with people in example.com who have the link (protected).',
+    );
+    expect(whoCanOpen('public', null)).toBe('Anyone with the link can open it (public).');
+    expect(whoCanOpen('private', null)).toBe('Only you can open it (private).');
   });
 });

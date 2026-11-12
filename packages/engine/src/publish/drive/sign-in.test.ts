@@ -141,6 +141,8 @@ describe('the sign-in without a terminal', () => {
       const result = await signIn(run.options);
       expect(run.asked).toEqual([]);
       expect(run.said.join('\n')).toContain('Open this address in your browser to sign in:');
+      // An admin-provided client: no warning about External test apps.
+      expect(run.said.join('\n')).not.toContain('7 days');
       expect(result.credentialsFile.endsWith(`${name}.json`)).toBe(true);
     });
 

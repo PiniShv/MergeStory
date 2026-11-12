@@ -103,6 +103,14 @@ export function domainOf(email: unknown): string | null {
   return /^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain) ? domain : null;
 }
 
+/** One line for people: who can open the video on Drive. */
+export function whoCanOpen(visibility: 'private' | 'protected' | 'public', domain: string | null): string {
+  if (visibility === 'protected')
+    return `Shared with people in ${domain ?? 'your organization'} who have the link (protected).`;
+  if (visibility === 'public') return 'Anyone with the link can open it (public).';
+  return 'Only you can open it (private).';
+}
+
 /** true for a domain that can be shared with: a Google Workspace organization, not a personal account. */
 export function isWorkspaceDomain(domain: string): boolean {
   return !CONSUMER_DOMAINS.has(domain);
@@ -185,6 +193,7 @@ export class DrivePublisher implements Publisher {
     const shared =
       requested === 'private' ? { visibility: 'private' as const } : await this.share(run, file.id, domain);
     const { visibility } = shared;
+    ctx.logger.info(whoCanOpen(visibility, domain));
     return {
       ...('warning' in shared ? { warnings: [shared.warning] } : {}),
       provider: 'drive',

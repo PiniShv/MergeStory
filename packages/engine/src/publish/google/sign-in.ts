@@ -125,6 +125,8 @@ export async function runGoogleSignIn(options: SignInOptions, service: ServiceSi
   for (const note of service.notes) io.say(note);
   io.say('');
 
+  // A client an admin set for everyone is usually an Internal app, where the 7-day limit never applies.
+  const typedClient = !clientId;
   if (clientId && clientSecret) {
     io.say('Using the OAuth client id and secret from the environment.');
   } else {
@@ -212,10 +214,12 @@ export async function runGoogleSignIn(options: SignInOptions, service: ServiceSi
   io.say(`Signed in. The sign-in is saved in ${file} (only you can read it).`);
   io.say('');
   for (const line of ciGuidance(file, secret !== null, provider)) io.say(line);
-  io.say('');
-  io.say(
-    'Heads up: while the OAuth consent screen is External and its status is "Testing", Google ends this sign-in after 7 days. ' +
-      `Publish the app, or use an Internal app in a Google Workspace, so it keeps working (see ${docsRef(provider)}).`,
-  );
+  if (typedClient) {
+    io.say('');
+    io.say(
+      'Heads up: while the OAuth consent screen is External and its status is "Testing", Google ends this sign-in after 7 days. ' +
+        `Publish the app, or use an Internal app in a Google Workspace, so it keeps working (see ${docsRef(provider)}).`,
+    );
+  }
   return { credentialsFile: file, scopes: granted ?? scopes };
 }
