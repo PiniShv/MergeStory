@@ -125,6 +125,24 @@ function expandAbbreviations(text: string): string {
     .replace(/\bvs\b\.?/gi, (m) => keepCase('versus', m));
 }
 
+/** Product and engineering terms that the identifier rules below would split or misread. */
+const TERMS: Record<string, string> = {
+  SaaS: 'sass',
+  PaaS: 'pass',
+  IaaS: 'I as',
+  PoC: 'POC',
+  MoM: 'month over month',
+  QoQ: 'quarter over quarter',
+  YoY: 'year over year',
+  WoW: 'week over week',
+};
+
+const TERM_WORDS = new RegExp(`\\b(?:${Object.keys(TERMS).join('|')})\\b`, 'g');
+
+function replaceTerms(text: string): string {
+  return text.replace(TERM_WORDS, (term) => TERMS[term] ?? term);
+}
+
 function replaceUrls(text: string): string {
   return text.replace(/\b(?:https?:\/\/|www\.)[^\s<>"']+/gi, (match) => {
     const trailing = /[.,;:!?)\]]+$/.exec(match)?.[0] ?? '';
@@ -158,13 +176,60 @@ export function identifierToWords(name: string): string {
 }
 
 function splitIdentifiers(text: string): string {
-  return text
-    .replace(/(^|[\s("'])--?(?=[A-Za-z])/g, '$1')
-    .replace(/(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9])/g, ' ')
-    .replace(/(?<![A-Za-z0-9])_+(?=[A-Za-z])|(?<=[A-Za-z0-9])_+(?![A-Za-z0-9_])/g, '')
-    .replace(/(?<=[A-Za-z])-(?=[A-Za-z])/g, ' ')
-    .replace(/(?<![A-Za-z0-9])[A-Za-z][A-Za-z0-9]*/g, splitCamel)
-    .replace(/(?<=[A-Za-z0-9_])\(\)/g, '');
+  return (
+    text
+      .replace(/(^|[\s("'])--?(?=[A-Za-z])/g, '$1')
+      .replace(/(?<=[A-Za-z0-9])_+(?=[A-Za-z0-9])/g, ' ')
+      .replace(/(?<![A-Za-z0-9])_+(?=[A-Za-z])|(?<=[A-Za-z0-9])_+(?![A-Za-z0-9_])/g, '')
+      // A hyphen next to a single capital stays ("A-B test", "T-shirt", "A-P-I"). With a space instead,
+      // the voice reads a lone A as the word "a" ("an A B test" says "uh B").
+      .replace(/(?<=[A-Za-z])(?<!\b[A-Z])-(?![A-Z]\b)(?=[A-Za-z])/g, ' ')
+      .replace(/(?<![A-Za-z0-9])[A-Za-z][A-Za-z0-9]*/g, splitCamel)
+      .replace(/(?<=[A-Za-z0-9_])\(\)/g, '')
+  );
+}
+
+/**
+ * Words that people say as words even when they are written in capitals: common short words,
+ * code words (MAX_RETRIES, DEV, ZIP) and abbreviations said as a word (RAM, GIF, LAN).
+ */
+const WORDS_IN_CAPITALS = new Set(
+  (
+    'abs add age ago all an and any app are arg arm as ask at bad bar baz be big bin bit bot box bug ' +
+    'bus but buy by can cap cat col cos cow cut dag day dec def dev did dim div do doc dog dom dot ' +
+    'dry due ear ego end env era err exp fan far fat fee few fit fix foo for fun gap gas gem get gif ' +
+    'git go got had has he her hex him his hit hot how hub ice if in inc inf int is iso its jar jit job ' +
+    'key kit lab lag lan law len let lib log lot low mac man map max may me min mix mod mul my nan ' +
+    'nas nat net new nil no nor not now odd of off oh old on one ops or our out own pad pay pem ' +
+    'per pin pod pop pow pre pro put ram raw red req res rip rom row run say sec see set she sim sin ' +
+    'six so spa sum tab tag tan tap tar tax ten the tip to too top try two up use var via wan war was ' +
+    'wav way we web who why win yes yet you zen zip'
+  ).split(' '),
+);
+
+/**
+ * Speech engines read a word of two or three capitals either as an abbreviation, letter by letter
+ * ("DEV mode" becomes "D, E, V mode"), or, in a short phrase, as a word ("the CLI," becomes "cly").
+ * Listed words are written in lower case, so they are always read as words. Any other such word
+ * with a vowel is an abbreviation (API, CLI, KPI), so its letters are joined by hyphens, which every
+ * engine spells. Without a vowel it is spelled anyway (SDK, PR). Runs after splitIdentifiers,
+ * which first frees the capitals inside names (MAX_RETRIES, getAPIKey).
+ */
+function speakCapitals(text: string): string {
+  return (
+    text
+      // "A/B", "CI/CD", "I/O": abbreviations joined by a slash are read one after the other.
+      .replace(/(?<![\w/])([A-Z]{1,4})\/([A-Z]{1,4})(?![\w/])/g, (_m, a: string, b: string) =>
+        a.length === 1 && b.length === 1 ? `${a}-${b}` : `${a} ${b}`,
+      )
+      .replace(/\b[A-Z]{2,3}\b(?![’']\w)/g, (word) => {
+        const lower = word.toLowerCase();
+        if (WORDS_IN_CAPITALS.has(lower)) return lower;
+        // A lone A inside a hyphenated spelling is read as the article ("Q-A team" as "Q, uh, team"),
+        // so an abbreviation with an A after its first letter keeps its plain form (QA, IAM, SLA).
+        return /[AEIOU]/.test(word) && !/.A/.test(word) ? [...word].join('-') : word;
+      })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -449,10 +514,12 @@ export function toSpokenText(text: string): string {
   out = out.replace(/•{3,}/g, 'a hidden value');
   out = replaceUrls(out);
   out = expandAbbreviations(out);
+  out = replaceTerms(out);
   out = replacePaths(out);
   out = expandSymbols(out);
   out = expandUnits(out);
   out = splitIdentifiers(out);
+  out = speakCapitals(out);
   return tidy(out);
 }
 

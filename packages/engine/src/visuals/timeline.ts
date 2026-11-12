@@ -14,8 +14,8 @@ import {
 import type { NarrationClip, NarrationResult, Timeline, TimelineBeat, TimelineScene } from '../core/types.ts';
 
 export const TIMELINE_RULES = {
-  /** Silence before the first beat of the first scene (the title animates in). */
-  firstLeadInSec: 0.8,
+  /** Silence before the first beat of the first scene: the title animates in and settles first. */
+  firstLeadInSec: 1.5,
   /** Silence before the first beat of every other scene; never shorter than the scene's transition. */
   leadInSec: 0.6,
   /** Pause between two narration beats of one scene. */

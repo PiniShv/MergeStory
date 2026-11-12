@@ -1,6 +1,6 @@
 {
   "name": "mergestory",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Turn a pull request into a short, narrated explainer video: the real code, animated diagrams, captions and a review checklist. Free, local and private by default.",
   "license": "Apache-2.0",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "git+https://github.com/PiniShv/MergeStory.git",
     "directory": "packages/engine"
   },
-  "homepage": "https://github.com/PiniShv/MergeStory#readme",
+  "homepage": "https://mergestory.pinishv.com",
   "bugs": {
     "url": "https://github.com/PiniShv/MergeStory/issues"
   },

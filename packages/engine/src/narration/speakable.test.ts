@@ -165,7 +165,7 @@ describe('toSpokenText: file paths', () => {
     expect(toSpokenText('A client/server design')).toBe('A client/server design');
     expect(toSpokenText('read/write access, and/or more')).toBe('read/write access, and/or more');
     expect(toSpokenText('Open 24/7')).toBe('Open 24/7');
-    expect(toSpokenText('I/O heavy')).toBe('I/O heavy');
+    expect(toSpokenText('I/O heavy')).toBe('I-O heavy');
   });
 
   it('leaves product names, domains and routes alone', () => {
@@ -183,10 +183,12 @@ describe('toSpokenText: identifiers', () => {
     ['retry-policy', 'retry policy'],
     ['getHTTPResponse', 'get HTTP Response'],
     ['parseJSON', 'parse JSON'],
-    ['MAX_RETRIES', 'MAX RETRIES'],
+    ['MAX_RETRIES', 'max RETRIES'],
     ['__init__', 'init'],
     ['retry() is called', 'retry is called'],
     ['Pass --dry-run to skip it', 'Pass dry run to skip it'],
+    ['Run an A-B test', 'Run an A-B test'],
+    ['T-shirt sizes', 'T-shirt sizes'],
     ['The base64Encode helper', 'The base64 Encode helper'],
     ['XMLHttpRequest', 'XML Http Request'],
     ['OAuth', 'O Auth'],
@@ -206,7 +208,6 @@ describe('toSpokenText: identifiers', () => {
       'NaN',
       'APIs',
       'HTTP',
-      'CLI',
       'npm',
       'p99',
       'sha256',
@@ -217,7 +218,7 @@ describe('toSpokenText: identifiers', () => {
   });
 
   it('splits well-known product names into their parts (the engine reads them the same way)', () => {
-    expect(toSpokenText('GitHub API')).toBe('Git Hub API');
+    expect(toSpokenText('GitHub API')).toBe('Git Hub A-P-I');
     expect(toSpokenText('TypeScript')).toBe('Type Script');
     expect(toSpokenText('PostgreSQL')).toBe('Postgre SQL');
   });
@@ -225,6 +226,48 @@ describe('toSpokenText: identifiers', () => {
   it('identifierToWords handles file stems', () => {
     expect(identifierToWords('client.test')).toBe('client test');
     expect(identifierToWords('my_file-name')).toBe('my file name');
+  });
+});
+
+describe('toSpokenText: words in capitals and product terms', () => {
+  cases([
+    ['This runs in DEV mode.', 'This runs in dev mode.'],
+    ['Download the ZIP file.', 'Download the zip file.'],
+    ['Do NOT retry, and keep the OLD key.', 'Do not retry, and keep the old key.'],
+    ['Set NODE_ENV and API_KEY', 'Set NODE env and A-P-I key'],
+    ['MAX_AGE is the cache HIT limit', 'max age is the cache hit limit'],
+    ['Our SaaS and PaaS tiers', 'Our sass and pass tiers'],
+    ['Our IaaS bill', 'Our I as bill'],
+    ['WoW growth', 'week over week growth'],
+    ['Breaking changes: N/A.', 'Breaking changes: N-A.'],
+    [
+      'Report MoM, QoQ and YoY growth.',
+      'Report month over month, quarter over quarter and year over year growth.',
+    ],
+    ['The PoC worked', 'The P-O-C worked'],
+    ['Ship to DEV, QA and PROD.', 'Ship to dev, QA and PROD.'],
+    ['Run an A/B test of the CI/CD and UI/UX flows', 'Run an A-B test of the C-I CD and U-I U-X flows'],
+    ['DEV/PROD and TCP/IP', 'dev PROD and TCP I-P'],
+  ]);
+
+  it('joins the letters of an abbreviation with hyphens, unless an A follows the first letter', () => {
+    expect(toSpokenText('The API, CLI and URL of the SDK')).toBe('The A-P-I, C-L-I and U-R-L of the SDK');
+    expect(toSpokenText('KPI, MVP, ROI, SLA and DAU')).toBe('K-P-I, MVP, R-O-I, SLA and DAU');
+    expect(toSpokenText('The AWS IAM role and the MIT license')).toBe(
+      'The A-W-S IAM role and the M-I-T license',
+    );
+    expect(toSpokenText('It is OK at 3:45 PM')).toBe('It is O-K at 3:45 PM');
+  });
+
+  it('reads abbreviations that people say as a word as a word', () => {
+    expect(toSpokenText('More RAM, a GIF and the LAN')).toBe('More ram, a gif and the lan');
+    expect(toSpokenText('ARM chips')).toBe('arm chips');
+  });
+
+  it('leaves a shouted contraction and a token people spell either way alone', () => {
+    expect(toSpokenText("DON'T merge yet")).toBe("DON'T merge yet");
+    expect(toSpokenText('DON’T merge yet')).toBe('DON’T merge yet');
+    expect(toSpokenText('Use a PAT for the push')).toBe('Use a PAT for the push');
   });
 });
 
@@ -247,6 +290,7 @@ describe('toSpokenText: other', () => {
       '**Bold** `code` and [a link](https://example.com)',
       'Uses timeout_ms and retry-policy values',
       'Status >= 500 or === 429 is retried; < 400 is not, and x * 2 ** n or 2^n grows.',
+      'The DEV ZIP of our SaaS, an A/B test, MAX_RETRIES and the API.',
     ];
     for (const sample of samples) {
       const once = toSpokenText(sample);
@@ -258,7 +302,7 @@ describe('toSpokenText: other', () => {
     const line =
       'The GitHub API returns 429 after 1.2s, so fetchWithRetry in src/weather/client.ts waits 340ms, e.g. on timeout_ms and #1234.';
     expect(toSpokenText(line)).toBe(
-      'The Git Hub API returns 429 after 1.2 seconds, so fetch With Retry in the client file waits 340 milliseconds, for example on timeout ms and number 1234.',
+      'The Git Hub A-P-I returns 429 after 1.2 seconds, so fetch With Retry in the client file waits 340 milliseconds, for example on timeout ms and number 1234.',
     );
   });
 });

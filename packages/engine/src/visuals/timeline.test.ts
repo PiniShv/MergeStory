@@ -111,12 +111,12 @@ function narrationFor(
 }
 
 describe('buildTimeline', () => {
-  it('starts the first scene at 0 with an 0.8 s lead-in and no transition', () => {
+  it('starts the first scene at 0 with a 1.5 s lead-in and no transition', () => {
     const board = storyboard([scene('a', 'title', 1, 'zoom'), scene('b', 'bullets', 1)]);
     const timeline = buildTimeline(board, narrationFor(board, 3));
     expect(timeline.scenes[0]?.startSec).toBe(0);
     expect(timeline.scenes[0]?.transitionSec).toBe(0);
-    expect(timeline.scenes[0]?.beats[0]?.startSec).toBe(0.8);
+    expect(timeline.scenes[0]?.beats[0]?.startSec).toBe(1.5);
   });
 
   it('uses a 0.6 s lead-in for later scenes, and never less than their transition', () => {
@@ -170,7 +170,7 @@ describe('buildTimeline', () => {
   it('lets long narration set the scene length', () => {
     const board = storyboard([scene('a', 'title', 2)]);
     const timeline = buildTimeline(board, narrationFor(board, 6));
-    expect(timeline.scenes[0]?.durationSec).toBeCloseTo(0.8 + 6 + 0.35 + 6 + 0.9, 5);
+    expect(timeline.scenes[0]?.durationSec).toBeCloseTo(1.5 + 6 + 0.35 + 6 + 0.9, 5);
   });
 
   it('starts each scene as many seconds before the previous one ends as its transition lasts', () => {
