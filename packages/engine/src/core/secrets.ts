@@ -201,7 +201,8 @@ function looksRandom(value: string): boolean {
  * two-letter pieces.
  */
 function looksLikeIdentifier(value: string): boolean {
-  const parts = value.match(/[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+/g) ?? [];
+  // No alternatives that overlap, so the match stays linear on long runs of one letter.
+  const parts = value.match(/[A-Z][a-z]+|[a-z]+|[A-Z]+|[0-9]+/g) ?? [];
   if (parts.join('') !== value.replace(/[_-]/g, '')) return false;
   const short = parts.filter((part) => part.length <= 2 && /^[A-Za-z]/.test(part)).length;
   const numbers = parts.filter((part) => /^[0-9]/.test(part)).length;
