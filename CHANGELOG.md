@@ -12,6 +12,7 @@ All notable changes to MergeStory are listed here, newest first.
   your Google Workspace organization, and `public` is anyone with the link. A public link for a private
   repository is blocked unless you allow it.
 - If Drive refuses to share a file, the upload still counts: the file stays private and a warning says why.
+- New files never take on a Workspace's default sharing; only the chosen visibility applies.
 - New `mergestory setup drive` signs in once. Organizations can give every laptop the client id and
   secret through `MERGESTORY_DRIVE_CLIENT_ID` and `MERGESTORY_DRIVE_CLIENT_SECRET`. See
   [docs/drive.md](docs/drive.md).

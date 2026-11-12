@@ -20,7 +20,8 @@ export async function checkDrive({ config, ctx, deps, online }: DoctorContext): 
     const detail = refused.message.startsWith('No Google Drive sign-in')
       ? 'Google Drive: not signed in. Run: mergestory setup drive'
       : `Google Drive: ${refused.message}`;
-    return [check('publish', 'Publishing', 'fail', detail, refused.hint ?? SETUP)];
+    // Videos are made on this machine without it; the sign-in is needed only to share, and takes one click.
+    return [check('publish', 'Publishing', 'warn', detail, refused.hint ?? SETUP)];
   }
   const [{ loadCredentials }, { DRIVE }, { parseScopes, shortScope }] = await Promise.all([
     import('../publish/google/credentials.ts'),

@@ -61,7 +61,7 @@ ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or 
 | `--duration <sec>`, `--max-duration <sec>` | Target length (20-600 seconds, default adapts to the change) and hard cap (20-600, default 150). |
 | `--tts auto\|kokoro\|say\|openai\|elevenlabs\|none` | Speech. `auto` only picks free local voices. |
 | `--llm none\|anthropic\|openai\|openai-compatible` | Who writes the storyboard when none is given. Paid providers need their key in the environment. |
-| `--publish local\|s3\|drive\|none` | Where the video goes. `local` (default) keeps it on this machine. `s3` and `drive` need storage that the team set up; `drive` also needs `mergestory setup drive` once. |
+| `--publish local\|s3\|drive\|none` | Where the video goes. Without the flag it follows the team's settings, which may be `s3` or `drive`, so pass `--publish local` when you render and upload later with `publish`. `local` keeps it on this machine. `drive` also needs `mergestory setup drive` once. |
 | `--visibility private\|protected\|public` | S3 links: signed and expiring, permanent behind a sign-in, or permanent and open. |
 | `--comment`, `--update-description` | Write the link to the pull request. Needs a pull request source and a video that was published somewhere other than this machine. |
 | `--budget <usd>` | Cost cap for the run (default 0.25). |

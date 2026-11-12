@@ -40,6 +40,10 @@ upload and asks you to use `private`, or `public` for public code. Another perso
 with a different e-mail address) is not recognised before the upload: Drive then refuses to share,
 and the video stays private, as described below.
 
+A Workspace can share every new file with the whole organization by default. MergeStory turns that
+off for its folder and its videos, so only the visibility you chose applies. If a share fails, it asks
+Drive who can open the file and reports that, or stops when Drive cannot say.
+
 MergeStory uploads only into a `MergeStory` folder that you own, in the top level of your Drive, and
 that nobody else can open. Files in a shared folder take on its sharing, so MergeStory makes a new
 folder when the old one is shared.

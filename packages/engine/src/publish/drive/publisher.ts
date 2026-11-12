@@ -182,8 +182,11 @@ export class DrivePublisher implements Publisher {
     const file = await this.step(run, 'Uploading the video to Google Drive', () =>
       this.upload(run, files.video.file.path, files.video.sizeBytes, folder.id, meta),
     );
-    const visibility = requested === 'private' ? 'private' : await this.share(run, file.id, domain);
+    const shared =
+      requested === 'private' ? { visibility: 'private' as const } : await this.share(run, file.id, domain);
+    const { visibility } = shared;
     return {
+      ...('warning' in shared ? { warnings: [shared.warning] } : {}),
       provider: 'drive',
       watchUrl: file.webViewLink,
       videoUrl: file.webViewLink,
@@ -289,7 +292,11 @@ export class DrivePublisher implements Publisher {
     }
     // shortcut: two first uploads at the same moment can each make a folder; later runs use the first one found.
     const created = await this.call(run, 'folder creation', {
-      url: apiUrl(this.endpoints.apiBase, '/drive/v3/files', { fields: FILE_FIELDS }),
+      // A Workspace can share every new file with the whole domain by default; MergeStory decides instead.
+      url: apiUrl(this.endpoints.apiBase, '/drive/v3/files', {
+        fields: FILE_FIELDS,
+        ignoreDefaultVisibility: 'true',
+      }),
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=UTF-8' },
       body: JSON.stringify({ name: FOLDER_NAME, mimeType: FOLDER_MIME }),
@@ -324,6 +331,7 @@ export class DrivePublisher implements Publisher {
       startUrl: apiUrl(this.endpoints.apiBase, '/upload/drive/v3/files', {
         uploadType: 'resumable',
         fields: FILE_FIELDS,
+        ignoreDefaultVisibility: 'true',
       }),
       metadata,
       filePath: path,
@@ -363,14 +371,15 @@ export class DrivePublisher implements Publisher {
 
   /**
    * Share the file as asked: the organization (domain) or anyone with the link, never findable in search.
-   * sendNotificationEmail is left out: Google accepts it only for people and groups. A failure leaves the
-   * file private and becomes a warning, because the video is already safely in the user's Drive.
+   * sendNotificationEmail is left out: Google accepts it only for people and groups. After a failure the
+   * permissions are read back, because Drive may have applied the share before its answer was lost:
+   * the result says only what Drive confirms, and a share that cannot be confirmed is an error.
    */
   private async share(
     run: Run,
     fileId: string,
     domain: string | null,
-  ): Promise<'protected' | 'public' | 'private'> {
+  ): Promise<{ visibility: 'protected' | 'public' } | { visibility: 'private'; warning: string }> {
     const permission = domain
       ? { type: 'domain', role: 'reader', domain, allowFileDiscovery: false }
       : { type: 'anyone', role: 'reader', allowFileDiscovery: false };
@@ -381,19 +390,47 @@ export class DrivePublisher implements Publisher {
         headers: { 'Content-Type': 'application/json; charset=UTF-8' },
         body: JSON.stringify(permission),
       });
-      return domain ? 'protected' : 'public';
+      return { visibility: domain ? 'protected' : 'public' };
     } catch (err) {
       const failure = toGoogleError(err, 'Sharing the video', run.ctx, DRIVE);
       if (failure.code === 'ABORTED') throw failure;
-      run.ctx.progress({
-        stage: 'publish',
-        status: 'warn',
-        message:
-          `The video is in the ${FOLDER_NAME} folder of your Google Drive, but it could not be shared, so only you can open it: ` +
-          `${describeProblem(failure)} You can share it yourself in Google Drive.`,
-      });
-      return 'private';
+      const applied = await this.appliedSharing(run, fileId);
+      if (applied) return { visibility: applied };
+      const warning =
+        `The video is in the ${FOLDER_NAME} folder of your Google Drive, but it could not be shared, so only you can open it: ` +
+        `${describeProblem(failure)} You can share it yourself in Google Drive.`;
+      run.ctx.progress({ stage: 'publish', status: 'warn', message: warning });
+      return { visibility: 'private', warning };
     }
+  }
+
+  /** Who can open the file, as Drive reports it now: null when only the owner can. Throws when Drive cannot say. */
+  private async appliedSharing(run: Run, fileId: string): Promise<'protected' | 'public' | null> {
+    let text: string;
+    try {
+      text = await this.call(run, 'sharing check', {
+        url: apiUrl(this.endpoints.apiBase, `/drive/v3/files/${fileId}/permissions`, {
+          fields: 'permissions(type)',
+        }),
+        method: 'GET',
+      });
+    } catch (err) {
+      const failure = toGoogleError(err, 'Checking the sharing of the video', run.ctx, DRIVE);
+      if (failure.code === 'ABORTED') throw failure;
+      throw new MergeStoryError(
+        'PUBLISH_FAILED',
+        'Google Drive could not confirm who can open the uploaded video.',
+        {
+          hint: `Check its sharing in the ${FOLDER_NAME} folder of your Google Drive. ${describeProblem(failure)}`,
+          cause: err,
+        },
+      );
+    }
+    const found = record(parseJson(text)).permissions;
+    const types = (Array.isArray(found) ? found : []).map((p) => record(p).type);
+    if (types.includes('anyone')) return 'public';
+    if (types.includes('domain')) return 'protected';
+    return null;
   }
 }
 

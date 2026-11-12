@@ -56,6 +56,7 @@ them, such as `cat`, `ls` or `node`, are not needed and can ask the user for app
 - Anything else (a pull request of another repository, a repository in another folder, a pull
   request on another host): the `agent` commands refuse it. Use `mergestory analyze`, `validate` and
   `generate` as [references/cli.md](references/cli.md) describes. The user is asked to approve those.
+  Always add `--publish local` to `generate`: the team's default storage may upload at once.
 
 ## 3. Write down what only you know
 
@@ -108,10 +109,11 @@ same run after they approve, without rendering again:
 
 - Without `--publish`, the video goes to the storage the team set up: Google Drive or S3. Do not add
   `--publish` or `--visibility` unless the user asks for them.
-- Google Drive: when `doctor` says "Google Drive: not signed in", ask the user, then run
-  `mergestory setup drive`. A Google page opens in their browser; they sign in with their company
-  account and click Allow. This happens once per machine. Then publish. If `setup drive` refuses
-  to run, show its message to the user and stop.
+- Google Drive: when `doctor` warns "Google Drive: not signed in", making the video still works.
+  Sign in only when the user wants to share: ask, then run `mergestory setup drive` with a timeout of
+  at least 6 minutes (it waits up to 5 for the browser). A Google page opens; they pick their company
+  account and click Allow. This happens once per machine. Then publish. If `setup drive` refuses to
+  run, show its message to the user and stop.
 - `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
   request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.

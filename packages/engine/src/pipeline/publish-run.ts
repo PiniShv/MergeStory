@@ -160,7 +160,9 @@ export async function publishAndNotify(
           engineVersion: watch.engineVersion,
         },
       };
-      publish = await publisher.publish(bundle, ctx);
+      const { warnings: uploadWarnings = [], ...published } = await publisher.publish(bundle, ctx);
+      publish = published;
+      warnings.push(...uploadWarnings);
       ctx.progress({ stage: 'publish', status: 'done', message: `Published to ${publish.location}` });
     }
   } catch (err) {

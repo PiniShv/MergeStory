@@ -22,10 +22,11 @@ describe('publishing: drive', () => {
   it('says "not signed in" and how to sign in', async () => {
     const report = await doctor(drive(), { publisher });
     const check = byId(report.checks, 'publish');
-    expect(check.status).toBe('fail');
+    expect(check.status).toBe('warn');
     expect(check.detail).toBe('Google Drive: not signed in. Run: mergestory setup drive');
     expect(check.fix).toContain('MERGESTORY_DRIVE_CLIENT_ID');
-    expect(report.ok).toBe(false);
+    // Videos are still made on this machine, so a missing Drive sign-in does not fail the doctor.
+    expect(report.checks.filter((c) => c.status === 'fail').map((c) => c.id)).not.toContain('publish');
   });
 
   it('says it is signed in, and with which permission, from the saved sign-in', async () => {

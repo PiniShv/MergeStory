@@ -262,6 +262,8 @@ export class FakeGoogle {
       };
       this.folders.push(folder);
       replyJson(res, 200, folder);
+    } else if (method === 'GET' && /^\/drive\/v3\/files\/[\w-]+\/permissions$/.test(path)) {
+      replyJson(res, 200, { permissions: [{ type: 'user' }] });
     } else if (method === 'POST' && /^\/drive\/v3\/files\/[\w-]+\/permissions$/.test(path)) {
       replyJson(res, 200, { id: 'permission-1' });
     } else {

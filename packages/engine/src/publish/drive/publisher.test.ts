@@ -242,6 +242,8 @@ describe('DrivePublisher', () => {
     const result = await publisher.publish(bundle, ctx);
     expect(result.visibility).toBe('private');
     expect(result.watchUrl).toBe(FILE_LINK);
+    // The reason also reaches the result, for JSON readers.
+    expect(result.warnings?.[0]).toContain('could not be shared');
     const [warning] = warnings(events);
     expect(warning).toContain('The video is in the MergeStory folder of your Google Drive');
     expect(warning).toContain('could not be shared');
@@ -258,6 +260,57 @@ describe('DrivePublisher', () => {
     const result = await publisher.publish(bundle, ctx);
     expect(result.visibility).toBe('private');
     expect(warnings(events)[0]).toContain('could not be shared');
+  });
+
+  it('reports the sharing that Drive applied before its answer was lost', async () => {
+    const { publisher, bundle, ctx, fake } = await setup({ visibility: 'protected' });
+    fake.intercept(
+      (r) => r.method === 'POST' && r.path.endsWith('/permissions'),
+      googleError(400, 'badRequest'),
+    );
+    fake.intercept((r) => r.method === 'GET' && r.path.endsWith('/permissions'), {
+      kind: 'json',
+      status: 200,
+      body: { permissions: [{ type: 'user' }, { type: 'domain' }] },
+    });
+    const result = await publisher.publish(bundle, ctx);
+    expect(result.visibility).toBe('protected');
+    expect(result.warnings).toBeUndefined();
+  });
+
+  it('fails when the sharing cannot be confirmed, instead of calling the video private', async () => {
+    const { publisher, bundle, ctx, fake } = await setup({ visibility: 'public' });
+    fake.intercept(
+      (r) => r.method === 'POST' && r.path.endsWith('/permissions'),
+      googleError(400, 'badRequest'),
+    );
+    fake.intercept(
+      (r) => r.method === 'GET' && r.path.endsWith('/permissions'),
+      googleError(400, 'badRequest'),
+    );
+    const error = await failure(publisher.publish(bundle, ctx));
+    expect(error.code).toBe('PUBLISH_FAILED');
+    expect(error.message).toBe('Google Drive could not confirm who can open the uploaded video.');
+  });
+
+  it('never lets the default sharing of a Workspace apply to the folder or the video', async () => {
+    const { publisher, bundle, ctx, fake } = await setup();
+    await publisher.publish(bundle, ctx);
+    expect(fake.requestsTo('POST', '/drive/v3/files')[0]?.query.get('ignoreDefaultVisibility')).toBe('true');
+    expect(fake.requestsTo('POST', '/upload/drive/v3/files')[0]?.query.get('ignoreDefaultVisibility')).toBe(
+      'true',
+    );
+  });
+
+  it('says plainly when the Drive is full', async () => {
+    const { publisher, bundle, ctx, fake } = await setup();
+    fake.intercept(
+      (r) => r.method === 'POST' && r.path === '/upload/drive/v3/files',
+      googleError(403, 'storageQuotaExceeded'),
+    );
+    const error = await failure(publisher.publish(bundle, ctx));
+    expect(error.message).toContain('Your Google Drive is full.');
+    expect(error.hint).toContain('Free some space');
   });
 
   it('stops when Drive answers the folder creation without a usable folder', async () => {

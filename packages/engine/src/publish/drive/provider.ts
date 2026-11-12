@@ -1,4 +1,5 @@
 /** Google Drive as a Google service: its settings, its one permission and its sign-in. */
+import type { Explanation, GoogleApiError } from '../google/google-api.ts';
 import type { GoogleProvider } from '../google/provider.ts';
 import { runGoogleSignIn, type SignInOptions, type SignInResult } from '../google/sign-in.ts';
 
@@ -11,7 +12,20 @@ export const DRIVE: GoogleProvider = {
   envPrefix: 'MERGESTORY_DRIVE',
   file: 'drive.json',
   apiName: 'Google Drive API',
+  explain,
 };
+
+/** Failures only Drive has. */
+function explain(err: GoogleApiError): Explanation | null {
+  if (err.has('storageQuotaExceeded')) {
+    return {
+      code: 'PUBLISH_FAILED',
+      message: 'Your Google Drive is full.',
+      hint: 'Free some space in Google Drive, or ask your administrator for more storage, then publish again.',
+    };
+  }
+  return null;
+}
 
 /** `mergestory setup drive`. */
 export function runDriveSignIn(options: SignInOptions): Promise<SignInResult> {

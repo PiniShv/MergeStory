@@ -489,6 +489,8 @@ export interface PublishResult {
   visibility: 'public' | 'private' | 'protected' | 'unlisted';
   /** Storage location without secrets, e.g. "s3://bucket/prefix/". */
   location: string;
+  /** Problems the upload had that did not stop it. Moved into the run's warnings, never stored here. */
+  warnings?: string[];
 }
 
 export type StageName =
