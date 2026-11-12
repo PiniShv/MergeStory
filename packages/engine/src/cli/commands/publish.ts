@@ -17,6 +17,7 @@ Examples:
   mergestory publish 20261104-101500-a1b2 --publish s3
   mergestory publish ~/.mergestory/runs/20261104-101500-a1b2 --publish s3 --visibility protected --comment
   mergestory publish ./my-run --publish youtube
+  mergestory publish ./my-run --publish drive --visibility protected --comment
 `;
 
 /** A run folder that exists next to the user becomes an absolute path; anything else is taken as a run id. */
@@ -62,7 +63,7 @@ export function formatPublishResult(result: GenerateResult, style: Style): strin
     return [
       `${style.yellow('Nothing was published')}: ${result.title}`,
       '',
-      'Choose where the video goes with --publish local, s3 or youtube.',
+      'Choose where the video goes with --publish local, s3, youtube or drive.',
       '',
     ].join('\n');
   }
@@ -105,7 +106,7 @@ export function registerPublish(program: Command, rt: CliRuntime): void {
     const settings = await loadConfig(env, overrides);
     if (settings.publish.provider === 'none') {
       throw new MergeStoryError('USAGE', 'There is nowhere to publish to: the publish provider is "none".', {
-        hint: 'Choose one with --publish local, s3 or youtube, or set MERGESTORY_PUBLISH_PROVIDER.',
+        hint: 'Choose one with --publish local, s3, youtube or drive, or set MERGESTORY_PUBLISH_PROVIDER.',
       });
     }
     const options: PublishRunOptions = {

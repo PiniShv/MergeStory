@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveConfig } from '../../core/config.ts';
 import { MergeStoryError } from '../../core/errors.ts';
 import type { GenerateResult, PublishResult } from '../../core/types.ts';
 import { generate, publishRun } from '../../pipeline/index.ts';
@@ -193,6 +194,19 @@ describe('publish: flags become PublishRunOptions', () => {
     expect(publishMock).not.toHaveBeenCalled();
   });
 
+  it('leaves the provider to the settings with --comment alone, so a team default of drive works', async () => {
+    publishMock.mockResolvedValue(fakeResult());
+    const env = { MERGESTORY_PUBLISH_PROVIDER: 'drive', MERGESTORY_VISIBILITY: 'protected' };
+    const { code } = await run(['publish', 'r1', '--comment'], env);
+    expect(code).toBe(0);
+    const overrides = lastOptions().config;
+    expect(overrides).toEqual({ github: { comment: true } });
+    // publishRun resolves its settings from these overrides and the environment.
+    const settings = resolveConfig({ skipFile: true, env, overrides });
+    expect(settings.publish).toMatchObject({ provider: 'drive', visibility: 'protected' });
+    expect(settings.github.comment).toBe(true);
+  });
+
   it('uses the publish provider of the config file', async () => {
     await writeFile(join(dir, 'ms.json'), JSON.stringify({ publish: { provider: 'none' } }));
     const { code, stderr } = await run(['publish', 'r1'], { MERGESTORY_CONFIG: 'ms.json' });
@@ -236,7 +250,7 @@ describe('publish: input that is refused', () => {
     expect(code).toBe(2);
     expect(stderr).toContain('error [USAGE]');
     expect(stderr).toContain('nowhere to publish');
-    expect(stderr).toContain('--publish local, s3 or youtube');
+    expect(stderr).toContain('--publish local, s3, youtube or drive');
     expect(publishMock).not.toHaveBeenCalled();
   });
 
@@ -325,6 +339,24 @@ describe('publish: output', () => {
     expect(stdout).not.toContain('Shared');
   });
 
+  it('describes a Google Drive link', async () => {
+    const link = 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view';
+    publishMock.mockResolvedValue(
+      fakeResult({
+        publish: published({
+          provider: 'drive',
+          watchUrl: link,
+          videoUrl: link,
+          visibility: 'protected',
+          expiresAt: null,
+        }),
+      }),
+    );
+    const { stdout } = await run(['publish', 'r1', '--publish', 'drive', '--visibility', 'protected']);
+    expect(stdout).toContain(link);
+    expect(stdout).toContain('protected: a permanent link that needs a team sign-in');
+  });
+
   it('describes a YouTube link', async () => {
     publishMock.mockResolvedValue(
       fakeResult({
@@ -382,7 +414,7 @@ describe('publish: output', () => {
     const { code, stdout } = await run(['publish', 'r1']);
     expect(code).toBe(0);
     expect(stdout).toContain('Nothing was published');
-    expect(stdout).toContain('--publish local, s3 or youtube');
+    expect(stdout).toContain('--publish local, s3, youtube or drive');
   });
 });
 

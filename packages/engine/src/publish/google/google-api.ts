@@ -10,16 +10,17 @@ import { abortedError, assertNotAborted, MergeStoryError } from '../../core/erro
 import { isRecord } from '../../core/json.ts';
 import { parseRetryAfter, retry, sleep } from '../../core/retry.ts';
 import { cleanText } from '../text.ts';
+import { docsRef, type GoogleProvider, setupCommand } from './provider.ts';
 
 /** The Google services the publisher talks to. Tests point these at a local server. */
-export interface YouTubeEndpoints {
-  /** Origin of the YouTube Data API. */
+export interface GoogleEndpoints {
+  /** Origin of the Google APIs. */
   apiBase: string;
   tokenUrl: string;
   authUrl: string;
 }
 
-export const GOOGLE_ENDPOINTS: YouTubeEndpoints = {
+export const GOOGLE_ENDPOINTS: GoogleEndpoints = {
   apiBase: 'https://www.googleapis.com',
   tokenUrl: 'https://oauth2.googleapis.com/token',
   authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -217,6 +218,14 @@ export async function withRetries<T>(
   }
 }
 
+/** An API address with its query string. */
+export function apiUrl(base: string, path: string, params: Record<string, string>): string {
+  const query = Object.entries(params)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+  return `${base.replace(/\/+$/, '')}${path}?${query}`;
+}
+
 export interface ApiCall {
   url: string;
   method: 'GET' | 'POST' | 'PUT';
@@ -280,23 +289,33 @@ export async function callApi(
   );
 }
 
-const SIGN_IN_AGAIN =
-  'Run `mergestory setup youtube` to sign in again. If the OAuth consent screen is External and its status is "Testing", ' +
-  'Google ends each sign-in after 7 days: publish the app, or use an Internal app, so the sign-in lasts (see docs/youtube.md in the MergeStory repository).';
+/** The hint for a sign-in that Google no longer accepts. */
+export function signInAgain(provider: GoogleProvider): string {
+  return (
+    `Run \`${setupCommand(provider)}\` to sign in again. If the OAuth consent screen is External and its status is "Testing", ` +
+    `Google ends each sign-in after 7 days: publish the app, or use an Internal app, so the sign-in lasts (see ${docsRef(provider)}).`
+  );
+}
 
 /** How a failed call is explained to the person who ran the command. */
-interface Explanation {
+export interface Explanation {
   code: 'CONFIG_INVALID' | 'PUBLISH_FAILED';
   message: string;
   hint: string;
 }
 
-function explain(err: GoogleApiError, forToken: 'refresh' | 'exchange' | null): Explanation {
+function explain(
+  err: GoogleApiError,
+  forToken: 'refresh' | 'exchange' | null,
+  provider: GoogleProvider,
+): Explanation {
   const { status } = err;
+  const { label, envPrefix } = provider;
+  const setup = setupCommand(provider);
   if (status === 0) {
     return {
       code: 'PUBLISH_FAILED',
-      message: `YouTube could not be reached (${err.apiMessage}).`,
+      message: `${label} could not be reached (${err.apiMessage}).`,
       hint: 'Check your network connection, then try again.',
     };
   }
@@ -304,14 +323,14 @@ function explain(err: GoogleApiError, forToken: 'refresh' | 'exchange' | null): 
     return {
       code: 'CONFIG_INVALID',
       message: 'Google did not accept the sign-in code.',
-      hint: 'Run `mergestory setup youtube` again and finish the sign-in in the browser soon after it opens. Each code works once.',
+      hint: `Run \`${setup}\` again and finish the sign-in in the browser soon after it opens. Each code works once.`,
     };
   }
   if (err.has('invalid_grant')) {
     return {
       code: 'CONFIG_INVALID',
-      message: 'Google no longer accepts the saved YouTube sign-in.',
-      hint: SIGN_IN_AGAIN,
+      message: `Google no longer accepts the saved ${label} sign-in.`,
+      hint: signInAgain(provider),
     };
   }
   if (err.has('invalid_client') || err.has('unauthorized_client')) {
@@ -319,91 +338,50 @@ function explain(err: GoogleApiError, forToken: 'refresh' | 'exchange' | null): 
       code: 'CONFIG_INVALID',
       message: 'Google rejected the OAuth client id or secret.',
       hint:
-        'Check MERGESTORY_YOUTUBE_CLIENT_ID and MERGESTORY_YOUTUBE_CLIENT_SECRET, or run `mergestory setup youtube` again. ' +
+        `Check ${envPrefix}_CLIENT_ID and ${envPrefix}_CLIENT_SECRET, or run \`${setup}\` again. ` +
         'The client must be of the type "Desktop app".',
     };
   }
-  if (err.has('quotaExceeded')) {
-    return {
-      code: 'PUBLISH_FAILED',
-      message: 'The daily YouTube quota of the Google Cloud project is used up.',
-      hint:
-        'Quotas reset at midnight Pacific Time. By default a project can upload 100 videos a day, and all other calls share ' +
-        '10,000 units (captions cost 400 units each). Try again tomorrow, turn off captions and playlists, ' +
-        'or ask Google for more quota. Check the current Google docs for the latest limits.',
-    };
-  }
-  if (err.has('uploadLimitExceeded')) {
-    return {
-      code: 'PUBLISH_FAILED',
-      message: 'The YouTube channel has reached its daily upload limit.',
-      hint: 'Wait 24 hours and try again. Verifying the channel (youtube.com/verify) raises the limit.',
-    };
-  }
-  if (err.has('youtubeSignupRequired')) {
-    return {
-      code: 'CONFIG_INVALID',
-      message: 'The Google account used to sign in has no YouTube channel.',
-      hint: 'Create a YouTube channel for that account, then run `mergestory setup youtube` again. Service accounts do not work with YouTube.',
-    };
-  }
+  const own = provider.explain?.(err);
+  if (own) return own;
   if (err.has('accessNotConfigured') || err.has('SERVICE_DISABLED')) {
     return {
       code: 'CONFIG_INVALID',
-      message: 'The YouTube Data API is not turned on for the Google Cloud project.',
-      hint: 'Enable "YouTube Data API v3" for the project that owns the OAuth client (see docs/youtube.md in the MergeStory repository), wait a minute, and try again.',
+      message: `The ${provider.apiName} is not turned on for the Google Cloud project.`,
+      hint: `Enable "${provider.apiName}" for the project that owns the OAuth client (see ${docsRef(provider)}), wait a minute, and try again.`,
     };
   }
   if (status === 401) {
     return {
       code: 'CONFIG_INVALID',
-      message: 'YouTube did not accept the saved sign-in.',
-      hint: SIGN_IN_AGAIN,
-    };
-  }
-  if (err.has('forbiddenPrivacySetting')) {
-    return {
-      code: 'PUBLISH_FAILED',
-      message: 'YouTube does not allow this privacy setting for the video.',
-      hint: 'Set publish.youtube.privacyStatus to "private" or "unlisted", or check the channel settings in YouTube Studio.',
+      message: `${label} did not accept the saved sign-in.`,
+      hint: signInAgain(provider),
     };
   }
   if (err.has('insufficientPermissions') || err.has('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
     return {
       code: 'PUBLISH_FAILED',
       message: 'The saved sign-in does not have the permission this step needs.',
-      hint: 'Turn on the feature (captions and playlists need a broader permission), then run `mergestory setup youtube` again.',
+      hint: `Run \`${setup}\` again and leave every permission box ticked on the Google page.`,
     };
   }
   if (status === 403) {
     return {
       code: 'PUBLISH_FAILED',
-      message: 'YouTube refused the request (forbidden).',
-      hint:
-        'Check that the signed-in account owns the channel, that the sign-in has the needed permissions ' +
-        '(run `mergestory setup youtube` again), and that the channel is verified for custom thumbnails.',
-    };
-  }
-  const invalid = err.reasons.find(
-    (reason) => /^invalid[A-Z]/.test(reason) || reason === 'defaultLanguageNotSet',
-  );
-  if (status === 400 && invalid) {
-    return {
-      code: 'PUBLISH_FAILED',
-      message: `YouTube rejected the video details (${invalid}).`,
-      hint: 'Check publish.youtube.categoryId and the language setting, then try again.',
+      message: `${label} refused the request (forbidden).`,
+      hint: `Check that the signed-in account may do this, or run \`${setup}\` again.`,
     };
   }
   if (err.transient) {
     return {
       code: 'PUBLISH_FAILED',
-      message: `YouTube had a temporary problem (HTTP ${status}).`,
+      message: `${label} had a temporary problem (HTTP ${status}).`,
       hint: 'Try again in a few minutes.',
     };
   }
   return {
     code: 'PUBLISH_FAILED',
-    message: `YouTube answered HTTP ${status}${err.reasons[0] ? ` (${err.reasons[0]})` : ''}.`,
+    message: `${label} answered HTTP ${status}${err.reasons[0] ? ` (${err.reasons[0]})` : ''}.`,
     hint: 'Check your settings and the sign-in, then try again.',
   };
 }
@@ -412,16 +390,17 @@ function explain(err: GoogleApiError, forToken: 'refresh' | 'exchange' | null): 
  * Turn anything thrown while talking to Google into a MergeStoryError: authorisation problems
  * become CONFIG_INVALID, everything else PUBLISH_FAILED. Cancellation stays ABORTED.
  */
-export function toYouTubeError(
+export function toGoogleError(
   err: unknown,
   action: string,
   ctx: Pick<RunContext, 'redactor' | 'signal'>,
+  provider: GoogleProvider,
   forToken: 'refresh' | 'exchange' | null = null,
 ): MergeStoryError {
   if (err instanceof MergeStoryError) return err;
   if (ctx.signal.aborted || (err instanceof Error && err.name === 'AbortError')) return abortedError(err);
   if (err instanceof GoogleApiError) {
-    const { code, message, hint } = explain(err, forToken);
+    const { code, message, hint } = explain(err, forToken, provider);
     return new MergeStoryError(
       code,
       ctx.redactor.redact(code === 'PUBLISH_FAILED' ? `${action} failed: ${message}` : message),

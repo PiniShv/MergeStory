@@ -1,4 +1,6 @@
 /** Reading a secret from a terminal without showing it, and opening an address in the browser. */
+
+import { ghEnvironment } from '../../core/child-env.ts';
 import { MergeStoryError } from '../../core/errors.ts';
 import { runCommand } from '../../core/process.ts';
 
@@ -86,7 +88,11 @@ export function readHidden(
   });
 }
 
-type RunFn = (command: string, args: string[], options?: { timeoutMs?: number }) => Promise<unknown>;
+type RunFn = (
+  command: string,
+  args: string[],
+  options?: { timeoutMs?: number; env?: NodeJS.ProcessEnv },
+) => Promise<unknown>;
 
 /**
  * Try to open an address in the default browser. Returns false when no launcher worked: that is
@@ -111,7 +117,8 @@ export async function openInBrowser(
         ? ['rundll32', ['url.dll,FileProtocolHandler', url]]
         : ['xdg-open', [url]];
   try {
-    await run(launcher[0], launcher[1], { timeoutMs: 10_000 });
+    // The browser it may start gets none of the keys or tokens of this process.
+    await run(launcher[0], launcher[1], { timeoutMs: 10_000, env: ghEnvironment() });
     return true;
   } catch {
     return false;

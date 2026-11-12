@@ -31,6 +31,9 @@ describe('publishCommand', () => {
         config({ publish: { provider: 'youtube' }, github: { comment: true, updateDescription: true } }),
       ),
     ).toBe('mergestory publish /runs/r1 --publish youtube --comment --update-description');
+    expect(
+      publishCommand('/runs/r1', config({ publish: { provider: 'drive', visibility: 'protected' } })),
+    ).toBe('mergestory publish /runs/r1 --publish drive --visibility protected');
   });
 
   it('quotes a folder with a space, and never suggests publishing to "none"', () => {

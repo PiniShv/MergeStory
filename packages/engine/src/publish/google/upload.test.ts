@@ -59,6 +59,7 @@ class Tokens implements TokenProvider {
 
 function job(overrides: Partial<ResumableUpload> = {}): ResumableUpload {
   return {
+    label: 'YouTube',
     startUrl: `${fake.url}/upload/youtube/v3/videos?uploadType=resumable&part=snippet%2Cstatus`,
     metadata: { snippet: { title: 'A title' }, status: { privacyStatus: 'private' } },
     filePath: path,
@@ -348,15 +349,20 @@ describe('uploadResumable', () => {
     it('accepts the origin of the start address and googleapis.com over HTTPS', () => {
       const start = 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable';
       expect(
-        checkedSessionUrl('https://www.googleapis.com/upload/youtube/v3/videos?upload_id=1', start),
+        checkedSessionUrl(
+          'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=1',
+          start,
+          'YouTube',
+        ),
       ).toContain('upload_id=1');
       expect(
         checkedSessionUrl(
           'https://youtube.googleapis.com/resumable/upload/youtube/v3/videos?upload_id=1',
           start,
+          'YouTube',
         ),
       ).toContain('youtube.googleapis.com');
-      expect(checkedSessionUrl('/upload/youtube/v3/videos?upload_id=2', start)).toBe(
+      expect(checkedSessionUrl('/upload/youtube/v3/videos?upload_id=2', start, 'YouTube')).toBe(
         'https://www.googleapis.com/upload/youtube/v3/videos?upload_id=2',
       );
     });
@@ -370,7 +376,7 @@ describe('uploadResumable', () => {
         'https://notgoogleapis.com/x',
         'ftp://www.googleapis.com/x',
       ]) {
-        expect(() => checkedSessionUrl(location, start)).toThrow();
+        expect(() => checkedSessionUrl(location, start, 'YouTube')).toThrow();
       }
     });
   });
@@ -401,17 +407,17 @@ describe('uploadResumable', () => {
 
 describe('confirmedBytes', () => {
   it('reads Range as the number of bytes Google has', () => {
-    expect(confirmedBytes('bytes=0-999999')).toBe(1_000_000);
-    expect(confirmedBytes('bytes=0-0')).toBe(1);
+    expect(confirmedBytes('bytes=0-999999', 'YouTube')).toBe(1_000_000);
+    expect(confirmedBytes('bytes=0-0', 'YouTube')).toBe(1);
   });
 
   it('treats a missing header as nothing received yet', () => {
-    expect(confirmedBytes(null)).toBe(0);
+    expect(confirmedBytes(null, 'YouTube')).toBe(0);
   });
 
   it('rejects anything else', () => {
     for (const value of ['bytes=5-10', 'bytes 0-10', 'garbage', 'bytes=0-']) {
-      expect(() => confirmedBytes(value)).toThrow();
+      expect(() => confirmedBytes(value, 'YouTube')).toThrow();
     }
   });
 });

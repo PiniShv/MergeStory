@@ -23,11 +23,11 @@ import {
   startFakeGoogle,
   UPLOAD_SCOPE,
 } from '../../testing/youtube.ts';
+import { CHUNK_UNIT } from '../google/upload.ts';
 import { createPublisher } from '../index.ts';
 import { credentialsPath, writeCredentialsFile } from './credentials.ts';
 import { utf8Length } from './description.ts';
 import { createYouTubePublisher, YouTubePublisher } from './publisher.ts';
-import { CHUNK_UNIT } from './upload.ts';
 
 const SECRETS: Partial<Record<SecretName, string>> = {
   MERGESTORY_YOUTUBE_CLIENT_ID: FAKE_CLIENT_ID,

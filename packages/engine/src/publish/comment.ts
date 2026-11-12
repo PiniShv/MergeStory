@@ -126,7 +126,7 @@ function watchLine(data: CommentData): string {
 /**
  * The small print under the link. A private link says when it expires. A protected link says that
  * it needs a team sign-in, so nobody is surprised by a login page. A private YouTube video says that
- * only its owner can watch it.
+ * only its owner can watch it, and a Google Drive link says where it opens.
  */
 function footerText(data: CommentData): string {
   const sha = shortSha(data.headSha);
@@ -138,6 +138,11 @@ function footerText(data: CommentData): string {
     data.visibility === 'protected' ? 'The link needs a team sign-in.' : '',
     data.provider === 'youtube' && data.visibility === 'private'
       ? 'Only the channel owner can watch this video.'
+      : '',
+    data.provider === 'drive'
+      ? data.visibility === 'private'
+        ? 'Watch on Google Drive: only the uploader can open this video.'
+        : 'Watch on Google Drive.'
       : '',
   ];
   return parts.filter(Boolean).join(' ');

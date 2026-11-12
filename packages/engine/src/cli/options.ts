@@ -177,6 +177,7 @@ const PUBLISH_TARGETS: Record<Config['publish']['provider'], string> = {
   local: 'a folder on this machine',
   s3: 'S3-compatible storage',
   youtube: 'your YouTube channel',
+  drive: 'your Google Drive',
   none: 'nowhere',
 };
 
@@ -186,11 +187,12 @@ function publishOption(choices: readonly Config['publish']['provider'][]): Optio
   return new Option('--publish <provider>', `where the finished video goes: ${meaning}`).choices(choices);
 }
 
-/** `--visibility`: who can open an S3 link. */
+/** `--visibility`: who can open an S3 or Google Drive link. */
 function visibilityOption(): Option {
   return new Option(
     '--visibility <visibility>',
-    'S3 links: private = signed, expires in 7 days at most; protected = permanent, behind your sign-in proxy; public = permanent, open to anyone',
+    'S3 links: private = signed, expires in 7 days at most; protected = permanent, behind your sign-in proxy; public = permanent, open to anyone. ' +
+      'Google Drive links: private = only you; protected = people in your Google Workspace organization; public = anyone with the link',
   ).choices(VISIBILITIES);
 }
 

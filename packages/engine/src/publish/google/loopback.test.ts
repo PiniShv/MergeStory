@@ -47,6 +47,7 @@ function start(overrides: { timeoutMs?: number; signal?: AbortSignal } = {}) {
     announce = resolve;
   });
   const result = receiveAuthorizationCode({
+    setupCommand: 'mergestory setup youtube',
     state: STATE,
     timeoutMs: overrides.timeoutMs ?? 10_000,
     signal: overrides.signal ?? controller.signal,

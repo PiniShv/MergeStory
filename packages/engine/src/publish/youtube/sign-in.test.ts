@@ -221,7 +221,7 @@ describe('runYouTubeSignIn', () => {
     expect(url.origin).toBe('https://accounts.google.test');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('access_type')).toBe('offline');
-    expect(url.searchParams.get('prompt')).toBe('consent');
+    expect(url.searchParams.get('prompt')).toBe('select_account consent');
     expect(url.searchParams.get('state')?.length).toBeGreaterThanOrEqual(32);
     expect(url.searchParams.get('redirect_uri')).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/oauth2callback$/);
     expect(url.searchParams.get('client_id')).toBe(FAKE_CLIENT_ID);

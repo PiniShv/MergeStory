@@ -102,8 +102,8 @@ built so that nothing from your code or the change leaves your machine unless yo
   MergeStory cannot tell, nothing is uploaded. The check proves that there is a sign-in step. It cannot
   see who is allowed in, so read your access policy. The pull request comment says that the link needs a
   team sign-in and shows no preview image. See [docs/hosting.md](docs/hosting.md).
-- **Public links need an opt-in.** A link that anyone can open is a `public` S3 link, or a YouTube video
-  that is not private. It is blocked for a private repository, and for a repository whose privacy
+- **Public links need an opt-in.** A link that anyone can open is a `public` S3 or Google Drive link, or a
+  YouTube video that is not private. It is blocked for a private repository, and for a repository whose privacy
   MergeStory cannot tell, unless you set `publish.allowPublicForPrivateRepos`.
 - **YouTube.** `--publish youtube` always sends the privacy setting, `unlisted` by default, because
   YouTube makes a video public when it is left out. A video that others can open is refused for a
@@ -111,6 +111,12 @@ built so that nothing from your code or the change leaves your machine unless yo
   link only for public repositories. Uploads do not notify subscribers. The saved sign-in is readable
   by you only, and MergeStory refuses to read it if other users can. Tokens stay in memory and are
   never logged. See [docs/youtube.md](docs/youtube.md).
+- **Google Drive.** `--publish drive` asks Google for one permission, `drive.file`: MergeStory reaches
+  only the files and the folder it created, nothing else in your Drive. `private` (the default) adds no
+  sharing. `protected` shares the file with your Google Workspace organization and `public` with anyone
+  who has the link, both as readers and never findable in search. If sharing fails, the file stays
+  private. The sign-in is saved in `~/.mergestory/credentials/drive.json`, readable by you only. See
+  [docs/drive.md](docs/drive.md).
 - **Share later.** You can render a video, watch it on your machine, and upload it only when you are
   happy: `mergestory publish <run>`. Only the video, the poster and the captions of the run folder are
   uploaded, and a file that leads outside the folder is refused. Before MergeStory makes a link that
@@ -136,7 +142,9 @@ built so that nothing from your code or the change leaves your machine unless yo
 - **Local repositories are opt-in.** A path is accepted only inside a folder you allow with
   `--allow-root`, and the whole repository must be inside it.
 - **It takes no secrets.** The server uses its own environment, and a request cannot choose a model
-  server, a screenshot file or a YouTube upload. Requests are limited in size and in time.
+  server, a screenshot file, or an upload to YouTube or Google Drive. A server whose default is YouTube
+  or Google Drive refuses jobs that name no other provider, because those sign-ins belong to the
+  operator. Requests are limited in size and in time.
 
 See [docs/api.md](docs/api.md#safety-rules).
 

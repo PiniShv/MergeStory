@@ -3,8 +3,9 @@
  * Checked against Google's discovery document in 2026-11; see the current Google docs for changes.
  */
 import type { Config } from '../../core/config.ts';
+import { SCOPE_PREFIX as PREFIX, shortScope } from '../google/oauth.ts';
 
-const PREFIX = 'https://www.googleapis.com/auth/';
+export { parseScopes, shortScope } from '../google/oauth.ts';
 
 export const SCOPES = {
   /** Upload videos and set thumbnails. */
@@ -40,11 +41,6 @@ export function requiredScopes(settings: YouTubeSettings): string[] {
   return settings.uploadCaptions || settings.playlistId !== null ? [SCOPES.forceSsl] : [SCOPES.upload];
 }
 
-/** The scope without its URL prefix, for messages: "youtube.upload". */
-export function shortScope(scope: string): string {
-  return scope.startsWith(PREFIX) ? scope.slice(PREFIX.length) : scope;
-}
-
 /** What Google's permission screen calls the scope, and what MergeStory uses it for. */
 export function describeScope(scope: string): string {
   if (scope === SCOPES.upload) {
@@ -57,12 +53,6 @@ export function describeScope(scope: string): string {
     );
   }
   return shortScope(scope);
-}
-
-/** Split a space-separated scope string. null when it is empty or missing (unknown). */
-export function parseScopes(value: string | null | undefined): string[] | null {
-  const scopes = (value ?? '').split(/\s+/).filter(Boolean);
-  return scopes.length > 0 ? scopes : null;
 }
 
 /** true when the granted scopes allow the method. Unknown scopes (null) are given the benefit of the doubt. */

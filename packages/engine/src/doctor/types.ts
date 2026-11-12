@@ -69,6 +69,8 @@ export interface DoctorDeps {
    * Throws when the file is there but cannot be used (for example when other users can read it).
    */
   readYouTubeLogin(path: string): Promise<YouTubeLoginFile | null>;
+  /** The organization domain of the Google Drive account (about.get), or null when Google does not say. Throws when it fails. */
+  driveDomain(config: Config, ctx: RunContext): Promise<string | null>;
   /**
    * The publisher that the settings name, built as a run builds it, or null when nothing is published.
    * The report asks it what an upload would refuse (check), so the report and the upload apply the same

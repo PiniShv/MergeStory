@@ -9,7 +9,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -23,8 +23,8 @@ Do not use it for text-only summaries, code review comments, or screen recording
 
 ## 1. Find the engine
 
-Run `mergestory --version`. It must print 1.1.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.1.0`. Never start
+Run `mergestory --version`. It must print 1.2.0 or newer. If the command is missing or older, ask
+the user whether you may install it, then run `npm install -g mergestory@1.2.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -56,6 +56,7 @@ them, such as `cat`, `ls` or `node`, are not needed and can ask the user for app
 - Anything else (a pull request of another repository, a repository in another folder, a pull
   request on another host): the `agent` commands refuse it. Use `mergestory analyze`, `validate` and
   `generate` as [references/cli.md](references/cli.md) describes. The user is asked to approve those.
+  Always add `--publish local` to `generate`: the team's default storage may upload at once.
 
 ## 3. Write down what only you know
 
@@ -104,10 +105,15 @@ it in the team chat themselves.
 With team storage: show the user the local watch page of the run you rendered, and publish that
 same run after they approve, without rendering again:
 
-`mergestory publish <runDir> --publish s3 --comment --json`
+`mergestory publish <runDir> --comment --json`
 
-- `--publish s3` uploads to the team's configured storage. Links are private and expire, unless the
-  team configured `--visibility protected` (permanent, behind a sign-in) or `public`.
+- Without `--publish`, the video goes to the storage the team set up: Google Drive or S3. Do not add
+  `--publish` or `--visibility` unless the user asks for them.
+- Google Drive: when `doctor` warns "Google Drive: not signed in", making the video still works.
+  Sign in only when the user wants to share: ask, then run `mergestory setup drive` with a timeout of
+  at least 6 minutes (it waits up to 5 for the browser). A Google page opens; they pick their company
+  account and click Allow. This happens once per machine. Then publish. If `setup drive` refuses to
+  run, show its message to the user and stop.
 - `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
   request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.
@@ -131,7 +137,8 @@ replace code review.
 - Exit code 6 means FFmpeg or the browser is missing: go back to section 1.
 - Exit code 7 means publishing was blocked to protect a private repository: keep links private.
 - Network errors: tell the user which host to allow (the GitHub API, the npm registry, the
-  storage endpoint, or `huggingface.co` once for the voice) instead of retrying in a loop.
+  storage endpoint, `www.googleapis.com` and `oauth2.googleapis.com` for Google Drive, or
+  `huggingface.co` once for the voice) instead of retrying in a loop.
 - Never paste tokens or keys into commands or files. The engine reads them from the environment.
 - `mergestory --help` and `mergestory <command> --help` list every flag. See
   [references/cli.md](references/cli.md) for JSON output shapes and exit codes, and

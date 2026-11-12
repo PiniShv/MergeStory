@@ -85,7 +85,7 @@ group on purpose: a run for an unrelated label, such as `bug`, must not cancel a
 | Make the video and comment on the pull request | Runs `mergestory generate "$PR_URL" --comment --json`. The result goes to `mergestory-result.json`. |
 | Add the link to the job summary | Always runs. It writes the link, or the error message, to the summary of the run. |
 
-**Pinned versions.** The workflow runs `mergestory@1.1.0`, and the actions are pinned to a full commit. A
+**Pinned versions.** The workflow runs `mergestory@1.2.0`, and the actions are pinned to a full commit. A
 moved tag cannot change which MergeStory or which action code runs. The pins do not cover the packages that
 MergeStory itself depends on: npm picks their versions when the workflow installs it. Update the pins when
 you want a new version.

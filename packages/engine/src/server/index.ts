@@ -13,6 +13,7 @@
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { type Config, resolveConfig } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { createLogger, type Logger } from '../core/logger.ts';
 import { isLoopbackAddress } from '../core/net.ts';
@@ -147,6 +148,38 @@ function checkSettings(host: string, port: number, token: string | null): void {
   }
 }
 
+/** Providers whose sign-in belongs to the operator: an API job never uses them, also not as a default. */
+const OPERATOR_PROVIDERS = new Set(['youtube', 'drive']);
+
+/**
+ * Fix the job's publish provider now. A request that names none gets the server's default, which
+ * the environment or the config file may set; a default of YouTube or Google Drive would upload
+ * with the operator's own sign-in, so it is refused.
+ */
+function pinPublishProvider(job: JobOptions): void {
+  let provider: string;
+  try {
+    provider = resolveConfig({ overrides: job.config, configPath: job.configPath ?? null }).publish.provider;
+  } catch {
+    // The job itself reports a settings problem when it runs; until then nothing may be uploaded.
+    provider = job.config?.publish?.provider ?? 'local';
+  }
+  if (OPERATOR_PROVIDERS.has(provider)) {
+    throw new ApiError(
+      403,
+      'FORBIDDEN',
+      `This server's default publish provider is ${provider}, which the HTTP API never uses.`,
+      {
+        hint: 'Send "options": {"publish": {"provider": "local"}} (or "s3"), or start the server without MERGESTORY_PUBLISH_PROVIDER set to youtube or drive.',
+      },
+    );
+  }
+  job.config = {
+    ...job.config,
+    publish: { ...job.config?.publish, provider: provider as Config['publish']['provider'] },
+  };
+}
+
 async function createJob(deps: RequestDeps, req: IncomingMessage, res: ServerResponse): Promise<void> {
   const { store, queue, logger } = deps;
   if (!isJsonContentType(req.headers['content-type'])) {
@@ -195,6 +228,7 @@ async function createJob(deps: RequestDeps, req: IncomingMessage, res: ServerRes
     jobOptions.context = masked.context;
   }
   if (deps.configPath) jobOptions.configPath = deps.configPath;
+  pinPublishProvider(jobOptions);
 
   // This process owns the job, so a read after it has died reports the job as failed.
   const job = await store.create(jobOptions, { pid: process.pid });

@@ -2,7 +2,7 @@
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { MergeStoryError } from '../../core/errors.ts';
-import type { SignInOptions, SignInResult } from '../../publish/youtube/sign-in.ts';
+import type { SignInOptions, SignInResult } from '../../publish/google/sign-in.ts';
 import type { CliRuntime, CommandEnv } from '../runtime.ts';
 import { loadConfig } from './shared.ts';
 
@@ -17,6 +17,11 @@ const TARGETS: { name: string; summary: string }[] = [
     summary:
       'sign in to YouTube once so videos can be uploaded to your channel (needs a browser; nothing is installed)',
   },
+  {
+    name: 'drive',
+    summary:
+      'sign in to Google Drive once so videos can be uploaded to your Drive (needs a browser; nothing is installed)',
+  },
 ];
 
 /** Replaces the terminal, the browser launcher and the sign-in itself. Tests use it. */
@@ -29,14 +34,16 @@ export interface SetupDeps {
   signIn?: (options: SignInOptions) => Promise<SignInResult>;
 }
 
-async function setupYouTube(env: CommandEnv, deps: SetupDeps): Promise<void> {
+/** The sign-in for YouTube or Google Drive: the same flow, with the service's own permissions. */
+async function setupGoogle(env: CommandEnv, deps: SetupDeps, target: 'youtube' | 'drive'): Promise<void> {
   const config = await loadConfig(env);
-  const [{ homeLayout }, { globalRedactor }, { loadSecrets }, youtube, prompt] = await Promise.all([
+  const [{ homeLayout }, { globalRedactor }, { loadSecrets }, youtube, drive, prompt] = await Promise.all([
     import('../../core/paths.ts'),
     import('../../core/redact.ts'),
     import('../../core/config.ts'),
     import('../../publish/youtube/sign-in.ts'),
-    import('../../publish/youtube/prompt.ts'),
+    import('../../publish/drive/provider.ts'),
+    import('../../publish/google/prompt.ts'),
   ]);
   const terminal =
     deps.terminal?.() ??
@@ -46,7 +53,8 @@ async function setupYouTube(env: CommandEnv, deps: SetupDeps): Promise<void> {
       askHidden: (question: string, signal: AbortSignal) =>
         prompt.readHidden(question, process.stdin, { write: (text) => env.io.stderr(text) }, signal),
     } as const);
-  const result = await (deps.signIn ?? youtube.runYouTubeSignIn)({
+  const run = target === 'youtube' ? youtube.runYouTubeSignIn : drive.runDriveSignIn;
+  const result = await (deps.signIn ?? run)({
     ctx: {
       config,
       secrets: loadSecrets(env.io.env),
@@ -55,15 +63,17 @@ async function setupYouTube(env: CommandEnv, deps: SetupDeps): Promise<void> {
       signal: env.signal,
     },
     io: {
-      say: env.say,
+      // In --json mode stdout holds one JSON document, so the steps (and the sign-in address) go to stderr.
+      say: env.json ? (text) => env.io.stderr(`${text}\n`) : env.say,
       askHidden: (question) => terminal.askHidden(question, env.signal),
       openBrowser: deps.openBrowser ?? ((url) => prompt.openInBrowser(url)),
       interactive: terminal.interactive,
+      ci: Boolean(env.io.env.CI),
     },
   });
   // Never the tokens: only where the sign-in is saved and what it allows.
   if (env.json)
-    env.emitJson({ ok: true, youtube: { credentialsFile: result.credentialsFile, scopes: result.scopes } });
+    env.emitJson({ ok: true, [target]: { credentialsFile: result.credentialsFile, scopes: result.scopes } });
 }
 
 /** Add the `setup` command. */
@@ -88,8 +98,8 @@ export function registerSetup(program: Command, rt: CliRuntime, deps: SetupDeps 
           hint: `Choose one of: ${TARGETS.map((t) => t.name).join(', ')}.`,
         });
       }
-      if (target === 'youtube') {
-        await setupYouTube(env, deps);
+      if (target === 'youtube' || target === 'drive') {
+        await setupGoogle(env, deps, target);
         return;
       }
       env.say('Kokoro is a free text-to-speech voice that runs on this machine (English only).');

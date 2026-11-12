@@ -2,14 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MergeStoryError } from '../../core/errors.ts';
 import { Redactor } from '../../core/redact.ts';
 import { FAST_TIMING, type FakeGoogle, googleError, startFakeGoogle } from '../../testing/youtube.ts';
-import {
-  callApi,
-  GoogleApiError,
-  parseApiFailure,
-  type TokenProvider,
-  toYouTubeError,
-  withRetries,
-} from './google-api.ts';
+import { toYouTubeError } from '../youtube/provider.ts';
+import { callApi, GoogleApiError, parseApiFailure, type TokenProvider, withRetries } from './google-api.ts';
 
 const apiFailure = (status: number, reason: string, message = 'Something went wrong.', extra: object = {}) =>
   parseApiFailure(

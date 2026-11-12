@@ -92,8 +92,9 @@ You need a Google Cloud project, the YouTube Data API turned on, and an OAuth cl
 mergestory setup youtube
 ```
 
-Run it in a normal terminal on your own machine. It needs a person and a browser, so it refuses to
-run when it has no terminal (for example in CI).
+Run it in a normal terminal on your own machine. It needs a person and a browser. Without a terminal
+it runs only when `MERGESTORY_YOUTUBE_CLIENT_ID` and `MERGESTORY_YOUTUBE_CLIENT_SECRET` are both set
+and `CI` is not, for example when a coding agent starts it for you. Otherwise it refuses.
 
 What happens:
 
@@ -263,7 +264,7 @@ Channel limits that are not about MergeStory:
 | "YouTube refused the request (forbidden)" | The sign-in lacks a permission, the account does not own the channel, or the channel is not verified for thumbnails. | Run setup again with the needed settings turned on, and check the channel in YouTube Studio. |
 | "The saved YouTube sign-in does not have the permission" or "Skipped the captions" | Captions and playlists need `youtube.force-ssl`, and the sign-in was made without it. | Turn the setting on, then run `mergestory setup youtube` again. |
 | "The YouTube credentials file can be read by other users" | The file's mode is too open. | Run `chmod 600` on the file (and `chmod 700` on its folder), or run setup again. |
-| "Signing in to YouTube needs a person at a terminal" | There is no terminal, for example in CI. | Run setup on your own machine, then use the CI secrets above. |
+| "Signing in to YouTube needs a person at a terminal" | There is no terminal and the client id and secret are not both in the environment, or `CI` is set. | Run setup on your own machine, then use the CI secrets above. |
 | Google shows an error page with `redirect_uri_mismatch` | The OAuth client is not of the type *Desktop app*. | Create a new client of the type *Desktop app* and use its id and secret. |
 | "The sign-in timed out" | The browser sign-in was not finished within 5 minutes. | Run setup again and finish the sign-in. |
 | "Google did not return a refresh token" | Google did not hand one out. | Remove MergeStory's access in your Google Account settings, then run setup again. |

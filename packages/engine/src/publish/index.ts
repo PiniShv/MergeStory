@@ -5,6 +5,7 @@
 import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Publisher } from '../core/providers.ts';
+import { createDrivePublisher } from './drive/index.ts';
 import { LocalPublisher, writeWatchFolder } from './local.ts';
 import { S3Publisher } from './s3/index.ts';
 import { createYouTubePublisher } from './youtube/index.ts';
@@ -30,9 +31,11 @@ export function createPublisher(config: Config): Publisher | null {
       return new S3Publisher(config);
     case 'youtube':
       return createYouTubePublisher(config);
+    case 'drive':
+      return createDrivePublisher(config);
     default:
       throw new MergeStoryError('CONFIG_INVALID', `Unknown publish provider "${provider}".`, {
-        hint: 'Use "local", "s3", "youtube" or "none".',
+        hint: 'Use "local", "s3", "youtube", "drive" or "none".',
       });
   }
 }

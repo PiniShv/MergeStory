@@ -160,7 +160,9 @@ export async function publishAndNotify(
           engineVersion: watch.engineVersion,
         },
       };
-      publish = await publisher.publish(bundle, ctx);
+      const { warnings: uploadWarnings = [], ...published } = await publisher.publish(bundle, ctx);
+      publish = published;
+      warnings.push(...uploadWarnings);
       ctx.progress({ stage: 'publish', status: 'done', message: `Published to ${publish.location}` });
     }
   } catch (err) {
@@ -290,11 +292,12 @@ async function readPreviousResult(
 }
 
 /** Whether a public link, or a public description, depends on the repository being public. */
-function dependsOnPublicRepository(config: RunContext['config']): boolean {
+export function dependsOnPublicRepository(config: RunContext['config']): boolean {
   const { publish } = config;
   return (
     (publish.provider === 's3' && publish.visibility === 'public') ||
-    (publish.provider === 'youtube' && publish.youtube.privacyStatus !== 'private')
+    (publish.provider === 'youtube' && publish.youtube.privacyStatus !== 'private') ||
+    (publish.provider === 'drive' && publish.visibility === 'public')
   );
 }
 

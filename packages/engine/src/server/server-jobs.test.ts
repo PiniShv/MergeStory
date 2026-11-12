@@ -130,6 +130,7 @@ describe('POST /v1/jobs: input checks', () => {
       targetDurationSec: null,
       llm: { model: null },
       tts: { voice: null },
+      publish: { provider: 'local' },
     });
   });
 
@@ -274,7 +275,8 @@ describe('POST /v1/jobs: creating jobs', () => {
         style: 'product',
         maxDurationSec: 90,
         llm: { provider: 'anthropic', model: 'claude-haiku-5-5' },
-        publish: { visibility: 'private' },
+        // The provider is fixed when the job is accepted (here the settings file cannot be read yet).
+        publish: { visibility: 'private', provider: 'local' },
         github: { comment: true },
       },
       configPath: '/etc/mergestory/config.json',
@@ -515,4 +517,29 @@ it('leaves no temporary files in the jobs directory', async () => {
   const created = await post(base, { source: 'acme/widgets#12' });
   await waitFor(async () => (await store.read(created.json.id)).status === 'succeeded');
   expect(await readdir(store.jobDir(created.json.id))).toEqual(['job.json']);
+});
+
+describe('POST /v1/jobs: the publish provider', () => {
+  it("never uses the operator's YouTube or Google Drive sign-in, also not as a default", async () => {
+    vi.stubEnv('MERGESTORY_PUBLISH_PROVIDER', 'drive');
+    try {
+      const { base } = await start();
+      const refused = await post(base, { source: 'o/r#1' });
+      expect(refused.status).toBe(403);
+      expect(refused.json.error.message).toContain('never uses');
+      // Naming a provider the API allows works, and the job keeps it.
+      const accepted = await post(base, { source: 'o/r#1', options: { publish: { provider: 'local' } } });
+      expect(accepted.status).toBe(202);
+      expect((await store.read(accepted.json.id))?.options.config?.publish?.provider).toBe('local');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('writes the default provider into the job, so a later change of the environment cannot switch it', async () => {
+    const { base } = await start();
+    const res = await post(base, { source: 'o/r#1' });
+    expect(res.status).toBe(202);
+    expect((await store.read(res.json.id))?.options.config?.publish?.provider).toBe('local');
+  });
 });

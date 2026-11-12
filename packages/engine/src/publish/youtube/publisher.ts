@@ -13,21 +13,22 @@ import type { PublishBundle, PublishCheckContext, Publisher, PublishMeta } from 
 import type { EgressRecord, PublishResult } from '../../core/types.ts';
 import { type BundleFile, type ClassifiedBundle, classifyBundle } from '../bundle.ts';
 import { contentTypeFor } from '../content-types.ts';
+import {
+  apiUrl,
+  callApi,
+  DEFAULT_TIMING,
+  GOOGLE_ENDPOINTS,
+  type GoogleEndpoints,
+  type Timing,
+} from '../google/google-api.ts';
+import { AccessTokens } from '../google/oauth.ts';
+import { CHUNK_UNIT, DEFAULT_CHUNK_BYTES, uploadResumable } from '../google/upload.ts';
 import { assertNotDryRun, exposureProblem } from '../privacy.ts';
 import { BUNDLE_CONTAINS } from '../types.ts';
 import { loadCredentials } from './credentials.ts';
 import { buildDescription, buildTags, buildTitle, youTubeLanguage } from './description.ts';
-import {
-  callApi,
-  DEFAULT_TIMING,
-  GOOGLE_ENDPOINTS,
-  type Timing,
-  toYouTubeError,
-  type YouTubeEndpoints,
-} from './google-api.ts';
-import { AccessTokens } from './oauth.ts';
+import { toYouTubeError, YOUTUBE } from './provider.ts';
 import { SCOPES, scopeAllows, shortScope } from './scopes.ts';
-import { CHUNK_UNIT, DEFAULT_CHUNK_BYTES, uploadResumable } from './upload.ts';
 
 type PrivacyStatus = Config['publish']['youtube']['privacyStatus'];
 
@@ -42,7 +43,7 @@ const PRIVACY_RANK: Record<PrivacyStatus, number> = { private: 0, unlisted: 1, p
 
 export interface YouTubePublisherOptions {
   /** Where the Google services are. Only tests change this. */
-  endpoints?: Partial<YouTubeEndpoints>;
+  endpoints?: Partial<GoogleEndpoints>;
   timing?: Partial<Timing>;
   /** Upload chunk size in bytes; a multiple of 256 KiB. */
   chunkBytes?: number;
@@ -55,13 +56,6 @@ const QUOTA = {
   'captions.insert': '400 units',
   'playlistItems.insert': '50 units',
 } as const;
-
-function apiUrl(base: string, path: string, params: Record<string, string>): string {
-  const query = Object.entries(params)
-    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
-    .join('&');
-  return `${base.replace(/\/+$/, '')}${path}?${query}`;
-}
 
 /** Public repositories only, or a private video, or an explicit opt-in. */
 function privacyProblem(config: Config, repoIsPrivate: boolean | null): MergeStoryError | null {
@@ -122,7 +116,7 @@ interface Run {
 export class YouTubePublisher implements Publisher {
   readonly id = 'youtube';
   private readonly config: Config;
-  private readonly endpoints: YouTubeEndpoints;
+  private readonly endpoints: GoogleEndpoints;
   private readonly timing: Timing;
   private readonly chunkBytes: number;
 
@@ -183,7 +177,7 @@ export class YouTubePublisher implements Publisher {
 
     const tokens = new AccessTokens(
       credentials,
-      { endpoints: this.endpoints, signal: ctx.signal, timing: this.timing },
+      { endpoints: this.endpoints, provider: YOUTUBE, signal: ctx.signal, timing: this.timing },
       ctx,
     );
     // Sign in before reading the video, so a bad sign-in fails fast.
@@ -272,6 +266,7 @@ export class YouTubePublisher implements Publisher {
     try {
       const outcome = await uploadResumable({
         // notifySubscribers=false: a video per pull request must not ping subscribers.
+        label: YOUTUBE.label,
         startUrl: apiUrl(this.endpoints.apiBase, '/upload/youtube/v3/videos', {
           uploadType: 'resumable',
           part: 'snippet,status',
@@ -371,6 +366,7 @@ export class YouTubePublisher implements Publisher {
         const code = run.language ?? 'en';
         run.ctx.egress.record(run.host, 'captions', captions.sizeBytes, ['narration-text']);
         await uploadResumable({
+          label: YOUTUBE.label,
           startUrl: apiUrl(this.endpoints.apiBase, '/upload/youtube/v3/captions', {
             uploadType: 'resumable',
             part: 'snippet',

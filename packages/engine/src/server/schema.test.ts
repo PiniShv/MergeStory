@@ -22,13 +22,14 @@ describe('parseCreateJob', () => {
     for (const theme of THEMES) expect(accepted({ theme }), theme).toBe(true);
     for (const provider of LLM_PROVIDERS) expect(accepted({ llm: { provider } }), provider).toBe(true);
     for (const provider of TTS_PROVIDERS) expect(accepted({ tts: { provider } }), provider).toBe(true);
-    for (const provider of PUBLISH_PROVIDERS.filter((p) => p !== 'youtube')) {
+    for (const provider of PUBLISH_PROVIDERS.filter((p) => p !== 'youtube' && p !== 'drive')) {
       expect(accepted({ publish: { provider } }), provider).toBe(true);
     }
     for (const visibility of VISIBILITIES.filter((v) => v !== 'protected')) {
       expect(accepted({ publish: { visibility } }), visibility).toBe(true);
     }
     expect(accepted({ publish: { provider: 'youtube' } })).toBe(false);
+    expect(accepted({ publish: { provider: 'drive' } })).toBe(false);
     expect(accepted({ publish: { visibility: 'protected' } })).toBe(false);
   });
 

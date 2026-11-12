@@ -1,6 +1,6 @@
 /**
- * Helpers for the YouTube tests: a fake Google server on 127.0.0.1 (token endpoint, resumable
- * uploads, thumbnails, captions, playlists) and fixtures. Not part of the build.
+ * Helpers for the YouTube and Google Drive tests: a fake Google server on 127.0.0.1 (token endpoint,
+ * resumable uploads, thumbnails, captions, playlists, Drive folders and sharing) and fixtures. Not part of the build.
  */
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -37,6 +37,7 @@ interface Interceptor {
 interface Session {
   id: string;
   kind: 'video' | 'captions';
+  api: 'youtube' | 'drive';
   total: number;
   chunks: Buffer[];
   received: number;
@@ -52,6 +53,8 @@ export interface FakeGoogleOptions {
   videoId?: string;
   /** What the fake reports as the privacy status, whatever was requested. */
   privacyStatus?: string;
+  /** The account's e-mail address for Drive's about.get; null leaves it out of the answer. */
+  email?: string | null;
 }
 
 export const FAKE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com';
@@ -60,6 +63,9 @@ export const FAKE_REFRESH_TOKEN = 'test-refresh-token-value-0123456789';
 export const FAKE_VIDEO_ID = 'dQw4w9WgXcQ';
 export const UPLOAD_SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
 export const FORCE_SSL_SCOPE = 'https://www.googleapis.com/auth/youtube.force-ssl';
+export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+export const FAKE_FILE_ID = '1AbCdEfGhIjKlMnOpQrStUvWxYz012345';
+export const FAKE_FOLDER_ID = '1FolderAbCdEfGhIjKlMnOpQrStUv';
 
 function readAll(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -99,12 +105,15 @@ export function oauthError(status: number, error: string, description = ''): Fak
 export class FakeGoogle {
   readonly requests: RecordedRequest[] = [];
   readonly sessions = new Map<string, Session>();
+  /** Folders that Drive lists (the ones this app made). */
+  readonly folders: { id: string; name: string; webViewLink: string; shared?: boolean }[] = [];
   url = '';
   tokensIssued = 0;
   private readonly server: Server;
   private readonly interceptors: Interceptor[] = [];
-  private readonly options: Required<Omit<FakeGoogleOptions, 'privacyStatus'>> & {
+  private readonly options: Required<Omit<FakeGoogleOptions, 'privacyStatus' | 'email'>> & {
     privacyStatus: string | null;
+    email: string | null;
   };
   private authCodes = new Map<string, { challenge: string; redirectUri: string }>();
 
@@ -116,6 +125,7 @@ export class FakeGoogle {
       scope: options.scope ?? UPLOAD_SCOPE,
       videoId: options.videoId ?? FAKE_VIDEO_ID,
       privacyStatus: options.privacyStatus ?? null,
+      email: options.email === undefined ? 'dev@example.com' : options.email,
     };
     this.server = createServer((req, res) => {
       this.handle(req, res).catch(() => res.destroy());
@@ -214,11 +224,12 @@ export class FakeGoogle {
       if (reply.kind === 'json') replyJson(res, reply.status, reply.body);
       return;
     }
-    const upload = /^\/upload\/youtube\/v3\/(videos|captions)$/.exec(path);
+    const upload = /^\/upload\/(?:youtube\/v3\/(videos|captions)|drive\/v3\/files)$/.exec(path);
     if (method === 'POST' && upload && request.query.get('uploadType') === 'resumable') {
-      this.startSession(upload[1] === 'videos' ? 'video' : 'captions', request, res);
+      this.startSession(upload[1] === 'captions' ? 'captions' : 'video', request, res);
       return;
     }
+    if (this.drive(request, res)) return;
     if (method === 'PUT' && upload) {
       this.putChunk(request, res);
       return;
@@ -232,6 +243,33 @@ export class FakeGoogle {
       return;
     }
     replyJson(res, 404, { error: { code: 404, message: 'Not found', errors: [{ reason: 'notFound' }] } });
+  }
+
+  /** The Drive metadata calls: about.get, files.list, folder creation and sharing. */
+  private drive(request: RecordedRequest, res: ServerResponse): boolean {
+    const { method, path } = request;
+    if (method === 'GET' && path === '/drive/v3/about') {
+      replyJson(res, 200, { user: this.options.email === null ? {} : { emailAddress: this.options.email } });
+    } else if (method === 'GET' && path === '/drive/v3/files') {
+      replyJson(res, 200, { files: this.folders });
+    } else if (method === 'POST' && path === '/drive/v3/files') {
+      const name = String((JSON.parse(request.body.toString('utf8')) as { name?: unknown }).name);
+      const folder = {
+        id: FAKE_FOLDER_ID,
+        name,
+        webViewLink: `https://drive.google.com/drive/folders/${FAKE_FOLDER_ID}`,
+        shared: false,
+      };
+      this.folders.push(folder);
+      replyJson(res, 200, folder);
+    } else if (method === 'GET' && /^\/drive\/v3\/files\/[\w-]+\/permissions$/.test(path)) {
+      replyJson(res, 200, { permissions: [{ type: 'user' }] });
+    } else if (method === 'POST' && /^\/drive\/v3\/files\/[\w-]+\/permissions$/.test(path)) {
+      replyJson(res, 200, { id: 'permission-1' });
+    } else {
+      return false;
+    }
+    return true;
   }
 
   private token(request: RecordedRequest, res: ServerResponse): void {
@@ -296,10 +334,12 @@ export class FakeGoogle {
     } catch {
       // left as null
     }
-    this.sessions.set(id, { id, kind, total, chunks: [], received: 0, metadata, complete: false });
-    const path = kind === 'video' ? 'videos' : 'captions';
+    const api = request.path.startsWith('/upload/drive/') ? 'drive' : 'youtube';
+    this.sessions.set(id, { id, kind, api, total, chunks: [], received: 0, metadata, complete: false });
+    const path =
+      api === 'drive' ? 'drive/v3/files' : kind === 'video' ? 'youtube/v3/videos' : 'youtube/v3/captions';
     res.writeHead(200, {
-      Location: `${this.url}/upload/youtube/v3/${path}?uploadType=resumable&upload_id=${id}`,
+      Location: `${this.url}/upload/${path}?uploadType=resumable&upload_id=${id}`,
       'Content-Length': '0',
     });
     res.end();
@@ -316,6 +356,10 @@ export class FakeGoogle {
   }
 
   private resource(session: Session): unknown {
+    if (session.api === 'drive') {
+      const name = (session.metadata as { name?: unknown } | null)?.name;
+      return { id: FAKE_FILE_ID, name, webViewLink: `https://drive.google.com/file/d/${FAKE_FILE_ID}/view` };
+    }
     if (session.kind === 'captions') return { kind: 'youtube#caption', id: 'caption-1' };
     const meta = (session.metadata ?? {}) as {
       snippet?: Record<string, unknown>;
