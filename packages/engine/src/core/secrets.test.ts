@@ -84,6 +84,53 @@ describe('maskSecrets', () => {
   });
 });
 
+describe('maskSecrets: webhooks, URL tokens and long names', () => {
+  // Made-up values, joined at run time so secret scanners do not flag the source.
+  const fake = (...parts: string[]): string => parts.join('');
+  const slackPath = 'T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX';
+  it.each([
+    [`"webhookUrl": "${fake('https://hooks.slack.com/services/', slackPath)}",`, slackPath],
+    [`"url": "${fake('https:\\/\\/hooks.slack.com\\/services\\/', slackPath)}"`, 'XXXXXXXXXXXXXXXXXXXXXXXX'],
+    [
+      'hook: https://hooks.slack.com/workflows/T0000/A0000/123456789012345678/abcdEFGHijklMNOPqrst',
+      'abcdEFGHijklMNOPqrst',
+    ],
+    [
+      '"https://hooks.slack.com/triggers/T0000/123456789012/abcdef0123456789abcdef0123456789"',
+      'abcdef0123456789abcdef',
+    ],
+    [
+      fake(
+        '"https://example.webhook.office.com/webhookb2/aaaa/IncomingWebhook/',
+        '0123456789abcdef0123/dddd"',
+      ),
+      '0123456789abcdef0123',
+    ],
+    [
+      fake('"https://discord.com/api/webhooks/', '123456789012345678/AbCdEfGhIjKlMnOpQrSt0123"'),
+      'AbCdEfGhIjKlMnOpQrSt0123',
+    ],
+    ['- https://example.com/notify?token=AbCdEf0123456789xyz&x=1', 'AbCdEf0123456789xyz'],
+  ])('masks %s', (input, secret) => {
+    const { text, masked } = maskSecrets(input);
+    expect(masked).toBeGreaterThan(0);
+    expect(text).not.toContain(secret);
+  });
+
+  it.each([
+    'See https://docs.github.com/en/webhooks/about-webhooks for the payload.',
+    'This removes `updateInvoiceApprovalStatusForCustomer` and `runNightlyReconciliationCleanupJob`.',
+    "const handler = 'processIncomingWebhookPayloadForTenant';",
+    'Script: `run_nightly_reconciliation_cleanup_job_v2`.',
+  ])('leaves %s alone', (input) => {
+    expect(maskSecrets(input)).toEqual({ text: input, masked: 0 });
+  });
+
+  it('still masks a random literal without a telling name', () => {
+    expect(maskSecrets("const x = 'q8Zr2LmP0vXa7TnB4kYw9HsD3fGj6Ue1';").masked).toBe(1);
+  });
+});
+
 describe('maskSecrets: unquoted values in configuration files', () => {
   // A base64 private key as kubeconfig holds it: one line, far longer than any other rule allows.
   const keyData = `LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVB${'q7Zx9Kp2Lw4Rt6Yv8Nb1Mc3Hd5Fg0Js'.repeat(60)}`;

@@ -54,6 +54,8 @@ export interface DoctorDeps {
   run(command: string, args: string[]): Promise<RunResult>;
   resolveFfmpeg(config: Config): Promise<{ ffmpeg: string; ffprobe: string }>;
   resolveBrowser(config: Config): Promise<{ path: string; source: string }>;
+  /** Starts the browser and returns the size of one 1280x720 test frame (null when unreadable). Throws when it cannot start. */
+  captureTestFrame(path: string): Promise<{ width: number; height: number } | null>;
   kokoroStatus(config: Config): Promise<{ installed: boolean; version: string | null; modelCached: boolean }>;
   /** Free bytes on the disk that holds `path`, or null when unknown. */
   freeBytes(path: string): Promise<number | null>;

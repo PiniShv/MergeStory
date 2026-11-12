@@ -137,7 +137,7 @@ describe('runYouTubeSignIn', () => {
     expect(error.code).toBe('USAGE');
     expect(error.message).toContain('terminal');
     expect(error.hint).toContain('MERGESTORY_YOUTUBE_REFRESH_TOKEN');
-    expect(error.hint).toContain('docs/youtube.md in the MergeStory repository');
+    expect(error.hint).toContain('MergeStory/blob/main/docs/youtube.md');
     expect(h.asked).toEqual([]);
     expect(h.urls).toEqual([]);
     expect(fake.requests).toEqual([]);

@@ -35,6 +35,7 @@ export function healthyDeps(overrides: Partial<DoctorDeps> = {}): Partial<Doctor
     },
     resolveFfmpeg: async () => ({ ffmpeg: '/usr/bin/ffmpeg', ffprobe: '/usr/bin/ffprobe' }),
     resolveBrowser: async () => ({ path: '/usr/bin/chromium', source: 'system' }),
+    captureTestFrame: async () => ({ width: 1280, height: 720 }),
     kokoroStatus: async () => ({ installed: false, version: null, modelCached: false }),
     freeBytes: async () => 50 * 1024 ** 3,
     existingAncestor: async (path) => path,

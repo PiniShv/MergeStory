@@ -60,7 +60,7 @@ Every response is JSON with `Cache-Control: no-store`. A trailing slash on the p
 
 | Method and path | What it does |
 |---|---|
-| `GET /v1/health` | Returns `{"ok": true, "version": "1.2.0"}`. |
+| `GET /v1/health` | Returns `{"ok": true, "version": "1.2.1"}`. |
 | `POST /v1/jobs` | Starts a job. Returns `202`. |
 | `GET /v1/jobs/:id` | Returns one job. |
 | `GET /v1/jobs?limit=<n>` | Returns recent jobs, newest first, as `{"jobs": [...]}`. `limit` is 1 to 200 and the default is 20. |

@@ -43,6 +43,10 @@ export function defaultDoctorDeps(env: NodeJS.ProcessEnv): DoctorDeps {
     run: defaultRun,
     resolveFfmpeg: async (config) => (await import('../core/binaries.ts')).resolveFfmpeg(config),
     resolveBrowser: async (config) => (await import('../render/index.ts')).resolveBrowserExecutable(config),
+    captureTestFrame: async (path) => {
+      const { silentLogger } = await import('../core/logger.ts');
+      return (await import('../render/index.ts')).captureTestFrame(path, silentLogger);
+    },
     kokoroStatus: async (config) => {
       const { createRunContext } = await import('../core/context.ts');
       const { silentLogger } = await import('../core/logger.ts');

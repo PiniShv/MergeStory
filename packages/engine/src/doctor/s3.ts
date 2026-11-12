@@ -46,7 +46,7 @@ function checkSettings(config: Config, problems: S3Problems, online: boolean): D
   if (problems.publicBase) {
     const needs =
       visibility === 'protected'
-        ? 'the custom domain of the bucket that sits behind your access proxy (see docs/hosting.md in the MergeStory repository)'
+        ? 'the custom domain of the bucket that sits behind your access proxy (see https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md)'
         : 'the address that serves the bucket (a CDN or a custom domain)';
     // The upload only takes a plain http(s) address without a user name or password.
     const problem = s3.publicBaseUrl
@@ -71,7 +71,7 @@ function checkSettings(config: Config, problems: S3Problems, online: boolean): D
         'Publishing',
         'fail',
         `${where}, protected links through ${publicHost}, but ${ADDRESS_MISTAKES[mistake]}`,
-        'Connect a custom domain to the bucket, put your access proxy in front of it, and use it as MERGESTORY_S3_PUBLIC_BASE_URL (see docs/hosting.md in the MergeStory repository).',
+        'Connect a custom domain to the bucket, put your access proxy in front of it, and use it as MERGESTORY_S3_PUBLIC_BASE_URL (see https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md).',
       );
     }
     return s3.verifyProtection
@@ -224,7 +224,7 @@ function protectionCheckResult(result: AccessProbeResult): DoctorCheck {
         name,
         'fail',
         `${result.host} ${result.detail}. ${blocked}`,
-        'Put the address behind an access proxy such as Cloudflare Access (see docs/hosting.md in the MergeStory repository), or use --visibility private.',
+        'Put the address behind an access proxy such as Cloudflare Access (see https://github.com/PiniShv/MergeStory/blob/main/docs/hosting.md), or use --visibility private.',
       )
     : check(
         id,
