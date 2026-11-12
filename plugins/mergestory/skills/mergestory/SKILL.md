@@ -110,7 +110,8 @@ same run after they approve, without rendering again:
   `--publish` or `--visibility` unless the user asks for them.
 - Google Drive: when `doctor` says "Google Drive: not signed in", ask the user, then run
   `mergestory setup drive`. A Google page opens in their browser; they sign in with their company
-  account and click Allow. This happens once per machine. Then publish.
+  account and click Allow. This happens once per machine. Then publish. If `setup drive` refuses
+  to run, show its message to the user and stop.
 - `--comment` adds or updates one MergeStory comment on the pull request. It needs a GitHub pull
   request as the source and a video that was published somewhere other than this machine.
 - `--update-description` adds a short section to the pull request description instead.
@@ -134,7 +135,8 @@ replace code review.
 - Exit code 6 means FFmpeg or the browser is missing: go back to section 1.
 - Exit code 7 means publishing was blocked to protect a private repository: keep links private.
 - Network errors: tell the user which host to allow (the GitHub API, the npm registry, the
-  storage endpoint, or `huggingface.co` once for the voice) instead of retrying in a loop.
+  storage endpoint, `www.googleapis.com` and `oauth2.googleapis.com` for Google Drive, or
+  `huggingface.co` once for the voice) instead of retrying in a loop.
 - Never paste tokens or keys into commands or files. The engine reads them from the environment.
 - `mergestory --help` and `mergestory <command> --help` list every flag. See
   [references/cli.md](references/cli.md) for JSON output shapes and exit codes, and

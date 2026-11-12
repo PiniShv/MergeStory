@@ -118,10 +118,10 @@ describe('DrivePublisher', () => {
     });
     const [list] = fake.requestsTo('GET', '/drive/v3/files');
     expect(list?.query.get('q')).toBe(
-      "name = 'MergeStory' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+      "name = 'MergeStory' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and 'me' in owners and 'root' in parents",
     );
     expect(list?.query.get('spaces')).toBe('drive');
-    expect(list?.query.get('fields')).toBe('files(id,name,webViewLink)');
+    expect(list?.query.get('fields')).toBe('files(id,name,webViewLink,shared)');
     const [create] = fake.requestsTo('POST', '/drive/v3/files');
     expect(JSON.parse(create?.body.toString('utf8') ?? '')).toEqual({
       name: 'MergeStory',
@@ -150,11 +150,32 @@ describe('DrivePublisher', () => {
       id: 'existingFolder01',
       name: 'MergeStory',
       webViewLink: 'https://drive.google.com/x',
+      shared: false,
     });
     const result = await publisher.publish(bundle, ctx);
     expect(fake.requestsTo('POST', '/drive/v3/files')).toEqual([]);
     expect(fake.sessionMetadata('video')).toMatchObject({ parents: ['existingFolder01'] });
     expect(result.location).toBe('https://drive.google.com/x');
+  });
+
+  it('never uploads into a shared folder, whose sharing a private video would take on', async () => {
+    const { publisher, bundle, ctx, fake } = await setup();
+    fake.folders.push({
+      id: 'sharedFolder01',
+      name: 'MergeStory',
+      webViewLink: 'https://drive.google.com/s',
+      shared: true,
+    });
+    // A folder whose sharing Drive does not report counts as shared.
+    fake.folders.push({
+      id: 'unknownFolder1',
+      name: 'MergeStory',
+      webViewLink: 'https://drive.google.com/u',
+    });
+    const result = await publisher.publish(bundle, ctx);
+    expect(fake.requestsTo('POST', '/drive/v3/files')).toHaveLength(1);
+    expect(fake.sessionMetadata('video')).toMatchObject({ parents: [FAKE_FOLDER_ID] });
+    expect(result.location).toBe(FOLDER_LINK);
   });
 
   it('resumes the upload after a broken connection', async () => {
@@ -226,6 +247,29 @@ describe('DrivePublisher', () => {
     expect(warning).toContain('could not be shared');
     expect(warning).toContain('invalidSharingRequest');
     expect(warning).toContain('You can share it yourself in Google Drive.');
+  });
+
+  it('keeps a protected upload private when the organization forbids link sharing', async () => {
+    const { publisher, bundle, ctx, fake, events } = await setup({ visibility: 'protected' });
+    fake.intercept(
+      (r) => r.path.endsWith('/permissions'),
+      googleError(403, 'sharingRateLimitExceeded', 'Sharing is not allowed.'),
+    );
+    const result = await publisher.publish(bundle, ctx);
+    expect(result.visibility).toBe('private');
+    expect(warnings(events)[0]).toContain('could not be shared');
+  });
+
+  it('stops when Drive answers the folder creation without a usable folder', async () => {
+    const { publisher, bundle, ctx, fake } = await setup();
+    fake.intercept((r) => r.method === 'POST' && r.path === '/drive/v3/files', {
+      kind: 'json',
+      status: 200,
+      body: {},
+    });
+    const error = await failure(publisher.publish(bundle, ctx));
+    expect(error.code).toBe('PUBLISH_FAILED');
+    expect(fake.requestsTo('POST', '/upload/drive/v3/files')).toEqual([]);
   });
 
   it('blocks a public link for a private or unknown repository before any request', async () => {

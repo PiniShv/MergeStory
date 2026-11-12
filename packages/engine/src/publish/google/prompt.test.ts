@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { openInBrowser, readHidden, type TerminalInput } from './prompt.ts';
 
 class FakeInput extends EventEmitter implements TerminalInput {
@@ -127,9 +127,23 @@ describe('readHidden', () => {
 
 describe('openInBrowser', () => {
   const calls: [string, string[]][] = [];
-  const run = async (command: string, args: string[]) => {
+  const envs: (NodeJS.ProcessEnv | undefined)[] = [];
+  const run = async (command: string, args: string[], options?: { env?: NodeJS.ProcessEnv }) => {
     calls.push([command, args]);
+    envs.push(options?.env);
   };
+
+  it('starts the browser without the keys and tokens of this process', async () => {
+    vi.stubEnv('MERGESTORY_DRIVE_REFRESH_TOKEN', 'not-a-real-token');
+    try {
+      envs.length = 0;
+      await openInBrowser('https://accounts.google.com/x', run, 'darwin');
+      expect(envs[0]).toBeDefined();
+      expect(envs[0]?.MERGESTORY_DRIVE_REFRESH_TOKEN).toBeUndefined();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 
   it('uses the launcher of each platform, with the address as one argument', async () => {
     calls.length = 0;

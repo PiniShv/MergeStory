@@ -16,7 +16,7 @@ import { GitHubClient, updatePullRequestDescription, upsertPullRequestComment } 
 import { createPublisher } from '../publish/index.ts';
 import { pageData } from '../testing/publish.ts';
 import { publishRun } from './index.ts';
-import { decidePullRequestUpdate } from './publish-run.ts';
+import { decidePullRequestUpdate, dependsOnPublicRepository } from './publish-run.ts';
 
 vi.mock('../publish/index.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../publish/index.ts')>()),
@@ -483,5 +483,18 @@ describe('decidePullRequestUpdate', () => {
     for (const where of ['local', null]) {
       expect(decidePullRequestUpdate(config, change, where)).toEqual({ kind: 'video-stays-local' });
     }
+  });
+});
+
+describe('dependsOnPublicRepository', () => {
+  const settings = (publish: NonNullable<ConfigInput['publish']>) =>
+    resolveConfig({ skipFile: true, env: {}, overrides: { publish } });
+
+  it('counts only links that anyone can open', () => {
+    expect(dependsOnPublicRepository(settings({ provider: 'drive', visibility: 'public' }))).toBe(true);
+    expect(dependsOnPublicRepository(settings({ provider: 'drive', visibility: 'protected' }))).toBe(false);
+    expect(dependsOnPublicRepository(settings({ provider: 'drive', visibility: 'private' }))).toBe(false);
+    expect(dependsOnPublicRepository(settings({ provider: 's3', visibility: 'public' }))).toBe(true);
+    expect(dependsOnPublicRepository(settings({ provider: 'local' }))).toBe(false);
   });
 });

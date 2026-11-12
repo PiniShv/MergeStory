@@ -341,7 +341,7 @@ sign-in are explained in [youtube.md](youtube.md).
 
 `--publish drive` uploads the video to a `MergeStory` folder in your own Google Drive. MergeStory asks
 Google only for the `drive.file` permission, so it reaches only the files it made. `--visibility`
-works as for S3: `private` (the default) is only you, `protected` is everyone in your Google Workspace
+has three levels: `private` (the default) is only you, `protected` is everyone in your Google Workspace
 organization who has the link, and `public` is anyone with the link. You sign in once with
 `mergestory setup drive`. The Google Cloud project, the settings for a whole organization and the
 sign-in are explained in [drive.md](drive.md).

@@ -290,7 +290,7 @@ async function readPreviousResult(
 }
 
 /** Whether a public link, or a public description, depends on the repository being public. */
-function dependsOnPublicRepository(config: RunContext['config']): boolean {
+export function dependsOnPublicRepository(config: RunContext['config']): boolean {
   const { publish } = config;
   return (
     (publish.provider === 's3' && publish.visibility === 'public') ||

@@ -267,22 +267,27 @@ export class DrivePublisher implements Publisher {
     return domainOf(record(record(parseJson(text)).user).emailAddress);
   }
 
-  /** The MergeStory folder: the one this app made before, or a new one. drive.file shows no other folder. */
+  /**
+   * The MergeStory folder: one this app made before in the user's own Drive, or a new one. A folder
+   * someone else owns, or one that is shared, is never used: files inside a folder take on its
+   * sharing, so a private video would not stay private.
+   */
   private async folder(run: Run): Promise<DriveFile> {
     const text = await this.call(run, 'folder lookup', {
       url: apiUrl(this.endpoints.apiBase, '/drive/v3/files', {
         // FOLDER_NAME holds no quote or backslash, so it needs no escaping.
-        q: `name = '${FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`,
+        q: `name = '${FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false and 'me' in owners and 'root' in parents`,
         spaces: 'drive',
-        fields: `files(${FILE_FIELDS})`,
+        fields: `files(${FILE_FIELDS},shared)`,
       }),
       method: 'GET',
     });
     const found = record(parseJson(text)).files;
     for (const item of Array.isArray(found) ? found : []) {
-      const folder = toDriveFile(item);
+      const folder = record(item).shared === false ? toDriveFile(item) : null;
       if (folder) return folder;
     }
+    // shortcut: two first uploads at the same moment can each make a folder; later runs use the first one found.
     const created = await this.call(run, 'folder creation', {
       url: apiUrl(this.endpoints.apiBase, '/drive/v3/files', { fields: FILE_FIELDS }),
       method: 'POST',

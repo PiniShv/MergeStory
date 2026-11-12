@@ -101,7 +101,7 @@ describe('buildAuthUrl', () => {
     expect(p.get('code_challenge')).toBe('challenge-value');
     expect(p.get('code_challenge_method')).toBe('S256');
     expect(p.get('access_type')).toBe('offline');
-    expect(p.get('prompt')).toBe('consent');
+    expect(p.get('prompt')).toBe('select_account consent');
     expect(p.get('state')).toBe('state-value');
     expect(p.get('client_id')).toBe('client-id-123.apps.googleusercontent.com');
     expect(p.get('redirect_uri')).toBe('http://127.0.0.1:54321/oauth2callback');

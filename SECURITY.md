@@ -142,7 +142,9 @@ built so that nothing from your code or the change leaves your machine unless yo
 - **Local repositories are opt-in.** A path is accepted only inside a folder you allow with
   `--allow-root`, and the whole repository must be inside it.
 - **It takes no secrets.** The server uses its own environment, and a request cannot choose a model
-  server, a screenshot file or a YouTube upload. Requests are limited in size and in time.
+  server, a screenshot file, or an upload to YouTube or Google Drive. A server whose default is YouTube
+  or Google Drive refuses jobs that name no other provider, because those sign-ins belong to the
+  operator. Requests are limited in size and in time.
 
 See [docs/api.md](docs/api.md#safety-rules).
 

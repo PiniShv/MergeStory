@@ -63,7 +63,8 @@ export interface AuthUrlInput {
 
 /**
  * The address the person opens to sign in. `access_type=offline` and `prompt=consent` make Google
- * hand out a refresh token every time. Nothing in it is secret: the verifier stays on this machine.
+ * hand out a refresh token every time; `select_account` makes the person pick the account, so a
+ * browser that is signed in to another account cannot be used without them noticing. Nothing in it is secret: the verifier stays on this machine.
  */
 export function buildAuthUrl(input: AuthUrlInput): string {
   const params: [string, string][] = [
@@ -75,7 +76,7 @@ export function buildAuthUrl(input: AuthUrlInput): string {
     ['code_challenge_method', 'S256'],
     ['state', input.state],
     ['access_type', 'offline'],
-    ['prompt', 'consent'],
+    ['prompt', 'select_account consent'],
   ];
   const query = params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
   return `${input.authUrl}?${query}`;

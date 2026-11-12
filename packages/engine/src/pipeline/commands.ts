@@ -14,7 +14,7 @@ export function commandLine(args: readonly string[]): string {
 export function publishCommand(runDir: string, config: Config): string {
   const { provider, visibility } = config.publish;
   const args = ['mergestory', 'publish', runDir, '--publish', provider === 'none' ? 'local' : provider];
-  if (provider === 's3') args.push('--visibility', visibility);
+  if (provider === 's3' || provider === 'drive') args.push('--visibility', visibility);
   if (config.github.comment) args.push('--comment');
   if (config.github.updateDescription) args.push('--update-description');
   return commandLine(args);

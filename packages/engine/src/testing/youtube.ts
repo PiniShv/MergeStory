@@ -106,7 +106,7 @@ export class FakeGoogle {
   readonly requests: RecordedRequest[] = [];
   readonly sessions = new Map<string, Session>();
   /** Folders that Drive lists (the ones this app made). */
-  readonly folders: { id: string; name: string; webViewLink: string }[] = [];
+  readonly folders: { id: string; name: string; webViewLink: string; shared?: boolean }[] = [];
   url = '';
   tokensIssued = 0;
   private readonly server: Server;
@@ -258,6 +258,7 @@ export class FakeGoogle {
         id: FAKE_FOLDER_ID,
         name,
         webViewLink: `https://drive.google.com/drive/folders/${FAKE_FOLDER_ID}`,
+        shared: false,
       };
       this.folders.push(folder);
       replyJson(res, 200, folder);

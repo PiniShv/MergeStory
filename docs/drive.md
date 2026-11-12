@@ -35,8 +35,14 @@ November 2026. Where something may change, this page says "check the current Goo
 In both shared cases the file cannot be found through search (`allowFileDiscovery: false`), and Google
 sends no e-mail.
 
-`protected` needs a Google Workspace account. With a personal account (`gmail.com`) MergeStory stops
-before the upload and asks you to use `private`, or `public` for public code.
+`protected` needs a Google Workspace account. With a `gmail.com` account MergeStory stops before the
+upload and asks you to use `private`, or `public` for public code. Another personal account (made
+with a different e-mail address) is not recognised before the upload: Drive then refuses to share,
+and the video stays private, as described below.
+
+MergeStory uploads only into a `MergeStory` folder that you own, in the top level of your Drive, and
+that nobody else can open. Files in a shared folder take on its sharing, so MergeStory makes a new
+folder when the old one is shared.
 
 If Drive refuses to share the file (for example because an administrator turned link sharing off),
 the upload still counts. The video stays private in your Drive, the result says `private`, and a
@@ -111,11 +117,13 @@ What happens:
    `MERGESTORY_DRIVE_CLIENT_SECRET`, or asks you to type them (hidden).
 3. It starts a short-lived listener on `127.0.0.1` on a random port, prints the Google sign-in
    address and tries to open it in your browser.
-4. You sign in and allow the permission. MergeStory checks a random `state` value, trades the code for
+4. Google asks which account to use: pick your company account. You allow the permission. MergeStory checks a random `state` value, trades the code for
    tokens (with PKCE), and waits at most 5 minutes.
 5. The refresh token is saved to `~/.mergestory/credentials/drive.json` (under `$MERGESTORY_HOME` if
    you set it). The folder has mode 0700 and the file mode 0600. MergeStory **refuses to read the
    file if other users can read it**.
+
+`mergestory doctor --online` shows the organization of the account you signed in with.
 
 **Without a terminal**, for example when a coding agent runs the command for you, the sign-in still
 runs when both the client id and the client secret come from the environment, so nothing has to be
