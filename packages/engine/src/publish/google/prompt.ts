@@ -1,6 +1,7 @@
 /** Reading a secret from a terminal without showing it, and opening an address in the browser. */
-import { MergeStoryError } from '../../core/errors.ts';
+
 import { ghEnvironment } from '../../core/child-env.ts';
+import { MergeStoryError } from '../../core/errors.ts';
 import { runCommand } from '../../core/process.ts';
 
 /** The parts of a terminal input stream that hidden input needs (process.stdin has them all). */
