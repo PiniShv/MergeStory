@@ -19,16 +19,16 @@ A flag you do not give leaves the environment and the config file in charge.
 
 The config file is a JSON file. MergeStory looks for it in this order and uses the first match:
 
-1. the file you give with `--config <file>`;
-2. the file named by the environment variable `MERGESTORY_CONFIG`;
-3. `$MERGESTORY_HOME/config.json`, which is `~/.mergestory/config.json` unless you set `MERGESTORY_HOME`. This
+1. the file named by the environment variable `MERGESTORY_CONFIG`;
+2. `$MERGESTORY_HOME/config.json`, which is `~/.mergestory/config.json` unless you set `MERGESTORY_HOME`. This
    one is used only when it exists.
 
-A file that you name with `--config` or `MERGESTORY_CONFIG` must exist, or the run stops with an error. A
+A file that you name with `MERGESTORY_CONFIG` must exist, or the run stops with an error. A
 relative path is read from the current folder.
 
 **MergeStory never looks for a config file in the current folder.** That folder is often the repository
-being explained. A file there could point MergeStory at other programs, servers or API hosts. The `home`
+being explained. A file there could point MergeStory at other programs, servers or API hosts. For the same
+reason there is no command-line flag for the config file: an agent that adds flags cannot choose one. The `home`
 setting does not move the config file either: the file is always found through `MERGESTORY_HOME`.
 
 The rules for the file:

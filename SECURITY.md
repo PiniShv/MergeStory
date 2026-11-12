@@ -24,6 +24,15 @@ built so that nothing from your code or the change leaves your machine unless yo
 - **Reads only.** It never changes your repository, your working tree or your git state. It never
   writes into the repository it explains: a run folder inside that repository is refused. It writes
   to a pull request only when you pass `--comment` or `--update-description`.
+- **Git runs only in a repository of your own.** The settings of a repository can name programs for
+  git to run. MergeStory reads a repository only when a `.git` entry names it, as in a normal clone or
+  work tree. Git never checks out an entry with that name, so those settings are yours. MergeStory
+  does not run inside a bare repository (a work tree of one is fine), or in a repository that sits
+  inside a checked-out folder. The same goes for a repository in MergeStory's work folder, where a
+  coding agent may write without asking. That folder is recognised by what it is on disk, also under
+  a second name. Not covered: unusual mount setups that only an administrator can create. A `.git`
+  folder that arrived another way, for example inside an archive, is trusted as your own git
+  commands trust it.
 - **Remote providers are opt-in.** The default storyboard is written by your coding agent or built
   offline, and the default voice runs locally. A remote LLM or speech service is used only when you
   select it. Each run reports what was sent and where (`egress` in the result, and the dry-run plan).
@@ -49,11 +58,31 @@ built so that nothing from your code or the change leaves your machine unless yo
   files, results or URLs, and no flag takes a secret. Config files that contain secret-like keys are
   rejected. The programs MergeStory starts (git, `gh`, the installer of the free voice) run without
   your keys and tokens.
-- **The config file has a fixed place.** MergeStory reads it only from `--config`, from
-  `MERGESTORY_CONFIG`, or from `$MERGESTORY_HOME/config.json` (by default `~/.mergestory/config.json`).
+- **The config file has a fixed place.** MergeStory reads it only from `MERGESTORY_CONFIG`,
+  or from `$MERGESTORY_HOME/config.json` (by default `~/.mergestory/config.json`).
   It never reads one from the current folder, because that is often the repository being explained, and
   a file there could point MergeStory at other programs, servers or API hosts. Every key in the file is
   checked, and an unknown key is an error.
+- **Some commands are safe to pre-approve for a coding agent:** `mergestory --version`,
+  `mergestory doctor --json` (exactly so: with `--online` it contacts your storage) and every
+  `mergestory agent ...` command. A coding agent can be steered by text in a pull request. So whatever
+  arguments it adds to an `agent` command:
+  - The command reads the current repository (through git), its work folder and MergeStory's own
+    files: the settings, the cache and the voice.
+  - It writes only in the MergeStory home (the work folder, the run folder, the cache and the one-time
+    voice install) and in the system's temporary folder. During that one install, npm also fills its
+    own cache.
+  - It starts only the programs MergeStory itself uses: git, `gh`, FFmpeg, a browser, the local voice
+    and, once, npm to install that voice. No argument can name a program.
+  - It never uploads, comments or spends money.
+  - It contacts two kinds of host only: GitHub, to read a pull request of the current repository, and
+    the hosts of the one-time voice download, which sends nothing from the change.
+
+  `agent render` always runs without a model, with a local voice and without an upload or a comment,
+  whatever the environment or the config file says. The promise is for the plain command: a variable
+  set in front of it, such as `MERGESTORY_CONFIG=<file>`, changes what it does, so do not pre-approve
+  that form. The general commands (`analyze`, `validate`, `generate`, `publish`) have flags that name
+  files, folders and hosts, so approve each of them when it runs.
 - **Tokens go only where they belong.** A GitHub token from the environment is only sent to
   `api.github.com` or to the host you set in `github.apiUrl`, so a pull request URL can never send it to
   another server. A model address with a user name or password in it is refused, and so is plain `http`

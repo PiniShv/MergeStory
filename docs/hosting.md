@@ -32,7 +32,7 @@ tell whether the repository is private, it treats it as private.
 
 ## Settings
 
-A flag beats an environment variable, and an environment variable beats the config file (`~/.mergestory/config.json`, or the file passed with `--config`). MergeStory never reads a config file from the current folder on its own.
+A flag beats an environment variable, and an environment variable beats the config file (`~/.mergestory/config.json`, or the file named by `MERGESTORY_CONFIG`). MergeStory never reads a config file from the current folder on its own.
 Keys and tokens never go into the config file: MergeStory refuses a config file that contains
 them.
 
@@ -374,7 +374,8 @@ warning. Google Chrome installed from its package can usually use the sandbox th
 ## Delete old videos
 
 Links expire, but the files stay in the bucket until you delete them. Deleting the files is the way to
-make a permanent link stop working for good.
+make a permanent link stop working for good. The copy on this machine is separate: list it with
+`mergestory runs` and remove it with `mergestory runs delete <run-id>`.
 
 If an upload fails after some files were sent, MergeStory tries to delete those files again. That needs
 permission to delete objects. When the deletion fails too, the error names the folder to check

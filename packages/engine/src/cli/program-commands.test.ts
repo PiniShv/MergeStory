@@ -62,24 +62,12 @@ describe('generate --async', () => {
   it('stores absolute paths so the worker does not depend on the working directory', async () => {
     await mkdir(join(dir, 'repo'));
     await writeFile(join(dir, 'shot.png'), makePng(8, 8));
-    await writeFile(join(dir, 'cfg.json'), '{}');
-    await run([
-      'generate',
-      'repo',
-      '--async',
-      '--screenshot',
-      'shot.png',
-      '--out',
-      'out',
-      '--config',
-      'cfg.json',
-    ]);
+    await run(['generate', 'repo', '--async', '--screenshot', 'shot.png', '--out', 'out']);
     const [id] = await readdir(join(dir, 'home', 'jobs'));
     const job = JSON.parse(await readFile(join(dir, 'home', 'jobs', id as string, 'job.json'), 'utf8'));
     expect(job.options.source).toBe(join(dir, 'repo'));
     expect(job.options.context.screenshots[0].path).toBe(join(dir, 'shot.png'));
     expect(job.options.config.outDir).toBe(join(dir, 'out'));
-    expect(job.options.configPath).toBe(join(dir, 'cfg.json'));
   });
 
   it('reports a bad setting at once, without creating a job', async () => {

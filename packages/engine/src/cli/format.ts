@@ -27,6 +27,12 @@ function cleanValue(value: unknown): unknown {
   return value;
 }
 
+/** "1m 32s", or "45s" under a minute. */
+export function formatElapsed(totalSec: number): string {
+  const seconds = Math.max(0, Math.round(totalSec));
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
 /** "1:23", or "1:02:05" from one hour on. */
 export function formatDuration(totalSec: number): string {
   const seconds = Math.max(0, Math.round(totalSec));
@@ -135,6 +141,7 @@ export function formatGenerateResult(raw: GenerateResult, style: Style): string 
           `${result.storyboardSource}, ${grounding.groundedClaims} narration line${grounding.groundedClaims === 1 ? '' : 's'} cite evidence${fixes}`,
         ],
         ['Run folder', result.runDir],
+        ['Made in', result.elapsedSec === undefined ? null : formatElapsed(result.elapsedSec)],
         ['Cost', formatCost(result.cost)],
         ['Sent', sentLines(result.egress, false)],
       ],

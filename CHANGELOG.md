@@ -2,7 +2,48 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Skill and plugin 1.0.1
+## 1.1.0
+
+### Safer with coding agents
+
+- The global `--config` option is removed. A settings file can name other programs and hosts, so a flag
+  added to an approved command could change what MergeStory runs and where it sends data. Set
+  `MERGESTORY_CONFIG=<file>` instead, or use `~/.mergestory/config.json`. Typing `--config` now gives an
+  error that says this.
+- `--llm-base-url` only takes an address on this machine. Before, the flag could send the evidence pack to
+  any https host. A server on another machine still works through `MERGESTORY_LLM_BASE_URL` or
+  `llm.baseUrl` in the config file.
+- New `mergestory agent analyze`, `agent validate` and `agent render` commands for coding agents. They work
+  in a work folder under `~/.mergestory/work`, explain only the repository of the current folder, and take
+  no flag that names a file, a folder, a program or a host. `agent render` never calls a model or a paid
+  voice, never uploads and never comments, whatever the environment or the config file says. With
+  `mergestory --version` and `mergestory doctor --json` they are safe to pre-approve.
+- `generate --out` and `publish` refuse a folder inside `~/.mergestory/work`. Before, a draft folder that an
+  agent may write to could become a run folder, and `publish` trusts the files of a run folder.
+- MergeStory no longer writes into an existing output folder (`--out`, or a work folder) that is a symbolic
+  link or holds one. Before, a link placed there could make a written file land elsewhere.
+- A local repository is read only when a `.git` entry names it: a normal clone, a linked work tree or a
+  submodule. MergeStory does not run inside a bare repository, in a repository that sits inside a
+  checked-out folder, or in one in the work folder. Before, the settings of such a repository could
+  name a program that git then ran.
+- Every program that MergeStory starts by name (`git`, `gh`, FFmpeg, the browser, and `npm` for the voice
+  install) is found on `PATH` and started by its full path. A `PATH` entry that is not a full path is
+  ignored, and a `git` inside the repository being explained is refused. Before, on Windows, a program
+  with that name in the current folder could run instead.
+
+### Also new
+
+- A pull request link from another host, such as Bitbucket or GitLab, is still refused. The error now
+  says to pass the path of the local repository with `--base <branch>` instead.
+- The message for missing FFmpeg now has the install command for Windows.
+- The result of a finished run has `elapsedSec`, the time the run took. `generate` prints it as
+  "Made in 1m 32s". Results from 1.0.0 do not have it, and `publish` still works with them.
+- The authoring guide (`AUTHORING.md`) now shows one example of every visual with all its fields, so a
+  storyboard is right in fewer tries.
+- New `mergestory runs` command: lists the videos on this machine. `mergestory runs delete <run-id>`
+  deletes the folder of a run. It only deletes real run folders under the runs folder.
+
+## Skill and plugin 1.0.1 (2026-11-11)
 
 The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.
 
@@ -21,7 +62,7 @@ The Agent Skill and the Claude Code plugin. The engine stays at 1.0.0.
 - Without team storage, the skill says where the video file is instead of offering an upload, and it no
   longer offers YouTube.
 
-## 1.0.0
+## 1.0.0 (2026-11-05)
 
 The first release.
 

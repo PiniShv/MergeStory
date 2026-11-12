@@ -98,6 +98,19 @@ describe('parsePullRequestUrl', () => {
     }
   });
 
+  it.each([
+    'https://bitbucket.org/team/app/pull-requests/42',
+    'https://gitlab.com/group/app/-/merge_requests/7',
+  ])('refuses %s and points to the local repository', (input) => {
+    expect.assertions(2);
+    try {
+      parsePullRequestUrl(input);
+    } catch (error) {
+      expect((error as Error).message).toContain('Not a pull request reference');
+      expect(isMergeStoryError(error) && error.hint).toContain('pass the path of the local repository');
+    }
+  });
+
   it('refuses credentials in a URL and does not echo them', () => {
     try {
       parsePullRequestUrl('https://user:ghp_supersecrettoken1234567890@github.com/acme/widgets/pull/1');

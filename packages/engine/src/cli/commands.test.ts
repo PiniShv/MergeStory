@@ -129,7 +129,7 @@ describe('doctor', () => {
   it('still runs when the config file is broken, and reports it', async () => {
     doctorMock.mockResolvedValue(report());
     await writeFile(join(dir, 'broken.json'), '{not json');
-    const { code } = await run(['doctor', '--config', 'broken.json']);
+    const { code } = await run(['doctor'], { MERGESTORY_CONFIG: 'broken.json' });
     expect(code).toBe(0);
     const options = doctorMock.mock.calls[0]?.[0];
     expect(options?.configError?.message).toContain('not valid JSON');

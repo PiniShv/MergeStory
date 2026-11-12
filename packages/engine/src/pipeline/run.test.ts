@@ -6,7 +6,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { cp, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -431,6 +431,8 @@ describe('generate: publishing', () => {
     expect(result.publish).toEqual(uploaded);
     const stored = await readJson<GenerateResult>(join(runDir(), 'result.json'));
     expect(stored.publish).toEqual(uploaded);
+    expect(stored.elapsedSec).toBe(result.elapsedSec);
+    expect(result.elapsedSec).toBeGreaterThan(0);
     const input = await readJson<Record<string, unknown>>(join(runDir(), 'publish-input.json'));
     expect(input.files).toBeUndefined();
     expect(JSON.stringify(input)).not.toContain(home);
@@ -681,6 +683,65 @@ describe('generate: the captions of the watch page', () => {
   });
 });
 
+describe('output folders', () => {
+  const LINK = 'is a symbolic link or holds one.';
+
+  it('never makes a work folder a run folder, but lets analyze write there', async () => {
+    const work = join(home, 'work', 'draft');
+    await expect(plan({ config: { outDir: work } })).rejects.toThrow(
+      'The work folder holds drafts. It cannot be a run folder.',
+    );
+    // Another letter case names the same folder on a disk that ignores case, also before it exists.
+    await expect(plan({ config: { outDir: join(home, 'WORK', 'draft') } })).rejects.toThrow(
+      'It cannot be a run folder.',
+    );
+    await mkdir(join(work, 'run'), { recursive: true });
+    await writeFile(join(work, 'run', 'publish-input.json'), '{}');
+    await expect(publishRun({ run: join(work, 'run'), config: { home } })).rejects.toThrow(
+      'It cannot be a run folder.',
+    );
+    const result = await prepareAuthoring({ ...options({ withContext: false }), outDir: work });
+    expect(result.runDir).toBe(work);
+  });
+
+  it('sees a work folder behind a link, also for a run folder that does not exist yet', async () => {
+    await mkdir(join(home, 'work'), { recursive: true });
+    await symlink(join(home, 'work'), join(base, 'elsewhere'));
+    await expect(plan({ config: { outDir: join(base, 'elsewhere', 'new-run') } })).rejects.toThrow(
+      'It cannot be a run folder.',
+    );
+  });
+
+  it.each([
+    [
+      'a link to a file',
+      async (out: string) => symlink(join(base, 'secret.txt'), join(out, 'analysis.json')),
+    ],
+    [
+      'a link to a folder',
+      async (out: string) => {
+        await mkdir(join(out, 'deep'));
+        await symlink(base, join(out, 'deep', 'up'));
+      },
+    ],
+    [
+      'a link itself',
+      async (out: string) => {
+        await rm(out, { recursive: true });
+        await symlink(base, out);
+      },
+    ],
+  ])('refuses an output folder that holds %s', async (label, setup) => {
+    await writeFile(join(base, 'secret.txt'), 'keep');
+    const out = join(base, `out-${label.replace(/\W+/g, '-')}`);
+    await mkdir(out);
+    await setup(out);
+    await expect(prepareAuthoring({ ...options({ withContext: false }), outDir: out })).rejects.toThrow(LINK);
+    await expect(plan({ config: { outDir: out } })).rejects.toThrow(LINK);
+    expect(await readFile(join(base, 'secret.txt'), 'utf8')).toBe('keep');
+  });
+});
+
 describe('prepareAuthoring: AUTHORING.md', () => {
   it('shows validate and generate with the source and the flags of the analysis', async () => {
     const result = await prepareAuthoring({
@@ -726,6 +787,20 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     expect(guide).toContain(
       `\`mergestory generate ${repo} --task '#42' --notes-file '~/notes.md' --storyboard ${storyboard}\``,
     );
+  });
+
+  it('shows the agent commands, which find the files by name, for the agent', async () => {
+    const result = await prepareAuthoring({
+      ...options({ withContext: false }),
+      outDir: join(base, 'authoring-agent'),
+      followUp: { source: '.', args: ['--name', 'fix-1', '--base', 'main'], agent: true },
+    });
+    const guide = await readFile(result.files.guide, 'utf8');
+    expect(guide).toContain('`mergestory agent validate . --name fix-1 --base main`');
+    expect(guide).toContain('`mergestory agent render . --name fix-1 --base main`');
+    expect(guide).toContain('`task.md`, `notes.md` in this folder');
+    expect(guide).not.toContain('mergestory generate');
+    expect(guide).not.toContain('--storyboard');
   });
 
   it('tells the author to repeat the flags when the command line is not known', async () => {

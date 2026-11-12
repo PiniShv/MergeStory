@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { MergeStoryError } from '../core/errors.ts';
 import type { RunOptions, RunResult } from '../core/process.ts';
@@ -216,7 +216,9 @@ describe('installKokoro', () => {
     expect(Object.values(manifest.dependencies).every((v) => /^\d+\.\d+\.\d+$/.test(v as string))).toBe(true);
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.command).toBe('npm');
+    // npm is started by its full path, never by a bare name that the current folder could supply.
+    expect(isAbsolute(calls[0]!.command)).toBe(true);
+    expect(basename(calls[0]!.command)).toMatch(/^npm(\.cmd)?$/i);
     expect(await readFile(join(dir, 'package-lock.json'), 'utf8')).toBe(
       await readFile(KOKORO_PLUGIN_LOCKFILE, 'utf8'),
     );

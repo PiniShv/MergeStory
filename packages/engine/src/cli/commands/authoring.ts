@@ -8,6 +8,7 @@ import {
   addContextFlags,
   addSourceFlags,
   buildCommonOptions,
+  type CommonOptions,
   type ConfigFlags,
   durationOption,
   followUpFor,
@@ -15,10 +16,12 @@ import {
   readStoryboard,
   type SourceFlags,
 } from '../options.ts';
-import type { CliRuntime } from '../runtime.ts';
+import type { CliRuntime, CommandEnv } from '../runtime.ts';
 
-type AnalyzeFlags = SourceFlags & ContextFlags & Pick<ConfigFlags, 'out'>;
-type ValidateFlags = SourceFlags & ContextFlags & Pick<ConfigFlags, 'maxDuration' | 'duration' | 'language'>;
+export type AnalyzeFlags = SourceFlags & ContextFlags & Pick<ConfigFlags, 'out'>;
+export type ValidateFlags = SourceFlags &
+  ContextFlags &
+  Pick<ConfigFlags, 'maxDuration' | 'duration' | 'language'>;
 
 /** Add the `analyze` command. */
 export function registerAnalyze(program: Command, rt: CliRuntime): void {
@@ -35,11 +38,7 @@ export function registerAnalyze(program: Command, rt: CliRuntime): void {
     .option('--out <dir>', 'write the files here instead of under the MergeStory home');
   command.action(async (source: string, flags: AnalyzeFlags, cmd: Command) => {
     const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, {
-      cwd: env.io.cwd,
-      configPath: env.configPath,
-      logger: env.logger,
-    });
+    const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
     // The follow-up commands name the source the way it was resolved, so they work from any directory.
     const shownSource = typeof common.source === 'string' ? common.source : source;
     const { source: followSource, args, contextArgs } = followUpFor(shownSource, flags, env.io.cwd);
@@ -87,31 +86,36 @@ export function registerValidate(program: Command, rt: CliRuntime): void {
     .option('--language <code>', 'narration language, for example en');
   command.action(async (storyboardPath: string, source: string, flags: ValidateFlags, cmd: Command) => {
     const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, {
-      cwd: env.io.cwd,
-      configPath: env.configPath,
-      logger: env.logger,
-    });
+    const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
     const storyboard = await readStoryboard(storyboardPath, env.io.cwd, 'storyboard file');
-    const { checkStoryboard } = await import('../../pipeline/index.ts');
-    const result = await checkStoryboard({ ...common, storyboard, signal: env.signal, logger: env.logger });
-    const valid = result.errors.length === 0;
-    if (env.json) {
-      env.emitJson(
-        globalRedactor.redactValue({
-          ok: valid,
-          errors: result.errors,
-          warnings: result.warnings,
-          fixes: result.fixes,
-          groundedClaims: result.groundedClaims,
-        }),
-      );
-    } else {
-      env.say(formatValidation(globalRedactor.redactValue(result), env.style));
-    }
-    // Exit code 3 is "the storyboard is not valid", the same as when generate refuses one.
-    if (!valid) env.setExitCode(3);
+    await checkAndReport(env, common, storyboard);
   });
+}
+
+/** Check a storyboard and print the result (validate and agent validate). */
+export async function checkAndReport(
+  env: CommandEnv,
+  common: CommonOptions,
+  storyboard: unknown,
+): Promise<void> {
+  const { checkStoryboard } = await import('../../pipeline/index.ts');
+  const result = await checkStoryboard({ ...common, storyboard, signal: env.signal, logger: env.logger });
+  const valid = result.errors.length === 0;
+  if (env.json) {
+    env.emitJson(
+      globalRedactor.redactValue({
+        ok: valid,
+        errors: result.errors,
+        warnings: result.warnings,
+        fixes: result.fixes,
+        groundedClaims: result.groundedClaims,
+      }),
+    );
+  } else {
+    env.say(formatValidation(globalRedactor.redactValue(result), env.style));
+  }
+  // Exit code 3 is "the storyboard is not valid", the same as when generate refuses one.
+  if (!valid) env.setExitCode(3);
 }
 
 /** Add the `schema` command. */

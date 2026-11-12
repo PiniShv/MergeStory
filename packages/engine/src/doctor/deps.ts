@@ -5,9 +5,11 @@ import { homeLayout } from '../core/paths.ts';
 import type { DoctorDeps, RunResult } from './types.ts';
 
 async function defaultRun(command: string, args: string[]): Promise<RunResult> {
-  const { runCommand } = await import('../core/process.ts');
+  const { findProgram, runCommand } = await import('../core/process.ts');
   try {
-    const result = await runCommand(command, args, {
+    // A bare name (git) is started by its absolute path on PATH; configured paths are used as given.
+    const program = /[\\/]/.test(command) ? command : await findProgram(command);
+    const result = await runCommand(program, args, {
       timeoutMs: 15_000,
       allowFailure: true,
       maxOutputBytes: 8 * 1024 * 1024,

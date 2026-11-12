@@ -18,7 +18,7 @@ export function registerDoctor(program: Command, rt: CliRuntime): void {
       let config: Config;
       let configError: { message: string; hint?: string | undefined } | null = null;
       try {
-        config = resolveConfig({ configPath: env.configPath, env: env.io.env, cwd: env.io.cwd });
+        config = resolveConfig({ env: env.io.env, cwd: env.io.cwd });
       } catch (err) {
         const report = describeError(err);
         configError = { message: report.message, hint: report.hint ?? undefined };

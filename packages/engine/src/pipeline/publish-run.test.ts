@@ -425,6 +425,17 @@ describe('a run that has no result.json', () => {
   });
 });
 
+describe('the time a run took', () => {
+  it('is kept when publish rewrites result.json, and a result from 1.0.0 without it still publishes', async () => {
+    await writeRun();
+    const old = await resultFile();
+    expect((await publish()).elapsedSec).toBeUndefined();
+    await writeFile(join(runDir, 'result.json'), JSON.stringify({ ...old, elapsedSec: 92.4 }));
+    expect((await publish()).elapsedSec).toBe(92.4);
+    expect((await resultFile()).elapsedSec).toBe(92.4);
+  });
+});
+
 describe('decidePullRequestUpdate', () => {
   const asked = (github: NonNullable<ConfigInput['github']>) =>
     resolveConfig({ skipFile: true, env: {}, overrides: { github } });

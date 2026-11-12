@@ -63,12 +63,24 @@ export async function prepareAuthoring(
  */
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
-  const validate = followUp
-    ? commandLine(['mergestory', 'validate', storyboard, followUp.source, ...followUp.args])
-    : 'mergestory validate storyboard.json <source>';
-  const generate = followUp
-    ? commandLine(['mergestory', 'generate', followUp.source, ...followUp.args, '--storyboard', storyboard])
-    : 'mergestory generate <source> --storyboard storyboard.json';
+  const agent = followUp?.agent === true;
+  const validate = !followUp
+    ? 'mergestory validate storyboard.json <source>'
+    : agent
+      ? commandLine(['mergestory', 'agent', 'validate', followUp.source, ...followUp.args])
+      : commandLine(['mergestory', 'validate', storyboard, followUp.source, ...followUp.args]);
+  const generate = !followUp
+    ? 'mergestory generate <source> --storyboard storyboard.json'
+    : agent
+      ? commandLine(['mergestory', 'agent', 'render', followUp.source, ...followUp.args])
+      : commandLine([
+          'mergestory',
+          'generate',
+          followUp.source,
+          ...followUp.args,
+          '--storyboard',
+          storyboard,
+        ]);
   return [
     '# Writing the storyboard',
     '',
@@ -90,7 +102,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
         ]),
     '',
     'You know why the change was made. Put that in the narration, but only claim what the evidence shows.',
-    'Decisions and context that are not in the diff belong in the task or notes (`--task-file`, `--notes-file`),',
+    `Decisions and context that are not in the diff belong in the task or notes (${agent ? '`task.md`, `notes.md` in this folder' : '`--task-file`, `--notes-file`'}),`,
     'so they become citable evidence (TASK, NOTES).',
     '',
     AUTHORING_GUIDE,

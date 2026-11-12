@@ -11,6 +11,7 @@ what each command prints, and the exit code it ends with. The settings behind th
 | Make a video from a pull request or a branch | [`mergestory generate`](#mergestory-generate) |
 | Upload a video I made earlier | [`mergestory publish`](#mergestory-publish) |
 | Write the storyboard myself, or let a coding agent write it | [`analyze`](#mergestory-analyze), [`validate`](#mergestory-validate) and [`schema`](#mergestory-schema) |
+| Let a coding agent run MergeStory without asking each time | [`mergestory agent`](#commands-for-coding-agents) |
 | Make a video in the background | `generate --async`, then [`status`](#mergestory-status) and [`jobs`](#mergestory-jobs) |
 | Offer MergeStory over HTTP | [`mergestory serve`](#mergestory-serve) |
 | Install the free voice, or sign in to YouTube | [`mergestory setup`](#mergestory-setup) |
@@ -35,6 +36,12 @@ For a local repository, `--base` and `--head` choose the range. Only committed c
 changes are never included. For a pull request, MergeStory reads the change through the GitHub API and
 clones nothing. Passing `--base` or `--head` with a pull request is an error.
 
+A local repository is read only when a `.git` entry names it: a normal clone, a linked work tree or a
+submodule. MergeStory does not run inside a bare repository (a work tree of one is fine), or in a
+repository that sits inside a checked-out folder, because its settings can name programs for git to
+run. A repository in `$MERGESTORY_HOME/work` is refused for the same reason: a coding agent may write
+there without asking. That folder is recognised under every name it has on disk.
+
 **What is read and written.** MergeStory never writes into the repository it explains. Every run writes
 one folder, described in [Run folders](#run-folders). A run folder inside the repository is refused.
 
@@ -52,12 +59,13 @@ These work with every command, before or after the command name.
 | `--json` | Print one JSON object on stdout and nothing else. Logs go to stderr. See [JSON output](#json-output). |
 | `--log-level <level>` | How much to log on stderr: `debug`, `info` (default), `warn`, `error` or `silent`. Environment variable: `MERGESTORY_LOG_LEVEL`. |
 | `--log-format <format>` | `pretty` (default) or `json`. Environment variable: `MERGESTORY_LOG_FORMAT`. |
-| `--config <file>` | Read settings from this file. Without it MergeStory uses `MERGESTORY_CONFIG`, then `$MERGESTORY_HOME/config.json`. It never searches the current folder. See [configuration.md](configuration.md#where-settings-come-from). |
 | `-q, --quiet` | Log errors only. Same as `--log-level error`. |
 | `-V, --version` | Print the version. |
 | `-h, --help` | Show help. |
 
-A flag you give beats an environment variable, and an environment variable beats the config file.
+A flag you give beats an environment variable, and an environment variable beats the config file. There is
+no flag for the config file: set `MERGESTORY_CONFIG`, or use `$MERGESTORY_HOME/config.json`. See
+[configuration.md](configuration.md#where-settings-come-from). The `--config` option was removed in 1.1.0.
 
 ### Context flags
 
@@ -122,7 +130,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 |---|---|---|
 | `--llm <provider>` | Who writes the storyboard: `none` (the free offline storyboard), `anthropic`, `openai` or `openai-compatible`. Paid providers need their key in the environment. | `none` |
 | `--model <name>` | The model. | `claude-haiku-5-5` for `anthropic`, `gpt-6-luna` for `openai`. `openai-compatible` has no default. |
-| `--llm-base-url <url>` | The address of an OpenAI-compatible server, for example `http://localhost:11434/v1`. Plain `http` is only accepted for this machine and private networks. No credentials in the URL. | none |
+| `--llm-base-url <url>` | The address of an OpenAI-compatible server on this machine, for example `http://localhost:11434/v1`. The flag takes only `localhost`, `127.x.x.x` or `::1`. For a server on another machine, set `MERGESTORY_LLM_BASE_URL` or `llm.baseUrl` in the config file. No credentials in the URL. | none |
 | `--tts <provider>` | Speech: `auto`, `kokoro`, `say`, `openai`, `elevenlabs` or `none`. `auto` only picks a free local voice: Kokoro for English (installed once on the first run), otherwise Kokoro if installed, then macOS `say`, then captions only. `say` and `none` never install anything. | `auto` |
 | `--voice <name>` | The voice name for the speech provider. | the provider's own voice |
 | `--publish <provider>` | Where the finished video goes: `local` (a folder on this machine), `s3` (S3-compatible storage), `youtube` (your channel) or `none` (nowhere). | `local` |
@@ -142,7 +150,7 @@ this machine (`--publish s3` or `youtube`). Otherwise MergeStory skips the updat
 | `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. See [storyboard.md](storyboard.md). |
 | `--dry-run` | Show the plan: the scenes, the estimated length and cost, and what a real run would send. It sends, renders and publishes nothing. It still reads the pull request from GitHub and writes the analysis files to the run folder. |
 | `--async` | Run in the background and print a job id. See [`status`](#mergestory-status). The settings are checked first, so a typo is reported at once. |
-| `--out <dir>` | Write the run files to this folder instead of under the MergeStory home. It must be outside the repository being explained. |
+| `--out <dir>` | Write the run files to this folder instead of under the MergeStory home. It must be outside the repository being explained and outside `$MERGESTORY_HOME/work`. An existing folder must not be or hold a symbolic link. |
 | `--no-cache` | Do not use or fill the cache of speech clips and model answers. |
 | `--no-captions` | Leave the captions out of the picture. The `captions.vtt` file is still written. |
 | `--music <file>` | Background music (MP3, WAV, M4A, FLAC or OGG). It is mixed in quietly and lowered while someone speaks. The file must exist. |
@@ -190,7 +198,7 @@ mergestory publish 20261104-101500-a1b2 --publish s3 --visibility protected --co
 
 `<run>` is the run folder (the `runDir` of a result) or the run id. A run id is looked up under
 `$MERGESTORY_HOME/runs`. The folder must hold `publish-input.json`, which `generate` writes when the video is
-rendered. The result is the earlier result with the new `publish` and `notify` parts. Its `cost` and `egress`
+rendered. A folder inside `$MERGESTORY_HOME/work` is refused: it holds drafts, not a run. The result is the earlier result with the new `publish` and `notify` parts. Its `cost` and `egress`
 add up what was spent and sent before.
 
 | Flag | What it does | Default |
@@ -236,7 +244,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
 | `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). They decide which evidence ids exist. |
-| `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. |
+| `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
 
@@ -271,6 +279,102 @@ Otherwise the ids `TASK`, `NOTES`, `T1` and `SS1` do not exist, and the lines th
 It prints `errors` (these block rendering), `warnings` (something was removed or replaced) and `fixes` (every
 change made automatically). The exit code is 0 when there are no errors, even if there are warnings, and 3
 when there is at least one error. [storyboard.md](storyboard.md#what-the-checks-do) explains each code.
+
+## Commands for coding agents
+
+A coding agent can be steered by text in a pull request. So the general commands, with their flexible
+flags, should run only with your approval. The `mergestory agent` commands are the safe part to pre-approve.
+Whatever arguments they get:
+
+- They read the current repository (through git), their work folder and MergeStory's own files: the
+  settings, the cache and the voice.
+- They write only in the MergeStory home (the work folder, the run folder, the cache and the one-time voice
+  install) and in the system's temporary folder. During that one install, npm also fills its own cache.
+- They start only the programs MergeStory itself uses: git, `gh`, FFmpeg, a browser, the local voice and,
+  once, npm to install that voice. No argument can name a program.
+- They never upload, comment or spend money.
+- The only hosts they contact are GitHub, to read a pull request of the current repository, and the hosts of
+  the one-time voice download.
+
+This holds for the plain command. A variable set in front of it, such as `MERGESTORY_CONFIG=<file>`, changes
+what it does, so do not pre-approve that form.
+
+```
+mergestory agent analyze  [source] --name <name> [--base <ref>] [--head <ref>]
+mergestory agent validate [source] --name <name> [flags]
+mergestory agent render   [source] --name <name> [flags]
+```
+
+**The work folder.** `--name` is required. It is 1 to 64 characters: `a-z`, `0-9`, `.`, `_` and `-`, and it
+starts with a letter or digit. The work folder is `$MERGESTORY_HOME/work/<name>` (by default
+`~/.mergestory/work/<name>`). It is created with mode 0700. The files have fixed names, all directly in the work
+folder:
+
+| File | Written by | What it holds |
+|---|---|---|
+| `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
+| `storyboard.json` | the agent | The storyboard. |
+| `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
+
+The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
+when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands.
+
+**The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
+give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
+only when its repository is one of the git remotes of the current repository, on github.com or on the host of
+`github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
+
+**What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--storyboard`,
+`--screenshot`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
+`--log-format` and `-q` apply.
+
+## `mergestory agent analyze`
+
+```
+mergestory agent analyze [source] --name <name> [--base <ref>] [--head <ref>]
+```
+
+Like [`analyze`](#mergestory-analyze), but it writes the four files into the work folder. `--name` names the
+work folder; `--base` and `--head` set the range of the local repository. With `--json` it prints
+`{"ok": true, "name", "workDir", "files": {"guide", "evidence", "analysis", "schema"}, "summary"}`, with the
+same `summary` as `analyze`.
+
+## `mergestory agent validate`
+
+```
+mergestory agent validate [source] --name <name> [flags]
+```
+
+Like [`validate`](#mergestory-validate), for `storyboard.json` in the work folder. It fails when there is no
+`storyboard.json`. Flags: `--name`, `--base`, `--head`, `--max-duration`, `--duration` and `--language`, as
+for `validate`. It prints the same result and ends with the same exit codes as `validate` (3 when there is an
+error).
+
+## `mergestory agent render`
+
+```
+mergestory agent render [source] --name <name> [flags]
+```
+
+Makes the video on this machine from `storyboard.json` in the work folder. Without that file the free offline
+storyboard is used. Whatever the environment or the config file says, it uses no model, a free local voice
+(`auto` unless you choose one), the `local` publish target, no comment, no description update and no music.
+The run folder is `$MERGESTORY_HOME/runs/<run id>`, never the work folder. The paths of `ffmpeg` and the
+browser still come from your settings.
+
+| Flag | What it does | Default |
+|---|---|---|
+| `--name <name>` | The work folder. | required |
+| `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
+| `--style`, `--quality`, `--max-duration`, `--duration`, `--language`, `--theme` | As for `generate`. | as for `generate` |
+| `--tts <provider>` | `auto`, `kokoro`, `say` or `none`. | `auto` |
+| `--voice <name>` | The voice name for the speech provider. | the provider's default |
+| `--dry-run` | Show the plan and render nothing. | off |
+| `--no-cache` | Do not use or fill the cache. | cache on |
+| `--no-captions` | Leave captions out of the video. | captions on |
+
+It prints the same result and ends with the same exit codes as `generate`.
 
 ## `mergestory schema`
 
@@ -370,6 +474,31 @@ Deletes the cache: speech clips (`tts`), model answers (`llm`) and file contents
 `$MERGESTORY_HOME/cache`. It never touches runs, jobs, models, plugins or sign-in data. A paid speech or
 model provider may bill again for work that was cached.
 
+## `mergestory runs`
+
+```
+mergestory runs [--limit <n>]
+```
+
+`runs` lists the videos in `$MERGESTORY_HOME/runs`, newest first: run id, date, title, length, where the
+video went ("this machine" or the provider) and its link. A folder without a readable `result.json`, such
+as the folder of a dry run, is left out. `--limit <n>` sets how many to show, from 1 to 500 (default 20). With `--json` it prints
+`{"ok": true, "runs": [{"runId", "runDir", "createdAt", "title", "durationSec", "video", "publish"}]}`,
+where `publish` is `{"provider", "watchUrl", "expiresAt"}` or `null`.
+
+## `mergestory runs delete`
+
+```
+mergestory runs delete <run-id...>
+```
+
+Removes the folders of the run ids you give, with everything in them, and prints how many
+bytes were freed. There is no option to delete all runs. An id is refused (exit code 2, nothing deleted
+for it) when it is not a plain run id, when the folder is a symbolic link, or when the folder holds none
+of `result.json`, `publish-input.json` and `analysis.json`. The other ids are still deleted. With `--json` it prints
+`{"ok": true, "deleted": ["..."], "freedBytes": 0}`; when an id is refused, `ok` is `false` and `errors`
+lists them. This only removes files on this machine. It does not remove an uploaded video.
+
 ## Run folders
 
 Every run writes one folder: `$MERGESTORY_HOME/runs/<run id>/` (the default home is `~/.mergestory`), or the
@@ -427,6 +556,7 @@ published video: a signed link stops working without its signature, so it is kep
   "title": "Retry temporary failures with backoff",
   "summary": "Two sentences for reviewers.",
   "durationSec": 146.5,
+  "elapsedSec": 92.4,
   "chapters": [{ "title": "The mission", "startSec": 0 }],
   "storyboardSource": "agent",
   "files": {
@@ -498,6 +628,7 @@ request update would be skipped.
 | Command | JSON on success |
 |---|---|
 | `analyze` | `{"ok": true, "runId", "runDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary": {"title", "changeLabel", "size", "files", "suggestedDurationSec", "evidenceItems"}}` |
+| `agent analyze` | `{"ok": true, "name", "workDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary"}`. `agent validate` and `agent render` print the same object as `validate` and `generate`. |
 | `validate` | `{"ok", "errors", "warnings", "fixes", "groundedClaims"}`. `ok` is `false` when there is an error. Each error and warning has `path` (for example `scenes[3].visual.ref`), `code` and `message`. `fixes` is a list of strings. |
 | `doctor` | `{"ok", "online", "version", "summary": {"pass", "warn", "fail"}, "checks": [{"id", "name", "status", "detail", "fix"}]}` |
 | `setup` | `{"ok": true, "targets": [{"name", "summary"}]}`. `setup kokoro` gives `{"ok": true, "kokoro": {"installed", "location", "version", "modelCached"}}`. `setup youtube` gives `{"ok": true, "youtube": {"credentialsFile", "scopes"}}`. Never a token. |

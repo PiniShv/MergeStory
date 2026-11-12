@@ -1,0 +1,105 @@
+name: Release
+
+# Pushing a tag such as v1.2.3 builds the package and stages it on npm. A maintainer then approves
+# the staged version on npmjs.com with two-step sign-in. Nothing reaches users before that approval.
+#
+# One-time setup on npmjs.com (package settings, "Trusted publishing"): GitHub Actions, this
+# repository, workflow file "release.yml". No npm token is stored in this repository.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing: a short-lived identity, no stored token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: The tag must match the package version
+        run: |
+          version=$(node -p "require('./packages/engine/package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match the package version $version." >&2
+            exit 1
+          fi
+
+      - name: Install FFmpeg
+        timeout-minutes: 10
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Test
+        run: npm test
+        env:
+          MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
+      - name: Build
+        run: npm run build
+
+      # The published package pins the version of every dependency, so every install gets the tree
+      # that this job checked. The pin is made from the packed files, without the tools that only
+      # development needs.
+      - name: Make the release folder
+        run: |
+          npm pack --workspace mergestory --pack-destination "$RUNNER_TEMP"
+          mkdir "$RUNNER_TEMP/release"
+          tar -xzf "$RUNNER_TEMP"/mergestory-*.tgz -C "$RUNNER_TEMP/release" --strip-components=1
+      - name: Pin every dependency version
+        working-directory: ${{ runner.temp }}/release
+        run: |
+          cp package.json "$RUNNER_TEMP/package.json.full"
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            delete manifest.devDependencies;
+            delete manifest.scripts;
+            fs.writeFileSync("package.json", JSON.stringify(manifest, null, 2) + "\n");
+          '
+          npm install --ignore-scripts --no-audit --no-fund
+          npm shrinkwrap
+          # Back to the full manifest, now listing the pin file so that it is packed too.
+          node -e '
+            const fs = require("fs");
+            const manifest = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/package.json.full", "utf8"));
+            manifest.files.push("npm-shrinkwrap.json");
+            fs.writeFileSync("package.json", JSON.stringify(manifest, null, 2) + "\n");
+          '
+      - name: Check the pinned package
+        working-directory: ${{ runner.temp }}/release
+        env:
+          MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
+          MERGESTORY_HOME: ${{ runner.temp }}/mergestory-home
+        run: |
+          node dist/cli/main.js --version
+          node dist/cli/main.js doctor
+          "$GITHUB_WORKSPACE/examples/demo/create-demo-repo.sh" "$RUNNER_TEMP/demo"
+          node dist/cli/main.js generate "$RUNNER_TEMP/demo" --base main --head feature/retry --tts none --quality draft
+          rm -rf node_modules
+          npm pack --dry-run 2>&1 | grep -q "npm-shrinkwrap.json"
+
+      # Staged publishing needs a newer npm than the one that ships with Node.
+      - name: Update npm
+        run: npm install -g npm@^11.15.0
+      - name: Stage the release on npm
+        working-directory: ${{ runner.temp }}/release
+        run: npm stage publish

@@ -4,7 +4,7 @@ import { type Config, resolveConfig } from '../core/config.ts';
 import { createRunContext, type RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
 import { newRunId } from '../core/ids.ts';
-import { ensureDir, runDirFor } from '../core/paths.ts';
+import { assertNoLinks, assertNotWorkFolder, ensureDir, runDirFor } from '../core/paths.ts';
 import type { SourceInput } from '../core/providers.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import type { Analysis, ChangeSet, ContextInputs, RepoReader } from '../core/types.ts';
@@ -31,6 +31,8 @@ export interface PrepareSettings {
   checkPublishing?: boolean;
   /** Write analysis.json (and so create the run folder). On by default; off for a caller that only reads the change. */
   writeAnalysis?: boolean;
+  /** The folder becomes a run folder that publish trusts later (generate), so it may not be a work folder. */
+  runFolder?: boolean;
 }
 
 function sourceInputFrom(options: GenerateOptions, cwd: string): SourceInput {
@@ -56,6 +58,8 @@ export async function prepare(
   const runId = options.runId ?? newRunId();
   // The folder is created once there is something to put in it, so a run that fails early leaves nothing behind.
   const runDir = runDirFor(runId, outDirOverride ?? config.outDir, config.home);
+  if (settings.runFolder) await assertNotWorkFolder(runDir, config.home);
+  if (settings.writeAnalysis ?? true) await assertNoLinks(runDir);
   const ctx = createRunContext({
     config,
     runId,

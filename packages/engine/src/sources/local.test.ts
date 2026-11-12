@@ -693,6 +693,21 @@ describe('LocalGitSource', () => {
     await rm(join(tmpdir(), `mergestory-hook-${basename(repo.dir)}.sh`), { force: true });
   });
 
+  it('never runs a diff or text conversion program that .gitattributes names', async () => {
+    const repo = await copyOfShared(shared);
+    const baseline = JSON.stringify((await load(repo)).changeSet);
+    const marker = join(repo.dir, '..', `textconv-ran-${basename(repo.dir)}`);
+    const script = join(tmpdir(), `mergestory-textconv-${basename(repo.dir)}.sh`);
+    await writeFile(script, `#!/bin/sh\ntouch '${marker}'\necho converted\n`, { mode: 0o755 });
+    await repo.write('.git/info/attributes', '* diff=evil\n');
+    repo.git('config', '--local', 'diff.evil.textconv', script);
+    repo.git('config', '--local', 'diff.evil.command', script);
+    const hostile = JSON.stringify((await load(repo)).changeSet);
+    expect(hostile).toBe(baseline);
+    expect(existsSync(marker)).toBe(false);
+    await rm(script, { force: true });
+  });
+
   describe('limits', () => {
     async function repoWithFiles(sizes: Record<string, number>): Promise<TempRepo> {
       const repo = await newRepo();

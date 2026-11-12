@@ -3,9 +3,101 @@
  * AUTHORING.md for anyone who writes a storyboard by hand, so it speaks to the writer directly.
  */
 
-import { STORYBOARD_LIMITS as LIMITS } from '../core/storyboard-schema.ts';
+import { STORYBOARD_LIMITS as LIMITS, type Visual } from '../core/storyboard-schema.ts';
 
 const FENCE = '```';
+
+const REF = { path: 'src/http/retry.ts', side: 'head', startLine: 18, endLine: 29 } as const;
+const NO_PANEL = { codeRef: null, bullets: [], terminal: [], screenshotId: null };
+
+/**
+ * One small example of each visual, so a writer sees every field name without reading the schema.
+ * The tests check each one against the schema.
+ */
+export const VISUAL_SHAPES: Visual[] = [
+  { type: 'title', kicker: 'Pull request 42', heading: 'Short heading', subheading: null, chips: ['http'] },
+  { type: 'mission', problem: 'The problem.', goal: 'The goal.', points: [{ text: 'A point', beat: 0 }] },
+  { type: 'files', highlightPaths: ['src/http/retry.ts'], caption: null },
+  {
+    type: 'architecture',
+    direction: 'LR',
+    nodes: [
+      {
+        id: 'client',
+        label: 'HTTP client',
+        detail: null,
+        kind: 'module',
+        status: 'modified',
+        beat: 0,
+        evidence: ['M1'],
+      },
+      {
+        id: 'api',
+        label: 'API',
+        detail: null,
+        kind: 'external',
+        status: 'unchanged',
+        beat: 0,
+        evidence: ['M1'],
+      },
+    ],
+    edges: [{ from: 'client', to: 'api', label: 'calls', status: 'unchanged', beat: 0 }],
+  },
+  {
+    type: 'flow',
+    actors: [
+      { id: 'client', label: 'HTTP client', kind: 'module' },
+      { id: 'api', label: 'API', kind: 'external' },
+    ],
+    steps: [
+      {
+        from: 'client',
+        to: 'api',
+        label: 'request',
+        detail: null,
+        kind: 'request',
+        beat: 0,
+        evidence: ['F1.H1'],
+      },
+    ],
+  },
+  {
+    type: 'code',
+    ref: REF,
+    mode: 'diff',
+    focus: [{ startLine: 20, endLine: 24, note: 'A short note', beat: 0 }],
+    caption: null,
+  },
+  {
+    type: 'before-after',
+    before: { ...NO_PANEL, label: 'Before', kind: 'code', codeRef: { ...REF, side: 'base' } },
+    after: { ...NO_PANEL, label: 'After', kind: 'code', codeRef: REF },
+    caption: null,
+  },
+  { type: 'terminal', title: 'Short title', lines: [{ kind: 'command', text: 'npm test', beat: 0 }] },
+  {
+    type: 'browser',
+    url: '/settings',
+    pageTitle: 'Settings',
+    blocks: [{ kind: 'button', text: 'Save', items: [], emphasis: true, beat: 0 }],
+  },
+  {
+    type: 'checklist',
+    items: [
+      {
+        title: 'Short title',
+        detail: 'What to check.',
+        severity: 'medium',
+        ref: null,
+        beat: 0,
+        evidence: ['F1.H1'],
+      },
+    ],
+  },
+  { type: 'bullets', heading: null, items: [{ text: 'A point', beat: 0 }] },
+  { type: 'screenshot', screenshotId: 'SS1', caption: null },
+  { type: 'summary', points: [{ text: 'A point', beat: 0 }], closing: null },
+];
 
 /** A small, complete storyboard. The tests check that it matches the schema and the validator. */
 export const EXAMPLE_STORYBOARD = {
@@ -137,6 +229,10 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - summary: up to ${LIMITS.maxBullets} closing points.
 
 Anything that appears while a scene plays has a "beat": the 0-based index of the narration line on which it appears. A beat must be smaller than the number of lines in that scene.
+
+The fields of each visual, one example per type. Write every field: use null or [] when there is nothing to say.
+
+${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 
 ## Evidence
 

@@ -6,7 +6,7 @@
  */
 import { ghEnvironment } from '../core/child-env.ts';
 import type { RunContext } from '../core/context.ts';
-import { runCommand } from '../core/process.ts';
+import { findProgram, runCommand } from '../core/process.ts';
 import { DEFAULT_API_URL, type PullRequestRef } from './pr-url.ts';
 
 const GH_TOKEN_TIMEOUT_MS = 5000;
@@ -56,7 +56,7 @@ export async function resolveToken(
 /** `gh auth token` for one host. Returns null when gh is missing, not logged in, or too slow. */
 async function readGhToken(ghPath: string, webHost: string, ctx: RunContext): Promise<string | null> {
   try {
-    const result = await runCommand(ghPath, ['auth', 'token', '--hostname', webHost], {
+    const result = await runCommand(await findProgram(ghPath), ['auth', 'token', '--hostname', webHost], {
       timeoutMs: GH_TOKEN_TIMEOUT_MS,
       allowFailure: true,
       signal: ctx.signal,

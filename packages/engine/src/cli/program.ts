@@ -2,12 +2,14 @@
 import { Command, CommanderError, Option } from 'commander';
 import { MergeStoryError } from '../core/errors.ts';
 import { ENGINE_VERSION } from '../version.ts';
+import { registerAgent } from './commands/agent.ts';
 import { registerAnalyze, registerSchema, registerValidate } from './commands/authoring.ts';
 import { registerCache } from './commands/cache.ts';
 import { registerDoctor } from './commands/doctor.ts';
 import { registerGenerate } from './commands/generate.ts';
 import { registerJobCommands } from './commands/jobs.ts';
 import { registerPublish } from './commands/publish.ts';
+import { registerRuns } from './commands/runs.ts';
 import { registerServe } from './commands/serve.ts';
 import { registerSetup } from './commands/setup.ts';
 import { formatError } from './format.ts';
@@ -55,10 +57,6 @@ export function buildProgram(rt: CliRuntime): Command {
         .choices(['pretty', 'json'])
         .env('MERGESTORY_LOG_FORMAT'),
     )
-    .option(
-      '--config <file>',
-      'config file (default: ~/.mergestory/config.json; the current directory is never searched)',
-    )
     .option('-q, --quiet', 'log errors only (same as --log-level error)')
     .commandsGroup('Make a video:');
   registerGenerate(program, rt);
@@ -69,12 +67,16 @@ export function buildProgram(rt: CliRuntime): Command {
   registerValidate(program, rt);
   registerSchema(program, rt);
 
+  program.commandsGroup('For coding agents (safe to pre-approve):');
+  registerAgent(program, rt);
+
   program.commandsGroup('Environment and background work:');
   registerDoctor(program, rt);
   registerSetup(program, rt);
   registerJobCommands(program, rt);
   registerServe(program, rt);
   registerCache(program, rt);
+  registerRuns(program, rt);
   return program;
 }
 
@@ -140,6 +142,12 @@ export async function runCli(argv: readonly string[], overrides: Partial<CliIo> 
   const rt = new CliRuntime(io, controller.signal);
   const detach = io.handleSignals ? installSignalHandlers(controller, io) : () => {};
   try {
+    // A settings file can name programs and hosts, so only the environment and the home folder may choose one.
+    if (argv.some((word) => word === '--config' || word.startsWith('--config='))) {
+      throw new MergeStoryError('USAGE', 'The --config option was removed in 1.1.0.', {
+        hint: 'Set MERGESTORY_CONFIG=<file> instead, or put the file at ~/.mergestory/config.json.',
+      });
+    }
     const program = buildProgram(rt);
     // The help would go to stderr and stdout would stay empty: say what is wrong in the one JSON object instead.
     if (isBareJson(program, argv)) {

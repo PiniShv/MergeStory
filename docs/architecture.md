@@ -266,6 +266,12 @@ to a file on this machine is never posted.
 - **CLI** (`src/cli`): `generate`, `publish`, `analyze`, `validate`, `schema`, `doctor`, `setup`,
   `status`, `jobs`, `serve`, `cache`. `--json` prints one JSON object on stdout; logs go to stderr.
   Exit codes are listed in `src/core/errors.ts`. See [cli.md](cli.md).
+  The `agent` group (`agent analyze`, `agent validate`, `agent render`) is the part a coding agent may run
+  without asking. It takes no flag that names a file, a folder, a program or a host. Its drafts live in
+  its work folder (`$MERGESTORY_HOME/work/<name>`, refused when it holds a symbolic link). It explains
+  only the repository of the current folder or a pull request of one of its remotes, and renders with
+  fixed local settings (no model, a local voice, no upload, no comment). A work folder can never be a run
+  folder, because `publish` trusts the files of a run folder.
 - **HTTP API** (`src/server`): `POST /v1/jobs`, `GET /v1/jobs/:id`, `GET /v1/jobs` and
   `GET /v1/health`. Binds to 127.0.0.1 by default and requires a bearer token on any other address.
   See [api.md](api.md).
@@ -277,7 +283,7 @@ to a file on this machine is never posted.
 ## Settings and files
 
 A flag beats an environment variable, an environment variable beats the config file, and the config
-file beats the defaults (`src/core/config.ts`). The config file is read only from `--config`,
+file beats the defaults (`src/core/config.ts`). The config file is read only from
 `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`, never from the current folder. Every key is
 validated, and a key that looks like a secret is rejected. [configuration.md](configuration.md) lists
 every setting.
@@ -311,7 +317,7 @@ whose price is unknown is counted at the highest listed rate, so it cannot slip 
 - Secrets come only from environment variables, are registered with a redactor, and never appear
   in logs, job files, results or URLs. Config files that contain secret-like keys are rejected.
   Child processes (git, `gh`, the installer of the free voice) start without them.
-- The config file is read only from `--config`, `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`,
+- The config file is read only from `MERGESTORY_CONFIG` or `$MERGESTORY_HOME/config.json`,
   never from the repository or the current folder, so a repository cannot change how MergeStory runs.
 - Child processes run without a shell and with argument arrays; refs and paths are validated. The run
   folder must be outside the repository being explained.

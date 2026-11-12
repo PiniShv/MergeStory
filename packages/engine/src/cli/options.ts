@@ -16,6 +16,7 @@ import {
 } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
+import { isLoopbackAddress } from '../core/net.ts';
 import { isInside } from '../core/posix.ts';
 import { maskSecrets } from '../core/secrets.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
@@ -245,8 +246,6 @@ export function addRunFlags(command: Command): Command {
 
 export interface BuildEnv {
   cwd: string;
-  /** The global --config flag, as typed. */
-  configPath: string | null;
   logger: Logger;
 }
 
@@ -295,6 +294,16 @@ function checkLlmBaseUrl(value: string): string {
     throw new MergeStoryError('USAGE', '--llm-base-url must be a plain http(s) URL without credentials.', {
       hint: 'Put the key in the MERGESTORY_LLM_API_KEY environment variable, never in the URL.',
     });
+  }
+  // A flag must not send the evidence pack off this machine: other hosts come from settings only.
+  if (!isLoopbackAddress(url.hostname)) {
+    throw new MergeStoryError(
+      'USAGE',
+      '--llm-base-url only takes an address on this machine, such as http://localhost:11434/v1.',
+      {
+        hint: 'For a server on another machine, set MERGESTORY_LLM_BASE_URL, or llm.baseUrl in the config file.',
+      },
+    );
   }
   return value;
 }
@@ -377,7 +386,6 @@ export async function buildCommonOptions(
 
   const config = await configFromFlags(flags, env.cwd);
   if (Object.keys(config).length > 0) options.config = config;
-  if (env.configPath) options.configPath = resolve(env.cwd, env.configPath);
 
   // Run files must stay out of the repository being explained.
   if (config.outDir && isAbsolute(source) && isInside(source, config.outDir)) {
