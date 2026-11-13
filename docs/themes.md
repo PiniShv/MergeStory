@@ -1,0 +1,145 @@
+# Themes
+
+A theme sets the colors of a video. MergeStory has four built-in themes, and you can make your own.
+A theme is data, never code: one `theme.json` file with colors and the name of a color scheme for
+code.
+
+## Choose a theme
+
+| Theme | What it looks like |
+|---|---|
+| `midnight` | Dark blue, with violet and cyan accents. The default. |
+| `paper` | Light, with the same accents in darker shades. |
+| `high-contrast` | Black background, white text and bright accents. |
+| `terminal` | Near-black background, green text and amber highlights. |
+
+Pass `--theme <theme>` to `generate`, or set `theme` in your config file or `MERGESTORY_THEME`. The
+old values `dark` and `light` still work: they are `midnight` and `paper`.
+
+```bash
+mergestory generate --theme terminal
+```
+
+## See a theme before you use it
+
+```bash
+mergestory theme preview terminal
+```
+
+This draws sample scenes with the theme and writes a page, `index.html`, that shows them all. It
+calls no model, makes no voice and uses no network. The files go to
+`~/.mergestory/previews/<theme>`, or to the folder you give with `--out`. See
+[cli.md](cli.md#mergestory-theme-preview).
+
+## Make your own theme
+
+1. Make a folder `~/.mergestory/themes/<name>`. The name has 1 to 40 characters: `a-z`, `0-9` and
+   `-`.
+2. Put a `theme.json` file in it. This one keeps midnight and changes the accent to orange:
+
+   ```json
+   {
+     "schema": 1,
+     "name": "acme",
+     "extends": "midnight",
+     "colors": {
+       "dark": {
+         "accent": "#ff7a1a",
+         "accent-soft": "rgba(255, 122, 26, 0.16)",
+         "accent-ink": "#ffc08f",
+         "brand-1": "#ffb070"
+       }
+     }
+   }
+   ```
+
+3. Look at it with `mergestory theme preview acme`, then use it with `mergestory generate --theme acme`.
+
+A theme folder can also be somewhere else. Give its path to `--theme` on the command line, or its full
+path as `theme` in your own config file.
+
+The built-in themes are good examples. Each one is a `theme.json` in
+[packages/engine/assets/themes](../packages/engine/assets/themes), with every color it uses.
+
+## The format
+
+| Key | What it holds |
+|---|---|
+| `schema` | Always `1`. |
+| `name` | The name of the theme: 1 to 40 characters, `a-z`, `0-9` and `-`. |
+| `extends` | Optional. A built-in theme to start from. Your colors replace its colors. Without `extends`, a dark theme starts from `midnight` and a light theme from `paper`. |
+| `colors.dark` or `colors.light` | One of the two. The key says if the video is dark or light, and it holds the colors you change. A theme that extends a built-in theme uses the same key as that theme. |
+| `code.shiki` | Optional. A Shiki color scheme for code that comes with MergeStory, for example `github-dark-default`, `monokai` or `github-light-default`. Use a dark scheme for a dark theme and a light scheme for a light theme. |
+
+Any other key is an error. Every value must be a color written as `#rgb`, `#rrggbb`, `#rrggbbaa`,
+`rgb()`, `rgba()`, `hsl()` or `hsla()`. Color names such as `red`, `var()`, `url()` and anything else
+are refused.
+
+## The colors a theme can set
+
+| Color | What it colors |
+|---|---|
+| `bg-0`, `bg-1` | The background of the video, from bottom (`bg-0`) to top (`bg-1`). Both must be opaque. |
+| `surface-1`, `surface-2` | Cards, and raised cards. |
+| `surface-code` | The background of code and terminal windows. |
+| `surface-inset` | Chips and small boxes inside cards. |
+| `border-1`, `border-2` | Thin and strong borders. |
+| `text-0`, `text-1`, `text-2` | Main text, secondary text and quiet text. |
+| `text-3` | Muted text, such as line numbers. |
+| `accent`, `accent-soft` | The main accent, and a see-through version for backgrounds. |
+| `accent-2`, `accent-2-soft` | The second accent, used for labels, and its see-through version. |
+| `accent-ink`, `accent-2-ink` | The accents in large text, such as the gradient of a heading. |
+| `brand-1`, `brand-2` | The gradient of the word "Story" in the logo. |
+| `glow`, `glow-2` | Soft light around accent elements. |
+| `cap-bg`, `cap-fg`, `cap-ring` | The caption: its background, its text and its border. |
+| `sev-info`, `sev-low`, `sev-medium`, `sev-high` | The levels of review signals. |
+
+On a dark theme, `glow` follows `accent`, and `glow-2` and `brand-2` follow `accent-2`, unless you set
+them.
+
+## What a theme cannot change
+
+- Added, removed and changed lines keep their green, red and amber, so a theme cannot make a removal
+  look like an addition.
+- The badges keep their colors: "Simulated UI", "Actual screenshot", "Secrets masked" and "Reported by
+  caller". A theme cannot hide that a picture is simulated or that secrets were masked.
+- Secrets are masked before the theme is used. A theme has no setting for masking.
+- Fonts, sizes, the layout, the logo and the end card stay the same.
+
+## The contrast check
+
+MergeStory refuses a theme that is hard to read:
+
+| What | Needs at least |
+|---|---|
+| `text-0`, `text-1` and `text-2` on the background and on every card | 4.5:1 |
+| `text-3` on the background and on every card | 3:1 |
+| Captions (`cap-fg` on `cap-bg`), over any scene behind them | 7:1 |
+
+It also refuses a background (`bg-0` or `bg-1`) that is not opaque, and a light `code.shiki` scheme on
+a dark theme or a dark one on a light theme. The error names each color and its contrast. With
+`--allow-low-contrast` (on `generate` and `theme preview`) these problems are warnings instead.
+
+## Where a theme comes from
+
+MergeStory looks for a theme name in this order:
+
+1. The built-in themes.
+2. `$MERGESTORY_HOME/themes/<name>/theme.json`.
+
+Any other value must be the path of a theme folder (or of its `theme.json`). Only you give a path:
+on the command line, or as a full path in your own config file. A relative path in the config file or
+in `MERGESTORY_THEME` is an error.
+
+MergeStory never takes a theme path from the storyboard, the pull request, the repository, the HTTP
+API or a coding agent. The agent commands and the HTTP API take a theme name only.
+
+In CI, prefer a theme name. A theme folder inside the repository can be changed by any pull request.
+
+## Safety
+
+- A theme is one JSON file with colors. It cannot run code, load a font or an image, or reach the
+  network. The render page stays offline, with the same content security policy as before.
+- In a theme folder, MergeStory reads only `theme.json`, and only when it is a plain file inside the
+  folder: not a symbolic link, not a hard link, and at most 64 KB. A theme folder that is a symbolic
+  link is refused.

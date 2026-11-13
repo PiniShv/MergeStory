@@ -101,6 +101,9 @@ async function load(next: RenderPlan): Promise<void> {
   css('base', BASE_CSS);
   css('runtime', RUNTIME_CSS);
   document.documentElement.dataset.theme = next.theme;
+  for (const [token, value] of Object.entries(next.colors ?? {})) {
+    document.documentElement.style.setProperty(`--${token}`, value);
+  }
   document.documentElement.style.setProperty('--stage-w', `${next.width}px`);
   document.documentElement.style.setProperty('--stage-h', `${next.height}px`);
   document.body.replaceChildren();

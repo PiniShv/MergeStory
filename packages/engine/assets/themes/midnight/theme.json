@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "name": "midnight",
+  "colors": {
+    "dark": {
+      "bg-0": "#05070d",
+      "bg-1": "#0a0f1e",
+      "surface-1": "rgba(20, 28, 54, 0.78)",
+      "surface-2": "rgba(30, 41, 76, 0.86)",
+      "surface-code": "#0a1020",
+      "surface-inset": "rgba(5, 8, 18, 0.55)",
+      "border-1": "rgba(150, 165, 215, 0.14)",
+      "border-2": "rgba(150, 165, 215, 0.28)",
+      "text-0": "#f4f6ff",
+      "text-1": "#cdd5ec",
+      "text-2": "#8f9aba",
+      "text-3": "#7681a6",
+      "accent": "#8c7bff",
+      "accent-soft": "rgba(140, 123, 255, 0.16)",
+      "accent-2": "#39d2f2",
+      "accent-2-soft": "rgba(57, 210, 242, 0.14)",
+      "accent-ink": "#c9c1ff",
+      "accent-2-ink": "#8fe9fb",
+      "brand-1": "#b6acff",
+      "cap-bg": "rgba(5, 8, 18, 0.76)",
+      "cap-fg": "#f6f8ff",
+      "cap-ring": "rgba(150, 165, 215, 0.2)",
+      "sev-info": "#60a5fa",
+      "sev-low": "#3ddc97",
+      "sev-medium": "#ffc861",
+      "sev-high": "#ff6b81"
+    }
+  },
+  "code": { "shiki": "github-dark-default" }
+}

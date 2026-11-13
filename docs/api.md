@@ -86,7 +86,7 @@ that is not listed here is an error, so a typo is never ignored.
 | `style` | `technical`, `product`, `hybrid` |
 | `quality` | `draft`, `standard`, `high` |
 | `maxDurationSec`, `targetDurationSec` | Seconds. The same ranges as in [configuration.md](configuration.md). `targetDurationSec` may be `null`. |
-| `language`, `theme` | A language tag, and `dark` or `light`. |
+| `language`, `theme` | A language tag, and a theme name such as `midnight`. A path is refused. |
 | `budgetUsd` | US dollars, from 0 to 100. |
 | `llm.provider`, `llm.model` | The provider (`none`, `anthropic`, `openai`, `openai-compatible`) and a model name. |
 | `tts.provider`, `tts.voice` | The speech provider (`auto`, `kokoro`, `say`, `openai`, `elevenlabs`, `none`) and a voice name. |

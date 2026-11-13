@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { CodeLine, RenderPlan, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import type { Scene, Storyboard } from '../core/storyboard-schema.ts';
+import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
 import { testConfig, testContext } from '../testing/context.ts';
 import { makePng } from '../testing/png.ts';
@@ -46,6 +47,7 @@ async function build(options: Options = {}): Promise<RenderPlan> {
       inputs: options.inputs ?? base.inputs,
       reader: memoryReader(options.files ?? sampleFiles()),
       config,
+      theme: await loadTheme(config.theme),
     },
     testContext({ config: options.config, home: dir, runDir: dir, signal: options.signal }).ctx,
   );
@@ -83,6 +85,7 @@ describe('buildRenderPlan: plan level', () => {
     const light = await build({ config: { theme: 'light' } });
     expect(light.version).toBe(1);
     expect(light.theme).toBe('light');
+    expect(light.colors).toEqual((await loadTheme('paper')).colors);
     const { storyboard, narration, changeSet } = sample();
     expect(light.durationSec).toBe(buildTimeline(storyboard, narration).durationSec);
     expect(light.meta).toEqual({

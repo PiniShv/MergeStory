@@ -25,6 +25,8 @@ export interface GenerateOptions {
   configPath?: string | null;
   /** Plan only: no paid calls, no rendering, no uploads, no GitHub writes. */
   dryRun?: boolean;
+  /** Use a theme that fails the contrast check, with a warning (--allow-low-contrast). */
+  allowLowContrast?: boolean;
   runId?: string;
   signal?: AbortSignal;
   logger?: Logger;

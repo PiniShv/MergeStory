@@ -1,26 +1,29 @@
 /**
- * Syntax highlighting with Shiki. The highlighter is created once per process, themes are loaded
- * together and grammars are loaded the first time a language is needed.
+ * Syntax highlighting with Shiki. The highlighter is created once per process; themes and grammars
+ * are loaded the first time they are needed.
  */
-import { type BundledLanguage, bundledLanguages, bundledLanguagesAlias, createHighlighter } from 'shiki';
+import {
+  type BundledLanguage,
+  type BundledTheme,
+  bundledLanguages,
+  bundledLanguagesAlias,
+  createHighlighter,
+} from 'shiki';
 import type { Logger } from '../core/logger.ts';
-import type { CodeToken, ThemeName } from '../core/render-plan.ts';
+import type { CodeToken } from '../core/render-plan.ts';
 
 type Highlighter = Awaited<ReturnType<typeof createHighlighter>>;
 
-const THEMES = { dark: 'github-dark-default', light: 'github-light-default' } as const;
-
 let highlighterPromise: Promise<Highlighter> | null = null;
+const loadedThemes = new Set<string>();
 const loadedLanguages = new Set<string>();
 const failedLanguages = new Set<string>();
 
 function getHighlighter(): Promise<Highlighter> {
-  highlighterPromise ??= createHighlighter({ themes: [THEMES.dark, THEMES.light], langs: [] }).catch(
-    (err) => {
-      highlighterPromise = null; // let a later call try again
-      throw err;
-    },
-  );
+  highlighterPromise ??= createHighlighter({ themes: [], langs: [] }).catch((err) => {
+    highlighterPromise = null; // let a later call try again
+    throw err;
+  });
   return highlighterPromise;
 }
 
@@ -41,7 +44,8 @@ export function plainTokens(text: string): CodeToken[][] {
 
 export interface HighlightOptions {
   language: string | null | undefined;
-  theme: ThemeName;
+  /** A bundled Shiki theme, for example github-dark-default (the theme's code.shiki). */
+  theme: string;
   logger?: Logger;
 }
 
@@ -61,13 +65,17 @@ export async function highlightText(text: string, options: HighlightOptions): Pr
   if (language === null || failedLanguages.has(language)) return plainTokens(text);
   try {
     const highlighter = await getHighlighter();
+    if (!loadedThemes.has(options.theme)) {
+      await highlighter.loadTheme(options.theme as BundledTheme);
+      loadedThemes.add(options.theme);
+    }
     if (!loadedLanguages.has(language)) {
       await highlighter.loadLanguage(language as BundledLanguage);
       loadedLanguages.add(language);
     }
     const result = highlighter.codeToTokens(text, {
       lang: language as BundledLanguage,
-      theme: THEMES[options.theme],
+      theme: options.theme,
     });
     const foreground = result.fg?.toLowerCase() ?? null;
     const lines = result.tokens.map((line) => {

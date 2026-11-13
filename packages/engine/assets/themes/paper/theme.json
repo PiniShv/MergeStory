@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "paper",
+  "colors": {
+    "light": {
+      "bg-0": "#eef1f8",
+      "bg-1": "#f6f7fb",
+      "surface-1": "rgba(255, 255, 255, 0.86)",
+      "surface-2": "rgba(255, 255, 255, 0.96)",
+      "surface-code": "#ffffff",
+      "surface-inset": "rgba(15, 23, 42, 0.04)",
+      "border-1": "rgba(30, 41, 80, 0.12)",
+      "border-2": "rgba(30, 41, 80, 0.22)",
+      "text-0": "#0d1330",
+      "text-1": "#2b3558",
+      "text-2": "#5b6688",
+      "text-3": "#68718f",
+      "accent": "#6750f0",
+      "accent-soft": "rgba(103, 80, 240, 0.1)",
+      "accent-2": "#0891b2",
+      "accent-2-soft": "rgba(8, 145, 178, 0.1)",
+      "accent-ink": "#5a43e6",
+      "accent-2-ink": "#0e7490",
+      "brand-1": "#5a43e6",
+      "brand-2": "#0e7490",
+      "glow": "#8c7bff",
+      "glow-2": "#39d2f2",
+      "cap-bg": "rgba(255, 255, 255, 0.92)",
+      "cap-fg": "#0d1330",
+      "cap-ring": "rgba(30, 41, 80, 0.16)",
+      "sev-info": "#60a5fa",
+      "sev-low": "#3ddc97",
+      "sev-medium": "#ffc861",
+      "sev-high": "#ff6b81"
+    }
+  },
+  "code": { "shiki": "github-light-default" }
+}

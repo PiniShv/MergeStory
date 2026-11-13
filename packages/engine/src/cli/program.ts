@@ -12,6 +12,7 @@ import { registerPublish } from './commands/publish.ts';
 import { registerRuns } from './commands/runs.ts';
 import { registerServe } from './commands/serve.ts';
 import { registerSetup } from './commands/setup.ts';
+import { registerTheme } from './commands/theme.ts';
 import { formatError } from './format.ts';
 import { type CliIo, createIo } from './io.ts';
 import { CliRuntime, describeError, errorEnvelope, USAGE_HINT } from './runtime.ts';
@@ -77,6 +78,7 @@ export function buildProgram(rt: CliRuntime): Command {
   registerServe(program, rt);
   registerCache(program, rt);
   registerRuns(program, rt);
+  registerTheme(program, rt);
   return program;
 }
 

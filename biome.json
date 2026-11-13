@@ -10,6 +10,7 @@
       "!**/dist",
       "!**/coverage",
       "!**/test/fixtures",
+      "!**/assets/preview",
       "!**/package-lock.json",
       "!**/examples/demo/base",
       "!**/examples/demo/feature"

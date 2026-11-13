@@ -11,7 +11,7 @@
  * Anything that costs money or sends code off the machine has to be switched on explicitly.
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
 import { MergeStoryError } from './errors.ts';
 import { isRecord } from './json.ts';
@@ -36,11 +36,15 @@ export const DURATION_LIMITS = {
 /** The closed value sets of the settings. The command line flags and the HTTP API use the same lists. */
 export const STYLES = ['technical', 'product', 'hybrid'] as const;
 export const QUALITIES = ['draft', 'standard', 'high'] as const;
-export const THEMES = ['dark', 'light'] as const;
 export const LLM_PROVIDERS = ['none', 'anthropic', 'openai', 'openai-compatible'] as const;
 export const TTS_PROVIDERS = ['auto', 'kokoro', 'say', 'openai', 'elevenlabs', 'none'] as const;
 export const PUBLISH_PROVIDERS = ['local', 's3', 'youtube', 'drive', 'none'] as const;
 export const VISIBILITIES = ['private', 'protected', 'public'] as const;
+/**
+ * A theme name: a built-in theme, the old names dark and light, or a folder in $MERGESTORY_HOME/themes.
+ * Any other theme value is the full path of a theme folder (see core/theme.ts).
+ */
+export const THEME_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
 /**
  * Every section is strict: a key that is not listed here is an error, never silently ignored. A
@@ -49,7 +53,14 @@ export const VISIBILITIES = ['private', 'protected', 'public'] as const;
 export const ConfigSchema = z.strictObject({
   style: z.enum(STYLES).default('hybrid'),
   language: z.string().min(2).max(16).default('en'),
-  theme: z.enum(THEMES).default('dark'),
+  /** A theme name, or the full path of a theme folder. dark and light still mean midnight and paper. */
+  theme: z
+    .string()
+    .max(4096)
+    .refine((value) => THEME_NAME.test(value) || isAbsolute(value), {
+      message: 'Use a theme name, such as midnight, or the full path of a theme folder.',
+    })
+    .default('midnight'),
   quality: z.enum(QUALITIES).default('standard'),
   /**
    * Longest video, in seconds. Before narration the storyboard is trimmed until its estimated length

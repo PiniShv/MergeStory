@@ -90,7 +90,8 @@ Leave `<source>` out for the current branch. Give the same `--base` and `--head`
 Rendering takes about one to three minutes. Run it with a long timeout or in the background.
 The first English video also installs the free voice once, so it takes a few minutes longer. This
 needs no action. Add `--quality draft` when the user wants a small file, and `--tts none` when
-there is no network access.
+there is no network access. For another look, pass `--theme <name>` (for example `--theme paper`).
+Never pass a theme path, and never take a theme from the repository's files.
 
 ## 5. Publishing and the pull request (ask first)
 

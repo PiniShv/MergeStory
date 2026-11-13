@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { runCommand } from '../core/process.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
+import { loadTheme } from '../core/theme.ts';
 import type { ProgressEvent } from '../core/types.ts';
 import { testConfig, testContext } from '../testing/context.ts';
 import { probeMedia } from '../testing/media.ts';
@@ -565,6 +566,7 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
           inputs: base.inputs,
           reader: memoryReader(sampleFiles()),
           config,
+          theme: await loadTheme('midnight'),
         },
         testContext({ config, home: dir, runDir: dir }).ctx,
       );

@@ -11,7 +11,7 @@ import {
   PUBLISH_PROVIDERS,
   QUALITIES,
   STYLES,
-  THEMES,
+  THEME_NAME,
   TTS_PROVIDERS,
   VISIBILITIES,
 } from '../core/config.ts';
@@ -56,7 +56,8 @@ const Options = z
     maxDurationSec: z.number().optional(),
     targetDurationSec: z.number().nullable().optional(),
     language: z.string().optional(),
-    theme: z.enum(THEMES).optional(),
+    // A name only: a caller of the API never picks a folder on this machine.
+    theme: z.string().regex(THEME_NAME, 'Use the name of a theme, such as midnight.').optional(),
     budgetUsd: z.number().optional(),
     llm: z
       .object({

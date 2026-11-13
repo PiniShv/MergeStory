@@ -314,6 +314,20 @@ describe('agent render: local only', () => {
     expect(localOnlyOverrides({ tts: 'openai' }).tts).toEqual({ provider: 'auto' });
     expect(localOnlyOverrides({}).tts).toEqual({ provider: 'auto' });
   });
+
+  it('takes a theme by name only: an agent never points it at a folder', async () => {
+    generateMock.mockResolvedValue(fakeResult());
+    expect((await run(['agent', 'render', '--name', 'fix-1', '--theme', 'terminal'])).code).toBe(0);
+    expect(lastGenerateOptions().config).toMatchObject({ theme: 'terminal' });
+    const calls = generateMock.mock.calls.length;
+    for (const path of ['./brand', '/tmp/brand', '../brand', 'C:\\brand']) {
+      const { code, stderr } = await run(['agent', 'render', '--name', 'fix-1', '--theme', path]);
+      expect(code, path).toBe(2);
+      expect(stderr, path).toContain('A path is not accepted here');
+    }
+    expect((await run(['agent', 'render', '--name', 'fix-1', '--allow-low-contrast'])).code).toBe(2);
+    expect(generateMock.mock.calls.length).toBe(calls);
+  });
 });
 
 describe('agent: output', () => {

@@ -177,6 +177,25 @@ describe('resolveConfig: length settings', () => {
   });
 });
 
+describe('resolveConfig: theme', () => {
+  const theme = (overrides: Record<string, unknown>, env: Record<string, string> = {}) =>
+    resolveConfig({ skipFile: true, env, overrides }).theme;
+
+  it('takes a theme name or the full path of a theme folder, and keeps the old names', () => {
+    expect(theme({})).toBe('midnight');
+    expect(theme({}, { MERGESTORY_THEME: 'light' })).toBe('light');
+    expect(theme({ theme: 'dark' })).toBe('dark');
+    expect(theme({ theme: 'my-brand' })).toBe('my-brand');
+    expect(theme({ theme: '/opt/themes/brand' })).toBe('/opt/themes/brand');
+  });
+
+  it('refuses a relative path, which would depend on the folder MergeStory runs in', () => {
+    for (const value of ['./brand', 'themes/brand', '../brand', 'Brand', '']) {
+      expect(() => theme({ theme: value }), value).toThrow('theme');
+    }
+  });
+});
+
 describe('configFromEnv: true or false settings', () => {
   it('reads the accepted words in any case', () => {
     const read = (value: string) =>

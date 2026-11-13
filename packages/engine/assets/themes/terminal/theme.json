@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "terminal",
+  "colors": {
+    "dark": {
+      "bg-0": "#020604",
+      "bg-1": "#05120a",
+      "surface-1": "rgba(6, 26, 14, 0.84)",
+      "surface-2": "rgba(10, 36, 20, 0.92)",
+      "surface-code": "#030b06",
+      "surface-inset": "rgba(0, 14, 6, 0.6)",
+      "border-1": "rgba(80, 220, 130, 0.16)",
+      "border-2": "rgba(80, 220, 130, 0.32)",
+      "text-0": "#e2ffe9",
+      "text-1": "#b4f2c4",
+      "text-2": "#7fd39a",
+      "text-3": "#5daa76",
+      "accent": "#2fc46e",
+      "accent-soft": "rgba(47, 196, 110, 0.16)",
+      "accent-2": "#ffb547",
+      "accent-2-soft": "rgba(255, 181, 71, 0.14)",
+      "accent-ink": "#9ff5bd",
+      "accent-2-ink": "#ffd796",
+      "brand-1": "#7cf0a6",
+      "brand-2": "#ffb547",
+      "glow": "#2fc46e",
+      "glow-2": "#ffb547",
+      "cap-bg": "rgba(1, 10, 4, 0.84)",
+      "cap-fg": "#e2ffe9",
+      "cap-ring": "rgba(80, 220, 130, 0.3)",
+      "sev-info": "#5fd0e6",
+      "sev-low": "#3ddc84",
+      "sev-medium": "#ffb547",
+      "sev-high": "#ff6b6b"
+    }
+  },
+  "code": { "shiki": "gruvbox-dark-hard" }
+}

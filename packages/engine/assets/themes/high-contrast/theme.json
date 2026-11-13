@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "name": "high-contrast",
+  "colors": {
+    "dark": {
+      "bg-0": "#000000",
+      "bg-1": "#000000",
+      "surface-1": "rgba(16, 16, 20, 0.96)",
+      "surface-2": "rgba(28, 28, 34, 0.98)",
+      "surface-code": "#08080b",
+      "surface-inset": "rgba(255, 255, 255, 0.08)",
+      "border-1": "rgba(255, 255, 255, 0.4)",
+      "border-2": "rgba(255, 255, 255, 0.7)",
+      "text-0": "#ffffff",
+      "text-1": "#f2f2f2",
+      "text-2": "#d6d6d6",
+      "text-3": "#b4b4b4",
+      "accent": "#a798ff",
+      "accent-soft": "rgba(167, 152, 255, 0.24)",
+      "accent-2": "#52e3ff",
+      "accent-2-soft": "rgba(82, 227, 255, 0.22)",
+      "accent-ink": "#dcd6ff",
+      "accent-2-ink": "#b0f3ff",
+      "brand-1": "#dcd6ff",
+      "brand-2": "#52e3ff",
+      "glow": "#a798ff",
+      "glow-2": "#52e3ff",
+      "cap-bg": "rgba(0, 0, 0, 0.92)",
+      "cap-fg": "#ffffff",
+      "cap-ring": "rgba(255, 255, 255, 0.65)",
+      "sev-info": "#7cc4ff",
+      "sev-low": "#4cf0a8",
+      "sev-medium": "#ffd36b",
+      "sev-high": "#ff7d93"
+    }
+  },
+  "code": { "shiki": "github-dark-high-contrast" }
+}

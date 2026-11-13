@@ -34,6 +34,10 @@ export interface HomeLayout {
   credentials: string;
   /** Work folders of `mergestory agent`: drafts an agent may write without asking. */
   work: string;
+  /** Themes the user made: themes/<name>/theme.json. */
+  themes: string;
+  /** Contact sheets of `mergestory theme preview`. */
+  previews: string;
 }
 
 export function homeLayout(override?: string | null): HomeLayout {
@@ -47,6 +51,8 @@ export function homeLayout(override?: string | null): HomeLayout {
     plugins: join(home, 'plugins'),
     credentials: join(home, 'credentials'),
     work: join(home, 'work'),
+    themes: join(home, 'themes'),
+    previews: join(home, 'previews'),
   };
 }
 

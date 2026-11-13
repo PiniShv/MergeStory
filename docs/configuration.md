@@ -74,13 +74,13 @@ in that order. `none` means that the setting has no flag, or no variable.
 |---|---|---|---|
 | `style` | `hybrid` | How technical the narration is: `technical` (modules, functions, data flow), `product` (what behaves differently and why it matters, with few code scenes) or `hybrid`. | `--style`, `MERGESTORY_STYLE` |
 | `language` | `en` | The narration language, as a tag of 2 to 16 characters such as `en`. The free Kokoro voice and the offline storyboard are English only. The check that removes claims such as "all tests pass" reads English only. | `--language`, `MERGESTORY_LANGUAGE` |
-| `theme` | `dark` | The color theme of the video: `dark` or `light`. | `--theme`, `MERGESTORY_THEME` |
+| `theme` | `midnight` | The look of the video: a theme name (`midnight`, `paper`, `high-contrast`, `terminal`, or a folder in `$MERGESTORY_HOME/themes`) or the full path of a theme folder. `dark` and `light` still work: they are `midnight` and `paper`. See [themes.md](themes.md). | `--theme`, `MERGESTORY_THEME` |
 | `quality` | `standard` | `draft`, `standard` or `high`. See [Quality presets](#quality-presets). | `--quality`, `MERGESTORY_QUALITY` |
 | `maxDurationSec` | `150` | The longest video, in whole seconds, from 20 to 600. Before narration, scenes and lines are dropped, least important first, until the estimated length fits. The mission and review scenes always stay. The real voice may run a little over, and a warning says so. | `--max-duration`, `MERGESTORY_MAX_DURATION` |
 | `targetDurationSec` | `null` | A fixed target length, in whole seconds, from 20 to 600. With `null` the engine picks a length that fits the size of the change. | `--duration`, none |
 | `captions` | `true` | Draw captions into the video. The `captions.vtt` file is written either way. | `--no-captions`, none |
 | `budgetUsd` | `0.25` | The most one run may spend, in US dollars, from 0 to 100. See [Budget](#budget). | `--budget`, `MERGESTORY_BUDGET_USD` |
-| `home` | `null` | The folder for runs, cache, jobs, models, plugins and sign-in data. `null` means `~/.mergestory`. | none, `MERGESTORY_HOME` |
+| `home` | `null` | The folder for runs, cache, jobs, models, plugins, sign-in data, your themes and theme previews. `null` means `~/.mergestory`. | none, `MERGESTORY_HOME` |
 | `outDir` | `null` | The folder for the run files. `null` means `$MERGESTORY_HOME/runs/<run id>`. A relative path is read from the current folder. It must be outside the repository being explained. | `--out`, none |
 
 ### Model for the storyboard (`llm`)

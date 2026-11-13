@@ -1,6 +1,7 @@
 /**
- * Golden stills: the dark and light looks, compared with stills made before the colours became
- * design tokens. Real browser and FFmpeg; the test skips itself when either is missing.
+ * Golden stills: the dark and light looks, drawn through the theme loader (as midnight and paper) and
+ * compared with stills made before themes existed. Real browser and FFmpeg; the test skips itself
+ * when either is missing.
  *
  * Only flat areas are compared (backgrounds, cards, glows, the stage gradient): pixels whose whole
  * neighbourhood is even in the golden. Text edges differ between browser builds and systems by up
@@ -12,19 +13,24 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { runCommand } from '../core/process.ts';
-import type { RenderPlan, ThemeName } from '../core/render-plan.ts';
+import type { RenderPlan } from '../core/render-plan.ts';
+import { loadTheme } from '../core/theme.ts';
 import { testConfig, testContext } from '../testing/context.ts';
 import { locateBrowser } from './browser.ts';
-import { renderStillFrames } from './chromium-renderer.ts';
+import { BROWSER_ARGS, renderStillFrames } from './chromium-renderer.ts';
+import { fontFacesCss } from './fonts.ts';
+import { buildPageHtml, PlanPage } from './page.ts';
+import { loadRuntimeBundle } from './runtime-bundle.ts';
 
 const tools = await resolveFfmpeg(testConfig()).catch(() => null);
 const browser = await locateBrowser(testConfig()).catch(() => null);
 const available = tools !== null && browser !== null;
 
-const PLANS = fileURLToPath(new URL('../../test/fixtures/plans/', import.meta.url));
+const PLANS = fileURLToPath(new URL('../../assets/preview/', import.meta.url));
 const GOLDENS = fileURLToPath(new URL('../../test/fixtures/stills/', import.meta.url));
 const UPDATE = process.env.MERGESTORY_UPDATE_STILLS === '1';
 
@@ -36,9 +42,11 @@ const COMPARED = { width: 160, height: 90 };
 /** A pixel is flat when every channel of its 3x3 neighbourhood stays within this range. */
 const FLAT_RANGE = 6;
 
-async function samplePlan(name: keyof typeof FRAMES, theme: ThemeName): Promise<RenderPlan> {
+/** A sample plan in a theme. */
+async function samplePlan(name: keyof typeof FRAMES, themeName: string): Promise<RenderPlan> {
   const plan = JSON.parse(await readFile(join(PLANS, `${name}-sample.json`), 'utf8')) as RenderPlan;
-  Object.assign(plan, { theme, ...DRAWN });
+  const theme = await loadTheme(themeName);
+  Object.assign(plan, { theme: theme.base, colors: theme.colors, ...DRAWN });
   // All four badges on the first scene, so their colours are drawn too.
   if (name === 'templates') {
     plan.scenes[0]!.badges = (['simulated', 'actual', 'masked', 'reported'] as const).map((kind) => ({
@@ -107,7 +115,7 @@ describe.skipIf(!available)('golden stills', () => {
   });
 
   for (const theme of ['dark', 'light'] as const) {
-    it(`draws the ${theme} look as before`, async () => {
+    it(`draws the ${theme} look as before, through the theme loader`, async () => {
       for (const name of ['core', 'templates'] as const) {
         const times = [...FRAMES[name]];
         const out = join(dir, `${theme}-${name}`);
@@ -139,4 +147,22 @@ describe.skipIf(!available)('golden stills', () => {
       }
     }, 120_000);
   }
+
+  it('draws a theme without a single request: the page stays offline', async () => {
+    const instance = await chromium.launch({
+      executablePath: browser!.path,
+      headless: true,
+      args: BROWSER_ARGS,
+    });
+    try {
+      const html = buildPageHtml({ runtimeJs: await loadRuntimeBundle(), fontsCss: await fontFacesCss() });
+      const page = await PlanPage.open(instance, await samplePlan('templates', 'terminal'), html);
+      for (const time of FRAMES.templates) await page.seek(time);
+      expect(page.blockedRequests).toBe(0);
+      expect(page.pageErrors).toEqual([]);
+      await page.close();
+    } finally {
+      await instance.close();
+    }
+  }, 60_000);
 });

@@ -4,7 +4,6 @@ import type { CodeLine, CodeToken } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import { STORYBOARD_LIMITS } from '../core/storyboard-schema.ts';
 import type { ChangedFile } from '../core/types.ts';
-import { testConfig } from '../testing/context.ts';
 import { memoryReader, sampleChangeSet, sampleFiles } from '../testing/sample-change.ts';
 import {
   CodeResolver,
@@ -15,17 +14,14 @@ import {
   splitCodeLines,
 } from './code.ts';
 
-const config = testConfig();
+const shiki = 'github-dark-default';
 
 const text = (tokens: CodeToken[]): string => tokens.map((t) => t.t).join('');
 const texts = (lines: CodeLine[]): string[] => lines.map((l) => text(l.tokens));
 
-function deps(
-  files: Record<string, string> = sampleFiles(),
-  overrides: Parameters<typeof testConfig>[0] = {},
-) {
+function deps(files: Record<string, string> = sampleFiles()) {
   const reader = memoryReader(files);
-  return { reader, changeSet: sampleChangeSet(), config: testConfig(overrides) };
+  return { reader, changeSet: sampleChangeSet(), shiki };
 }
 
 /** Resolve one reference with a resolver of its own. */
@@ -155,7 +151,7 @@ describe('snippet mode', () => {
       'base:src/client.ts': 'old line\n',
       'head:src/http-client.ts': 'new line\n',
     });
-    const resolver = new CodeResolver({ reader, changeSet, config });
+    const resolver = new CodeResolver({ reader, changeSet, shiki });
     const base = await resolver.resolve(
       { path: 'src/http-client.ts', side: 'base', startLine: 1, endLine: 1 },
       'snippet',
@@ -514,7 +510,7 @@ describe('protection', () => {
       { path: 'src/settings.ts', side: 'head', startLine: 1, endLine: 1 },
       'diff',
       [],
-      { reader, changeSet, config },
+      { reader, changeSet, shiki },
     );
     expect(code.masked).toBe(true);
     expect(texts(code.lines).join('\n')).not.toContain(secret);
@@ -528,7 +524,7 @@ describe('protection', () => {
       { path: 'config/.env', side: 'head', startLine: 1, endLine: 1 },
       'snippet',
       [],
-      { reader, changeSet, config },
+      { reader, changeSet, shiki },
     );
     expect(reader.reads).toEqual([]);
     expect(code.masked).toBe(true);
@@ -553,7 +549,7 @@ describe('protection', () => {
       resolveCode({ path, side: 'head', startLine: 1, endLine: 1 }, 'snippet', [], {
         reader,
         changeSet,
-        config,
+        shiki,
       });
     for (const path of ['deploy/id_rsa', 'internal/plan.ts']) {
       const code = await show(path);
@@ -582,7 +578,7 @@ describe('protection', () => {
       const code = await resolveCode({ path, side, startLine: 1, endLine: 1 }, 'snippet', [], {
         reader,
         changeSet,
-        config,
+        shiki,
       });
       expect(texts(code.lines)).toEqual(['Protected file: its contents are never shown.']);
     }

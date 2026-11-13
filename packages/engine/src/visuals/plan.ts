@@ -30,6 +30,7 @@ import {
   type Visual,
 } from '../core/storyboard-schema.ts';
 import { collapseLineRange } from '../core/text.ts';
+import type { ResolvedTheme } from '../core/theme.ts';
 import type {
   Analysis,
   CaptionCue,
@@ -55,6 +56,8 @@ export interface BuildPlanInput {
   inputs: ContextInputs;
   reader: RepoReader;
   config: Config;
+  /** The video theme (core/theme.ts loadTheme). */
+  theme: ResolvedTheme;
 }
 
 /** Rows shown in the changed-files visual; the rest is summarised as a count. */
@@ -563,14 +566,14 @@ async function planScene(
  * storyboard scene (code, diagrams and screenshots resolved) and the end card.
  */
 export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): Promise<RenderPlan> {
-  const { storyboard, timeline, changeSet, analysis, inputs, reader, config } = input;
+  const { storyboard, timeline, changeSet, analysis, inputs, reader, config, theme } = input;
   const preset = QUALITY_PRESETS[config.quality];
   const env: Environment = {
     config,
     changeSet,
     analysis,
     inputs,
-    resolver: new CodeResolver({ reader, changeSet, config, logger: ctx.logger }),
+    resolver: new CodeResolver({ reader, changeSet, shiki: theme.shiki, logger: ctx.logger }),
     images: new Map(),
   };
   const evidence = new Map(analysis.evidence.map((item) => [item.id, item]));
@@ -597,7 +600,8 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     height: preset.height,
     fps: preset.fps,
     durationSec: timeline.durationSec,
-    theme: config.theme,
+    theme: theme.base,
+    colors: theme.colors,
     meta: {
       title: metaScrub.text(storyboard.title),
       repoLabel,

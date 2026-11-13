@@ -10,6 +10,7 @@ import {
   writeRunJson,
 } from '../core/run-folder.ts';
 import { groundedLines } from '../core/storyboard-facts.ts';
+import { loadTheme } from '../core/theme.ts';
 import type { GenerateResult, PlanResult } from '../core/types.ts';
 import {
   assembleNarrationTrack,
@@ -59,6 +60,15 @@ export async function generate(
   const { ctx, config, changeSet, publishProblem } = p;
   const folder = runFolder(ctx.runDir);
   const warnings: string[] = [];
+  // Before anything is spent: a theme that cannot be used stops the run here.
+  const theme = await loadTheme(config.theme, {
+    home: config.home,
+    allowLowContrast: options.allowLowContrast === true,
+    warn: (message) => {
+      ctx.progress({ stage: 'visuals', status: 'warn', message });
+      warnings.push(message);
+    },
+  });
 
   const choice = await chooseStoryboard(p, options.storyboard);
   const { validation } = choice;
@@ -132,6 +142,7 @@ export async function generate(
       inputs: p.inputs,
       reader: p.reader,
       config,
+      theme,
     },
     ctx,
   );

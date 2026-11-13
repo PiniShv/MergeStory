@@ -4,7 +4,6 @@ import {
   PUBLISH_PROVIDERS,
   QUALITIES,
   STYLES,
-  THEMES,
   TTS_PROVIDERS,
   VISIBILITIES,
 } from '../core/config.ts';
@@ -19,7 +18,13 @@ describe('parseCreateJob', () => {
     const accepted = (options: unknown) => parseCreateJob({ source: PR, options }).ok;
     for (const style of STYLES) expect(accepted({ style }), style).toBe(true);
     for (const quality of QUALITIES) expect(accepted({ quality }), quality).toBe(true);
-    for (const theme of THEMES) expect(accepted({ theme }), theme).toBe(true);
+    for (const theme of ['midnight', 'paper', 'high-contrast', 'terminal', 'dark', 'light', 'my-brand']) {
+      expect(accepted({ theme }), theme).toBe(true);
+    }
+    // A caller of the API names a theme; it never points at a folder on the server.
+    for (const theme of ['/etc/themes/x', '../x', './x', 'C:\\themes\\x', '']) {
+      expect(accepted({ theme }), theme).toBe(false);
+    }
     for (const provider of LLM_PROVIDERS) expect(accepted({ llm: { provider } }), provider).toBe(true);
     for (const provider of TTS_PROVIDERS) expect(accepted({ tts: { provider } }), provider).toBe(true);
     for (const provider of PUBLISH_PROVIDERS.filter((p) => p !== 'youtube' && p !== 'drive')) {
