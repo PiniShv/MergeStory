@@ -25,8 +25,8 @@ still say so.
   absolute paths, at most 64 KB.
 - The colors that carry meaning are locked: added, removed and changed lines, new connections in
   diagrams, and the badges for simulated pictures, real screenshots, masked secrets and reported
-  results. Every background must be opaque, and the locked change colors must stand out from it (2:1).
-  No flag turns this off.
+  results. The background must be opaque, and the locked change colors must stand out (2:1) from it
+  along its whole gradient and from every box drawn on it. No flag turns this off.
 - A contrast check refuses themes that are hard to read: text 4.5:1, muted text 3:1, captions 7:1.
   `--allow-low-contrast` turns it into a warning.
 

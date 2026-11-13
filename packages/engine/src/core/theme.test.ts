@@ -284,5 +284,18 @@ describe('the contrast check', () => {
     await expect(loadTheme(added, allow)).rejects.toThrow('add (#3ddc97) reaches');
     const clear = await themeFolder(dark({ 'bg-0': 'rgba(0, 0, 0, 0.5)' }));
     await expect(loadTheme(clear, allow)).rejects.toThrow('bg-0 must be opaque');
+    // Ends where every change color stands out, with a grey middle where they do not.
+    const fade = await themeFolder({
+      schema: 1,
+      name: 'mine',
+      colors: { light: { 'bg-1': '#ffffff', 'bg-0': '#000000' } },
+    });
+    await expect(loadTheme(fade, allow)).rejects.toThrow(/cannot be used\..* of the way from bg-1 to bg-0/);
+    // See-through boxes that add up on a card.
+    const glass = 'rgba(255, 255, 255, 0.36)';
+    const rows = await themeFolder(
+      dark({ 'bg-0': '#000000', 'bg-1': '#000000', 'surface-1': glass, 'surface-inset': glass }),
+    );
+    await expect(loadTheme(rows, allow)).rejects.toThrow('surface-inset on surface-1 on');
   });
 });

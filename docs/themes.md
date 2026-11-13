@@ -112,18 +112,22 @@ follow `accent-2`, unless you set them.
 
 ## The checks
 
+The checks look at every background that text and changes are drawn on: the background all along its
+gradient from `bg-1` (top) to `bg-0` (bottom), every card, code window and inset box on it, and inset
+boxes and code windows on cards. The soft glows behind some scenes are not part of the checks.
+
 Two rules always apply, and no flag turns them off:
 
 - `bg-0` and `bg-1` must be opaque.
 - The colors of added, removed and changed lines, and of new connections, must stand out from every
-  background and card: at least 2:1. So a theme can never hide what a change did.
+  one of those backgrounds: at least 2:1. So a theme cannot make a change hard to see.
 
 MergeStory also refuses a theme that is hard to read:
 
 | What | Needs at least |
 |---|---|
-| `text-0`, `text-1` and `text-2` on the background and on every card | 4.5:1 |
-| `text-3` on the background and on every card | 3:1 |
+| `text-0`, `text-1` and `text-2` on every background | 4.5:1 |
+| `text-3` on every background | 3:1 |
 | Captions (`cap-fg` on `cap-bg`), over any scene behind them | 7:1 |
 
 It also refuses a light `code.shiki` scheme on a dark theme, or a dark one on a light theme. The error

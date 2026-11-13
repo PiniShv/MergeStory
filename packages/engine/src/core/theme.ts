@@ -202,13 +202,33 @@ function colorReader(theme: ResolvedTheme): (token: string) => Rgba {
   };
 }
 
-/** The backgrounds of the video: bg-0 and bg-1, and every surface drawn over each. */
+/** Boxes the video draws on its background: cards, code windows, insets, and insets and code on cards. */
+const LAYERS = [
+  [],
+  ['surface-1'],
+  ['surface-2'],
+  ['surface-code'],
+  ['surface-inset'],
+  ['surface-1', 'surface-inset'],
+  ['surface-2', 'surface-inset'],
+  ['surface-1', 'surface-code'],
+  ['surface-2', 'surface-code'],
+];
+
+/**
+ * The backgrounds text and changes are drawn on: the stage gradient from bg-1 (top) to bg-0 (bottom),
+ * at five points, with every box of LAYERS on it. The soft glows behind scenes are left out.
+ */
 function backgroundsOf(color: (token: string) => Rgba): [string, Rgba][] {
+  const [top, bottom] = [color('bg-1'), color('bg-0')];
   const out: [string, Rgba][] = [];
-  for (const bg of ['bg-0', 'bg-1']) {
-    out.push([bg, color(bg)]);
-    for (const surface of ['surface-1', 'surface-2', 'surface-code', 'surface-inset']) {
-      out.push([`${surface} over ${bg}`, over(color(surface), color(bg))]);
+  for (const at of [0, 0.25, 0.5, 0.75, 1]) {
+    const stage: Rgba = [0, 1, 2].map((i) => top[i]! * (1 - at) + bottom[i]! * at).concat(1) as Rgba;
+    const where =
+      at === 0 ? 'bg-1' : at === 1 ? 'bg-0' : `the background ${at * 100}% of the way from bg-1 to bg-0`;
+    for (const layers of LAYERS) {
+      const background = layers.reduce((below, surface) => over(color(surface), below), stage);
+      out.push([[...layers].reverse().concat(where).join(' on '), background]);
     }
   }
   return out;
