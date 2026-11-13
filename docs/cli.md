@@ -122,7 +122,8 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Before narration, MergeStory drops scenes and lines, least important first, until the estimated length fits. The mission and review scenes always stay. The real voice may run a little over, and a warning says so. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts to the size of the change |
 | `--language <code>` | The narration language, for example `en`. The free Kokoro voice and the offline storyboard are English only. The check that removes claims such as "all tests pass" reads English only. | `en` |
-| `--theme <theme>` | `dark` or `light`. | `dark` |
+| `--theme <theme>` | The look of the video: `midnight`, `paper`, `high-contrast`, `terminal`, a theme of yours in `~/.mergestory/themes`, or the path of a theme folder. `dark` and `light` still work: they are `midnight` and `paper`. See [themes.md](themes.md). | `midnight` |
+| `--allow-low-contrast` | Use a theme that fails the contrast check, with a warning instead of an error. | off |
 
 **Providers.** The defaults call no paid service and keep everything on this machine.
 
@@ -369,7 +370,8 @@ browser still come from your settings.
 |---|---|---|
 | `--name <name>` | The work folder. | required |
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--style`, `--quality`, `--max-duration`, `--duration`, `--language`, `--theme` | As for `generate`. | as for `generate` |
+| `--style`, `--quality`, `--max-duration`, `--duration`, `--language` | As for `generate`. | as for `generate` |
+| `--theme <name>` | A theme name, as for `generate`. A path is refused. | `midnight` |
 | `--tts <provider>` | `auto`, `kokoro`, `say` or `none`. | `auto` |
 | `--voice <name>` | The voice name for the speech provider. | the provider's default |
 | `--dry-run` | Show the plan and render nothing. | off |
@@ -501,6 +503,21 @@ for it) when it is not a plain run id, when the folder is a symbolic link, or wh
 of `result.json`, `publish-input.json` and `analysis.json`. The other ids are still deleted. With `--json` it prints
 `{"ok": true, "deleted": ["..."], "freedBytes": 0}`; when an id is refused, `ok` is `false` and `errors`
 lists them. This only removes files on this machine. It does not remove an uploaded video.
+
+## `mergestory theme preview`
+
+```
+mergestory theme preview <theme> [--out <dir>] [--allow-low-contrast]
+```
+
+Draws sample scenes with a theme and writes the stills and a page that shows them all, `index.html`.
+It calls no model, makes no voice and uses no network. `<theme>` is a theme name or the path of a theme
+folder, as for `generate --theme`. See [themes.md](themes.md).
+
+| Flag | What it does | Default |
+|---|---|---|
+| `--out <dir>` | The folder for the stills and the page: an empty folder, or one that an earlier preview made. A folder with other files, or with a symbolic link in it, is refused. | `$MERGESTORY_HOME/previews/<theme>` |
+| `--allow-low-contrast` | Draw a theme that fails the contrast check, with a warning. | off |
 
 ## Run folders
 
@@ -640,6 +657,7 @@ request update would be skipped.
 | `jobs` | `{"jobs": [{"id", "status", "createdAt", "updatedAt", "progress", "title", "error"}]}` |
 | `serve` | `{"ok": true, "url", "host", "port", "auth", "allowRoots"}` once, at start. The server then runs until you stop it. |
 | `cache clear` | `{"ok": true, "path", "cleared": ["tts", "llm"]}` |
+| `theme preview` | `{"ok": true, "theme", "base", "sheet", "stills"}`. `base` is `dark` or `light`, `sheet` is the page and `stills` the image files. |
 
 ## Exit codes
 

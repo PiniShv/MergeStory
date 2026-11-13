@@ -1,6 +1,8 @@
+import type { Browser } from 'playwright-core';
 import { describe, expect, it } from 'vitest';
+import type { RenderPlan } from '../core/render-plan.ts';
 import { FONT_FACES, fontFacesCss } from './fonts.ts';
-import { buildPageHtml, escapeInlineScript, PAGE_CSP } from './page.ts';
+import { buildPageHtml, escapeInlineScript, PAGE_CSP, PlanPage } from './page.ts';
 import { loadRuntimeBundle } from './runtime-bundle.ts';
 
 describe('escapeInlineScript', () => {
@@ -54,5 +56,36 @@ describe('loadRuntimeBundle', () => {
     expect(script).toContain('__MERGESTORY__');
     expect(script.length).toBeGreaterThan(1000);
     expect(await loadRuntimeBundle()).toBe(script);
+  });
+});
+
+describe('PlanPage.open', () => {
+  it('opens a plan with theme colors offline and blocks every request', async () => {
+    let contextOptions: unknown;
+    let routed: unknown;
+    const context = {
+      route: async (pattern: unknown) => {
+        routed = pattern;
+      },
+      newPage: async () => {
+        throw new Error('stop once the context is set up');
+      },
+      close: async () => undefined,
+    };
+    const browser = {
+      newContext: async (options: unknown) => {
+        contextOptions = options;
+        return context;
+      },
+    } as unknown as Browser;
+    const plan = {
+      width: 640,
+      height: 360,
+      theme: 'dark',
+      colors: { accent: '#ff8800' },
+    } as unknown as RenderPlan;
+    await expect(PlanPage.open(browser, plan, '<!doctype html>')).rejects.toThrow();
+    expect(contextOptions).toMatchObject({ offline: true, serviceWorkers: 'block' });
+    expect(routed).toBe('**/*');
   });
 });

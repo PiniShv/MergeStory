@@ -2,7 +2,6 @@
  * Code resolution: reads the real lines a code reference points at, so a video never shows code
  * that is not in the change. Secrets are masked before highlighting, protected files are never shown.
  */
-import type { Config } from '../core/config.ts';
 import { diffViewSpan, hunksInView, sideNumber } from '../core/diff-view.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
@@ -31,7 +30,8 @@ export interface FocusRange {
 export interface CodeResolverDeps {
   reader: RepoReader;
   changeSet: ChangeSet;
-  config: Pick<Config, 'theme'>;
+  /** The Shiki theme for code (the theme's code.shiki). */
+  shiki: string;
   logger?: Logger;
 }
 
@@ -290,7 +290,7 @@ export class CodeResolver {
     const masked = maskLines(lines);
     const tokens = await highlightText(masked.lines.join('\n'), {
       language,
-      theme: this.deps.config.theme,
+      theme: this.deps.shiki,
       logger: this.deps.logger,
     });
     return { masked, tokens };

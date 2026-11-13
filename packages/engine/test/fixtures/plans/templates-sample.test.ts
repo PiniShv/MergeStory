@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { PlannedScene, RenderPlan } from '../../../src/core/render-plan.ts';
 import { focusIndexRange } from '../../../src/runtime/code-view.ts';
 
-const raw = readFileSync(new URL('./templates-sample.json', import.meta.url), 'utf8');
+const raw = readFileSync(new URL('../../../assets/preview/templates-sample.json', import.meta.url), 'utf8');
 const plan = JSON.parse(raw) as RenderPlan;
 
 function visualOf<T extends PlannedScene['visual']['type']>(type: T) {

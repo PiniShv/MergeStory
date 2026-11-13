@@ -13,10 +13,10 @@ const SUMMARY_CSS = String.raw`
   bottom: -300px;
   width: 1000px;
   height: 1000px;
-  background: radial-gradient(closest-side, rgba(57, 210, 242, 0.2), rgba(140, 123, 255, 0.1) 55%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent-2) 20%, transparent), color-mix(in srgb, var(--accent) 10%, transparent) 55%, transparent 100%);
 }
 :root[data-theme='light'] .ms-sum__orb {
-  background: radial-gradient(closest-side, rgba(8, 145, 178, 0.14), rgba(103, 80, 240, 0.07) 55%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent-2) 14%, transparent), color-mix(in srgb, var(--accent) 7%, transparent) 55%, transparent 100%);
 }
 .ms-sum__art { position: absolute; right: 60px; top: 150px; width: 420px; height: 420px; overflow: visible; }
 .ms-sum__art circle { fill: none; stroke-linecap: round; }

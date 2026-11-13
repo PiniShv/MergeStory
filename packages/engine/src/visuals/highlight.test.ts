@@ -21,13 +21,16 @@ describe('resolveLanguage', () => {
 describe('highlightText', () => {
   it('returns tokens per line that rebuild the text', async () => {
     const code = 'const a = 1;\n\n// done\n';
-    const lines = await highlightText(code, { language: 'typescript', theme: 'dark' });
+    const lines = await highlightText(code, { language: 'typescript', theme: 'github-dark-default' });
     expect(lines.map(join)).toEqual(['const a = 1;', '', '// done', '']);
     expect(lines[1]).toEqual([]);
   });
 
   it('colours tokens and leaves the default foreground as null', async () => {
-    const [line] = await highlightText('const a = 1;', { language: 'typescript', theme: 'dark' });
+    const [line] = await highlightText('const a = 1;', {
+      language: 'typescript',
+      theme: 'github-dark-default',
+    });
     const keyword = line!.find((t) => t.t === 'const')!;
     expect(keyword.c).toMatch(/^#[0-9a-f]{6}$/);
     expect(line!.some((t) => t.c === null)).toBe(true);
@@ -35,15 +38,21 @@ describe('highlightText', () => {
   });
 
   it('uses the theme that was asked for', async () => {
-    const [dark] = await highlightText('const a = 1;', { language: 'typescript', theme: 'dark' });
-    const [light] = await highlightText('const a = 1;', { language: 'typescript', theme: 'light' });
+    const [dark] = await highlightText('const a = 1;', {
+      language: 'typescript',
+      theme: 'github-dark-default',
+    });
+    const [light] = await highlightText('const a = 1;', {
+      language: 'typescript',
+      theme: 'github-light-default',
+    });
     expect(dark!.find((t) => t.t === 'const')!.c).not.toBe(light!.find((t) => t.t === 'const')!.c);
   });
 
   it('keeps grammar state across lines', async () => {
     const lines = await highlightText('/* start\n   still a comment */\nconst x = 1;', {
       language: 'typescript',
-      theme: 'dark',
+      theme: 'github-dark-default',
     });
     const comment = lines[0]![0]!.c;
     expect(comment).not.toBeNull();
@@ -52,12 +61,15 @@ describe('highlightText', () => {
   });
 
   it('shows unknown languages as plain text', async () => {
-    const lines = await highlightText('hello\n  world', { language: 'no-such-language', theme: 'dark' });
+    const lines = await highlightText('hello\n  world', {
+      language: 'no-such-language',
+      theme: 'github-dark-default',
+    });
     expect(lines).toEqual([[{ t: 'hello', c: null, s: 0 }], [{ t: '  world', c: null, s: 0 }]]);
   });
 
   it('merges neighbouring tokens that look the same', async () => {
-    const [line] = await highlightText('a b c', { language: 'text', theme: 'dark' });
+    const [line] = await highlightText('a b c', { language: 'text', theme: 'github-dark-default' });
     expect(line).toEqual([{ t: 'a b c', c: null, s: 0 }]);
   });
 });

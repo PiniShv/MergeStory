@@ -9,6 +9,7 @@
  */
 import type { NodeKind, SceneRole, Severity, TransitionType } from './storyboard-schema.ts';
 
+/** The base look of the runtime. A theme is drawn on one of the two. */
 export type ThemeName = 'dark' | 'light';
 export type QualityPreset = 'draft' | 'standard' | 'high';
 
@@ -20,6 +21,11 @@ export interface RenderPlan {
   fps: number;
   durationSec: number;
   theme: ThemeName;
+  /**
+   * Colors of the theme, by design token without "--" (see core/theme.ts). Plans made before themes
+   * have none, and the base colors of `theme` apply.
+   */
+  colors?: Record<string, string>;
   meta: PlanMeta;
   captions: { enabled: boolean; cues: PlanCue[] };
   chapters: { title: string; startSec: number }[];

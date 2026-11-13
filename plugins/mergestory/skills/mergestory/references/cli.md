@@ -18,7 +18,7 @@ These run without a question:
 For the `agent` commands, leave `[source]` out to explain the current branch, or give a pull request
 of this repository: its repository must be a git remote of the current folder, on GitHub. Anything
 else is refused with exit code 2. Give the same source, `--base` and `--head` to all three.
-`agent render` takes `--quality`, `--duration`, `--max-duration`, `--language`, `--theme`, `--style`,
+`agent render` takes `--quality`, `--duration`, `--max-duration`, `--language`, `--theme` (a name only), `--style`,
 `--tts` (`auto`, `kokoro`, `say` or `none`), `--voice`, `--dry-run`, `--no-cache` and `--no-captions`.
 The agent commands refuse every flag that names a file, a folder, a model, a storage or a host.
 

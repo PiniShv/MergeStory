@@ -13,10 +13,10 @@ const BULLETS_CSS = String.raw`
   top: 40px;
   width: 900px;
   height: 900px;
-  background: radial-gradient(closest-side, rgba(140, 123, 255, 0.2), rgba(57, 210, 242, 0.06) 56%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent-2) 6%, transparent) 56%, transparent 100%);
 }
 :root[data-theme='light'] .ms-bul__orb {
-  background: radial-gradient(closest-side, rgba(103, 80, 240, 0.12), rgba(8, 145, 178, 0.05) 56%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent-2) 5%, transparent) 56%, transparent 100%);
 }
 .ms-bul__art { position: absolute; right: 0; top: 0; width: 560px; height: 720px; overflow: visible; }
 .ms-bul__art circle { fill: none; }
@@ -53,7 +53,7 @@ const BULLETS_CSS = String.raw`
   height: 0.9em;
   margin: -0.45em 0 0 -0.45em;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(140, 123, 255, 0.5), transparent);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--glow) 50%, transparent), transparent);
   opacity: 0;
 }
 .ms-bul__dot {

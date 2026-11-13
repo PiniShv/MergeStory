@@ -10,7 +10,7 @@ import {
   PUBLISH_PROVIDERS,
   QUALITIES,
   STYLES,
-  THEMES,
+  THEME_NAME,
   TTS_PROVIDERS,
   VISIBILITIES,
 } from '../core/config.ts';
@@ -105,7 +105,10 @@ export interface ConfigFlags {
   maxDuration?: number;
   duration?: number;
   language?: string;
-  theme?: Config['theme'];
+  /** A theme name, or (generate only) the path of a theme folder. */
+  theme?: string;
+  /** --allow-low-contrast (generate only). */
+  allowLowContrast?: boolean;
   llm?: Config['llm']['provider'];
   model?: string;
   llmBaseUrl?: string;
@@ -160,16 +163,38 @@ export function addContextFlags(command: Command): Command {
     );
 }
 
-/** Add the flags for style, quality and length. */
-export function addStyleFlags(command: Command): Command {
-  return command
+/**
+ * `--theme`. With `paths` (generate, theme preview) it also takes the path of a theme folder on this
+ * machine; without (agent commands) only a name, so an agent can never point it at a folder.
+ */
+export function themeOption(paths: boolean): Option {
+  const names =
+    'midnight (default), paper, high-contrast, terminal, or a theme of yours in ~/.mergestory/themes';
+  return new Option(
+    '--theme <theme>',
+    paths ? `video theme: ${names}, or the path of a theme folder` : `video theme: ${names}`,
+  ).argParser((value: string) => {
+    if (!paths && !THEME_NAME.test(value)) {
+      throw new InvalidArgumentError('Give the name of a theme. A path is not accepted here.');
+    }
+    return value;
+  });
+}
+
+/** Add the flags for style, quality and length. `userThemes` also takes theme paths and --allow-low-contrast. */
+export function addStyleFlags(command: Command, userThemes = false): Command {
+  command
     .optionsGroup('Style and length:')
     .addOption(new Option('--style <style>', 'how technical the narration is').choices(STYLES))
     .addOption(new Option('--quality <preset>', 'video quality').choices(QUALITIES))
     .addOption(maxDurationOption())
     .addOption(durationOption())
     .option('--language <code>', 'narration language, for example en')
-    .addOption(new Option('--theme <theme>', 'color theme').choices(THEMES));
+    .addOption(themeOption(userThemes));
+  if (userThemes) {
+    command.option('--allow-low-contrast', 'use a theme that fails the contrast check, with a warning');
+  }
+  return command;
 }
 
 /** What each publish target means, in a few words. */
@@ -330,7 +355,8 @@ export async function configFromFlags(flags: ConfigFlags, cwd: string): Promise<
   if (flags.maxDuration !== undefined) config.maxDurationSec = flags.maxDuration;
   if (flags.duration !== undefined) config.targetDurationSec = flags.duration;
   if (flags.language) config.language = flags.language;
-  if (flags.theme) config.theme = flags.theme;
+  // A theme path is made absolute here, so later steps never look for it in another folder.
+  if (flags.theme) config.theme = THEME_NAME.test(flags.theme) ? flags.theme : resolve(cwd, flags.theme);
   if (flags.budget !== undefined) config.budgetUsd = flags.budget;
   if (flags.captions === false) config.captions = false;
   if (flags.out) config.outDir = resolve(cwd, flags.out);

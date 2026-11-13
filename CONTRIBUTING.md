@@ -55,7 +55,7 @@ Scene templates live in `packages/engine/src/runtime/templates`. Render frames o
 files to check your work:
 
 ```bash
-node packages/engine/scripts/preview-frames.mjs packages/engine/test/fixtures/plans/templates-sample.json /tmp/frames
+node packages/engine/scripts/preview-frames.mjs packages/engine/assets/preview/templates-sample.json /tmp/frames
 ```
 
 Rules for templates:

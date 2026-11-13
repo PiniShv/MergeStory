@@ -686,7 +686,7 @@ function registerStyles(): void {
   box-shadow: 0 0 0 1px var(--border-2);
 }
 .ms-codeview__flag { color: var(--del); background: var(--del-soft); box-shadow: 0 0 0 1px rgba(255, 107, 129, 0.4); }
-.ms-codeview__tag { color: var(--accent-2); background: var(--accent-2-soft); box-shadow: 0 0 0 1px rgba(57, 210, 242, 0.35); }
+.ms-codeview__tag { color: var(--accent-2); background: var(--accent-2-soft); box-shadow: 0 0 0 1px color-mix(in srgb, var(--glow-2) 35%, transparent); }
 .ms-codeview__body { overflow: hidden; }
 .ms-codeview__lines { position: relative; }
 .ms-codeview__line {

@@ -246,6 +246,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [Architecture](docs/architecture.md)
 - [CLI reference](docs/cli.md)
 - [Configuration](docs/configuration.md)
+- [Themes](docs/themes.md)
 - [What it costs](docs/cost.md)
 - [Storyboard format](docs/storyboard.md)
 - [GitHub Actions](docs/github-actions.md)

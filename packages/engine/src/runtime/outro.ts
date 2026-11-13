@@ -21,10 +21,10 @@ const OUTRO_CSS = String.raw`
   width: 1500px;
   height: 1000px;
   margin: -500px 0 0 -750px;
-  background: radial-gradient(closest-side, rgba(140, 123, 255, 0.3), rgba(57, 210, 242, 0.1) 58%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent-2) 10%, transparent) 58%, transparent 100%);
 }
 :root[data-theme='light'] .ms-outro__glow {
-  background: radial-gradient(closest-side, rgba(103, 80, 240, 0.16), rgba(8, 145, 178, 0.07) 58%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent-2) 7%, transparent) 58%, transparent 100%);
 }
 .ms-outro__col {
   position: relative;
@@ -38,12 +38,11 @@ const OUTRO_CSS = String.raw`
 .ms-outro__word { font-size: 104px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--text-0); }
 .ms-outro__word b {
   font-weight: 800;
-  background: linear-gradient(90deg, #b6acff, var(--accent-2));
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-:root[data-theme='light'] .ms-outro__word b { background: linear-gradient(90deg, #5a43e6, #0e7490); -webkit-background-clip: text; background-clip: text; }
 .ms-outro__tag { margin-top: 34px; font-size: 52px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--text-1); }
 .ms-outro__rule {
   width: 160px;

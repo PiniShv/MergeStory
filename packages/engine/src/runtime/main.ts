@@ -58,7 +58,7 @@ const RUNTIME_CSS = String.raw`
   height: 1080px;
   margin-left: -2px;
   background: linear-gradient(180deg, transparent, var(--accent-2) 30%, var(--accent) 70%, transparent);
-  box-shadow: 0 0 40px 6px rgba(140, 123, 255, 0.5);
+  box-shadow: 0 0 40px 6px color-mix(in srgb, var(--glow) 50%, transparent);
 }
 `;
 
@@ -101,6 +101,9 @@ async function load(next: RenderPlan): Promise<void> {
   css('base', BASE_CSS);
   css('runtime', RUNTIME_CSS);
   document.documentElement.dataset.theme = next.theme;
+  for (const [token, value] of Object.entries(next.colors ?? {})) {
+    document.documentElement.style.setProperty(`--${token}`, value);
+  }
   document.documentElement.style.setProperty('--stage-w', `${next.width}px`);
   document.documentElement.style.setProperty('--stage-h', `${next.height}px`);
   document.body.replaceChildren();

@@ -118,6 +118,16 @@ describe('generate: flags become GenerateOptions', () => {
     expect(options.configPath).toBeUndefined();
   });
 
+  it('takes a theme name as typed, and makes a theme path absolute', async () => {
+    generateMock.mockResolvedValue(fakeResult());
+    await run(['generate', '--theme', 'terminal']);
+    expect(lastGenerateOptions().config).toEqual({ theme: 'terminal' });
+    expect(lastGenerateOptions().allowLowContrast).toBeUndefined();
+    await run(['generate', '--theme', 'themes/brand', '--allow-low-contrast']);
+    expect(lastGenerateOptions().config).toEqual({ theme: resolve(dir, 'themes/brand') });
+    expect(lastGenerateOptions().allowLowContrast).toBe(true);
+  });
+
   it('does not switch anything on or off that was not asked for', async () => {
     generateMock.mockResolvedValue(fakeResult());
     await run(['generate', 'acme/app#1', '--style', 'technical']);

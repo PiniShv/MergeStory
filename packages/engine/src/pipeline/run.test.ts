@@ -265,6 +265,25 @@ describe('--max-duration', () => {
   });
 });
 
+describe('the theme', () => {
+  it('stops a run with a theme that cannot be used, before a storyboard is chosen', async () => {
+    const error = await failure(plan({ config: { theme: join(home, 'no-such-theme') } }));
+    expect(error.code).toBe('CONFIG_INVALID');
+    expect(error.message).toContain('Theme folder not found');
+    expect(existsSync(join(runDir(), 'storyboard.json'))).toBe(false);
+  });
+
+  it('refuses a theme that is hard to read, and only warns when that is allowed', async () => {
+    const folder = join(home, 'grey-theme');
+    await mkdir(folder, { recursive: true });
+    const theme = { schema: 1, name: 'grey', colors: { dark: { 'text-2': '#3a3f4f' } } };
+    await writeFile(join(folder, 'theme.json'), JSON.stringify(theme));
+    expect((await failure(plan({ config: { theme: folder } }))).message).toContain('hard to read');
+    const result = await plan({ config: { theme: folder }, allowLowContrast: true });
+    expect(result.warnings).toContainEqual(expect.stringContaining('text-2 reaches'));
+  });
+});
+
 describe('a dry run', () => {
   it('reports publishing that would fail, and plans no upload to a bucket that is not set', async () => {
     const result = await plan({ config: { publish: { provider: 's3' } } });

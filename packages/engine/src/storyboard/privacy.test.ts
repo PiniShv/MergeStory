@@ -114,7 +114,7 @@ describe('one privacy verdict for every stage', () => {
   });
 
   it('shows the protected panel for any of them in the code view, and reads none of them', async () => {
-    const { changeSet, reader, config } = await change();
+    const { changeSet, reader } = await change();
     const reads: string[] = [];
     const recording: RepoReader = {
       readFile(path, side) {
@@ -122,7 +122,7 @@ describe('one privacy verdict for every stage', () => {
         return reader.readFile(path, side);
       },
     };
-    const resolver = new CodeResolver({ reader: recording, changeSet, config });
+    const resolver = new CodeResolver({ reader: recording, changeSet, shiki: 'github-dark-default' });
     for (const { path, side } of HIDDEN) {
       const code = await resolver.resolve({ path, side, startLine: 1, endLine: 2 }, 'snippet');
       expect(code.masked, path).toBe(true);
