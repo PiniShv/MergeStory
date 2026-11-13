@@ -1,5 +1,6 @@
 /** mergestory theme preview, mergestory theme init */
-import { stat, writeFile } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+import { rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { type Command, Option } from 'commander';
 import { BUILT_IN_THEMES } from '../../core/config.ts';
@@ -79,7 +80,7 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
     .option('--accent-2 <color>', 'a second brand color, for labels and highlights')
     .option(
       '--brand <file>',
-      'a file with your brand colors (CSS, JSON or a list); its first two clearly colored values are used',
+      'a file with your brand colors (CSS, JSON or a list): its first color that labels can use, and the next one of a clearly different hue',
     )
     .addOption(
       new Option('--from <theme>', 'the built-in theme to start from; it makes the theme dark or light')
@@ -97,6 +98,7 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
           import('../../core/paths.ts'),
           import('../files.ts'),
         ]);
+      let lowContrast = false;
       const brand = flags.brand
         ? await readTextFile(flags.brand, { label: '--brand', maxBytes: LIMITS.brandBytes, cwd: env.io.cwd })
         : undefined;
@@ -107,7 +109,10 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
         accent2: flags.accent2,
         brand,
         allowLowContrast: flags.allowLowContrast === true,
-        warn: (message) => env.logger.warn(message),
+        warn: (message) => {
+          lowContrast = true;
+          env.logger.warn(message);
+        },
       });
       const { themes } = homeLayout(config.home);
       const folder = join(themes, name);
@@ -118,10 +123,21 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
           hint: 'Pass --force to replace its theme.json, or choose another name.',
         });
       }
-      await ensureDir(themes);
-      await ensureDir(folder);
       const path = join(folder, 'theme.json');
-      await writeFile(path, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600 });
+      // A new file renamed into place: never written through a hard link to a file elsewhere.
+      const temp = join(folder, `.theme.json.${randomBytes(6).toString('hex')}.tmp`);
+      try {
+        await ensureDir(themes);
+        await ensureDir(folder);
+        await writeFile(temp, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
+        await rename(temp, path);
+      } catch (err) {
+        await rm(temp, { force: true }).catch(() => undefined);
+        throw new MergeStoryError('USAGE', `The theme could not be saved in ${folder}.`, {
+          hint: 'theme.json there must be a plain file. Remove the folder, or choose another name.',
+          cause: err,
+        });
+      }
       const colors = file.colors?.dark ?? file.colors?.light ?? {};
       const base = file.colors?.dark ? 'dark' : 'light';
       if (env.json) {
@@ -131,7 +147,8 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
       const second = colors['accent-2'] ? ` and accent-2 ${colors['accent-2']}` : '';
       env.say(`Theme ${name} (${base}, from ${file.extends}): accent ${colors.accent}${second}.`);
       env.say(`Saved ${path}`);
-      env.say(`See it: mergestory theme preview ${name}`);
-      env.say(`Use it: mergestory generate --theme ${name}`);
+      const allow = lowContrast ? ' --allow-low-contrast' : '';
+      env.say(`See it: mergestory theme preview ${name}${allow}`);
+      env.say(`Use it: mergestory generate --theme ${name}${allow}`);
     });
 }

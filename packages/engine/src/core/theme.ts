@@ -170,6 +170,9 @@ export function colorProblem(value: string): string | null {
   return null;
 }
 
+/** A ratio for a message, rounded down, so 2.996 never reads as the 3:1 it misses. */
+const ratioText = (ratio: number): string => (Math.floor(ratio * 100) / 100).toFixed(2);
+
 function luminance([r, g, b]: Rgba): number {
   const linear = (v: number) => {
     const c = v / 255;
@@ -258,7 +261,7 @@ export function safetyProblems(theme: ResolvedTheme): string[] {
       const ratio = contrastOn(parseColor(value)!, background);
       if (ratio < CHANGE_CONTRAST) {
         problems.push(
-          `${token} (${value}) reaches ${ratio.toFixed(2)}:1 on ${where}, so a change could be missed; it needs ${CHANGE_CONTRAST}:1.`,
+          `${token} (${value}) reaches ${ratioText(ratio)}:1 on ${where}, so a change could be missed; it needs ${CHANGE_CONTRAST}:1.`,
         );
         break;
       }
@@ -276,7 +279,7 @@ export function contrastProblems(theme: ResolvedTheme): string[] {
     for (const [where, background] of backgrounds) {
       const ratio = contrastOn(color(token), background);
       if (ratio < minimum) {
-        problems.push(`${token} reaches ${ratio.toFixed(2)}:1 on ${where}; it needs ${minimum}:1.`);
+        problems.push(`${token} reaches ${ratioText(ratio)}:1 on ${where}; it needs ${minimum}:1.`);
         break;
       }
     }
@@ -287,7 +290,7 @@ export function contrastProblems(theme: ResolvedTheme): string[] {
     const ratio = contrastOn(color('cap-fg'), pill);
     if (ratio < CAPTION_CONTRAST) {
       problems.push(
-        `Captions (cap-fg on cap-bg) reach ${ratio.toFixed(2)}:1 over some scenes; they need ${CAPTION_CONTRAST}:1.`,
+        `Captions (cap-fg on cap-bg) reach ${ratioText(ratio)}:1 over some scenes; they need ${CAPTION_CONTRAST}:1.`,
       );
       break;
     }
@@ -648,22 +651,35 @@ export async function createTheme(
       'Use 1-40 characters: a-z, 0-9 and "-", and not the name of a built-in theme.',
     );
   }
+  const parent = await builtInTheme(from as BuiltIn);
+  // Brand colors that labels can use on this look: a navy brand color suits paper, not midnight.
+  const backgrounds = backgroundsOf(colorReader(parent));
+  const readable = (c: Rgba) =>
+    backgrounds.every(([, bg]) => contrastOn(c, bg) >= (TEXT_CONTRAST.accent ?? 3));
   const found = (options.brand === undefined ? [] : brandColors(options.brand)).filter(vivid);
-  const accent = flagColor('--accent', options.accent) ?? found[0] ?? null;
+  const accent = flagColor('--accent', options.accent) ?? found.find(readable) ?? found[0] ?? null;
   if (!accent) {
     throw themeError(
       options.brand === undefined
         ? 'Give --accent or --brand.'
-        : 'The brand file has no clearly colored value.',
+        : 'The brand file has no clearly colored value written as #hex, rgb() or hsl().',
       'Pass the main brand color with --accent, for example --accent "#ff7a1a".',
     );
   }
   const accent2 =
-    flagColor('--accent-2', options.accent2) ?? found.find((c) => hueDistance(c, accent) >= 30) ?? null;
-  const base = (await builtInTheme(from as BuiltIn)).base;
+    flagColor('--accent-2', options.accent2) ??
+    found.find((c) => readable(c) && hueDistance(c, accent) >= 30) ??
+    null;
+  const base = parent.base;
   const file = parseThemeFile(
     { schema: 1, name: options.name, extends: from, colors: { [base]: accentColors(base, accent, accent2) } },
     `the new theme "${options.name}"`,
   );
-  return { file, theme: checked(await complete(file, false), options) };
+  try {
+    return { file, theme: checked(await complete(file, false), options) };
+  } catch (err) {
+    if (!(err instanceof MergeStoryError)) throw err;
+    const picked = `Accent ${toHex(accent)}${accent2 ? `, accent-2 ${toHex(accent2)}` : ''} on ${from}.`;
+    throw themeError(`${picked} ${err.message}`, err.hint);
+  }
 }

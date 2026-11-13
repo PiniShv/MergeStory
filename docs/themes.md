@@ -45,14 +45,17 @@ mergestory theme init acme --brand brand.css --from paper
 
 - `--accent` is your main brand color, and `--accent-2` an optional second one.
 - `--brand` reads a file with your brand colors: CSS variables, design tokens in JSON, or a plain list.
-  MergeStory uses its first clearly colored value as the accent, and the next one with a clearly
-  different hue as the second accent. Greys, black and white are skipped. `--accent` and `--accent-2`
-  win over the file.
+  It reads colors written as `#hex`, `rgb()` or `hsl()`; other notations, such as `oklch()`, are
+  skipped. Greys, black and white are skipped too. The accent is the first color that labels can use
+  on the chosen look (3:1, see the checks below), and the second accent is the next such color with a
+  clearly different hue. So a navy brand color is used on `paper` but not on `midnight`. Without a
+  second color, the theme keeps the one of `--from`. `--accent` and `--accent-2` win over the file.
 - `--from` is the built-in theme to start from. `midnight` (the default) makes a dark theme, `paper` a
   light one.
 
-On a light theme, a pale brand color such as a light yellow fails the contrast check: give a deeper
-shade of it with `--accent`, or make a dark theme.
+A brand color given with `--accent` must pass the same check: on a light theme a pale color, such as a
+light yellow, fails it, and on a dark theme a deep one, such as navy, does. Give a deeper or a lighter
+shade of it, or start from the other look. When the check fails, the error names the colors it tried.
 
 MergeStory works out the other accent colors (soft backgrounds, the colors of large text and the logo
 word, the glows) from your colors, the way the built-in themes relate theirs. It runs the checks, saves
@@ -156,11 +159,11 @@ MergeStory also refuses a theme that is hard to read:
 |---|---|
 | `text-0`, `text-1` and `text-2` on every background | 4.5:1 |
 | `text-3` on every background | 3:1 |
-| `accent` and `accent-2`, which color labels and chips, on every background | 3:1 |
+| `accent` and `accent-2`, which color labels, on every background | 3:1 |
 | Captions (`cap-fg` on `cap-bg`), over any scene behind them | 7:1 |
 
 It also refuses a light `code.shiki` scheme on a dark theme, or a dark one on a light theme. The error
-names each color and its contrast. With `--allow-low-contrast` (on `generate` and `theme preview`)
+names each color and its contrast. With `--allow-low-contrast` (on `generate`, `theme preview` and `theme init`)
 these readability problems are warnings instead.
 
 ## Where a theme comes from
