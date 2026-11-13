@@ -59,7 +59,7 @@ export function fence(body: string, info = ''): string {
 export function cell(value: string): string {
   return value
     .replace(/[\r\n]+/g, ' ')
-    .replace(/\|/g, '\\|')
+    .replace(/[\\|]/g, '\\$&')
     .replace(/`/g, "'");
 }
 

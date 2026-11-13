@@ -29,8 +29,8 @@ describe('buildPageHtml', () => {
   it('inlines the fonts and the runtime, with the script end tag escaped', () => {
     expect(html).toContain('<style>@font-face{font-family:"T";}</style>');
     expect(html).toContain('window.x = "<\\/script><b>";');
-    expect(html.match(/<script>/g)).toHaveLength(1);
-    expect(html.match(/<\/script>/g)).toHaveLength(1);
+    expect(html.split('<script>')).toHaveLength(2);
+    expect(html.split('</script>')).toHaveLength(2);
     expect(html.startsWith('<!doctype html>')).toBe(true);
   });
 });

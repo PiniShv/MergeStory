@@ -128,6 +128,15 @@ describe('trivial detection', () => {
     expect(trivialFor('src/a.ts', 'say("a");\n', "say('a');\n").reason).toMatch(/^formatting-only/);
   });
 
+  it('reads a quote with no end as plain text, and the strings around it as strings', () => {
+    expect(trivialFor('src/a.ts', "// don't\nsay('a b');\n", "// don't\nsay('ab');\n").trivial).toBe(false);
+    expect(trivialFor('src/a.ts', "// don't  stop\nsay('a');\n", "// don't stop\nsay('a');\n").trivial).toBe(
+      true,
+    );
+    const open = `x = '${"\\'".repeat(50_000)}`;
+    expect(trivialFor('src/a.ts', `${open}\n`, `${open} \n`).trivial).toBe(true);
+  });
+
   it('does not call quote or semicolon changes formatting outside JavaScript and TypeScript', () => {
     expect(trivialFor('deploy.sh', 'rm -rf "$DIR"\n', "rm -rf '$DIR'\n").trivial).toBe(false);
     expect(trivialFor('deploy.sh', 'cd build; rm -rf dist\n', 'cd build rm -rf dist\n').trivial).toBe(false);

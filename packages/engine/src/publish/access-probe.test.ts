@@ -395,7 +395,7 @@ describe('probeAccessProtection: the request it sends', () => {
 describe('probeAccessProtection: redirects', () => {
   it('follows redirects inside the same host, then decides', async () => {
     handler = (req, res) => {
-      if (!req.url?.endsWith('/')) res.writeHead(301, { location: `${req.url}/` }).end();
+      if (req.url !== '/folder/') res.writeHead(301, { location: '/folder/' }).end();
       else res.writeHead(404).end();
     };
     const result = await probeAccessProtection(origin);

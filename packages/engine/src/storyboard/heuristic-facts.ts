@@ -79,7 +79,8 @@ export function numericSentences(facts: readonly NumericFact[], subject: string 
 
 /** Names after "Affected:" in the detail of a public API risk. */
 export function affectedNames(risk: RiskSignal): string[] {
-  const match = /Affected: (.+?)\.(?:\s|$)/.exec(risk.detail);
+  const at = risk.detail.indexOf('Affected: ');
+  const match = at === -1 ? null : /^(.+?)\.(?:\s|$)/.exec(risk.detail.slice(at + 'Affected: '.length));
   if (!match) return [];
   return match[1]!
     .replace(/ and \d+ more$/, '')
@@ -163,7 +164,7 @@ function blocks(text: string): string[] {
       open = false;
       continue;
     }
-    const bullet = /^(?:[-*+]|\d{1,3}[.)])\s+(.*)$/.exec(line);
+    const bullet = /^(?:[-*+]|\d{1,3}[.)])\s+(\S.*)$/.exec(line);
     if (bullet) {
       out.push(bullet[1]!);
       open = true;

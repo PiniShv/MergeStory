@@ -128,7 +128,9 @@ function shouldMask(name: string, value: string): boolean {
  * only lines that hold nothing else match, and values of any length are masked whole.
  */
 const UNQUOTED_ASSIGNMENT =
-  /^[ \t]*(?:-[ \t]{1,8})?(?:export[ \t]{1,8})?([A-Za-z_][\w.-]{0,63})[ \t]{0,8}(?::[ \t]{1,8}|=[ \t]{0,8})([^\s"'`]\S*)(?:[ \t]+#[^\r\n]*)?[ \t]*$/dgm;
+  /^[ \t]*(?:-[ \t]{1,8})?(?:export[ \t]{1,8})?([A-Za-z_][\w.-]{0,63})[ \t]{0,8}(?::[ \t]{1,8}|=[ \t]{0,8})([^\s"'`]\S*)(?:[ \t]+(?:#.*)?)?$/d;
+/** One line of text. Lines are matched one at a time, so the pattern above is anchored to a whole string. */
+const LINE = /[^\n\r\u2028\u2029]+/g;
 /** Names for a setting about a secret, not the secret: secretName, password_file, api_key_header. */
 const REFERENCE_NAME =
   /(?:name|file|path|ref|type|header|url|uri|endpoint|helper|provider|backend|store|source|arn)$/i;
@@ -136,7 +138,7 @@ const REFERENCE_NAME =
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 /** A variable, member, call, index or type: `hashedPassword`, `config.apiKey`, `getSecret()`, `Option<String>`. */
 const CODE_VALUE =
-  /^[&*!]*[A-Za-z_$][\w$]*(?:(?:\?\.|\.|::|->)[A-Za-z_$][\w$]*|\[[^\]\s]*\]|\([^)\s]*\)|<\S*)*[!?]?$/;
+  /^[&*!]*[A-Za-z_$][\w$]*(?:(?:\?\.|\.|::|->)[A-Za-z_$][\w$]*|\[[^\]\s]*\]|\([^)\s]*\)|<[^\s<]*)*[!?]?$/;
 
 /** Whether an unquoted value is code that names a secret rather than the secret itself. */
 function readsLikeCode(name: string, value: string): boolean {
@@ -240,12 +242,12 @@ export function findSecrets(text: string): SecretMatch[] {
     const start = (m.index ?? 0) + full.lastIndexOf(value);
     matches.push({ rule: 'env-secret', start, end: start + value.length });
   }
-  UNQUOTED_ASSIGNMENT.lastIndex = 0;
-  for (const m of text.matchAll(UNQUOTED_ASSIGNMENT)) {
-    const [, name, value] = m as unknown as [string, string, string];
-    const at = m.indices?.[2];
-    if (!at || !shouldMaskUnquoted(name, value)) continue;
-    matches.push({ rule: 'unquoted-secret', start: at[0], end: at[1] });
+  for (const line of text.matchAll(LINE)) {
+    const m = UNQUOTED_ASSIGNMENT.exec(line[0]);
+    const at = m?.indices?.[2];
+    if (!m || !at || !shouldMaskUnquoted(m[1]!, m[2]!)) continue;
+    const offset = line.index ?? 0;
+    matches.push({ rule: 'unquoted-secret', start: offset + at[0], end: offset + at[1] });
   }
   QUOTED_LITERAL.lastIndex = 0;
   for (const m of text.matchAll(QUOTED_LITERAL)) {

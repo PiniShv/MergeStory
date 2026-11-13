@@ -160,7 +160,9 @@ function section(page: string, heading: string): string {
 
 /** Whether a page names a flag. `--task` is not found inside `--task-file`. */
 function namesFlag(text: string, flag: string): boolean {
-  return new RegExp(`${flag.replace(/-/g, '\\-')}(?![\\w-])`).test(text);
+  for (let at = text.indexOf(flag); at !== -1; at = text.indexOf(flag, at + 1))
+    if (!/[\w-]/.test(text.charAt(at + flag.length))) return true;
+  return false;
 }
 
 interface CommandInfo {

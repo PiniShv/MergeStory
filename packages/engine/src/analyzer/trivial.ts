@@ -24,12 +24,52 @@ function changedSides(hunk: DiffHunk): { removed: string[]; added: string[] } {
   return { removed, added };
 }
 
-const STRING_LITERAL = /'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`/g;
+/**
+ * Where the string literal that opens at `start` ends, or the place where the scan gave up as a
+ * negative number. A quote must close on its own line; a backtick may run over lines.
+ */
+function stringEnd(text: string, start: number): number {
+  const quote = text[start];
+  let at = start + 1;
+  while (at < text.length) {
+    const char = text[at];
+    if (char === quote) return at + 1;
+    if (char === '\\') {
+      if (at + 1 >= text.length || /[\n\r\u2028\u2029]/.test(text[at + 1]!)) break;
+      at += 2;
+    } else if (char === '\n' && quote !== '`') break;
+    else at += 1;
+  }
+  return -at;
+}
+
+/**
+ * Swaps each string literal for what `replace` returns. Scans by hand to stay linear: when a quote
+ * finds no end, no later quote of that kind before the same place finds one either, so they are skipped.
+ */
+function replaceStrings(text: string, replace: (literal: string) => string): string {
+  const openUntil: Record<string, number> = { "'": 0, '"': 0, '`': 0 };
+  let out = '';
+  let at = 0;
+  while (at < text.length) {
+    const char = text[at]!;
+    const end = char in openUntil && at >= openUntil[char]! ? stringEnd(text, at) : 0;
+    if (end > 0) {
+      out += replace(text.slice(at, end));
+      at = end;
+      continue;
+    }
+    if (end < 0) openUntil[char] = -end;
+    out += char;
+    at += 1;
+  }
+  return out;
+}
 
 /** Runs `edit` on the text with each string literal swapped for a marker, so the edit never touches a string. */
 function outsideStrings(text: string, edit: (code: string) => string, unifyQuotes = false): string {
   const strings: string[] = [];
-  const masked = text.replace(STRING_LITERAL, (literal) => {
+  const masked = replaceStrings(text, (literal) => {
     strings.push(unifyQuotes && literal.startsWith('"') ? `'${literal.slice(1, -1)}'` : literal);
     return `\0${strings.length - 1}\0`;
   });
