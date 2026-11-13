@@ -41,6 +41,13 @@ All notable changes to MergeStory are listed here, newest first.
 - docs/cost.md says that the `gpt-4o-mini-tts` and ElevenLabs rates are conversions, and that you can
   set your own in `pricing`.
 
+## Skill and plugin 1.2.4
+
+- The skill installs `mergestory@1.2.4`, which says exactly what a video can cost and counts the cost
+  of a run accurately.
+- The skill calls the cost an estimate only when it is above $0, and says that the agent's own usage,
+  storage and CI are billed separately. The plugin page says what can still cost money.
+
 ## 1.2.3
 
 ### Narration
