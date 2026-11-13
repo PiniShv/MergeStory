@@ -45,6 +45,8 @@ export const VISIBILITIES = ['private', 'protected', 'public'] as const;
  * Any other theme value is the full path of a theme folder (see core/theme.ts).
  */
 export const THEME_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+/** The themes that ship with MergeStory (assets/themes). */
+export const BUILT_IN_THEMES = ['midnight', 'paper', 'high-contrast', 'terminal'] as const;
 
 /**
  * Every section is strict: a key that is not listed here is an error, never silently ignored. A

@@ -12,6 +12,8 @@ export const LIMITS = {
   testsBytes: 256 * 1024,
   /** --storyboard */
   storyboardBytes: 1024 * 1024,
+  /** theme init --brand */
+  brandBytes: 1024 * 1024,
 } as const;
 
 /** "64 KB", "1.5 MB". */

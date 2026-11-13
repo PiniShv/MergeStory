@@ -13,6 +13,9 @@ All notable changes to MergeStory are listed here, newest first.
   path you give to `--theme`. A theme is data only: colors and a code color scheme. It cannot change
   how added, removed and changed lines look, or the badges, and its backgrounds must let those colors
   stand out. See [docs/themes.md](docs/themes.md).
+- `mergestory theme init <name> --accent <color>` makes a theme from your brand color. `--brand
+  <file>` takes the colors from a file of yours (CSS, JSON or a list), and `--from paper` makes the
+  theme light.
 - `mergestory theme preview <theme>` draws sample scenes with a theme on one page, with no model, no
   voice and no network.
 - A contrast check refuses a theme that is hard to read. `--allow-low-contrast` makes it a warning.
