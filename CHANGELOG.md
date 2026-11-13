@@ -2,7 +2,7 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.3.0
 
 ### Themes
 
