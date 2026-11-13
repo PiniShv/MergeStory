@@ -39,7 +39,8 @@ flowchart LR
    reported a passing test run.
 2. **Cheap by default.** The default run makes no paid calls: the storyboard comes from the coding
    agent or the offline generator, speech is local, rendering is local. Paid providers are
-   opt-in, use the cheapest capable model, and stop at a budget (default $0.25 per run).
+   opt-in, use the cheapest capable model, and are checked against an estimated budget before each call
+   (default $0.25 per run).
 3. **Private by default.** Nothing from the code or the change leaves the machine unless a provider
    is configured. Secrets are masked in code, captions, narration and logs. Shared links are private
    and expire by default.
@@ -295,15 +296,15 @@ repository: `runs/`, `cache/`, `jobs/`, `models/`, `plugins/` and `credentials/`
 
 | Item | Default | Typical cost per video |
 |---|---|---|
-| Storyboard | Written by the coding agent, or offline | $0 |
-| Storyboard with an LLM (opt-in) | `claude-haiku-5-5` | under $0.01 |
+| Storyboard | Written by the coding agent, or offline | no MergeStory charge (the agent's own usage is billed by its provider) |
+| Storyboard with an LLM (opt-in) | `claude-haiku-5-5` | estimated under $0.01 |
 | Speech | Local (Kokoro or macOS) | $0 |
 | Speech, paid (opt-in) | OpenAI or ElevenLabs | a few cents |
 | Rendering | Local CPU | $0 (CI minutes on hosted runners) |
-| Storage | S3-compatible | fractions of a cent per month (R2 has no egress fees) |
+| Storage | S3-compatible | billed by your provider: fractions of a cent per month for a short video on R2; S3 also bills requests and data transfer out |
 
 Every paid call is checked against the budget before it is made and recorded in the result. A model
-whose price is unknown is counted at the highest listed rate, so it cannot slip past the budget. See
+whose price is unknown is counted at the highest listed rate, so it is not counted as cheap. See
 [configuration.md](configuration.md#budget).
 
 ## Security model

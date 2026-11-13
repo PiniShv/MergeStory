@@ -110,12 +110,14 @@ describe('formatCost', () => {
       budgetUsd: 0.25,
       records: [record('llm', 0.004), record('tts', 0.0002)],
     };
-    expect(formatCost(cost)).toBe('$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25');
+    expect(formatCost(cost)).toBe(
+      '$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted',
+    );
   });
 
   it('shows zero costs, so a free run looks free', () => {
     expect(formatCost({ totalUsd: 0, budgetUsd: 0.25, records: [] })).toBe(
-      '$0.0000 (LLM $0.0000, speech $0.0000), budget $0.25',
+      '$0.0000 (LLM $0.0000, speech $0.0000), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted',
     );
   });
 
@@ -126,7 +128,7 @@ describe('formatCost', () => {
       records: [record('llm', 0.01, true), record('storage', 0.0005), record('other', 0)],
     };
     expect(formatCost(cost)).toBe(
-      '$0.0105 (LLM $0.0100, speech $0.0000, other $0.0005), estimated from list prices, budget $1.00',
+      '$0.0105 (LLM $0.0100, speech $0.0000, other $0.0005), estimated from list prices, budget $1.00; your coding agent, storage, CI and model servers on your network are not counted',
     );
   });
 

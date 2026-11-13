@@ -351,7 +351,7 @@ sign-in are explained in [drive.md](drive.md).
 Storage for one video is tiny. A 2-minute video at 1080p is about 10 MB.
 
 Cloudflare R2 charges $0.015 per GB-month of storage. The first 10 GB-month are free each month, and
-R2 has no egress fees, so watching a video costs nothing extra.
+R2 has no egress fees. Each view counts as read operations, which are free up to a monthly limit.
 
 | Videos you keep | Storage | R2 per month |
 |---|---|---|
@@ -363,12 +363,13 @@ R2 has no egress fees, so watching a video costs nothing extra.
 |---|---|
 | Local | nothing |
 | Cloudflare R2 | the table above. Cloudflare Access is a separate Cloudflare service: check its plan and price for the number of people who sign in. |
-| Amazon S3, Backblaze B2, Google Cloud Storage | the price list of the provider. Some providers also charge for each GB that viewers download. |
+| Amazon S3, Backblaze B2, Google Cloud Storage | the price list of the provider. Most also charge for the data that viewers download, so a widely shared link costs more. |
 | Self-hosted server | your own hardware and time |
 | YouTube | no storage fee. The default quota allows 100 uploads per day for one Google Cloud project. |
+| Google Drive | no fee from MergeStory. Files count against your Google storage quota. |
 
-MergeStory records storage as $0 in the cost report, because the provider bills you and not
-MergeStory. Every run lists what was uploaded and to which host.
+The cost report does not include storage, downloads, CI minutes or your coding agent's usage: those
+providers bill you, not MergeStory. Every run lists what was uploaded and to which host.
 
 ## Running in a container
 

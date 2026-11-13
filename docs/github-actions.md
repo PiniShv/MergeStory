@@ -131,20 +131,23 @@ again.
   renders. The first run is slower, because it installs the voice. The job stops after 20 minutes
   (`timeout-minutes`).
 - **Storage.** A 2-minute video is about 10 MB. [hosting.md](hosting.md#what-it-costs) has the numbers for
-  Cloudflare R2: the first 10 GB are free, and watching a video costs nothing extra.
-- **Paid services.** None by default. With a model it is usually under one cent per video, and the budget
-  of 25 cents per run (`MERGESTORY_BUDGET_USD`) stops a run before any call that would go over it.
+  Cloudflare R2: the first 10 GB are free, and R2 has no egress fees. Views count as read operations, which
+  are free up to a monthly limit.
+- **Paid services.** None by default. With a model it is usually under one cent per video (an estimate). The
+  budget of 25 cents per run (`MERGESTORY_BUDGET_USD`) stops the run before a model or voice call that would go
+  over it. It is a safeguard, not a guarantee, and it does not cover Actions minutes or storage.
 
 ## Optional: let a model write the storyboard
 
-Without a model, MergeStory builds the storyboard offline, for free, from the diff and the pull request text.
+Without a model, MergeStory builds the storyboard offline, with no model call, from the diff and the pull
+request text.
 To let a model write it, set the variable `MERGESTORY_LLM_PROVIDER` to `anthropic` and add the secret
 `ANTHROPIC_API_KEY`. For OpenAI, set the variable to `openai`, and add `OPENAI_API_KEY` to the `env:` of the
 step. The model gets the diff and the code around it. To send only names and paths, set `privacy.llmContext`
 to `minimal` in a config file (see [configuration.md](configuration.md#privacy-options)).
 
-A coding agent that wrote the pull request can do better, for free: it knows why it made each decision. It
-can make the video on its own machine with the MergeStory skill and upload it later with
+A coding agent that wrote the pull request can do better, with no MergeStory charge: it knows why it made
+each decision. It can make the video on its own machine with the MergeStory skill and upload it later with
 `mergestory publish`. See [storyboard.md](storyboard.md#how-an-agent-writes-one).
 
 ## Links expire

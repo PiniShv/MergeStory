@@ -100,7 +100,7 @@ mergestory generate [source] [flags]
 Makes a video. In order, it reads the change and analyses it. Then it gets a storyboard: one you give it, one a
 model writes, or the free offline one. It checks every claim and every line of code, narrates and renders.
 Last, it copies the result to the place you chose and, when you ask, posts the link on the pull request. The
-default run costs nothing and sends nothing anywhere. With `--dry-run` it stops after the check and prints a
+default run calls no paid service and sends nothing anywhere. With `--dry-run` it stops after the check and prints a
 plan. See [architecture.md](architecture.md#pipeline) for the stages.
 
 **Source.** `[source]` is described under [The basics](#the-basics).
@@ -124,7 +124,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--language <code>` | The narration language, for example `en`. The free Kokoro voice and the offline storyboard are English only. The check that removes claims such as "all tests pass" reads English only. | `en` |
 | `--theme <theme>` | `dark` or `light`. | `dark` |
 
-**Providers.** The defaults are free and keep everything on this machine.
+**Providers.** The defaults call no paid service and keep everything on this machine.
 
 | Flag | What it does | Default |
 |---|---|---|
@@ -137,7 +137,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--visibility <visibility>` | Who can open an S3 link: `private` (signed, expires in 7 days at most), `protected` (permanent, behind your sign-in proxy) or `public` (permanent, open to anyone). For Google Drive: `private` (only you), `protected` (your Google Workspace organization) or `public` (anyone with the link). | `private` |
 | `--comment` | Post one comment with the video link on the pull request, or update it. | off |
 | `--update-description` | Add or update a section with the link in the pull request description. | off |
-| `--budget <usd>` | The most this run may spend, in US dollars (0 to 100). See [configuration.md](configuration.md#budget). | 0.25 |
+| `--budget <usd>` | The most this run may spend on paid model and voice calls, in US dollars (0 to 100), checked against estimates. See [configuration.md](configuration.md#budget). | 0.25 |
 
 `--comment` and `--update-description` need a pull request as the source and a video that is not only on
 this machine (`--publish s3`, `youtube` or `drive`). Otherwise MergeStory skips the update and adds a warning. See
@@ -239,7 +239,7 @@ mergestory publish ./my-run --publish drive --visibility protected --comment
 mergestory analyze [source] [flags]
 ```
 
-Analyses a change and writes the files you need to author a storyboard yourself. It is free: no model is
+Analyses a change and writes the files you need to author a storyboard yourself. No model is
 called. This is the first step for a coding agent. See [storyboard.md](storyboard.md#how-an-agent-writes-one).
 
 | Flag | What it does |

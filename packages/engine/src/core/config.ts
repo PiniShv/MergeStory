@@ -7,7 +7,7 @@
  * Secrets never live in the config file. They come from the environment only and are
  * registered with the redactor the moment they are read.
  *
- * Defaults are chosen to be free and private: no remote LLM, local speech, local publishing.
+ * Defaults call no paid service and stay private: no remote LLM, local speech, local publishing.
  * Anything that costs money or sends code off the machine has to be switched on explicitly.
  */
 import { existsSync, readFileSync } from 'node:fs';

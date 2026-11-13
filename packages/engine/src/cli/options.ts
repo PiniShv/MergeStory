@@ -209,21 +209,26 @@ export function addPublishFlags(command: Command): Command {
 /** Add the flags for LLM, speech, publishing, GitHub and budget. */
 export function addProviderFlags(command: Command): Command {
   return command
-    .optionsGroup('Providers (the defaults are free and keep everything on this machine):')
+    .optionsGroup('Providers (the defaults call no paid service and keep everything on this machine):')
     .addOption(
-      new Option('--llm <provider>', 'who writes the storyboard; none = free offline storyboard').choices(
-        LLM_PROVIDERS,
-      ),
+      new Option(
+        '--llm <provider>',
+        'who writes the storyboard; none = offline storyboard, no model call',
+      ).choices(LLM_PROVIDERS),
     )
     .option('--model <name>', "LLM model (default: the provider's cheap default)")
     .option('--llm-base-url <url>', 'base URL of an OpenAI-compatible server, such as a local one')
-    .addOption(new Option('--tts <provider>', 'speech; auto picks a free local voice').choices(TTS_PROVIDERS))
+    .addOption(new Option('--tts <provider>', 'speech; auto picks a local voice').choices(TTS_PROVIDERS))
     .option('--voice <name>', 'voice name for the speech provider')
     .addOption(publishOption(PUBLISH_PROVIDERS))
     .addOption(visibilityOption())
     .option('--comment', 'post or update one comment with the video link on the pull request')
     .option('--update-description', 'add or update a section in the pull request description')
-    .option('--budget <usd>', 'cost cap for this run in USD', numberFlag({ min: 0 }));
+    .option(
+      '--budget <usd>',
+      'the most this run may spend on paid model and voice calls, in USD (checked against estimates)',
+      numberFlag({ min: 0 }),
+    );
 }
 
 /** Add the flags that control the run itself. */

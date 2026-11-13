@@ -2,6 +2,21 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## 1.2.4
+
+### Cost, stated exactly
+
+- The README, the npm page, the plugin page, the docs and the website now say exactly what MergeStory
+  charges (nothing by default) and what can still cost money: your coding agent's usage, models and
+  voices you turn on, storage and downloads, and CI minutes. Their providers bill you.
+- Prices are estimates from list prices, and the budget is a safeguard per run, not a guarantee of your
+  final bill. To cap your real bill, set a spending limit with each provider.
+- The `Cost` line and the dry-run estimate end with "your coding agent, storage, CI and model servers on
+  your network are not counted".
+- The `--budget` help says what the budget covers, and the `doctor` model check says that the provider
+  bills your account. The `--llm`, `--tts` and `analyze` help no longer say "free". The npm description
+  says "Open source" instead of "Free".
+
 ## 1.2.3
 
 ### Narration

@@ -295,7 +295,7 @@ export function registerAgent(program: Command, rt: CliRuntime): void {
   render
     .optionsGroup('Voice:')
     .addOption(
-      new Option('--tts <provider>', 'speech on this machine; auto picks a free local voice').choices(
+      new Option('--tts <provider>', 'speech on this machine; auto picks a local voice').choices(
         LOCAL_VOICES,
       ),
     )

@@ -1,6 +1,6 @@
 # Configuration
 
-MergeStory works with no configuration. The defaults are free and private: no paid service is called, speech
+MergeStory works with no configuration. The defaults are private and call no paid service: speech
 and rendering run on your machine, and nothing is uploaded. Every setting on this page is optional. The flags
 that map to a setting are listed in [cli.md](cli.md).
 
@@ -221,7 +221,7 @@ the free voice) get an environment without them.
 | `MERGESTORY_LOG_LEVEL`, `MERGESTORY_LOG_FORMAT` | The same as `--log-level` and `--log-format`. |
 | `MERGESTORY_KOKORO_DTYPE` | The precision of the free voice model: `q8` (small, about 90 MB) or `fp32` (full, about 330 MB). The default is `fp32` on Apple Silicon and `q8` elsewhere. |
 | `GITHUB_API_URL` | The same as `github.apiUrl`. |
-| `ANTHROPIC_BASE_URL` | Sends Anthropic requests to a gateway instead of `api.anthropic.com`. It must use `https`, unless the host is on this machine or a private network. MergeStory counts a gateway on this machine as free, so its budget check does not cover what that gateway forwards. |
+| `ANTHROPIC_BASE_URL` | Sends Anthropic requests to a gateway instead of `api.anthropic.com`. It must use `https`, unless the host is on this machine or a private network. MergeStory counts a gateway on this machine as $0, so its budget check does not cover what that gateway forwards. |
 | `AWS_REGION`, `AWS_DEFAULT_REGION` | The region of an Amazon S3 bucket, when `publish.s3.region` is `auto`. |
 | `PLAYWRIGHT_BROWSERS_PATH` | Where to look for a browser that Playwright installed. |
 | `NO_COLOR`, `FORCE_COLOR` | Turn terminal colors off or on. |
@@ -302,7 +302,9 @@ A key is `<provider>:<model>`, or `<provider>:*` for every model of a provider. 
 
 ## Budget
 
-`budgetUsd` is the most one run may spend. It is checked before every paid call, so a run never goes over:
+`budgetUsd` is the most one run may spend on paid model and voice calls. It is checked before each of them
+against an estimate, so MergeStory does not make a call that would go over. It is a safeguard, not a guarantee
+of your final bill, and it does not cover storage, CI minutes or your coding agent's usage:
 
 - MergeStory estimates the cost of a call from its size and the price, and assumes that a model answer uses
   all of `llm.maxOutputTokens`. If the run's total would pass the budget, the call is not made and the run
@@ -311,7 +313,7 @@ A key is `<provider>:<model>`, or `<provider>:*` for every model of a provider. 
   budget has no room left for a repair, the offline storyboard takes over.
 - Speech is checked before each request, from the number of characters.
 - A cached answer or clip costs nothing. Local speech (Kokoro, macOS `say`) costs nothing. A model server on
-  this machine or on a private network counts as free.
+  this machine or on a private network counts as 0, because MergeStory cannot see what you pay to run it.
 - Storage is recorded as 0, because your storage provider bills you and MergeStory does not.
 - `--dry-run` shows the estimate and adds a warning when it is over the budget.
 - Every paid call is listed in `cost.records` of the result. `estimated: true` means that the cost comes from
@@ -319,7 +321,7 @@ A key is `<provider>:<model>`, or `<provider>:*` for every model of a provider. 
 
 **A model with no known price.** MergeStory does not guess low. For a language model, it counts the call at
 the highest listed rate: $10 per million input tokens and $50 per million output tokens. So an unlisted model
-can never slip past the budget. A warning names the model, once. For speech, an unlisted OpenAI model counts
+is not counted as cheap. A warning names the model, once. For speech, an unlisted OpenAI model counts
 at $30 per million characters, and an unlisted ElevenLabs model or other provider counts at $80. Add the
 real price to `pricing` to get an accurate figure.
 

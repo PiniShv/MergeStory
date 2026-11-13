@@ -11,9 +11,9 @@ There are three ways to get one, and all three go through the same checks before
 
 | Source | How | Cost |
 |---|---|---|
-| The offline generator | The default. It builds the storyboard from the diff, the task and the notes. | Free. Nothing is sent anywhere. |
-| A language model | `--llm anthropic`, `openai` or `openai-compatible`. | A fraction of a cent for a typical change. Capped by the [budget](configuration.md#budget). |
-| You or your coding agent | `--storyboard storyboard.json`. | Free. No second model sees the code. |
+| The offline generator | The default. It builds the storyboard from the diff, the task and the notes. | No paid call. Nothing is sent anywhere. |
+| A language model | `--llm anthropic`, `openai` or `openai-compatible`. | An estimated fraction of a cent for a typical change. Checked against the [budget](configuration.md#budget) before each call. |
+| You or your coding agent | `--storyboard storyboard.json`. | No MergeStory charge. No second model sees the code. |
 
 The result says which one was used: `storyboardSource` is `heuristic`, `llm` or `agent`. An agent knows why
 each decision was made, so its story is usually the best one. The checks keep it honest.
@@ -301,8 +301,8 @@ retry tests passed" is removed too, because no result backs it.
 
 ## How an agent writes one
 
-This is what the MergeStory skill does, and you can do the same by hand. Nothing here costs money, and no
-second model sees the code.
+This is what the MergeStory skill does, and you can do the same by hand. MergeStory makes no paid call here,
+and no second model sees the code. The reading and writing are your agent's own usage.
 
 1. **Write down what only you know**, in a folder outside the repository: `task.md` (the task), `notes.md`
    (your decisions, edge cases and what deserves extra review) and `tests.json` (only tests you really ran).

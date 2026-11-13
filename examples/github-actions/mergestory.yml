@@ -9,7 +9,9 @@
 #   Variables: MERGESTORY_S3_BUCKET, MERGESTORY_S3_ENDPOINT (for example https://<account-id>.r2.cloudflarestorage.com)
 #   Secrets:   MERGESTORY_S3_ACCESS_KEY_ID, MERGESTORY_S3_SECRET_ACCESS_KEY
 #   Optional:  variable MERGESTORY_LLM_PROVIDER=anthropic and secret ANTHROPIC_API_KEY for an
-#              LLM-written storyboard (otherwise the free offline storyboard is used).
+#              LLM-written storyboard (otherwise the offline storyboard is used, with no model call).
+# Costs: the model provider bills the key's usage to your account. Your storage provider bills storage,
+# requests and downloads. GitHub bills Actions minutes for private repositories beyond your plan.
 # Also create a label named "mergestory" in the repository.
 # See docs/github-actions.md in the MergeStory repository for details.
 

@@ -1,4 +1,4 @@
-# 4. Free and private by default
+# 4. Cheap and private by default
 
 Status: accepted
 
@@ -24,3 +24,5 @@ the tool with private code.
 
 - The first run needs no account and no key.
 - Teams that want an LLM-written storyboard or a cloud voice opt in with one setting.
+- Cheap is not zero. Users can still pay for their coding agent's usage, storage and CI minutes, and the
+  budget works on estimates.

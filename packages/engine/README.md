@@ -46,18 +46,24 @@ Run `mergestory --help` or `mergestory <command> --help` for every option.
 
 ## What it costs
 
-**$0 per video by default.** No paid service is called. Speech and rendering run on your machine.
+**MergeStory charges nothing.** A default run calls no paid service. Speech and rendering run on your machine.
 
 | Step | Default | Cost |
 |---|---|---|
-| Storyboard | written by your coding agent, or built offline | $0 |
-| Voice and rendering | local | $0 |
-| Storyboard with Claude Haiku 5.5 (opt-in) | `--llm anthropic` | usually under $0.01 |
+| Storyboard | written by your coding agent, or built offline | no MergeStory charge; extra usage for your agent, billed by its provider if you pay per token |
+| Voice and rendering | local | no fee; uses your machine (the voice is a one-time download of about 400 MB, plus the voice model) |
+| Storyboard with Claude Haiku 5.5 (opt-in) | `--llm anthropic` | estimated under $0.01, billed by Anthropic to your account |
 
-Every run prints its cost, and stops before any call that would go over the budget ($0.25 by default).
+Every run prints its estimated cost. A budget ($0.25 by default) is checked before each paid model or voice
+call. It is a safeguard, not a guarantee of your final bill.
+
+Other costs can still apply, and their providers bill you: your coding agent's usage, any model or voice you
+turn on, storage and downloads, and CI minutes. Prices are estimates from list prices checked 2026-11. To cap
+your real bill, set a spending limit or alert with each provider.
 Read more at https://mergestory.pinishv.com and in
 https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md.
 
 ## License
 
-Apache-2.0. See `LICENSE` and `NOTICE`.
+Apache-2.0. See `LICENSE` and `NOTICE`. The software is provided "as is", without warranties, and the license limits
+liability (sections 7 and 8).
