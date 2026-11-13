@@ -12,6 +12,7 @@ import type {
   EgressRecord,
   PublishResult,
   RepoReader,
+  UsageRecord,
 } from './types.ts';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,8 @@ export interface LlmProvider {
   generateJson(request: LlmRequest, ctx: RunContext): Promise<LlmResponse>;
   /** Estimated USD for a call, from the price book; null when the price is unknown. */
   estimateCostUsd(inputTokens: number, outputTokens: number, ctx: RunContext): number | null;
+  /** Why the estimate is not from a known price, for the cost record; undefined when the price is known. */
+  priceNote?(ctx: RunContext): UsageRecord['priceNote'];
 }
 
 // ---------------------------------------------------------------------------

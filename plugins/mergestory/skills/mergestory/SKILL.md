@@ -127,7 +127,8 @@ same run after they approve, without rendering again:
 ## 6. Report back
 
 Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and any `warnings`. Say that
-`cost.totalUsd` counts only MergeStory's paid calls, as estimates: your own usage, storage and CI are not in it.
+`cost.totalUsd` counts only MergeStory's paid calls, and call it an estimate only when it is above 0. Your
+agent's own usage, storage and CI are billed separately and are not in it.
 When `publish` is null or `publish.provider` is `local`, nothing was shared: give the local
 files `files.watchPage` and `files.video`, and say that they are only on this machine. Otherwise
 the link is `publish.watchUrl`. Say plainly that the video explains the change and does not

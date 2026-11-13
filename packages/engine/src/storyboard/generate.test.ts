@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { EvidencePack } from '../analyzer/index.ts';
 import type { Cache, CacheNamespace } from '../core/cache.ts';
 import { type ConfigInput, resolveConfig, Secrets } from '../core/config.ts';
@@ -10,6 +10,7 @@ import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts'
 import { wordBudget } from '../core/storyboard-facts.ts';
 import { STORYBOARD_LIMITS, StoryboardSchema, VisualSchema } from '../core/storyboard-schema.ts';
 import { countWords } from '../core/text.ts';
+import { createOpenAiFromConfig } from '../llm/openai-compatible.ts';
 import { testContext } from '../testing/context.ts';
 import { type Fixture, retryFixture } from '../testing/storyboard-fixtures.ts';
 import { AUTHORING_GUIDE, EXAMPLE_STORYBOARD, VISUAL_SHAPES } from './authoring.ts';
@@ -248,7 +249,7 @@ describe('prompts', () => {
 
 describe('estimateStoryboardCost', () => {
   it('estimates input from the prompts and takes the configured output limit as the output size', () => {
-    const { fx, ctx } = setup();
+    const { fx, ctx } = setup({ llm: { repairAttempts: 0 } });
     const provider = fakeProvider([]);
     const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx);
     const system = buildSystemPrompt(fx.config);
@@ -258,11 +259,156 @@ describe('estimateStoryboardCost', () => {
     expect(estimate.costUsd).toBeCloseTo((estimate.inputTokens + estimate.outputTokens * 2) / 1_000_000, 9);
   });
 
+  it('is a high estimate that includes each repair attempt, with a history that grows', () => {
+    const { fx, ctx } = setup({ llm: { repairAttempts: 2 } });
+    const provider = fakeProvider([]);
+    const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx);
+    const system = buildSystemPrompt(fx.config);
+    const prompt = buildUserPrompt(PACK, fx.config.maxDurationSec, fx.config);
+    const maxOut = fx.config.llm.maxOutputTokens;
+    // What ask() checks for each attempt: repair k sends k longest answers echoed back.
+    const echoed = 'x'.repeat(Math.min(60_000, Math.floor(maxOut * 3.6)));
+    const checks = [0, 1, 2]
+      .map((k) => provider.estimateCostUsd(estimateTokens(system + prompt + echoed.repeat(k)), maxOut, ctx)!)
+      .reduce((sum, cost) => sum + cost, 0);
+    expect(estimate.costUsd).toBeGreaterThanOrEqual(checks);
+    expect(estimate.outputTokens).toBe(maxOut * 3);
+  });
+
   it('follows a smaller configured output limit, and reports an unknown price as null', () => {
-    const { fx, ctx } = setup({ llm: { maxOutputTokens: 3000 } });
+    const { fx, ctx } = setup({ llm: { maxOutputTokens: 3000, repairAttempts: 0 } });
     const estimate = estimateStoryboardCost(fakeProvider([], { costPerCall: null }), PACK, fx.config, ctx);
     expect(estimate.outputTokens).toBe(3000);
     expect(estimate.costUsd).toBeNull();
+  });
+});
+
+describe('a model call that gives no usable answer', () => {
+  const pricing = {
+    'openai-compatible:priced': { kind: 'llm', inputPerMTok: 1, outputPerMTok: 2 },
+  } as const;
+  /** The real provider against a stubbed server, so the errors are the ones the adapter makes. */
+  function hosted(model: string, baseUrl = 'https://gateway.example.com/v1') {
+    const llm = { provider: 'openai-compatible', baseUrl, model } as const;
+    const fx = retryFixture({ config: { llm, pricing, budgetUsd: 5 } });
+    const { ctx, events } = testContext({ config: fx.config, cache: new MemoryCache() });
+    return {
+      fx,
+      ctx,
+      events,
+      provider: createOpenAiFromConfig('openai-compatible', ctx.config, ctx.secrets, model),
+    };
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('is counted once at its estimate when the answer cannot be read, and the error is passed on', async () => {
+    const { fx, ctx, events, provider } = hosted('mystery');
+    vi.stubGlobal('fetch', async () => new Response('<html>busy</html>', { status: 200 }));
+
+    const error = await failure(generateStoryboard(input(provider, fx), ctx));
+
+    expect(error.message).toContain('not JSON');
+    const { records } = ctx.cost.report();
+    expect(records).toHaveLength(1);
+    // The model has no known price: the record carries the estimate at the assumed rate.
+    expect(records[0]).toMatchObject({
+      kind: 'llm',
+      model: 'mystery',
+      estimated: true,
+      priceNote: 'assumed',
+    });
+    expect(records[0]!.costUsd).toBeGreaterThan(0);
+    expect(events.some((e) => e.status === 'warn' && e.message.includes('may still bill it'))).toBe(true);
+  });
+
+  it('is counted once at its estimate when the server stalls past llm.timeoutMs', async () => {
+    const { fx, ctx, events, provider } = hosted('mystery');
+    // A request whose time limit has already run out, so the test does not wait for it.
+    const timeout = vi
+      .spyOn(AbortSignal, 'timeout')
+      .mockImplementation(() =>
+        AbortSignal.abort(new DOMException('The operation was aborted due to timeout', 'TimeoutError')),
+      );
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) => Promise.reject(init.signal?.reason));
+    try {
+      const error = await failure(generateStoryboard(input(provider, fx), ctx));
+      expect(error.message).toContain('did not answer');
+    } finally {
+      timeout.mockRestore();
+    }
+    const { records } = ctx.cost.report();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ estimated: true, priceNote: 'assumed' });
+    expect(events.filter((e) => e.status === 'warn' && e.message.includes('may still bill it'))).toHaveLength(
+      1,
+    );
+  });
+
+  it('keeps the record but gives no billing warning for a local server with no known price', async () => {
+    const { fx, ctx, events, provider } = hosted('mystery', 'http://localhost:11434/v1');
+    vi.stubGlobal('fetch', async () => new Response('<html>busy</html>', { status: 200 }));
+
+    await failure(generateStoryboard(input(provider, fx), ctx));
+
+    const { records } = ctx.cost.report();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ costUsd: 0, priceNote: 'local' });
+    expect(events.some((e) => e.message.includes('may still bill it'))).toBe(false);
+  });
+
+  it('notes a model with no known price on the record of a good answer: assumed when hosted, local on this machine', async () => {
+    const answer = {
+      choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(validStoryboard()) } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    };
+    for (const [baseUrl, note] of [
+      ['https://gateway.example.com/v1', 'assumed'],
+      ['http://localhost:11434/v1', 'local'],
+    ] as const) {
+      const { fx, ctx, provider } = hosted('mystery', baseUrl);
+      vi.stubGlobal('fetch', async () => new Response(JSON.stringify(answer), { status: 200 }));
+      await generateStoryboard(input(provider, fx), ctx);
+      const { records } = ctx.cost.report();
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({ inputTokens: 10, outputTokens: 5, priceNote: note });
+    }
+  });
+
+  it('notes the same on the record of a refused answer', async () => {
+    const refusal = {
+      choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'No.' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    };
+    for (const [baseUrl, note] of [
+      ['https://gateway.example.com/v1', 'assumed'],
+      ['http://localhost:11434/v1', 'local'],
+    ] as const) {
+      const { fx, ctx, provider } = hosted('mystery', baseUrl);
+      vi.stubGlobal('fetch', async () => new Response(JSON.stringify(refusal), { status: 200 }));
+      await failure(generateStoryboard(input(provider, fx), ctx));
+      const { records } = ctx.cost.report();
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({ priceNote: note });
+    }
+  });
+
+  it('is still counted once when the provider refused', async () => {
+    const { fx, ctx, provider } = hosted('priced');
+    const refusal = { choices: [{ finish_reason: 'stop', message: { content: null, refusal: 'No.' } }] };
+    vi.stubGlobal(
+      'fetch',
+      async () =>
+        new Response(JSON.stringify({ ...refusal, usage: { prompt_tokens: 10, completion_tokens: 5 } }), {
+          status: 200,
+        }),
+    );
+
+    await failure(generateStoryboard(input(provider, fx), ctx));
+
+    const { records } = ctx.cost.report();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ inputTokens: 10, outputTokens: 5 });
+    expect(records[0]?.priceNote).toBeUndefined();
   });
 });
 

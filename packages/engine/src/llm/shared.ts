@@ -3,7 +3,7 @@ import type { RunContext } from '../core/context.ts';
 import { type ErrorCode, MergeStoryError } from '../core/errors.ts';
 import { isPrivateHostname } from '../core/net.ts';
 import type { LlmRequest } from '../core/providers.ts';
-import { budgetLlmCostUsd } from './prices.ts';
+import { budgetLlmCostUsd, llmPriceNote } from './prices.ts';
 
 /** Parse a JSON answer. Tolerates a code fence or text around the object. Returns undefined when nothing parses. */
 export function parseJsonLoose(text: string): unknown {
@@ -96,6 +96,20 @@ export function recordBilledFailure(
     outputTokens,
     costUsd: budgetLlmCostUsd(provider, model, inputTokens, outputTokens, ctx, local),
     estimated: true,
+    priceNote: llmPriceNote(provider, model, ctx, local),
+  });
+}
+
+/**
+ * The same error, marked with details.mayBeBilled: the request reached the provider and it may bill
+ * the call although no usable answer came back (a timeout, or a body that cannot be read).
+ */
+export function markMayBeBilled(error: MergeStoryError): MergeStoryError {
+  return new MergeStoryError(error.code, error.message, {
+    cause: error.cause,
+    hint: error.hint,
+    retryable: error.retryable,
+    details: { ...error.details, mayBeBilled: true },
   });
 }
 

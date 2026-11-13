@@ -149,7 +149,7 @@ for Google Drive.
 | Flag | What it does |
 |---|---|
 | `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. See [storyboard.md](storyboard.md). |
-| `--dry-run` | Show the plan: the scenes, the estimated length and cost, and what a real run would send. It sends, renders and publishes nothing. It still reads the pull request from GitHub and writes the analysis files to the run folder. |
+| `--dry-run` | Show the plan: the scenes, the estimated length, a high estimate of the cost, and what a real run would send. It sends, renders and publishes nothing. It still reads the pull request from GitHub and writes the analysis files to the run folder. |
 | `--async` | Run in the background and print a job id. See [`status`](#mergestory-status). The settings are checked first, so a typo is reported at once. |
 | `--out <dir>` | Write the run files to this folder instead of under the MergeStory home. It must be outside the repository being explained and outside `$MERGESTORY_HOME/work`. An existing folder must not be or hold a symbolic link. |
 | `--no-cache` | Do not use or fill the cache of speech clips and model answers. |
@@ -596,7 +596,7 @@ published video: a signed link stops working without its signature, so it is kep
 | `publish.expiresAt` | When a signed link stops working, or `null` for a link that does not expire. |
 | `notify` | `null` unless you asked for a comment or a description update and it was tried. Then it is `{commentUrl, descriptionUpdated}`. |
 | `grounding` | How many narration lines cite evidence, every automatic fix, and the warnings. |
-| `cost` | `totalUsd`, the `budgetUsd` and one record per paid call, with `provider`, `kind` (`llm`, `tts`, `storage` or `other`), `model`, token or character counts, `costUsd`, and `estimated` (true when the cost comes from a price list and not from a bill). Cached answers cost 0 and have `cached: true`. |
+| `cost` | `totalUsd`, the `budgetUsd` and one record per paid call, with `provider`, `kind` (`llm`, `tts`, `storage` or `other`), `model`, token or character counts, `costUsd`, and `estimated` (true when the cost comes from a price list and not from a bill), and `priceNote` when no price was known (`assumed`: counted at the fallback rate; `local`: a model server on this machine or a private network, counted as $0). Cached answers cost 0 and have `cached: true`. |
 | `egress` | Every outbound transfer: `destination` (a host name), `purpose`, `bytes` and `contains` (for example `video` or `diff`). |
 | `warnings` | Things worth knowing, in plain words. |
 
@@ -623,7 +623,8 @@ To tell a local-only run from a shared one, look at `publish.provider`. Do not t
 
 `providers.llm` is `none (offline)`, `agent-supplied`, or `<provider>:<model>`. A dry run never calls the
 model, so with `--llm` it shows the estimate and the offline storyboard stands in for the outline.
-`warnings` also says when the estimate is over the budget, when publishing would fail, and when a pull
+`estimatedCost` is a high estimate: it includes each repair attempt (`Est. cost (high estimate)` in the text
+output). `warnings` also says when it is over the budget, when publishing would fail, and when a pull
 request update would be skipped.
 
 ### The other commands

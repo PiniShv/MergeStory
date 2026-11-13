@@ -11,11 +11,35 @@ All notable changes to MergeStory are listed here, newest first.
   voices you turn on, storage and downloads, and CI minutes. Their providers bill you.
 - Prices are estimates from list prices, and the budget is a safeguard per run, not a guarantee of your
   final bill. To cap your real bill, set a spending limit with each provider.
-- The `Cost` line and the dry-run estimate end with "your coding agent, storage, CI and model servers on
-  your network are not counted".
+- The `Cost` line and the dry-run estimate end with "your coding agent, storage and CI are billed
+  separately".
 - The `--budget` help says what the budget covers, and the `doctor` model check says that the provider
   bills your account. The `--llm`, `--tts` and `analyze` help no longer say "free". The npm description
   says "Open source" instead of "Free".
+
+### Cost report
+
+- A model server on this machine or your network (for Anthropic, a gateway on this machine) is now
+  counted at the model's built-in price or the price you set in `pricing`. Before, it counted as $0, so
+  a run near its budget can now stop with `BUDGET_EXCEEDED`. With no known price it still counts as $0,
+  and the run warns once that the budget does not cover it.
+- The `Cost` line no longer calls an assumed rate a list price. It says when a model had no known price
+  and a rate was assumed, or when a model server on this machine or your network was counted as $0.
+  Each record in `result.json` has a `priceNote` (`assumed` or `local`) for this.
+- A model call that times out, or whose answer cannot be read, may still be billed. It is now counted at
+  its estimate instead of at $0.
+- The dry-run estimate is now a high estimate: it includes each repair attempt, and with a model it
+  prices the speech for the longest narration that fits `maxDurationSec`. It is labelled
+  `Est. cost (high estimate)`. When it is over the budget, the note says that a real run stops before
+  any call that would go over it.
+- When no usage comes back from the server, the input count includes the repair history.
+- `mergestory publish` shows "not known: the earlier result of this run is missing" as the cost when
+  `result.json` is gone, instead of $0.0000.
+- The progress line of `analyze` counts the guide and the schema as well as the evidence pack.
+- The plugin skill calls the cost an estimate only when it is above $0, and says that the agent's own
+  usage, storage and CI are billed separately.
+- docs/cost.md says that the `gpt-4o-mini-tts` and ElevenLabs rates are conversions, and that you can
+  set your own in `pricing`.
 
 ## 1.2.3
 

@@ -1,8 +1,13 @@
 /** The dry-run plan: what a real run would do, spend and send, without doing any of it. */
 import { describeProblem, type MergeStoryError } from '../core/errors.ts';
-import type { Storyboard } from '../core/storyboard-schema.ts';
+import { STORYBOARD_LIMITS, type Storyboard } from '../core/storyboard-schema.ts';
 import type { PlanResult, UsageRecord } from '../core/types.ts';
-import { estimateNarrationCost, kokoroInstallNote, selectTtsProvider } from '../narration/index.ts';
+import {
+  estimateNarrationCost,
+  kokoroInstallNote,
+  selectTtsProvider,
+  ttsPriceNote,
+} from '../narration/index.ts';
 import { estimateVideoSeconds } from './fit-duration.ts';
 import { planEgress } from './planned-egress.ts';
 import type { Prepared } from './prepare.ts';
@@ -10,6 +15,13 @@ import type { StoryboardChoice } from './storyboard-choice.ts';
 
 /** Rough size of a finished video, per second of it, for the plan of what an upload would send. */
 const ESTIMATED_VIDEO_BYTES_PER_SEC = 120_000;
+
+/**
+ * Characters per narrated word, spaces included: a high average for technical English, so the bound stays high.
+ * shortcut: assumes words separated by spaces; a language written without them (ja, zh) needs a
+ * character-based limit before the dry-run speech figure can be trusted there.
+ */
+const NARRATION_CHARS_PER_WORD = 7;
 
 /** The plan for a run that has chosen its storyboard. `warnings` are the ones found so far. */
 export async function planResult(
@@ -21,14 +33,22 @@ export async function planResult(
 ): Promise<PlanResult> {
   const { ctx } = p;
   const tts = await selectTtsProvider(ctx);
-  const speech = estimateNarrationCost(storyboard, tts, ctx);
+  const planned = choice.source === 'llm' ? choice.plannedLlm : null;
+  let speech = estimateNarrationCost(storyboard, tts, ctx);
+  if (planned) {
+    // The storyboard is the offline stand-in, and the model's can narrate more: price the longest that fits.
+    const characters = Math.max(
+      speech.characters,
+      Math.ceil(p.config.maxDurationSec * STORYBOARD_LIMITS.wordsPerSecond * NARRATION_CHARS_PER_WORD),
+    );
+    speech = { characters, costUsd: tts.estimateCostUsd(characters, ctx) };
+  }
   const estimatedDurationSec = Math.round(
     estimateVideoSeconds(storyboard, {
       language: p.config.language,
       maskEmails: p.config.privacy.maskEmails,
     }),
   );
-  const planned = choice.source === 'llm' ? choice.plannedLlm : null;
   const records: UsageRecord[] = [];
   if (choice.source === 'llm' && planned) {
     records.push({
@@ -39,6 +59,7 @@ export async function planResult(
       outputTokens: planned.outputTokens,
       costUsd: planned.costUsd ?? 0,
       estimated: true,
+      priceNote: choice.provider.priceNote?.(ctx),
     });
   }
   records.push({
@@ -48,6 +69,7 @@ export async function planResult(
     characters: speech.characters,
     costUsd: speech.costUsd,
     estimated: true,
+    priceNote: ttsPriceNote(ctx, tts.id, tts.model(ctx)),
   });
   const totalUsd = records.reduce((s, r) => s + r.costUsd, 0);
   const notes = [...warnings];
@@ -61,7 +83,8 @@ export async function planResult(
   }
   if (totalUsd > p.config.budgetUsd) {
     notes.push(
-      `Estimated cost $${totalUsd.toFixed(4)} is above the budget of $${p.config.budgetUsd.toFixed(2)}.`,
+      `This high estimate, $${totalUsd.toFixed(4)}, is above the budget of $${p.config.budgetUsd.toFixed(2)}. ` +
+        'A real run stops before any call that would go over it: a repair is skipped; a first model call or speech stops the run.',
     );
   }
   const egress = await planEgress({

@@ -221,7 +221,7 @@ the free voice) get an environment without them.
 | `MERGESTORY_LOG_LEVEL`, `MERGESTORY_LOG_FORMAT` | The same as `--log-level` and `--log-format`. |
 | `MERGESTORY_KOKORO_DTYPE` | The precision of the free voice model: `q8` (small, about 90 MB) or `fp32` (full, about 330 MB). The default is `fp32` on Apple Silicon and `q8` elsewhere. |
 | `GITHUB_API_URL` | The same as `github.apiUrl`. |
-| `ANTHROPIC_BASE_URL` | Sends Anthropic requests to a gateway instead of `api.anthropic.com`. It must use `https`, unless the host is on this machine or a private network. MergeStory counts a gateway on this machine as $0, so its budget check does not cover what that gateway forwards. |
+| `ANTHROPIC_BASE_URL` | Sends Anthropic requests to a gateway instead of `api.anthropic.com`. It must use `https`, unless the host is on this machine or a private network. A gateway on this machine counts as $0 only when no price is known for the model, built in or in `pricing`, so then its budget check does not cover what that gateway forwards. Add the model to `pricing` to count it. |
 | `AWS_REGION`, `AWS_DEFAULT_REGION` | The region of an Amazon S3 bucket, when `publish.s3.region` is `auto`. |
 | `PLAYWRIGHT_BROWSERS_PATH` | Where to look for a browser that Playwright installed. |
 | `NO_COLOR`, `FORCE_COLOR` | Turn terminal colors off or on. |
@@ -312,12 +312,21 @@ of your final bill, and it does not cover storage, CI minutes or your coding age
 - A model call that fails the checker is sent back for repair, and each repair is checked too. When the
   budget has no room left for a repair, the offline storyboard takes over.
 - Speech is checked before each request, from the number of characters.
+- A model call that times out, or whose answer cannot be read, may still be billed by the provider, so it is
+  counted at its estimate and a warning says so. That estimate counts against the budget for the rest of the
+  run.
 - A cached answer or clip costs nothing. Local speech (Kokoro, macOS `say`) costs nothing. A model server on
-  this machine or on a private network counts as 0, because MergeStory cannot see what you pay to run it.
+  this machine or on a private network counts as $0 only when no price is known for its model (built in or in
+  `pricing`), because MergeStory cannot see what you pay to run it. A warning names the model, once. With a
+  known price, it is counted.
 - Storage is recorded as 0, because your storage provider bills you and MergeStory does not.
-- `--dry-run` shows the estimate and adds a warning when it is over the budget.
+- `--dry-run` shows `Est. cost (high estimate)`, which includes each repair attempt and prices the speech
+  for the longest narration that fits `maxDurationSec`, and adds a warning when it is over the budget. A real
+  run then stops before any call that would go over it: a repair is skipped; a first model call or speech
+  stops the run.
 - Every paid call is listed in `cost.records` of the result. `estimated: true` means that the cost comes from
-  a price list and not from a bill.
+  a price list and not from a bill. `priceNote` is set when no price was known: `assumed` (counted at the
+  fallback rate) or `local` (a model server on this machine or a private network, counted as $0).
 
 **A model with no known price.** MergeStory does not guess low. For a language model, it counts the call at
 the highest listed rate: $10 per million input tokens and $50 per million output tokens. So an unlisted model

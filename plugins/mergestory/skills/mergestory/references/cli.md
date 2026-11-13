@@ -65,7 +65,7 @@ ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or 
 | `--visibility private\|protected\|public` | S3 links: signed and expiring, permanent behind a sign-in, or permanent and open. |
 | `--comment`, `--update-description` | Write the link to the pull request. Needs a pull request source and a video that was published somewhere other than this machine. |
 | `--budget <usd>` | The most this run may spend on MergeStory's paid model and voice calls, checked against estimates (default 0.25). It does not cap your own usage, storage or CI. |
-| `--dry-run` | Plan only: scenes, estimated cost and what would leave the machine. Nothing is rendered or sent. |
+| `--dry-run` | Plan only: scenes, a high estimate of the cost and what would leave the machine. Nothing is rendered or sent. |
 | `--async` | Run in the background; prints a job id. |
 | `--out <dir>` | Write the run files to this folder (outside the repository). |
 

@@ -6,6 +6,7 @@ import { MergeStoryError } from '../../core/errors.ts';
 import type { GenerateResult, PublishResult } from '../../core/types.ts';
 import { redactResult } from '../../jobs/view.ts';
 import type { PublishRunOptions } from '../../pipeline/index.ts';
+import { EARLIER_RESULT_MISSING } from '../../pipeline/types.ts';
 import { formatCost, formatEgress, formatRows, formatTime } from '../format.ts';
 import { addPublishFlags, configFromFlags, type PublishFlags } from '../options.ts';
 import type { CliRuntime } from '../runtime.ts';
@@ -79,7 +80,13 @@ export function formatPublishResult(result: GenerateResult, style: Style): strin
         ['Expires', formatTime(publish.expiresAt)],
         ['Pull request', result.notify ? pullRequestLine(result.notify) : null],
         ['Run folder', result.runDir],
-        ['Cost', formatCost(result.cost)],
+        [
+          'Cost',
+          // A result rebuilt without the earlier result.json has no costs to add up; $0 would look free.
+          result.warnings.some((w) => w.startsWith(EARLIER_RESULT_MISSING))
+            ? 'not known: the earlier result of this run is missing'
+            : formatCost(result.cost),
+        ],
         ['Sent', result.egress.length > 0 ? result.egress.map(formatEgress) : ['nothing left this machine']],
       ],
       style,

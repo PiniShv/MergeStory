@@ -7,7 +7,7 @@
 import type { EvidencePack } from '../analyzer/index.ts';
 import type { Config } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
-import { estimateTokens } from '../core/cost.ts';
+import { CHARS_PER_TOKEN, estimateTokens } from '../core/cost.ts';
 import { isMergeStoryError, MergeStoryError } from '../core/errors.ts';
 import { hashKey } from '../core/ids.ts';
 import { isLoopbackHost } from '../core/net.ts';
@@ -45,8 +45,15 @@ export function modelEgress(
 const MAX_LISTED_ERRORS = 25;
 /** The previous answer is sent back for repair, cut to this length so one bad answer cannot cost a lot. */
 const MAX_ECHOED_ANSWER_CHARS = 60_000;
+/** Room for the numbered list of errors that a repair adds (see MAX_LISTED_ERRORS and repairMessage). */
+const REPAIR_MESSAGE_TOKENS = 2_000;
 
-/** Estimated cost of generateStoryboard before it runs (first attempt only). */
+/**
+ * Estimated cost of generateStoryboard before it runs: a high estimate. It counts the first call and
+ * every repair attempt. The history grows with every repair, so repair k (1-based) sends the first
+ * input and k answers (each cut to MAX_ECHOED_ANSWER_CHARS)
+ * with k lists of errors, and may answer up to the output limit.
+ */
 export function estimateStoryboardCost(
   provider: LlmProvider,
   pack: EvidencePack,
@@ -55,10 +62,26 @@ export function estimateStoryboardCost(
 ): { inputTokens: number; outputTokens: number; costUsd: number | null } {
   const system = buildSystemPrompt(config);
   const prompt = buildUserPrompt(pack, config.targetDurationSec ?? config.maxDurationSec, config);
-  const inputTokens = estimateTokens(system + prompt);
-  // The answer may be as long as the limit, so the estimate is an upper bound.
+  const firstInput = estimateTokens(system + prompt);
+  // The answer may be as long as the limit, so the estimate stays high.
   const outputTokens = config.llm.maxOutputTokens;
-  return { inputTokens, outputTokens, costUsd: provider.estimateCostUsd(inputTokens, outputTokens, ctx) };
+  // ask() counts the echoed answer by characters, and it is cut to MAX_ECHOED_ANSWER_CHARS.
+  const echoedTokens = Math.ceil(MAX_ECHOED_ANSWER_CHARS / CHARS_PER_TOKEN);
+  const inputs = [
+    firstInput,
+    ...Array.from(
+      { length: config.llm.repairAttempts },
+      (_, i) => firstInput + (i + 1) * (echoedTokens + REPAIR_MESSAGE_TOKENS),
+    ),
+  ];
+  const costs = inputs.map((input) => provider.estimateCostUsd(input, outputTokens, ctx));
+  return {
+    inputTokens: inputs.reduce((sum, input) => sum + input, 0),
+    outputTokens: outputTokens * inputs.length,
+    costUsd: costs.some((cost) => cost === null)
+      ? null
+      : costs.reduce((sum: number, cost) => sum + (cost ?? 0), 0),
+  };
 }
 
 function historyText(request: LlmRequest): string {
@@ -161,7 +184,35 @@ async function ask(
   );
   if (sent) ctx.egress.record(sent.destination, sent.purpose, sent.bytes, sent.contains);
 
-  const response = await provider.generateJson(request, ctx);
+  let response: LlmResponse;
+  try {
+    response = await provider.generateJson(request, ctx);
+  } catch (err) {
+    // A timeout or an unreadable answer may still be billed, so it is counted at its estimate.
+    // Failures with known usage (refused, cut off) are recorded by the provider and not marked.
+    if (isMergeStoryError(err) && err.details?.mayBeBilled) {
+      ctx.cost.record({
+        provider: provider.id,
+        kind: 'llm',
+        model: provider.model,
+        inputTokens: estimatedIn,
+        outputTokens: request.maxOutputTokens,
+        costUsd: estimatedCost ?? 0,
+        estimated: true,
+        priceNote: provider.priceNote?.(ctx),
+        cached: false,
+      });
+      // A local server with no known price is counted at $0: there is nothing to warn about.
+      if (provider.priceNote?.(ctx) !== 'local') {
+        ctx.progress({
+          stage: 'storyboard',
+          status: 'warn',
+          message: `The model call timed out or its answer could not be read. The provider may still bill it, so it is counted at its estimate ($${(estimatedCost ?? 0).toFixed(4)}).`,
+        });
+      }
+    }
+    throw err;
+  }
 
   const cost = provider.estimateCostUsd(response.usage.inputTokens, response.usage.outputTokens, ctx);
   ctx.cost.record({
@@ -172,6 +223,7 @@ async function ask(
     outputTokens: response.usage.outputTokens,
     costUsd: cost ?? 0,
     estimated: true,
+    priceNote: provider.priceNote?.(ctx),
     cached: false,
   });
 

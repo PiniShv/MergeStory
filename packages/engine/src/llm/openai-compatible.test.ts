@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { noCache } from '../core/cache.ts';
 import { type Config, type ConfigInput, resolveConfig, Secrets } from '../core/config.ts';
 import { createRunContext, type RunContext } from '../core/context.ts';
+import { estimateTokens } from '../core/cost.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { silentLogger } from '../core/logger.ts';
 import type { LlmProvider, LlmRequest } from '../core/providers.ts';
@@ -327,6 +328,20 @@ describe('OpenAI response handling', () => {
     expect((await provider.generateJson(request(), ctx)).json).toBeUndefined();
   });
 
+  it('counts the repair history in the input when the server reports no usage', async () => {
+    const { ctx, provider } = ollama();
+    fetchMock.mockResolvedValue(reply({ model: 'llama3.1', choices: completion().choices }));
+    const history = [
+      { role: 'assistant' as const, content: 'a'.repeat(3600) },
+      { role: 'user' as const, content: 'Fix it.' },
+    ];
+    const asked = request({ history });
+    const response = await provider.generateJson(asked, ctx);
+    expect(response.usage.inputTokens).toBe(
+      estimateTokens(asked.system + asked.prompt + history[0]!.content + history[1]!.content),
+    );
+  });
+
   it('estimates usage from text length when the server reports none', async () => {
     const { ctx, provider } = ollama();
     fetchMock.mockResolvedValue(reply({ model: 'llama3.1', choices: completion().choices }));
@@ -377,7 +392,34 @@ describe('OpenAI errors', () => {
     const error = await failure(provider.generateJson(request(), ctx));
     expect(error.code).toBe('LLM_FAILED');
     expect(error.message).toBe('localhost:11434 sent an answer larger than 32 MB.');
+    // The server answered, so it may bill the call.
+    expect(error.details).toEqual({ mayBeBilled: true });
     expect(sent).toBeLessThan(40);
+  });
+
+  it('marks an answer with nothing in it as possibly billed, and an error inside the answer as not billed', async () => {
+    const { ctx, provider } = ollama();
+    fetchMock.mockResolvedValueOnce(reply({}));
+    expect((await failure(provider.generateJson(request(), ctx))).details).toEqual({ mayBeBilled: true });
+    fetchMock.mockResolvedValueOnce(reply({ error: { message: 'model not found' } }));
+    const error = await failure(provider.generateJson(request(), ctx));
+    expect(error.message).toContain('model not found');
+    expect(error.details).toBeUndefined();
+  });
+
+  it('keeps ABORTED, with no billing doubt, when the run is cancelled while the answer is read', async () => {
+    const { ctx, provider } = ollama();
+    const controller = new AbortController();
+    const body = new ReadableStream<Uint8Array>({
+      pull() {
+        controller.abort();
+        throw new Error('aborted');
+      },
+    });
+    fetchMock.mockResolvedValue(new Response(body, { status: 200 }));
+    const error = await failure(provider.generateJson(request(), { ...ctx, signal: controller.signal }));
+    expect(error.code).toBe('ABORTED');
+    expect(error.details).toBeUndefined();
   });
 
   it('reports an unreachable server with a hint, not a stack trace', async () => {
@@ -391,6 +433,8 @@ describe('OpenAI errors', () => {
       expect(error.code).toBe('LLM_FAILED');
       expect(error.message).toContain('localhost:11434');
       expect(error.message).not.toContain('did not answer');
+      // The request never reached a server, so nothing can be billed.
+      expect(error.details).toBeUndefined();
       expect(error.hint).toContain('llm.baseUrl');
       expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
@@ -416,6 +460,7 @@ describe('OpenAI errors', () => {
       expect(error.message).toBe('The model did not answer within 240 seconds.');
       expect(error.hint).toContain('llm.timeoutMs');
       expect(error.retryable).toBe(true);
+      expect(error.details).toEqual({ mayBeBilled: true });
       // The model may still be working on a timed-out request, and bill it: it is not sent again.
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {

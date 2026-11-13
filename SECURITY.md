@@ -154,8 +154,9 @@ See [docs/api.md](docs/api.md#safety-rules).
   video before you share it outside your team, and do not keep secrets in code.
 - MergeStory never runs your tests or your code. Test results in a video are the ones you reported, and
   the video says who reported them.
-- A model server on this machine or on a private network counts as $0 in the budget check, and MergeStory
-  cannot see what such a server forwards to another service.
+- A model server on this machine or on a private network counts as $0 in the budget check when no price is
+  known for its model (built in or in `pricing`), and MergeStory cannot see what such a server forwards to
+  another service.
 - The video explains a change. It does not replace code review.
 
 ## Supported versions

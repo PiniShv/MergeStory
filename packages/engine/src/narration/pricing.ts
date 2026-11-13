@@ -4,6 +4,7 @@
  * "openai:gpt-4o-mini-tts"), because providers change prices.
  */
 import type { RunContext } from '../core/context.ts';
+import type { UsageRecord } from '../core/types.ts';
 
 /** Used for a model with no known price: the dearest model of that provider, so budgets stay safe. */
 const UNKNOWN_MODEL_PER_MCHARS: Record<string, number> = { openai: 30, elevenlabs: 80 };
@@ -19,6 +20,15 @@ export function ttsPricePerMChars(ctx: RunContext, provider: string, model: stri
     );
   }
   return assumed;
+}
+
+/** 'assumed' when no price is known for the model (see ttsPricePerMChars), else undefined. */
+export function ttsPriceNote(
+  ctx: RunContext,
+  provider: string,
+  model: string | null,
+): UsageRecord['priceNote'] {
+  return ctx.cost.prices.find(provider, model)?.kind === 'tts' ? undefined : 'assumed';
 }
 
 export function ttsCostUsd(ctx: RunContext, provider: string, model: string, characters: number): number {

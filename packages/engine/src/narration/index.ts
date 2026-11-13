@@ -14,6 +14,7 @@ export { createKokoroProvider } from './kokoro.ts';
 export { kokoroInstallNote, setupKokoro } from './kokoro-install.ts';
 export { installKokoro, kokoroStatus, type LocalVoiceStatus } from './kokoro-plugin.ts';
 export { createOpenAiProvider } from './openai.ts';
+export { ttsPriceNote } from './pricing.ts';
 export { createSayProvider } from './say.ts';
 export { selectTtsProvider } from './select.ts';
 export { createSilentProvider } from './silent.ts';

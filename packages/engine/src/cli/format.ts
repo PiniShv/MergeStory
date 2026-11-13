@@ -48,7 +48,11 @@ export function formatUsd(amount: number, digits = 4): string {
   return `$${amount.toFixed(digits)}`;
 }
 
-/** "$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted" */
+/**
+ * "$0.0042 (LLM $0.0040, speech $0.0002), estimated from list prices, budget $0.25; your coding agent, storage and CI are billed separately".
+ * A model with no known price changes the estimate note to say that a rate was assumed. A model
+ * server on your network adds ", a model server on this machine or your network counted as $0".
+ */
 export function formatCost(cost: CostReport): string {
   const sum = (kind: string): number =>
     cost.records.filter((r) => r.kind === kind).reduce((total, r) => total + r.costUsd, 0);
@@ -56,8 +60,14 @@ export function formatCost(cost: CostReport): string {
   const other = sum('storage') + sum('other');
   if (other > 0) parts.push(`other ${formatUsd(other)}`);
   let text = `${formatUsd(cost.totalUsd)} (${parts.join(', ')})`;
-  if (cost.totalUsd > 0 && cost.records.some((r) => r.estimated)) text += ', estimated from list prices';
-  return `${text}, budget ${formatUsd(cost.budgetUsd, 2)}; your coding agent, storage, CI and model servers on your network are not counted`;
+  if (cost.totalUsd > 0 && cost.records.some((r) => r.estimated)) {
+    text += cost.records.some((r) => r.priceNote === 'assumed')
+      ? ', estimated; includes an assumed rate for a model with no known price'
+      : ', estimated from list prices';
+  }
+  if (cost.records.some((r) => r.priceNote === 'local'))
+    text += ', a model server on this machine or your network counted as $0';
+  return `${text}, budget ${formatUsd(cost.budgetUsd, 2)}; your coding agent, storage and CI are billed separately`;
 }
 
 /** One outbound transfer: where, why, how much and what was in it. */
@@ -170,7 +180,7 @@ export function formatPlanResult(raw: PlanResult, style: Style): string {
           'Providers',
           `LLM ${plan.providers.llm}, speech ${plan.providers.tts}, publish ${plan.providers.publish}`,
         ],
-        ['Est. cost', formatCost(plan.estimatedCost)],
+        ['Est. cost (high estimate)', formatCost(plan.estimatedCost)],
         ['Would send', sentLines(plan.plannedEgress, true)],
         ['Run folder', plan.runDir],
       ],
