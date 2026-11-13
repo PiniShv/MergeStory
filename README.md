@@ -159,6 +159,13 @@ Public links for a private repository are blocked unless you allow them. Set-up 
 [hosting your videos](docs/hosting.md), [publishing to YouTube](docs/youtube.md) and
 [publishing to Google Drive](docs/drive.md).
 
+### Watch inside the pull request
+
+[MergeStory for Chrome](https://github.com/PiniShv/mergestory-chrome) is a small browser extension. A
+click on the MergeStory link in the comment plays the video right there, so the reviewer stays on the
+pull request page. It works on GitHub with videos on YouTube and Google Drive, and it loads nothing
+until you click.
+
 ## Use it in CI
 
 Run the CLI in GitHub Actions on labelled pull requests and post the link as a comment. Copy
@@ -256,6 +263,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [Publishing to YouTube](docs/youtube.md)
 - [Publishing to Google Drive](docs/drive.md)
 - [The demo](examples/demo/README.md)
+- [MergeStory for Chrome](https://github.com/PiniShv/mergestory-chrome)
 - [Security](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)

@@ -27,6 +27,11 @@ All notable changes to MergeStory are listed here, newest first.
 - A contrast check refuses a theme that is hard to read. `--allow-low-contrast` makes it a warning.
 - The agent commands and the HTTP API take a theme name only, never a path.
 
+### Browser extension
+
+- [MergeStory for Chrome](https://github.com/PiniShv/mergestory-chrome) plays the video inside the pull
+  request page on GitHub. It is a separate project with its own repository.
+
 ### Cost report
 
 - A speech request that times out (also when it is tried again), or whose audio cannot be read after the
