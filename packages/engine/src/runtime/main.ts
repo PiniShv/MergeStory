@@ -58,7 +58,7 @@ const RUNTIME_CSS = String.raw`
   height: 1080px;
   margin-left: -2px;
   background: linear-gradient(180deg, transparent, var(--accent-2) 30%, var(--accent) 70%, transparent);
-  box-shadow: 0 0 40px 6px rgba(140, 123, 255, 0.5);
+  box-shadow: 0 0 40px 6px color-mix(in srgb, var(--glow) 50%, transparent);
 }
 `;
 

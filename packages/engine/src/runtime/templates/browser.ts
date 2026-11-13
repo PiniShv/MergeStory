@@ -59,6 +59,7 @@ const BROWSER_CSS = `
   --app-text: #f1f3ff;
   --app-text-2: #b2bbdc;
   --app-muted: #7783aa;
+  --app-tabs: rgba(0, 0, 0, 0.26);
 }
 :root[data-theme='light'] .ms-browser {
   --app-bg: #f6f7fc;
@@ -68,6 +69,7 @@ const BROWSER_CSS = `
   --app-text: #0d1330;
   --app-text-2: #4a5578;
   --app-muted: #8089a8;
+  --app-tabs: rgba(30, 41, 80, 0.06);
 }
 .ms-browser__tabs {
   display: flex;
@@ -76,9 +78,8 @@ const BROWSER_CSS = `
   height: ${TABS_H}px;
   padding: 0 24px;
   flex: none;
-  background: rgba(0, 0, 0, 0.26);
+  background: var(--app-tabs);
 }
-:root[data-theme='light'] .ms-browser__tabs { background: rgba(30, 41, 80, 0.06); }
 .ms-browser__lights { display: flex; gap: 10px; align-self: center; margin-right: 22px; }
 .ms-browser__lights i { width: 14px; height: 14px; border-radius: 50%; background: var(--text-3); opacity: 0.55; }
 .ms-browser__lights i:nth-child(1) { background: #ff6b81; }

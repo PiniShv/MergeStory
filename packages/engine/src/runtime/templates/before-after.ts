@@ -208,7 +208,7 @@ const BEFORE_AFTER_CSS = `
   border-radius: 50%;
   color: #fff;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: 0 16px 36px -12px rgba(140, 123, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  box-shadow: 0 16px 36px -12px color-mix(in srgb, var(--glow) 70%, transparent), inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 .ms-ba__caption {
   position: absolute;

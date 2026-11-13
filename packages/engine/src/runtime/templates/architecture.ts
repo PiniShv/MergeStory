@@ -425,11 +425,10 @@ const ARCH_CSS = `
   font-weight: 800;
   letter-spacing: 0.08em;
   line-height: 1;
-  color: #071022;
+  color: var(--on-status);
   background: var(--status);
   box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--status) 80%, transparent);
 }
-:root[data-theme='light'] .ms-arch__pill { color: #fff; }
 `;
 
 type Node = ArchitectureResolved['nodes'][number];

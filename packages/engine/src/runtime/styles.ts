@@ -37,6 +37,18 @@ export const BASE_CSS = String.raw`
   --accent-soft: rgba(140, 123, 255, 0.16);
   --accent-2: #39d2f2;
   --accent-2-soft: rgba(57, 210, 242, 0.14);
+  /* Accent colours for large text: gradient headings and the brand word. */
+  --accent-ink: #c9c1ff;
+  --accent-2-ink: #8fe9fb;
+  --brand-1: #b6acff;
+  --brand-2: var(--accent-2);
+  /* Soft halos and rings around accent elements. */
+  --glow: var(--accent);
+  --glow-2: var(--accent-2);
+
+  --cap-bg: rgba(5, 8, 18, 0.76);
+  --cap-fg: #f6f8ff;
+  --cap-ring: rgba(150, 165, 215, 0.2);
 
   --add: #3ddc97;
   --add-soft: rgba(61, 220, 151, 0.14);
@@ -52,12 +64,20 @@ export const BASE_CSS = String.raw`
   --sev-medium: #ffc861;
   --sev-high: #ff6b81;
 
+  /* Badges and the text on status pills keep these colours in every theme. */
+  --badge-bg: rgba(5, 8, 18, 0.72);
+  --badge-simulated: #ffc861;
+  --badge-actual: #3ddc97;
+  --badge-masked: #ff6b81;
+  --badge-reported: #60a5fa;
+  --on-status: #071022;
+
   --radius-l: 24px;
   --radius-pill: 999px;
 
   --shadow-card: 0 34px 80px -24px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border-1);
   --shadow-lift: 0 20px 50px -18px rgba(0, 0, 0, 0.6);
-  --glow-accent: 0 0 0 1px rgba(140, 123, 255, 0.45), 0 0 48px rgba(140, 123, 255, 0.28);
+  --glow-accent: 0 0 0 1px color-mix(in srgb, var(--glow) 45%, transparent), 0 0 48px color-mix(in srgb, var(--glow) 28%, transparent);
 
   --font-ui: 'Inter', 'Helvetica Neue', Arial, sans-serif;
   --font-code: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
@@ -88,6 +108,15 @@ export const BASE_CSS = String.raw`
   --accent-soft: rgba(103, 80, 240, 0.1);
   --accent-2: #0891b2;
   --accent-2-soft: rgba(8, 145, 178, 0.1);
+  --accent-ink: #5a43e6;
+  --accent-2-ink: #0e7490;
+  --brand-1: #5a43e6;
+  --brand-2: #0e7490;
+  --glow: #8c7bff;
+  --glow-2: #39d2f2;
+  --cap-bg: rgba(255, 255, 255, 0.92);
+  --cap-fg: #0d1330;
+  --cap-ring: rgba(30, 41, 80, 0.16);
   --add: #0f9f6e;
   --add-soft: rgba(15, 159, 110, 0.12);
   --add-line: rgba(15, 159, 110, 0.09);
@@ -96,6 +125,12 @@ export const BASE_CSS = String.raw`
   --del-line: rgba(214, 51, 79, 0.08);
   --mod: #b7791f;
   --mod-soft: rgba(183, 121, 31, 0.12);
+  --badge-bg: rgba(255, 255, 255, 0.94);
+  --badge-simulated: #8f5600;
+  --badge-actual: #087a52;
+  --badge-masked: #c0243e;
+  --badge-reported: #1d4ed8;
+  --on-status: #ffffff;
   --shadow-card: 0 30px 70px -28px rgba(30, 41, 80, 0.35), 0 0 0 1px var(--border-1);
   --shadow-lift: 0 18px 40px -20px rgba(30, 41, 80, 0.35);
 }
@@ -126,15 +161,15 @@ body {
   overflow: hidden;
   transform-origin: 0 0;
   background:
-    radial-gradient(1200px 700px at 12% -10%, rgba(140, 123, 255, 0.18), transparent 60%),
-    radial-gradient(1000px 640px at 100% 110%, rgba(57, 210, 242, 0.12), transparent 60%),
+    radial-gradient(1200px 700px at 12% -10% in srgb, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    radial-gradient(1000px 640px at 100% 110% in srgb, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 60%),
     linear-gradient(180deg, var(--bg-1), var(--bg-0));
 }
 
 :root[data-theme='light'] #ms-stage {
   background:
-    radial-gradient(1200px 700px at 12% -10%, rgba(103, 80, 240, 0.1), transparent 60%),
-    radial-gradient(1000px 640px at 100% 110%, rgba(8, 145, 178, 0.08), transparent 60%),
+    radial-gradient(1200px 700px at 12% -10% in srgb, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    radial-gradient(1000px 640px at 100% 110% in srgb, color-mix(in srgb, var(--accent-2) 8%, transparent), transparent 60%),
     linear-gradient(180deg, var(--bg-1), var(--bg-0));
 }
 
@@ -188,14 +223,14 @@ body {
 .ms-h2 { font-size: var(--fs-h2); font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
 
 .ms-gradient-text {
-  background: linear-gradient(92deg, var(--text-0) 10%, #c9c1ff 55%, #8fe9fb 100%);
+  background: linear-gradient(92deg, var(--text-0) 10%, var(--accent-ink) 55%, var(--accent-2-ink) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 :root[data-theme='light'] .ms-gradient-text {
-  background: linear-gradient(92deg, var(--text-0) 10%, #5a43e6 60%, #0e7490 100%);
+  background: linear-gradient(92deg, var(--text-0) 10%, var(--accent-ink) 60%, var(--accent-2-ink) 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -239,19 +274,16 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
-  background: rgba(5, 8, 18, 0.72);
+  color: var(--badge);
+  background: var(--badge-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--badge) 45%, transparent);
   backdrop-filter: blur(10px);
 }
 .ms-badge::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
-.ms-badge--simulated { color: #ffc861; box-shadow: 0 0 0 1px rgba(255, 200, 97, 0.45); }
-.ms-badge--actual { color: #3ddc97; box-shadow: 0 0 0 1px rgba(61, 220, 151, 0.45); }
-.ms-badge--masked { color: #ff6b81; box-shadow: 0 0 0 1px rgba(255, 107, 129, 0.45); }
-.ms-badge--reported { color: #60a5fa; box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.45); }
-:root[data-theme='light'] .ms-badge { background: rgba(255, 255, 255, 0.94); }
-:root[data-theme='light'] .ms-badge--simulated { color: #8f5600; box-shadow: 0 0 0 1px rgba(143, 86, 0, 0.45); }
-:root[data-theme='light'] .ms-badge--actual { color: #087a52; box-shadow: 0 0 0 1px rgba(8, 122, 82, 0.45); }
-:root[data-theme='light'] .ms-badge--masked { color: #c0243e; box-shadow: 0 0 0 1px rgba(192, 36, 62, 0.45); }
-:root[data-theme='light'] .ms-badge--reported { color: #1d4ed8; box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.45); }
+.ms-badge--simulated { --badge: var(--badge-simulated); }
+.ms-badge--actual { --badge: var(--badge-actual); }
+.ms-badge--masked { --badge: var(--badge-masked); }
+.ms-badge--reported { --badge: var(--badge-reported); }
 
 /* Window chrome shared by code, terminal and browser templates. */
 .ms-window {

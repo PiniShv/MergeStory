@@ -13,10 +13,10 @@ const TITLE_CSS = String.raw`
   top: -230px;
   width: 1060px;
   height: 1060px;
-  background: radial-gradient(closest-side, rgba(140, 123, 255, 0.34), rgba(57, 210, 242, 0.11) 54%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 34%, transparent), color-mix(in srgb, var(--accent-2) 11%, transparent) 54%, transparent 100%);
 }
 :root[data-theme='light'] .ms-title__orb {
-  background: radial-gradient(closest-side, rgba(103, 80, 240, 0.2), rgba(8, 145, 178, 0.08) 54%, transparent 100%);
+  background: radial-gradient(closest-side in srgb, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent) 54%, transparent 100%);
 }
 .ms-title__art { position: absolute; right: 30px; top: 30px; width: 480px; height: 660px; overflow: visible; }
 .ms-title__art .rail { fill: none; stroke: var(--accent); stroke-width: 3; opacity: 0.3; stroke-linecap: round; }

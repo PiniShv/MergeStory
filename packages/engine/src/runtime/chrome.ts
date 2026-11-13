@@ -27,23 +27,12 @@ const MARK_CSS = String.raw`
   place-items: center;
   border-radius: 28%;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  box-shadow: 0 10px 28px -10px rgba(140, 123, 255, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--glow) 75%, transparent), inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 .ms-mark svg { width: 64%; height: 64%; display: block; }
 `;
 
 const CHROME_CSS = String.raw`
-:root {
-  --cap-bg: rgba(5, 8, 18, 0.76);
-  --cap-fg: #f6f8ff;
-  --cap-ring: rgba(150, 165, 215, 0.2);
-}
-:root[data-theme='light'] {
-  --cap-bg: rgba(255, 255, 255, 0.92);
-  --cap-fg: #0d1330;
-  --cap-ring: rgba(30, 41, 80, 0.16);
-}
-
 .ms-chrome { position: absolute; inset: 0; pointer-events: none; }
 
 .ms-chrome__top {
@@ -61,12 +50,11 @@ const CHROME_CSS = String.raw`
 .ms-chrome__word { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--text-0); }
 .ms-chrome__word b {
   font-weight: 700;
-  background: linear-gradient(90deg, #b6acff, var(--accent-2));
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-:root[data-theme='light'] .ms-chrome__word b { background: linear-gradient(90deg, #5a43e6, #0e7490); -webkit-background-clip: text; background-clip: text; }
 .ms-chrome__sep { width: 1px; height: 30px; margin: 0 8px; background: var(--border-2); flex: none; }
 .ms-chrome__repo {
   font-family: var(--font-code);
