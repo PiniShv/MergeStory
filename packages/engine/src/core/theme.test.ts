@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BASE_CSS } from '../runtime/styles.ts';
 import {
   BUILT_IN_THEMES,
+  CHANGE_COLORS,
   colorProblem,
   LOCKED_TOKENS,
   loadTheme,
@@ -76,7 +77,8 @@ describe('built-in themes', () => {
       ['midnight', darkCss],
       ['paper', lightCss],
     ] as const) {
-      const { colors } = await loadTheme(name);
+      const { colors, base } = await loadTheme(name);
+      for (const [token, value] of Object.entries(CHANGE_COLORS[base])) expect(css[token], token).toBe(value);
       for (const token of THEME_TOKENS) {
         // A token that follows another one (glow follows accent on dark) is left to the styles.
         if (css[token]!.startsWith('var(')) expect(colors[token], `${name} ${token}`).toBeUndefined();
@@ -186,6 +188,9 @@ describe('theme.json', () => {
       'rgb(256, 0, 0)',
       'rgba(0, 0, 0, 1.5)',
       'hsl(0, 101%, 50%)',
+      'hsl(361, 50%, 50%)',
+      `hsl(${'9'.repeat(40)}, 100%, 50%)`,
+      'rgb(1.123456, 0, 0)',
       'rgb(1,\n2,3)',
       'rgb(-1, 0, 0)',
     ]) {
@@ -234,7 +239,9 @@ describe('the files of a theme folder', () => {
     const folder = await themeFolder(dark({}));
     const alias = join(dir, `alias-${n++}`);
     await symlink(folder, alias);
-    await expect(loadTheme(alias)).rejects.toThrow('symbolic link');
+    for (const path of [alias, `${alias}/`, `${alias}/.`]) {
+      await expect(loadTheme(path), path).rejects.toThrow('symbolic link');
+    }
     await expect(loadTheme(await themeFolder(`${' '.repeat(65 * 1024)}{}`))).rejects.toThrow(
       'larger than 64 KB',
     );
@@ -260,10 +267,22 @@ describe('the contrast check', () => {
     expect(await problem(dark({ 'cap-bg': 'rgba(5, 8, 18, 0.4)' }))).toContain('they need 7:1');
   });
 
-  it('wants an opaque background and code colors made for the base', async () => {
-    expect(await problem(dark({ 'bg-0': 'rgba(0, 0, 0, 0.5)' }))).toContain('bg-0 must be opaque');
+  it('wants code colors made for the base', async () => {
     expect(await problem(dark({}, { code: { shiki: 'github-light' } }))).toContain(
       'is a light theme on a dark video',
     );
+  });
+
+  it('never lets a background hide what a change did, or show through, whatever the flags', async () => {
+    const allow = { allowLowContrast: true };
+    // Black text on a code background the color of removed lines: readable, but removals would vanish.
+    const hiding = await themeFolder(dark({ 'surface-code': '#ff6b81', 'text-0': '#000000' }));
+    await expect(loadTheme(hiding, allow)).rejects.toThrow(
+      /cannot be used\..*del \(#ff6b81\) reaches 1\.00:1/,
+    );
+    const added = await themeFolder(dark({ 'bg-0': '#3ddc97' }));
+    await expect(loadTheme(added, allow)).rejects.toThrow('add (#3ddc97) reaches');
+    const clear = await themeFolder(dark({ 'bg-0': 'rgba(0, 0, 0, 0.5)' }));
+    await expect(loadTheme(clear, allow)).rejects.toThrow('bg-0 must be opaque');
   });
 });

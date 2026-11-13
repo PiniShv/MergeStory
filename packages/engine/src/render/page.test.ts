@@ -60,7 +60,7 @@ describe('loadRuntimeBundle', () => {
 });
 
 describe('PlanPage.open', () => {
-  it('opens every plan offline and blocks every request, whatever its theme', async () => {
+  it('opens a plan with theme colors offline and blocks every request', async () => {
     let contextOptions: unknown;
     let routed: unknown;
     const context = {

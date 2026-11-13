@@ -33,8 +33,10 @@ export function isPlanResult(result: GenerateResult | PlanResult): result is Pla
 
 /** Start the job in a background worker and print its id. */
 async function runInBackground(env: CommandEnv, options: JobOptions): Promise<void> {
-  // Check the settings now, so a typo is reported here instead of in a background process.
+  // Check the settings and the theme now, so a mistake is reported here instead of in a background process.
   const config = await loadConfig(env, options.config);
+  const { loadTheme } = await import('../../core/theme.ts');
+  await loadTheme(config.theme, { home: config.home, allowLowContrast: options.allowLowContrast === true });
   const { startBackgroundJob } = await import('../../jobs/runner.ts');
   const job = await startBackgroundJob(options, { home: config.home, env: env.io.env });
   if (env.json) {

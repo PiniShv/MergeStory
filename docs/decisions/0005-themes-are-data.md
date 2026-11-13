@@ -19,12 +19,14 @@ still say so.
 - The theme goes into the render plan as data. The render page, its content security policy, request
   blocking and offline mode do not change.
 - A name finds a built-in theme, then `$MERGESTORY_HOME/themes/<name>`. A path comes only from the
-  command line or the user's own config, never from the storyboard, the pull request, the repository,
-  the HTTP API or an agent command.
+  command line, the user's own config file or `MERGESTORY_THEME`, never from the storyboard, the pull
+  request, the repository, the HTTP API or an agent command.
 - Only a plain `theme.json` inside the theme folder is read: no symbolic or hard links, no `..`, no
   absolute paths, at most 64 KB.
-- The colors that carry meaning are locked: added, removed and changed lines, and the badges for
-  simulated pictures, real screenshots, masked secrets and reported results.
+- The colors that carry meaning are locked: added, removed and changed lines, new connections in
+  diagrams, and the badges for simulated pictures, real screenshots, masked secrets and reported
+  results. Every background must be opaque, and the locked change colors must stand out from it (2:1).
+  No flag turns this off.
 - A contrast check refuses themes that are hard to read: text 4.5:1, muted text 3:1, captions 7:1.
   `--allow-low-contrast` turns it into a warning.
 
@@ -32,6 +34,6 @@ still say so.
 
 - The default video costs and sends nothing more than before. `midnight` and `paper` look the same as
   `dark` and `light` did, and golden stills check it.
-- Themes cannot change fonts, the logo or the end card. Those need files in the theme folder, which
-  the folder rules above already cover.
+- Themes cannot change fonts, or the shape and text of the logo and the end card. Those need files in
+  the theme folder, which the folder rules above already cover.
 - A team sees a theme with low contrast before a video goes out, because using it needs a flag.

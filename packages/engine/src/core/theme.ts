@@ -4,12 +4,13 @@
  * go through the same loader as the themes people make.
  *
  * Where a theme comes from: a name finds a built-in theme, then $MERGESTORY_HOME/themes/<name>. Any
- * other value must be the full path of a theme folder, which only the command line and the user's own
- * config give. The storyboard, the pull request, the repository and the agent commands never do.
+ * other value must be the full path of a theme folder, which only the command line, the user's own
+ * config file and MERGESTORY_THEME give. The storyboard, the pull request, the repository, the HTTP
+ * API and the agent commands never do.
  */
 import { constants } from 'node:fs';
 import { lstat, open, realpath } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundledThemesInfo } from 'shiki';
 import { z } from 'zod';
@@ -76,7 +77,15 @@ export const LOCKED_TOKENS = [
   'badge-masked',
   'badge-reported',
   'on-status',
+  'edge-added',
 ] as const;
+
+/** The locked colors that show what a change did, as runtime/styles.ts draws them on each base. */
+export const CHANGE_COLORS: Record<ThemeName, Record<string, string>> = {
+  dark: { add: '#3ddc97', del: '#ff6b81', mod: '#ffc861', 'edge-added': '#8c7bff' },
+  light: { add: '#0f9f6e', del: '#d6334f', mod: '#b7791f', 'edge-added': '#6750f0' },
+};
+const CHANGE_CONTRAST = 2;
 
 const BUILT_IN_DIR = fileURLToPath(new URL('../../assets/themes/', import.meta.url));
 const THEME_FILE = 'theme.json';
@@ -103,7 +112,8 @@ export interface ResolvedTheme {
 /** Red, green and blue from 0 to 255, alpha from 0 to 1. */
 export type Rgba = [number, number, number, number];
 
-const N = String.raw`(\d+(?:\.\d+)?|\.\d+)`;
+// Small numbers only: a 40-digit hue is a number to JavaScript, but the browser draws something else.
+const N = String.raw`(\d{1,3}(?:\.\d{1,4})?|\.\d{1,4})`;
 const ALPHA = String.raw`${N}(%?)`;
 const HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const RGB = [
@@ -143,7 +153,7 @@ export function parseColor(value: string): Rgba | null {
     const alpha = m[4] === undefined ? 1 : Number(m[4]) / (m[5] === '%' ? 100 : 1);
     if (alpha > 1) return null;
     if (rgb) return a <= 255 && b <= 255 && c <= 255 ? [a, b, c, alpha] : null;
-    return b <= 100 && c <= 100 ? [...hslToRgb(a % 360, b / 100, c / 100), alpha] : null;
+    return a <= 360 && b <= 100 && c <= 100 ? [...hslToRgb(a, b / 100, c / 100), alpha] : null;
   }
   return null;
 }
@@ -183,27 +193,57 @@ export function contrastOn(text: Rgba, background: Rgba): number {
 const TEXT_CONTRAST: Record<string, number> = { 'text-0': 4.5, 'text-1': 4.5, 'text-2': 4.5, 'text-3': 3 };
 const CAPTION_CONTRAST = 7;
 
-/** Contrast problems of a theme, one sentence each. An empty list means the theme is easy to read. */
-export function contrastProblems(theme: ResolvedTheme): string[] {
-  const color = (token: string): Rgba => {
+/** A theme color by token. Every theme holds all colors that the checks read (its base has them all). */
+function colorReader(theme: ResolvedTheme): (token: string) => Rgba {
+  return (token) => {
     const value = parseColor(theme.colors[token] ?? '');
     if (!value) throw new MergeStoryError('INTERNAL', `Theme "${theme.name}" has no color for ${token}.`);
     return value;
   };
-  const problems: string[] = [];
-  for (const token of ['bg-0', 'bg-1']) {
-    if (color(token)[3] < 1)
-      problems.push(`${token} must be opaque: it is the background of the whole video.`);
-  }
-  if (problems.length > 0) return problems;
+}
 
-  const backgrounds: [string, Rgba][] = [];
+/** The backgrounds of the video: bg-0 and bg-1, and every surface drawn over each. */
+function backgroundsOf(color: (token: string) => Rgba): [string, Rgba][] {
+  const out: [string, Rgba][] = [];
   for (const bg of ['bg-0', 'bg-1']) {
-    backgrounds.push([bg, color(bg)]);
+    out.push([bg, color(bg)]);
     for (const surface of ['surface-1', 'surface-2', 'surface-code', 'surface-inset']) {
-      backgrounds.push([`${surface} over ${bg}`, over(color(surface), color(bg))]);
+      out.push([`${surface} over ${bg}`, over(color(surface), color(bg))]);
     }
   }
+  return out;
+}
+
+/**
+ * Problems no flag allows: a see-through background, or a background that would hide what a change
+ * did. Each locked change color (added, removed and changed lines, added connections) must stand out
+ * from every background.
+ */
+export function safetyProblems(theme: ResolvedTheme): string[] {
+  const color = colorReader(theme);
+  const problems = ['bg-0', 'bg-1'].flatMap((token) =>
+    color(token)[3] < 1 ? [`${token} must be opaque: it is the background of the whole video.`] : [],
+  );
+  if (problems.length > 0) return problems;
+  for (const [token, value] of Object.entries(CHANGE_COLORS[theme.base])) {
+    for (const [where, background] of backgroundsOf(color)) {
+      const ratio = contrastOn(parseColor(value)!, background);
+      if (ratio < CHANGE_CONTRAST) {
+        problems.push(
+          `${token} (${value}) reaches ${ratio.toFixed(2)}:1 on ${where}, so a change could be missed; it needs ${CHANGE_CONTRAST}:1.`,
+        );
+        break;
+      }
+    }
+  }
+  return problems;
+}
+
+/** Contrast problems of a theme with opaque backgrounds, one sentence each. None means easy to read. */
+export function contrastProblems(theme: ResolvedTheme): string[] {
+  const color = colorReader(theme);
+  const problems: string[] = [];
+  const backgrounds = backgroundsOf(color);
   for (const [token, minimum] of Object.entries(TEXT_CONTRAST)) {
     for (const [where, background] of backgrounds) {
       const ratio = contrastOn(color(token), background);
@@ -295,9 +335,14 @@ export async function readThemeFile(folder: string, name: string, builtIn = fals
   if (isAbsolute(name) || name.split(/[\\/]/).includes('..')) {
     throw themeError(`"${name}" is not a file inside the theme folder.`);
   }
-  await assertNoLinks(folder, false);
-  const root = await realpath(folder).catch(() => {
-    throw themeError(`Theme folder not found: ${folder}`);
+  // Without a trailing "/" or "/.", which would make the link check follow a link.
+  const dir = resolve(folder);
+  await assertNoLinks(dir, false);
+  const root = await realpath(dir).catch(() => {
+    throw themeError(
+      `Theme folder not found: ${folder}`,
+      'Theme names are lowercase, such as terminal. A path must lead to a folder that holds theme.json.',
+    );
   });
   const path = join(root, name);
   const info = await lstat(path).catch(() => null);
@@ -308,6 +353,9 @@ export async function readThemeFile(folder: string, name: string, builtIn = fals
   });
   try {
     const stats = await handle.stat();
+    if (stats.ino !== info.ino || stats.dev !== info.dev) {
+      throw themeError(`${name} in ${folder} changed while it was read.`);
+    }
     if (!stats.isFile() || (!builtIn && stats.nlink !== 1)) {
       throw themeError(`${name} in ${folder} must be a plain file with a single name, not a hard link.`);
     }
@@ -394,7 +442,7 @@ export async function loadTheme(value: string, options: LoadThemeOptions = {}): 
     if (!(await lstat(folder).catch(() => null))) {
       throw themeError(
         `There is no theme named "${name}".`,
-        `Built-in themes: ${BUILT_IN_THEMES.join(', ')}. Your own themes go in ${join(homeLayout(options.home).themes, '<name>', THEME_FILE)}.`,
+        `Built-in themes: ${BUILT_IN_THEMES.join(', ')}. Your own themes go in ${join(homeLayout(options.home).themes, '<name>', THEME_FILE)}. For a theme folder here, write ./${name}.`,
       );
     }
     theme = await complete(await readTheme(folder, false), false);
@@ -403,6 +451,13 @@ export async function loadTheme(value: string, options: LoadThemeOptions = {}): 
     theme = await complete(await readTheme(folder, false), false);
   } else {
     throw themeError(`"${value}" is not a theme name or the full path of a theme folder.`);
+  }
+  const unsafe = safetyProblems(theme);
+  if (unsafe.length > 0) {
+    throw themeError(
+      `Theme "${theme.name}" cannot be used. ${unsafe.join(' ')}`,
+      'Backgrounds must be opaque and must differ from the fixed colors of added, removed and changed lines. --allow-low-contrast does not change this.',
+    );
   }
   const problems = contrastProblems(theme);
   if (problems.length > 0 && !options.allowLowContrast) {

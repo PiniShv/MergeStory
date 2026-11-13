@@ -371,7 +371,7 @@ browser still come from your settings.
 | `--name <name>` | The work folder. | required |
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
 | `--style`, `--quality`, `--max-duration`, `--duration`, `--language` | As for `generate`. | as for `generate` |
-| `--theme <name>` | A theme name, as for `generate`. Never a path: an agent command does not read a theme folder that you did not name. | `midnight` |
+| `--theme <name>` | A theme name, as for `generate`. A path is refused. | `midnight` |
 | `--tts <provider>` | `auto`, `kokoro`, `say` or `none`. | `auto` |
 | `--voice <name>` | The voice name for the speech provider. | the provider's default |
 | `--dry-run` | Show the plan and render nothing. | off |
@@ -516,7 +516,7 @@ folder, as for `generate --theme`. See [themes.md](themes.md).
 
 | Flag | What it does | Default |
 |---|---|---|
-| `--out <dir>` | The folder for the stills and the page. | `$MERGESTORY_HOME/previews/<theme>` |
+| `--out <dir>` | The folder for the stills and the page: an empty folder, or one that an earlier preview made. A folder with other files, or with a symbolic link in it, is refused. | `$MERGESTORY_HOME/previews/<theme>` |
 | `--allow-low-contrast` | Draw a theme that fails the contrast check, with a warning. | off |
 
 ## Run folders

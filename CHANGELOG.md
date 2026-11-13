@@ -11,7 +11,8 @@ All notable changes to MergeStory are listed here, newest first.
   look exactly as before.
 - Make your own theme: a `theme.json` with colors in `~/.mergestory/themes/<name>`, or a folder whose
   path you give to `--theme`. A theme is data only: colors and a code color scheme. It cannot change
-  how added, removed and changed lines look, or the badges. See [docs/themes.md](docs/themes.md).
+  how added, removed and changed lines look, or the badges, and its backgrounds must let those colors
+  stand out. See [docs/themes.md](docs/themes.md).
 - `mergestory theme preview <theme>` draws sample scenes with a theme on one page, with no model, no
   voice and no network.
 - A contrast check refuses a theme that is hard to read. `--allow-low-contrast` makes it a warning.

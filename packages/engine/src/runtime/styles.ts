@@ -71,6 +71,7 @@ export const BASE_CSS = String.raw`
   --badge-masked: #ff6b81;
   --badge-reported: #60a5fa;
   --on-status: #071022;
+  --edge-added: #8c7bff;
 
   --radius-l: 24px;
   --radius-pill: 999px;
@@ -131,6 +132,7 @@ export const BASE_CSS = String.raw`
   --badge-masked: #c0243e;
   --badge-reported: #1d4ed8;
   --on-status: #ffffff;
+  --edge-added: #6750f0;
   --shadow-card: 0 30px 70px -28px rgba(30, 41, 80, 0.35), 0 0 0 1px var(--border-1);
   --shadow-lift: 0 18px 40px -20px rgba(30, 41, 80, 0.35);
 }

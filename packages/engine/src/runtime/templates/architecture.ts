@@ -321,10 +321,10 @@ const ARCH_CSS = `
 .ms-arch__edges { position: absolute; left: 0; top: 0; overflow: visible; }
 .ms-arch__line { fill: none; stroke-linecap: butt; stroke-linejoin: round; }
 .ms-arch__line--unchanged { stroke: var(--text-3); stroke-width: 3; stroke-dasharray: 1; }
-.ms-arch__line--added { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 1; }
+.ms-arch__line--added { stroke: var(--edge-added); stroke-width: 4; stroke-dasharray: 1; }
 .ms-arch__line--removed { stroke: var(--del); stroke-width: 3; stroke-dasharray: 11 9; }
 .ms-arch__head--unchanged { fill: var(--text-3); }
-.ms-arch__head--added { fill: var(--accent); }
+.ms-arch__head--added { fill: var(--edge-added); }
 .ms-arch__head--removed { fill: var(--del); }
 .ms-arch__packet-core { fill: var(--accent-2); }
 .ms-arch__packet-halo { fill: var(--accent-2); opacity: 0.28; }
@@ -352,7 +352,7 @@ const ARCH_CSS = `
   overflow: hidden;
   overflow-wrap: anywhere;
 }
-.ms-arch__elabel--added { color: var(--accent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+.ms-arch__elabel--added { color: var(--edge-added); box-shadow: 0 0 0 1px color-mix(in srgb, var(--edge-added) 55%, transparent); }
 .ms-arch__elabel--removed { color: var(--del); box-shadow: 0 0 0 1px color-mix(in srgb, var(--del) 55%, transparent); }
 
 .ms-arch__node { position: absolute; }

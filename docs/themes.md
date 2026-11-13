@@ -55,11 +55,13 @@ calls no model, makes no voice and uses no network. The files go to
 
 3. Look at it with `mergestory theme preview acme`, then use it with `mergestory generate --theme acme`.
 
+For a light theme, put your colors under `colors.light` and extend `paper`, or leave `extends` out.
+
 A theme folder can also be somewhere else. Give its path to `--theme` on the command line, or its full
 path as `theme` in your own config file.
 
 The built-in themes are good examples. Each one is a `theme.json` in
-[packages/engine/assets/themes](../packages/engine/assets/themes), with every color it uses.
+[packages/engine/assets/themes](../packages/engine/assets/themes), with the colors it sets.
 
 ## The format
 
@@ -69,11 +71,12 @@ The built-in themes are good examples. Each one is a `theme.json` in
 | `name` | The name of the theme: 1 to 40 characters, `a-z`, `0-9` and `-`. |
 | `extends` | Optional. A built-in theme to start from. Your colors replace its colors. Without `extends`, a dark theme starts from `midnight` and a light theme from `paper`. |
 | `colors.dark` or `colors.light` | One of the two. The key says if the video is dark or light, and it holds the colors you change. A theme that extends a built-in theme uses the same key as that theme. |
-| `code.shiki` | Optional. A Shiki color scheme for code that comes with MergeStory, for example `github-dark-default`, `monokai` or `github-light-default`. Use a dark scheme for a dark theme and a light scheme for a light theme. |
+| `code.shiki` | Optional. A Shiki color scheme for code that comes with MergeStory, for example `github-dark-default`, `monokai` or `github-light-default`. Use a dark scheme for a dark theme and a light scheme for a light theme. Without it, the theme keeps the scheme of the theme it starts from. |
 
 Any other key is an error. Every value must be a color written as `#rgb`, `#rrggbb`, `#rrggbbaa`,
-`rgb()`, `rgba()`, `hsl()` or `hsla()`. Color names such as `red`, `var()`, `url()` and anything else
-are refused.
+`rgb()`, `rgba()`, `hsl()` or `hsla()`, with numbers of at most three digits before the point and four
+after, and a hue from 0 to 360. Color names such as `red`, `var()`, `url()` and anything else are
+refused.
 
 ## The colors a theme can set
 
@@ -94,21 +97,28 @@ are refused.
 | `cap-bg`, `cap-fg`, `cap-ring` | The caption: its background, its text and its border. |
 | `sev-info`, `sev-low`, `sev-medium`, `sev-high` | The levels of review signals. |
 
-On a dark theme, `glow` follows `accent`, and `glow-2` and `brand-2` follow `accent-2`, unless you set
-them.
+In `midnight` and the themes that start from it, `glow` follows `accent`, and `glow-2` and `brand-2`
+follow `accent-2`, unless you set them.
 
 ## What a theme cannot change
 
 - Added, removed and changed lines keep their green, red and amber, so a theme cannot make a removal
-  look like an addition.
+  look like an addition. New connections in diagrams keep their color too.
 - The badges keep their colors: "Simulated UI", "Actual screenshot", "Secrets masked" and "Reported by
   caller". A theme cannot hide that a picture is simulated or that secrets were masked.
 - Secrets are masked before the theme is used. A theme has no setting for masking.
-- Fonts, sizes, the layout, the logo and the end card stay the same.
+- Fonts, sizes and the layout stay the same. The logo and the end card keep their shape and text; a
+  theme only changes their colors.
 
-## The contrast check
+## The checks
 
-MergeStory refuses a theme that is hard to read:
+Two rules always apply, and no flag turns them off:
+
+- `bg-0` and `bg-1` must be opaque.
+- The colors of added, removed and changed lines, and of new connections, must stand out from every
+  background and card: at least 2:1. So a theme can never hide what a change did.
+
+MergeStory also refuses a theme that is hard to read:
 
 | What | Needs at least |
 |---|---|
@@ -116,9 +126,9 @@ MergeStory refuses a theme that is hard to read:
 | `text-3` on the background and on every card | 3:1 |
 | Captions (`cap-fg` on `cap-bg`), over any scene behind them | 7:1 |
 
-It also refuses a background (`bg-0` or `bg-1`) that is not opaque, and a light `code.shiki` scheme on
-a dark theme or a dark one on a light theme. The error names each color and its contrast. With
-`--allow-low-contrast` (on `generate` and `theme preview`) these problems are warnings instead.
+It also refuses a light `code.shiki` scheme on a dark theme, or a dark one on a light theme. The error
+names each color and its contrast. With `--allow-low-contrast` (on `generate` and `theme preview`)
+these readability problems are warnings instead.
 
 ## Where a theme comes from
 

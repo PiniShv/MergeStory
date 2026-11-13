@@ -3,10 +3,12 @@
  * model, no voice and no network: the plans ship with MergeStory, and only their code is colored
  * again for the theme's Shiki theme.
  */
-import { readFile, writeFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { RunContext } from '../core/context.ts';
+import { MergeStoryError } from '../core/errors.ts';
+import { assertNoLinks, assertNotWorkFolder } from '../core/paths.ts';
 import type { RenderPlan, ResolvedCode } from '../core/render-plan.ts';
 import type { ResolvedTheme } from '../core/theme.ts';
 import { highlightText } from '../visuals/highlight.ts';
@@ -20,8 +22,11 @@ const SHOTS = [
   { plan: 'templates-sample', times: [4.5, 10.5, 16, 21.5, 27, 32.5, 38, 41.5] },
 ] as const;
 
+/** What a preview writes. A folder for a preview may hold nothing else. */
+const OWN_ENTRIES = new Set(['index.html', ...SHOTS.map((shot) => shot.plan)]);
+
 /** Color the code of a plan again with another Shiki theme. */
-async function recolorCode(plan: RenderPlan, shiki: string): Promise<void> {
+export async function recolorCode(plan: RenderPlan, shiki: string): Promise<void> {
   const blocks: ResolvedCode[] = [];
   for (const { visual } of plan.scenes) {
     if (visual.type === 'code') blocks.push(visual.code);
@@ -66,6 +71,21 @@ export async function previewTheme(
   outDir: string,
   ctx: RunContext,
 ): Promise<ThemePreview> {
+  // Never write through a link, into the work folder, or over files that a preview did not make.
+  await assertNotWorkFolder(outDir, ctx.config.home);
+  await assertNoLinks(outDir);
+  const others = (await readdir(outDir).catch(() => [] as string[])).filter(
+    (entry) => !OWN_ENTRIES.has(entry),
+  );
+  if (others.length > 0) {
+    throw new MergeStoryError(
+      'USAGE',
+      `The folder ${outDir} already holds other files, such as ${others[0]}.`,
+      {
+        hint: 'Choose an empty folder for the preview, or leave --out out.',
+      },
+    );
+  }
   const stills: string[] = [];
   for (const shot of SHOTS) {
     const plan = JSON.parse(await readFile(join(SAMPLES, `${shot.plan}.json`), 'utf8')) as RenderPlan;
