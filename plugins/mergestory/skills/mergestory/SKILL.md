@@ -3,13 +3,14 @@ name: mergestory
 description: >-
   Turns a pull request or local branch into a short narrated explainer video for code
   reviewers (animated diagrams, real code, captions) and returns the video file or a
-  shareable link. Use after opening a pull request, or when the user wants to explain,
-  walk through, demo or summarize a PR or code change as a video, even if they do not
-  say video or name MergeStory.
+  shareable link. Use when the user wants to explain, walk through, demo or summarize a
+  PR or code change as a video, even if they do not say video or name MergeStory. After
+  opening a pull request, offer a video in one short sentence, and run this only when the
+  user agrees.
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.2.4"
+  version: "1.2.5"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 

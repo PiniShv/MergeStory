@@ -2,6 +2,18 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Cost report
+
+- A speech request that times out (also when it is tried again), or whose audio cannot be read after the
+  service answered, may still be billed. It is now counted at its estimate, like a model call.
+
+## Skill and plugin 1.2.5
+
+- After you open a pull request, the skill offers a video in one short sentence and makes one only when
+  you say yes. Before, it could make a video nobody asked for, and that uses your agent's tokens.
+
 ## 1.2.4
 
 ### Cost, stated exactly
