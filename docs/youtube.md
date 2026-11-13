@@ -230,7 +230,7 @@ Numbers checked in November 2026. Check the current Google docs for the latest.
   videos fit into one day. Without captions the 100-uploads limit comes first. Captions are off by
   default for this reason.
 - Quotas reset at midnight Pacific Time. Every request counts, even a refused one.
-- The cost report shows each call and the quota it used. The money cost is always zero.
+- The cost report shows each call and the quota it used. The YouTube API charges no money for these calls. They use quota units.
 - To raise the quota, Google asks you to complete its audit and quota extension form.
 
 Channel limits that are not about MergeStory:

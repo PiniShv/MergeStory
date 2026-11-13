@@ -11,7 +11,7 @@ These run without a question:
 | Command | What it does |
 |---|---|
 | `mergestory doctor --json` | Checks Node, git, FFmpeg, the browser, speech, LLM, GitHub access, publishing and disk space. Each check has `status` (pass, warn, fail) and a `fix`. Exit code 1 when a check fails. |
-| `mergestory agent analyze [source] --name <name> [--base <ref>] [--head <ref>] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into the work folder `~/.mergestory/work/<name>`, and prints it as `workDir`. Reads `task.md`, `notes.md` and `tests.json` from that folder. Free. |
+| `mergestory agent analyze [source] --name <name> [--base <ref>] [--head <ref>] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into the work folder `~/.mergestory/work/<name>`, and prints it as `workDir`. Reads `task.md`, `notes.md` and `tests.json` from that folder. No model is called. |
 | `mergestory agent validate [source] --name <name> --json` | Checks `storyboard.json` in the work folder against the change, without rendering. Exit code 3 when it has errors. |
 | `mergestory agent render [source] --name <name> [flags] --json` | Makes the video on this machine from `storyboard.json` in the work folder. Never calls a model or a paid voice, never uploads and never comments. |
 
@@ -27,7 +27,7 @@ in another folder, or publishing:
 
 | Command | What it does |
 |---|---|
-| `mergestory analyze <source> --out <dir> [context flags] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into `<dir>`. Free. |
+| `mergestory analyze <source> --out <dir> [context flags] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into `<dir>`. No model is called. |
 | `mergestory validate <storyboard.json> <source> [context flags] --json` | Checks a storyboard against the change without rendering. Exit code 3 when it has errors. |
 | `mergestory generate <source> [context flags] [--storyboard <file>] --json` | Makes the video. Without `--storyboard` the engine writes the storyboard itself (offline, or with the configured LLM). |
 | `mergestory publish <run> [--comment] --json` | Uploads a video that was already rendered to the team's storage (Google Drive or S3), and optionally comments on the pull request. No rendering. |
@@ -64,7 +64,7 @@ ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or 
 | `--publish local\|s3\|drive\|none` | Where the video goes. Without the flag it follows the team's settings, which may be `s3` or `drive`, so pass `--publish local` when you render and upload later with `publish`. `local` keeps it on this machine. `drive` also needs `mergestory setup drive` once. |
 | `--visibility private\|protected\|public` | S3 links: signed and expiring, permanent behind a sign-in, or permanent and open. |
 | `--comment`, `--update-description` | Write the link to the pull request. Needs a pull request source and a video that was published somewhere other than this machine. |
-| `--budget <usd>` | Cost cap for the run (default 0.25). |
+| `--budget <usd>` | The most this run may spend on MergeStory's paid model and voice calls, checked against estimates (default 0.25). It does not cap your own usage, storage or CI. |
 | `--dry-run` | Plan only: scenes, estimated cost and what would leave the machine. Nothing is rendered or sent. |
 | `--async` | Run in the background; prints a job id. |
 | `--out <dir>` | Write the run files to this folder (outside the repository). |

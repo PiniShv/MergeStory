@@ -60,7 +60,7 @@ Every response is JSON with `Cache-Control: no-store`. A trailing slash on the p
 
 | Method and path | What it does |
 |---|---|
-| `GET /v1/health` | Returns `{"ok": true, "version": "1.2.3"}`. |
+| `GET /v1/health` | Returns `{"ok": true, "version": "1.2.4"}`. |
 | `POST /v1/jobs` | Starts a job. Returns `202`. |
 | `GET /v1/jobs/:id` | Returns one job. |
 | `GET /v1/jobs?limit=<n>` | Returns recent jobs, newest first, as `{"jobs": [...]}`. `limit` is 1 to 200 and the default is 20. |
@@ -268,7 +268,7 @@ A failure throws a `MergeStoryError`. It has a `code`, a `hint`, `details` and a
 ### `prepareAuthoring`
 
 Analyses a change and writes the files an agent needs to write a storyboard. It is the same as
-`mergestory analyze`. It is free, and no model is called.
+`mergestory analyze`. No model is called.
 
 ```ts
 import { prepareAuthoring } from 'mergestory';

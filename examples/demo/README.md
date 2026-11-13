@@ -33,7 +33,7 @@ If you work from a clone of this repository, use `node ../../packages/engine/src
 
 ## Three ways to make the video
 
-### 1. Offline storyboard (free)
+### 1. Offline storyboard (no paid service)
 
 The default. The storyboard is built on this machine from the diff, the task and the notes. No model is called and nothing is sent anywhere.
 
@@ -77,19 +77,19 @@ export ANTHROPIC_API_KEY=<your key>
 mergestory generate /tmp/mergestory-demo --base main --head feature/retry --task-file task.md --notes-file notes.md --tests-file tests.json --llm anthropic
 ```
 
-Run it with `--dry-run` first. It shows the estimated cost and what would be sent to the model: the diff, the code around it, and the task and notes you passed. The run stops before any call that would go over the budget (`--budget`, 25 cents by default).
+Run it with `--dry-run` first. It shows the estimated cost and what would be sent to the model: the diff, the code around it, and the task and notes you passed. The budget (`--budget`, 25 cents by default) is checked before each paid call, using estimated prices. It is a safeguard, not a guarantee of your final bill.
 
 ## What to expect
 
 | | Storyboard from | Cost |
 |---|---|---|
-| 1 | the offline generator | $0 |
-| 2 | `storyboard.json`, written by hand | $0 |
-| 3 | a language model | a fraction of a cent for this change |
+| 1 | the offline generator | no paid call |
+| 2 | `storyboard.json`, written by hand or by your coding agent | no paid call from MergeStory (an agent's own usage is billed by its provider) |
+| 3 | a language model | an estimated fraction of a cent for this change, billed by the provider |
 
 The video is about two minutes long with any of the three. The length follows the size of the change.
 
-Speech and rendering run on your machine, so they cost nothing. Rendering takes one to three minutes. The first video installs the free Kokoro voice once, which takes a minute or two longer. Run `mergestory setup kokoro` to do it ahead of time, or add `--tts none` for a silent video with captions. `mergestory doctor` checks what is installed.
+Speech and rendering run on your machine. They add no provider charge, but they use your machine's time and power. Rendering takes one to three minutes. The first video installs the free Kokoro voice once, which takes a minute or two longer. Run `mergestory setup kokoro` to do it ahead of time, or add `--tts none` for a silent video with captions. `mergestory doctor` checks what is installed.
 
 Every name and number in the video comes from the change. The video says that tests passed only because `tests.json` reports it, and it says who reported it.
 

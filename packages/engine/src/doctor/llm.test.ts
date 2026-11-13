@@ -22,6 +22,7 @@ describe('LLM', () => {
     expect(check.detail).toContain('ANTHROPIC_API_KEY is set');
     expect(check.detail).toContain('claude-haiku-5-5');
     expect(check.detail).toContain('api.anthropic.com');
+    expect(check.detail).toContain('that provider bills your account');
     expect(JSON.stringify(present)).not.toContain(key);
 
     const openai = await doctor({ llm: { provider: 'openai' } });

@@ -33,13 +33,14 @@ export function llmCostUsd(
   return null;
 }
 
-/** Rate used for a model whose price is unknown: the highest listed rate, so the budget still holds. */
+/** Rate used for a model whose price is unknown: the highest listed rate, so it is not counted as cheap. */
 export const UNKNOWN_MODEL_PRICE: ModelPrice = { inputPerMTok: 10, outputPerMTok: 50 };
 
 /**
  * Cost to check against the budget and to record. A model without a known price counts at
- * UNKNOWN_MODEL_PRICE (with one warning per model), so an unlisted model can never get past the
- * budget. Servers on this machine or a private network (for example Ollama) cost nothing.
+ * UNKNOWN_MODEL_PRICE (with one warning per model), so an unlisted model is not counted as cheap.
+ * Servers on this machine or a private network (for example Ollama) count as 0, even when they
+ * forward to a paid service.
  */
 export function budgetLlmCostUsd(
   provider: string,

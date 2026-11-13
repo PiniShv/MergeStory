@@ -30,5 +30,13 @@ video, or when your team set up a paid voice for MergeStory. The first English v
 voice once, from the npm registry and `huggingface.co`, and sends nothing from the change. There is
 no telemetry.
 
+## Cost
+
+MergeStory adds no charge by default. Writing the storyboard is extra usage in your Claude Code
+session: Claude reads MergeStory's instructions and evidence pack, often more than 10,000 tokens. If
+you pay per token, that usage is billed to you. A model or a cloud voice that you turn on, storage and
+CI minutes can also cost money. See [what can still cost
+money](https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md#what-can-still-cost-money).
+
 The engine is the [`mergestory`](https://www.npmjs.com/package/mergestory) package. Documentation and
 source: [github.com/PiniShv/MergeStory](https://github.com/PiniShv/MergeStory).

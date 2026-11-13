@@ -28,7 +28,7 @@ export function registerAnalyze(program: Command, rt: CliRuntime): void {
   const command = program
     .command('analyze')
     .description(
-      'Analyse a change and write the files needed to author a storyboard yourself (free, no model is called)',
+      'Analyse a change and write the files needed to author a storyboard yourself (no model is called)',
     )
     .argument('[source]', 'pull request URL, owner/repo#123, or the path of a local repository', '.');
   addSourceFlags(command);

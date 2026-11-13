@@ -10,6 +10,8 @@
 
 [Website](https://mergestory.pinishv.com) · [Watch the film](https://www.youtube.com/watch?v=Ylp5W4oaAqM) · [Watch the demo](https://www.youtube.com/watch?v=yZaKPyuZN1Q) · [Get started](#get-started)
 
+<sub>"Free" in the film means MergeStory adds no charge with the default settings. [What can still cost money](docs/cost.md#what-can-still-cost-money).</sub>
+
 </div>
 
 <br>
@@ -32,7 +34,7 @@ Claims nobody can check, like "all tests pass", are removed unless real test res
 
 ## $0. By design.
 
-By default, MergeStory calls no paid service at all. [See what it costs and why.](#what-it-costs)
+By default, MergeStory itself calls no paid service.[^cost] [See what it costs and why.](#what-it-costs)
 
 ## Private by default.
 
@@ -127,7 +129,8 @@ Gemini CLI is now for Code Assist. Other people use Google's Antigravity CLI (`a
 `.agents/skills`.
 
 With the skill, the agent writes the storyboard itself from MergeStory's evidence pack. The agent
-knows why it made each decision, so the story is better, and no extra model is paid for. The engine
+knows why it made each decision, so the story is better, and MergeStory calls no extra paid model.
+Reading the evidence pack and writing the storyboard is extra usage in your agent's session. The engine
 still checks every claim and every line reference before rendering. See [the storyboard
 format](docs/storyboard.md). The skill itself is in
 [plugins/mergestory/skills/mergestory/SKILL.md](plugins/mergestory/skills/mergestory/SKILL.md).
@@ -177,7 +180,7 @@ variable beats the config file. Common options:
 | Quality | `--quality draft`, `standard`, `high` | `MERGESTORY_QUALITY` |
 | Config file | none | `MERGESTORY_CONFIG` (default: `~/.mergestory/config.json`) |
 
-Free local voice: English videos use Kokoro, an open neural voice that runs on your machine. The
+Local voice: English videos use Kokoro, an open neural voice that runs on your machine. The
 first English video installs it once (about 400 MB plus a one-time model download), and
 `mergestory setup kokoro` does it ahead of time. `--tts say` (macOS) or `--tts none` skips it.
 
@@ -185,15 +188,15 @@ Full reference: [docs/configuration.md](docs/configuration.md) and [docs/cli.md]
 
 ## What it costs
 
-A default run costs **$0** per video. No paid service is called.
+A default run calls no paid service, so MergeStory adds **$0** per video.[^cost] Other costs can still apply.
 
 | Step | Default | Cost |
 |---|---|---|
-| Storyboard (the script) | Written by the coding agent you already use, from MergeStory's evidence pack. Without an agent, built offline from the analysis. | $0 extra |
-| Voice | Kokoro, an open neural voice for English that runs on your own CPU. Installed once (about 400 MB plus the model download). | $0 |
-| Rendering | Your own browser draws each frame from a JSON plan. FFmpeg encodes. Same input, same video. | $0 |
+| Storyboard (the script) | Written by the coding agent you already use, from MergeStory's evidence pack. Without an agent, built offline from the analysis. | No MergeStory charge. Your agent reads the evidence pack and writes the script: extra usage, billed by its provider if you pay per token. |
+| Voice | Kokoro, an open neural voice for English that runs on your own CPU. Installed once (about 400 MB plus the model download). | No fee. Uses your machine and disk. |
+| Rendering | Your own browser draws each frame from a JSON plan. FFmpeg encodes. Same input, same video. | No fee. Uses your machine, or your CI minutes in CI. |
 | Checks | Every claim and line reference is checked locally. | $0 |
-| Sharing | Local by default. YouTube or Google Drive on your own account, or object storage. | $0 on your own channel or Drive. A fraction of a cent per month on Cloudflare R2 or S3. |
+| Sharing | Local by default. YouTube or Google Drive on your own account, or object storage. | Local: nothing. YouTube: no storage fee. Drive: your storage quota. R2 and S3: billed by the provider for storage and requests, and S3 also for data transfer out. |
 
 ### Why it is so cheap
 
@@ -201,13 +204,18 @@ A default run costs **$0** per video. No paid service is called.
 - The voice is open and runs on your CPU.
 - Your own browser and FFmpeg render the video. No render farm, no cloud GPU.
 - The checks run on your machine.
-- A budget guard stops any paid call that would go over. Every run prints its cost.
+- A budget check runs before each paid MergeStory call, using estimated prices. It is a safeguard, not a
+  guarantee. Every run prints its estimated cost.
 
-Paid services are opt-in. A storyboard by Claude Haiku 5.5 (`--llm anthropic`) usually costs under $0.01 per video. The default budget is $0.25 per run, checked before every paid call.
+Paid services are opt-in, and their providers bill your own account. A storyboard by Claude Haiku 5.5
+(`--llm anthropic`) is estimated at under $0.01 per video, from list prices checked 2026-11. Providers change
+prices, and your provider's bill is the final word. The default budget is $0.25 per run, checked before every
+paid call. To cap your real bill, set a spending limit or alert with each provider.
 
 Read [the full cost breakdown](docs/cost.md).
 
-▶ [Watch the 70-second film: $0. By design.](https://www.youtube.com/watch?v=6X5-zCe8PbU)
+▶ [Watch the 70-second film on what it costs.](https://www.youtube.com/watch?v=6X5-zCe8PbU) It shows the
+default settings. See [what can still cost money](docs/cost.md#what-can-still-cost-money).
 
 ## Privacy and security
 
@@ -253,4 +261,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 
 ## License
 
-[Apache-2.0](LICENSE). Bundled fonts: Inter and JetBrains Mono (SIL Open Font License 1.1).
+[Apache-2.0](LICENSE). The software is provided "as is", without warranties, and the license limits liability
+(sections 7 and 8). Bundled fonts: Inter and JetBrains Mono (SIL Open Font License 1.1).
+
+[^cost]: MergeStory is open source, and a default run calls no paid service, so MergeStory itself adds no charge. Your coding agent's usage, any model or voice you turn on, storage and CI minutes can still cost money, and their providers bill you. See [what can still cost money](docs/cost.md#what-can-still-cost-money).

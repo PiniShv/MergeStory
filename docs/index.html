@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-src https://www.youtube-nocookie.com; base-uri 'none'; form-action 'none'">
 <title>MergeStory: every change has a story</title>
-<meta name="description" content="MergeStory turns a pull request into a short narrated video: what changed, why, and what to review. $0 per video. Free, open source, and it runs on your machine.">
+<meta name="description" content="MergeStory turns a pull request into a short narrated video: what changed, why, and what to review. Open source, runs on your machine, and calls no paid service by default.">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://mergestory.pinishv.com/">
 <meta name="color-scheme" content="light dark">
@@ -15,7 +15,7 @@
 <meta property="og:url" content="https://mergestory.pinishv.com/">
 <meta property="og:site_name" content="MergeStory">
 <meta property="og:title" content="MergeStory: every change has a story">
-<meta property="og:description" content="Turn a pull request into a short narrated video. What changed, why, and what to review. $0 per video. Free, open source, runs on your machine.">
+<meta property="og:description" content="Turn a pull request into a short narrated video. What changed, why, and what to review. Open source, runs on your machine, no paid service by default.">
 <meta property="og:image" content="https://mergestory.pinishv.com/assets/social-preview.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1280">
@@ -23,7 +23,7 @@
 <meta property="og:image:alt" content="MergeStory. Every change has a story.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MergeStory: every change has a story">
-<meta name="twitter:description" content="Turn a pull request into a short narrated video. $0 per video. Free and open source.">
+<meta name="twitter:description" content="Turn a pull request into a short narrated video. Open source, with no paid service by default.">
 <meta name="twitter:image" content="https://mergestory.pinishv.com/assets/social-preview.png">
 <meta name="twitter:image:alt" content="MergeStory. Every change has a story.">
 <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
@@ -448,6 +448,16 @@ html:not(.js) .panel+.panel{border-top:1px solid var(--t-line)}
 .cost-link{margin:clamp(28px,4vw,40px) 0 0;text-align:center;font-size:1.1875rem;font-weight:500}
 .cost-link a{display:inline-flex;min-height:44px;align-items:center}
 
+/* Numbered notes for the cost claims */
+.fn-ref{margin-left:.1em;font-size:.6em;font-weight:600;line-height:0;vertical-align:super;color:var(--accent);text-decoration:none}
+.notes{padding-block:0 clamp(32px,5vw,56px);color:var(--muted);font-size:.8125rem;line-height:1.5}
+.notes ol{margin:0;padding-left:1.5em;max-width:62em}
+.notes ul{margin:6px 0 0;padding-left:1.25em}
+.notes li+li{margin-top:8px}
+.notes li:target{color:var(--text)}
+.fn-back{text-decoration:none}
+.film-note{margin:16px auto 0;max-width:40em;text-align:center;color:var(--muted);font-size:.875rem;line-height:1.45}
+
 /* Pipeline */
 .pipe{display:grid;gap:12px;grid-template-columns:minmax(0,1fr);counter-reset:p}
 @media (min-width:600px){.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -573,10 +583,10 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <!-- Hero -->
 <section class="hero" aria-labelledby="h-hero">
 <div class="wrap">
-<a class="eyebrow" href="#cost"><b>New</b><span>$0 per video, by design</span><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></a>
+<a class="eyebrow" href="#cost"><b>New</b><span>$0 per video, by design<sup class="fn-ref" aria-hidden="true">1</sup></span><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></a>
 <h1 id="h-hero"><span class="nl">Every change</span> <span class="grad nl">has a story.</span></h1>
 <p class="lead">MergeStory turns a pull request into a short narrated video. What changed, why, and what to review.</p>
-<p class="sub">Free, open source, and it runs on your machine.</p>
+<p class="sub">Open source, and it runs on your machine.</p>
 <div class="cta">
 <a class="btn btn-primary" href="#install">Install</a>
 <a class="btn btn-ghost" href="#film"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Watch the film</a>
@@ -595,6 +605,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <a class="ctl yt" href="https://www.youtube.com/watch?v=Ylp5W4oaAqM" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
 </div>
 </figure>
+<p class="film-note">"Free" in the film means MergeStory adds no charge with the default settings. Your coding agent's usage, storage and CI minutes can still cost money.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
 </div>
 </section>
 
@@ -658,7 +669,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <div class="wrap">
 <h2 id="h-glance" class="sr">At a glance</h2>
 <ul role="list">
-<li class="rv" style="--d:0"><strong>Free.</strong><span>No paid service is called by default.</span></li>
+<li class="rv" style="--d:0"><strong>No paid service.</strong><span>None is called by default.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></span></li>
 <li class="rv" style="--d:1"><strong>Local.</strong><span>Voice and rendering run on your machine.</span></li>
 <li class="rv" style="--d:2"><strong>Private.</strong><span>Nothing leaves unless you set it up.</span></li>
 <li class="rv" style="--d:3"><strong>Grounded.</strong><span>Every line cites the code.</span></li>
@@ -823,24 +834,24 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <div class="wrap">
 <div class="head rv">
 <h2 id="h-cost">$0. By design.</h2>
-<p class="intro">A default run calls no paid service at all. No account. No key for your first video.</p>
+<p class="intro">A default run calls no paid service of its own.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> No account. No key for your first video.</p>
 </div>
 <p class="big0 rv" aria-hidden="true"><span class="grad">$0</span></p>
-<p class="big0-l rv">per video</p>
+<p class="big0-l rv"><span class="sr">$0 </span>per video, from MergeStory<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
 <ul class="steps5" role="list">
-<li class="rv" style="--d:0"><span class="k">Storyboard</span><span class="v">$0</span><p class="d">Written by the coding agent you already use. No extra bill.</p></li>
-<li class="rv" style="--d:1"><span class="k">Voice</span><span class="v">$0</span><p class="d">Kokoro, an open English voice that runs on your own CPU. Installed once.</p></li>
-<li class="rv" style="--d:2"><span class="k">Rendering</span><span class="v">$0</span><p class="d">Your own browser draws each frame. FFmpeg encodes.</p></li>
+<li class="rv" style="--d:0"><span class="k">Storyboard</span><span class="v">Varies</span><p class="d">Written by the coding agent you already use. That is extra usage in your session. If you pay per token, your agent's provider bills it.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
+<li class="rv" style="--d:1"><span class="k">Voice</span><span class="v">$0</span><p class="d">Kokoro, an open English voice that runs on your own CPU. Installed once: about 400 MB, plus the voice model.</p></li>
+<li class="rv" style="--d:2"><span class="k">Rendering</span><span class="v">$0</span><p class="d">Your own browser draws each frame. FFmpeg encodes. In CI, it uses your CI minutes.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
 <li class="rv" style="--d:3"><span class="k">Checks</span><span class="v">$0</span><p class="d">Every claim and line reference is checked on your machine.</p></li>
-<li class="rv" style="--d:4"><span class="k">Sharing</span><span class="v">$0</span><p class="d">On your own YouTube channel or Google Drive. A fraction of a cent a month on R2 or S3.</p></li>
+<li class="rv" style="--d:4"><span class="k">Sharing</span><span class="v">Varies</span><p class="d">Local by default, with nothing to pay. YouTube and Google Drive use your own account and storage. R2 and S3 bill you for storage and requests.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
 </ul>
 
 <h3 class="pricehead rv">Why it is so cheap.</h3>
 <ul class="specs" role="list">
 <li class="rv">
 <div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>The agent</div>
-<div><h3>The expensive part is already done.</h3>
-<p>Understanding the change and writing the story is the costly work. Your coding agent has done it, so it writes the storyboard. No second model reads the whole change again. Its usage is part of the session you already run.</p></div>
+<div><h3>The agent already knows the change.</h3>
+<p>Your coding agent made or reviewed the change, so it writes the storyboard. No second model reads the whole change again. Writing it is extra usage in your session: the agent reads MergeStory's instructions and evidence pack, often more than 10,000 tokens. If you pay per token, your agent's provider bills that usage.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></div>
 </li>
 <li class="rv">
 <div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-code"/></svg>Local software</div>
@@ -854,18 +865,18 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </li>
 <li class="rv">
 <div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg>Honest</div>
-<div><h3>Every run reports its cost.</h3>
-<p>It also lists every outbound transfer: the host, the purpose and the size.</p></div>
+<div><h3>Every run reports its estimated cost.</h3>
+<p>It counts MergeStory's own paid calls, from list prices.<a class="fn-ref" href="#fn-2" aria-label="Note 2">2</a> It also lists every outbound transfer: the host, the purpose and the size.</p></div>
 </li>
 </ul>
 
 <h3 class="pricehead rv">When you want more.</h3>
-<p class="pricecap rv">Both are opt-in. These are the built-in prices, checked in November 2026. You can override them in the config.</p>
+<p class="pricecap rv">Both are opt-in, and the provider bills your own account. These are estimates from list prices, checked in November 2026.<a class="fn-ref" href="#fn-2" aria-label="Note 2">2</a> You can override them in the config.</p>
 <div class="prices rv">
 <div class="term">
 <div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Opt-in prices</span></div>
 <ul class="cmdlist" role="list">
-<li><code>--llm anthropic</code><span class="d"><b>Claude Haiku 5.5 storyboard:</b> usually under $0.01 per video ($0.10 per million input tokens, $0.50 per million output tokens)</span></li>
+<li><code>--llm anthropic</code><span class="d"><b>Claude Haiku 5.5 storyboard:</b> estimated under $0.01 per video for a typical change ($0.10 per million input tokens, $0.50 per million output tokens)</span></li>
 <li><code>--tts openai</code><span class="d"><b>OpenAI gpt-4o-mini-tts:</b> $18 per million characters, about $0.015 per minute of speech</span></li>
 <li><code>--tts elevenlabs</code><span class="d"><b>ElevenLabs Flash:</b> $40 per million characters</span></li>
 <li><code>--tts elevenlabs</code><span class="d"><b>ElevenLabs v3 and Multilingual v2:</b> $80 per million characters</span></li>
@@ -875,8 +886,8 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </div>
 <div class="budget rv">
 <svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>
-<div><h3>A $0.25 budget, checked before every paid call.</h3>
-<p>No paid call can take a run over its budget. A model with an unknown price is counted at the highest rate, so the budget still holds. Change it with <code class="nw">--budget</code>.</p></div>
+<div><h3>A $0.25 budget per run, checked before every paid call.</h3>
+<p>MergeStory checks its estimate before each paid model or voice call and does not make a call that would go over. A model with an unknown price is counted at the highest rate. It is a safeguard, not a guarantee of your final bill.<a class="fn-ref" href="#fn-3" aria-label="Note 3">3</a> Change it with <code class="nw">--budget</code>.</p></div>
 </div>
 
 <figure class="film small cost-film rv" data-yt="6X5-zCe8PbU" data-title="MergeStory: what it costs and why (film)">
@@ -890,6 +901,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <a class="ctl yt" href="https://www.youtube.com/watch?v=6X5-zCe8PbU" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
 </div>
 </figure>
+<p class="film-note rv">The film shows the default settings. Your coding agent's usage, storage and CI minutes can still cost money.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
 <p class="cost-link rv"><a href="https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md">How the cost works <span aria-hidden="true">&nbsp;›</span></a></p>
 </div>
 </section>
@@ -1060,7 +1072,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <ul class="nots" role="list">
 <li class="rv" style="--d:0"><span><strong>Not a reviewer.</strong> It points to what to review. You decide.</span></li>
 <li class="rv" style="--d:1"><span><strong>Not a service.</strong> There is no account. It runs on your machine.</span></li>
-<li class="rv" style="--d:2"><span><strong>Not free in every language.</strong> The free voice is English only.</span></li>
+<li class="rv" style="--d:2"><span><strong>Not one voice for every language.</strong> Kokoro speaks English only. Other languages use a system voice, a cloud voice you turn on, or captions only.</span></li>
 <li class="rv" style="--d:3"><span><strong>Not a cheerleader.</strong> Claims it cannot check are removed.</span></li>
 </ul>
 </div>
@@ -1081,7 +1093,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </details>
 <details>
 <summary>What does it cost?</summary>
-<div class="a"><p>$0 per video by default. No paid service is called. If you opt in to a model for the storyboard, Claude Haiku 5.5 usually costs under $0.01 per video. Cloud voices are priced per million characters. A budget of $0.25 per run is checked before every paid call. <a href="#cost">See the full cost</a>.</p></div>
+<div class="a"><p>MergeStory charges nothing, and a default run calls no paid service.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> You may still pay others for your coding agent's usage, storage, CI minutes and any model or cloud voice you turn on. If you opt in to a model for the storyboard, Claude Haiku 5.5 is estimated at under $0.01 per video.<a class="fn-ref" href="#fn-2" aria-label="Note 2">2</a> Cloud voices are priced per million characters. A budget of $0.25 per run is checked before every paid call.<a class="fn-ref" href="#fn-3" aria-label="Note 3">3</a> <a href="#cost">See the full cost</a>.</p></div>
 </details>
 <details>
 <summary>Which agents does it work with?</summary>
@@ -1117,7 +1129,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <div class="wrap">
 <div class="cta-card dk">
 <h2 id="h-cta" class="rv">Every change has a story.</h2>
-<p class="tagline rv">Reads. Tells. Checks. <span>Free, on your machine.</span></p>
+<p class="tagline rv">Reads. Tells. Checks. <span>Open source, on your machine.</span></p>
 <p class="intro rv">Install MergeStory and turn your next pull request into a video.</p>
 <div class="install-wrap rv">
 <div class="term">
@@ -1142,6 +1154,25 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </div>
 </section>
 
+<section class="notes" aria-labelledby="h-notes">
+<div class="wrap">
+<h2 id="h-notes" class="sr">Notes</h2>
+<ol>
+<li id="fn-1">MergeStory is open source and charges nothing. A default run calls no paid service. Other costs can still apply. Their providers bill you, not MergeStory:
+<ul>
+<li>your coding agent's own usage, if you pay for it per token. The agent reads MergeStory's instructions and evidence pack, often more than 10,000 tokens, and writes the storyboard. That can cost more than an opt-in model.</li>
+<li>a model (<code>--llm</code>) or a cloud voice (<code>--tts</code>) that you turn on.</li>
+<li>storage and delivery. Amazon S3 bills storage, requests and data transfer out. Cloudflare R2 bills storage and operations above its free tier. Google Drive uses your storage quota.</li>
+<li>GitHub Actions minutes for private repositories.</li>
+<li>your own machine's time, power and network, including a one-time voice download of about 400 MB, plus the voice model.</li>
+</ul>
+<a class="fn-back" href="#cost" aria-label="Back to the cost section">&#8617;&#xFE0E;</a></li>
+<li id="fn-2">Prices are estimates from the providers' list prices, checked in November 2026. Providers change their prices. Your provider's bill is the final word. <a class="fn-back" href="#cost" aria-label="Back to the cost section">&#8617;&#xFE0E;</a></li>
+<li id="fn-3">The budget is per run, not per day or month. It is a safeguard, not a guarantee of your final bill. It uses the estimates in note 2 and covers only paid model and voice calls. It does not cover storage, CI minutes or your coding agent's usage. A model server or gateway on this machine or a private network counts as $0, even when it forwards to a paid service. To cap your real bill, set a spending limit or alert with each provider. <a class="fn-back" href="#cost" aria-label="Back to the cost section">&#8617;&#xFE0E;</a></li>
+</ol>
+</div>
+</section>
+
 </main>
 
 <footer class="foot">
@@ -1163,7 +1194,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </nav>
 </div>
 <div class="legal">
-<p>Apache-2.0 licence. Bundled fonts Inter and JetBrains Mono are under the SIL Open Font Licence 1.1.</p>
+<p>Apache-2.0 licence. MergeStory is provided "as is", without warranties, and the licence limits liability. See sections 7 and 8 of the <a href="https://github.com/PiniShv/MergeStory/blob/main/LICENSE">licence</a>. Bundled fonts Inter and JetBrains Mono are under the SIL Open Font Licence 1.1.</p>
 </div>
 </div>
 </footer>

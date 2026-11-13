@@ -48,7 +48,7 @@ export function formatUsd(amount: number, digits = 4): string {
   return `$${amount.toFixed(digits)}`;
 }
 
-/** "$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25" */
+/** "$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted" */
 export function formatCost(cost: CostReport): string {
   const sum = (kind: string): number =>
     cost.records.filter((r) => r.kind === kind).reduce((total, r) => total + r.costUsd, 0);
@@ -57,7 +57,7 @@ export function formatCost(cost: CostReport): string {
   if (other > 0) parts.push(`other ${formatUsd(other)}`);
   let text = `${formatUsd(cost.totalUsd)} (${parts.join(', ')})`;
   if (cost.totalUsd > 0 && cost.records.some((r) => r.estimated)) text += ', estimated from list prices';
-  return `${text}, budget ${formatUsd(cost.budgetUsd, 2)}`;
+  return `${text}, budget ${formatUsd(cost.budgetUsd, 2)}; your coding agent, storage, CI and model servers on your network are not counted`;
 }
 
 /** One outbound transfer: where, why, how much and what was in it. */

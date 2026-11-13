@@ -10,7 +10,7 @@ export function checkLlm({ config, secrets }: DoctorContext): DoctorCheck {
       'llm',
       'Storyboard writer (LLM)',
       'pass',
-      'none: free offline storyboards, or one you pass with --storyboard. Nothing is sent to a model.',
+      'none: offline storyboards with no model call, or one you pass with --storyboard. Nothing is sent to a model.',
     );
   }
   if (provider === 'openai-compatible') {
@@ -46,7 +46,7 @@ export function checkLlm({ config, secrets }: DoctorContext): DoctorCheck {
       'llm',
       'Storyboard writer (LLM)',
       'pass',
-      `${provider}${model}: ${keyName} is set. The change's diff and text are sent to ${host}.`,
+      `${provider}${model}: ${keyName} is set. The change's diff and text are sent to ${host}, and that provider bills your account.`,
     );
   }
   return check(
@@ -54,6 +54,6 @@ export function checkLlm({ config, secrets }: DoctorContext): DoctorCheck {
     'Storyboard writer (LLM)',
     'fail',
     `${provider} selected but ${keyName} is not set`,
-    `Set ${keyName} in your environment, or use --llm none for the free offline mode.`,
+    `Set ${keyName} in your environment, or use --llm none for the offline storyboard with no model call.`,
   );
 }

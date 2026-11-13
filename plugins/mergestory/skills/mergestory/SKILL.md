@@ -72,7 +72,7 @@ never in the repository:
 
 These become citable evidence (TASK, NOTES, T1) in the video.
 
-## 4. Write the storyboard yourself (free, nothing leaves the machine)
+## 4. Write the storyboard yourself (MergeStory adds no charge; your own usage counts)
 
 1. `mergestory agent analyze <source> --name <name> --json`
 2. Read `AUTHORING.md` and `evidence.md` in the work folder. The evidence pack lists every fact
@@ -126,7 +126,8 @@ same run after they approve, without rendering again:
 
 ## 6. Report back
 
-Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and any `warnings`.
+Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and any `warnings`. Say that
+`cost.totalUsd` counts only MergeStory's paid calls, as estimates: your own usage, storage and CI are not in it.
 When `publish` is null or `publish.provider` is `local`, nothing was shared: give the local
 files `files.watchPage` and `files.video`, and say that they are only on this machine. Otherwise
 the link is `publish.watchUrl`. Say plainly that the video explains the change and does not
