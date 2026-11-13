@@ -31,7 +31,32 @@ calls no model, makes no voice and uses no network. The files go to
 `~/.mergestory/previews/<theme>`, or to the folder you give with `--out`. See
 [cli.md](cli.md#mergestory-theme-preview).
 
-## Make your own theme
+## Make a theme from your brand colors
+
+Give MergeStory your main brand color, or a file with your brand colors, and it makes the theme:
+
+```bash
+mergestory theme init acme --accent "#ff7a1a"
+```
+
+```bash
+mergestory theme init acme --brand brand.css --from paper
+```
+
+- `--accent` is your main brand color, and `--accent-2` an optional second one.
+- `--brand` reads a file with your brand colors: CSS variables, design tokens in JSON, or a plain list.
+  MergeStory uses its first clearly colored value as the accent, and the next one with a clearly
+  different hue as the second accent. Greys, black and white are skipped. `--accent` and `--accent-2`
+  win over the file.
+- `--from` is the built-in theme to start from. `midnight` (the default) makes a dark theme, `paper` a
+  light one.
+
+MergeStory works out the other accent colors (soft backgrounds, the colors of large text and the logo
+word, the glows) from your colors, the way the built-in themes relate theirs. It runs the checks, saves
+`~/.mergestory/themes/<name>/theme.json` and tells you how to look at it. It never replaces a theme
+unless you pass `--force`. You can change the file by hand afterwards.
+
+## Make your own theme by hand
 
 1. Make a folder `~/.mergestory/themes/<name>`. The name has 1 to 40 characters: `a-z`, `0-9` and
    `-`.

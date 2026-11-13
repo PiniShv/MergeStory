@@ -14,12 +14,13 @@ import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundledThemesInfo } from 'shiki';
 import { z } from 'zod';
-import { THEME_NAME } from './config.ts';
+import { BUILT_IN_THEMES, THEME_NAME } from './config.ts';
 import { MergeStoryError } from './errors.ts';
 import { assertNoLinks, homeLayout } from './paths.ts';
 import type { ThemeName } from './render-plan.ts';
 
-export const BUILT_IN_THEMES = ['midnight', 'paper', 'high-contrast', 'terminal'] as const;
+export { BUILT_IN_THEMES };
+
 type BuiltIn = (typeof BUILT_IN_THEMES)[number];
 
 /** The theme a dark or a light theme starts from when it extends nothing. */
@@ -389,6 +390,19 @@ export async function readThemeFile(folder: string, name: string, builtIn = fals
   }
 }
 
+/** A theme.json value checked against the format; `where` names it in errors. */
+function parseThemeFile(data: unknown, where: string): ThemeFile {
+  const parsed = ThemeFileSchema.safeParse(data);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .slice(0, 6)
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ');
+    throw themeError(`The theme in ${where} is not valid: ${issues}`);
+  }
+  return parsed.data;
+}
+
 async function readTheme(folder: string, builtIn: boolean): Promise<ThemeFile> {
   const text = await readThemeFile(folder, THEME_FILE, builtIn);
   let data: unknown;
@@ -397,15 +411,7 @@ async function readTheme(folder: string, builtIn: boolean): Promise<ThemeFile> {
   } catch {
     throw themeError(`${THEME_FILE} is not valid JSON: ${folder}`);
   }
-  const parsed = ThemeFileSchema.safeParse(data);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .slice(0, 6)
-      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-      .join('; ');
-    throw themeError(`The theme in ${folder} is not valid: ${issues}`);
-  }
-  return parsed.data;
+  return parseThemeFile(data, folder);
 }
 
 /** A theme with its colors complete: those of the theme it extends (or of its base), then its own. */
@@ -472,6 +478,11 @@ export async function loadTheme(value: string, options: LoadThemeOptions = {}): 
   } else {
     throw themeError(`"${value}" is not a theme name or the full path of a theme folder.`);
   }
+  return checked(theme, options);
+}
+
+/** The theme, after the checks: never usable when unsafe, and hard to read only when allowed. */
+function checked(theme: ResolvedTheme, options: LoadThemeOptions): ResolvedTheme {
   const unsafe = safetyProblems(theme);
   if (unsafe.length > 0) {
     throw themeError(
@@ -488,4 +499,164 @@ export async function loadTheme(value: string, options: LoadThemeOptions = {}): 
   }
   for (const problem of problems) options.warn?.(`Theme "${theme.name}": ${problem}`);
   return theme;
+}
+
+// ---------------------------------------------------------------------------
+// A theme made from brand colors (theme init)
+// ---------------------------------------------------------------------------
+
+const WHITE: Rgba = [255, 255, 255, 1];
+const BLACK: Rgba = [0, 0, 0, 1];
+const toHex = (c: Rgba): string =>
+  `#${c
+    .slice(0, 3)
+    .map((v) => Math.round(v).toString(16).padStart(2, '0'))
+    .join('')}`;
+const mix = (a: Rgba, b: Rgba, share: number): Rgba => [
+  ...([0, 1, 2].map((i) => a[i]! * (1 - share) + b[i]! * share) as [number, number, number]),
+  1,
+];
+const seeThrough = (c: Rgba, alpha: number): string =>
+  `rgba(${c
+    .slice(0, 3)
+    .map((v) => Math.round(v))
+    .join(', ')}, ${alpha})`;
+
+/** Hue in degrees, and saturation and lightness from 0 to 1. */
+function hsl([r, g, b]: Rgba): [number, number, number] {
+  const [rr, gg, bb] = [r / 255, g / 255, b / 255];
+  const max = Math.max(rr, gg, bb);
+  const min = Math.min(rr, gg, bb);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === rr ? ((gg - bb) / d) % 6 : max === gg ? (bb - rr) / d + 2 : (rr - gg) / d + 4;
+  return [(h * 60 + 360) % 360, s, l];
+}
+
+/** A color that can carry a brand: clearly colored, neither near black nor near white. */
+const vivid = (c: Rgba): boolean => {
+  const [, s, l] = hsl(c);
+  return s >= 0.3 && l >= 0.2 && l <= 0.8;
+};
+const hueDistance = (a: Rgba, b: Rgba): number => {
+  const d = Math.abs(hsl(a)[0] - hsl(b)[0]);
+  return Math.min(d, 360 - d);
+};
+
+/**
+ * The colors of a brand file, such as CSS variables, design tokens in JSON or a plain list: every
+ * opaque hex, rgb() or hsl() value, in the order it appears, each once.
+ */
+export function brandColors(text: string): Rgba[] {
+  const out: Rgba[] = [];
+  const seen = new Set<string>();
+  for (const [raw] of text.matchAll(/#[0-9a-f]{3,8}\b|(?:rgba?|hsla?)\([^)]{0,60}\)/gi)) {
+    const color = parseColor(raw);
+    if (!color || color[3] < 1 || seen.has(toHex(color))) continue;
+    seen.add(toHex(color));
+    out.push(color);
+  }
+  return out;
+}
+
+/**
+ * The accent colors of a theme made from one or two brand colors, related to them the way the accent
+ * colors of midnight (dark) and paper (light) are related to theirs.
+ */
+export function accentColors(base: ThemeName, accent: Rgba, accent2: Rgba | null): Record<string, string> {
+  const paler = (c: Rgba, white: number) => toHex(mix(c, WHITE, white));
+  const deeper = (c: Rgba, black: number) => toHex(mix(c, BLACK, black));
+  if (base === 'dark') {
+    return {
+      accent: toHex(accent),
+      'accent-soft': seeThrough(accent, 0.16),
+      'accent-ink': paler(accent, 0.53),
+      'brand-1': paler(accent, 0.37),
+      glow: toHex(accent),
+      ...(accent2 && {
+        'accent-2': toHex(accent2),
+        'accent-2-soft': seeThrough(accent2, 0.14),
+        'accent-2-ink': paler(accent2, 0.45),
+        'brand-2': toHex(accent2),
+        'glow-2': toHex(accent2),
+      }),
+    };
+  }
+  return {
+    accent: toHex(accent),
+    'accent-soft': seeThrough(accent, 0.1),
+    'accent-ink': deeper(accent, 0.12),
+    'brand-1': deeper(accent, 0.12),
+    glow: paler(accent, 0.3),
+    ...(accent2 && {
+      'accent-2': toHex(accent2),
+      'accent-2-soft': seeThrough(accent2, 0.1),
+      'accent-2-ink': deeper(accent2, 0.2),
+      'brand-2': deeper(accent2, 0.2),
+      'glow-2': paler(accent2, 0.3),
+    }),
+  };
+}
+
+export interface CreateThemeOptions {
+  name: string;
+  /** The built-in theme to start from; it decides dark or light. Default midnight. */
+  from?: string;
+  /** Brand colors given as flags. They win over the brand file. */
+  accent?: string;
+  accent2?: string;
+  /** The text of a brand file; its first two vivid colors of clearly different hues are used. */
+  brand?: string;
+  allowLowContrast?: boolean;
+  warn?: (message: string) => void;
+}
+
+function flagColor(flag: string, value: string | undefined): Rgba | null {
+  if (value === undefined) return null;
+  const problem = colorProblem(value);
+  const color = parseColor(value);
+  if (problem || !color || color[3] < 1) {
+    throw themeError(`${flag} must be an opaque color, such as #ff7a1a.`, 'Use #rrggbb, rgb() or hsl().');
+  }
+  return color;
+}
+
+/**
+ * A new theme from brand colors: the theme.json to write, and the theme it gives, after the same
+ * checks as a theme that is loaded.
+ */
+export async function createTheme(
+  options: CreateThemeOptions,
+): Promise<{ file: ThemeFile; theme: ResolvedTheme }> {
+  const from =
+    options.from === 'dark' ? 'midnight' : options.from === 'light' ? 'paper' : (options.from ?? 'midnight');
+  if (!(BUILT_IN_THEMES as readonly string[]).includes(from)) {
+    throw themeError(`--from must be a built-in theme: ${BUILT_IN_THEMES.join(', ')}.`);
+  }
+  if (!THEME_NAME.test(options.name) || [...BUILT_IN_THEMES, 'dark', 'light'].includes(options.name)) {
+    throw themeError(
+      `"${options.name}" cannot be the name of a new theme.`,
+      'Use 1-40 characters: a-z, 0-9 and "-", and not the name of a built-in theme.',
+    );
+  }
+  const found = (options.brand === undefined ? [] : brandColors(options.brand)).filter(vivid);
+  const accent = flagColor('--accent', options.accent) ?? found[0] ?? null;
+  if (!accent) {
+    throw themeError(
+      options.brand === undefined
+        ? 'Give --accent or --brand.'
+        : 'The brand file has no clearly colored value.',
+      'Pass the main brand color with --accent, for example --accent "#ff7a1a".',
+    );
+  }
+  const accent2 =
+    flagColor('--accent-2', options.accent2) ?? found.find((c) => hueDistance(c, accent) >= 30) ?? null;
+  const base = (await builtInTheme(from as BuiltIn)).base;
+  const file = parseThemeFile(
+    { schema: 1, name: options.name, extends: from, colors: { [base]: accentColors(base, accent, accent2) } },
+    `the new theme "${options.name}"`,
+  );
+  return { file, theme: checked(await complete(file, false), options) };
 }

@@ -4,9 +4,12 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BASE_CSS } from '../runtime/styles.ts';
 import {
+  accentColors,
   BUILT_IN_THEMES,
+  brandColors,
   CHANGE_COLORS,
   colorProblem,
+  createTheme,
   LOCKED_TOKENS,
   loadTheme,
   parseColor,
@@ -297,5 +300,62 @@ describe('the contrast check', () => {
       dark({ 'bg-0': '#000000', 'bg-1': '#000000', 'surface-1': glass, 'surface-inset': glass }),
     );
     await expect(loadTheme(rows, allow)).rejects.toThrow('surface-inset on surface-1 on');
+  });
+});
+
+describe('a theme made from brand colors', () => {
+  const hex = (colors: ReturnType<typeof brandColors>) =>
+    colors.map(
+      (c) =>
+        `#${c
+          .slice(0, 3)
+          .map((v) => v.toString(16).padStart(2, '0'))
+          .join('')}`,
+    );
+
+  it('relates the accent colors to the brand color as midnight relates its own', () => {
+    const colors = accentColors('dark', parseColor('#8c7bff')!, null);
+    expect(colors).toMatchObject({ accent: '#8c7bff', 'accent-soft': 'rgba(140, 123, 255, 0.16)' });
+    expect(colors['accent-ink']).toBe('#c9c1ff');
+    expect(colors['accent-2']).toBeUndefined();
+    const light = accentColors('light', parseColor('#6750f0')!, parseColor('#0891b2')!);
+    expect(light['accent-ink']).toBe(light['brand-1']);
+    expect(light['accent-2-ink']).toBe(light['brand-2']);
+  });
+
+  it('reads the colors of a brand file in order, each once, and only plain opaque colors', () => {
+    const css =
+      ':root { --red: #E50914; --ink: #221f1f; --red-again: #e50914; --fade: rgba(0, 0, 0, 0.5); --x: #12345; --sky: rgb(14, 165, 233); }';
+    expect(hex(brandColors(css))).toEqual(['#e50914', '#221f1f', '#0ea5e9']);
+    const tokens = JSON.stringify({
+      color: { primary: { value: '#1ed760' }, text: { value: 'hsl(0, 0%, 100%)' } },
+    });
+    expect(hex(brandColors(tokens))).toEqual(['#1ed760', '#ffffff']);
+  });
+
+  it('takes the first two clearly colored values of the brand, and the flags over it', async () => {
+    const brand = '--black: #000000; --red: #e50914; --orange: #f03a17; --blue: #0ea5e9; --white: #ffffff;';
+    const fromBrand = await createTheme({ name: 'stream', brand });
+    // Orange is too close to red, so the second accent is the blue.
+    expect(fromBrand.file.colors?.dark).toMatchObject({ accent: '#e50914', 'accent-2': '#0ea5e9' });
+    const flags = await createTheme({ name: 'stream', brand, accent: '#1ed760' });
+    expect(flags.file.colors?.dark).toMatchObject({ accent: '#1ed760', 'accent-2': '#e50914' });
+    const light = await createTheme({ name: 'music', accent: '#1ed760', from: 'paper' });
+    expect(light.file).toMatchObject({ extends: 'paper', colors: { light: { accent: '#1ed760' } } });
+    expect(light.theme.base).toBe('light');
+    expect(light.theme.colors['bg-0']).toBe('#eef1f8');
+  });
+
+  it('refuses what it cannot make a theme from', async () => {
+    await expect(createTheme({ name: 'mine' })).rejects.toThrow('Give --accent or --brand.');
+    await expect(createTheme({ name: 'mine', brand: '#000000 #ffffff #808080' })).rejects.toThrow(
+      'no clearly colored value',
+    );
+    await expect(createTheme({ name: 'mine', accent: 'red' })).rejects.toThrow(
+      '--accent must be an opaque color',
+    );
+    await expect(createTheme({ name: 'mine', accent: '#ff7a1a80' })).rejects.toThrow('opaque');
+    await expect(createTheme({ name: 'paper', accent: '#ff7a1a' })).rejects.toThrow('cannot be the name');
+    await expect(createTheme({ name: 'mine', accent: '#ff7a1a', from: 'neon' })).rejects.toThrow('--from');
   });
 });
