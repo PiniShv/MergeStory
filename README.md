@@ -111,8 +111,8 @@ estimate and what would leave the machine, without rendering anything.
 
 ## Use it from a coding agent
 
-Install the skill, then ask the agent to "explain this PR as a video" or to run MergeStory after it
-opens a pull request.
+Install the skill, then ask the agent to "explain this PR as a video". After it opens a pull request,
+the agent offers a video and makes one only when you say yes.
 
 | Agent | Install |
 |---|---|

@@ -101,8 +101,9 @@ take the run over, it is not made. For the first model call or for speech, the r
 A flag wins over the variable, and the variable wins over the file. A model with no known price is counted at
 the highest listed rate ($10 per million input tokens and $50 per million output tokens), so it is not counted
 as cheap. A model on a server on this machine or your network counts as $0 only when no price is known for it,
-built in or in `pricing`, and the run then warns once that the budget does not cover it. A model call that times out, or whose answer cannot be read,
-may still be billed, so it is counted at its estimate. See [Budget](configuration.md#budget) for every rule.
+built in or in `pricing`, and the run then warns once that the budget does not cover it. A model call or a
+speech request that times out (also when it is tried again), or whose answer cannot be read, may still be
+billed, so it is counted at its estimate. See [Budget](configuration.md#budget) for every rule.
 
 The budget is per run, not per day or month. It is a safeguard, not a guarantee of your final bill. It uses
 estimates from list prices, and it covers only MergeStory's own model and voice calls. It does not cover

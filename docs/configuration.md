@@ -314,7 +314,8 @@ of your final bill, and it does not cover storage, CI minutes or your coding age
 - Speech is checked before each request, from the number of characters.
 - A model call that times out, or whose answer cannot be read, may still be billed by the provider, so it is
   counted at its estimate and a warning says so. That estimate counts against the budget for the rest of the
-  run.
+  run. A speech request that times out (also when it is tried again), or whose audio cannot be read after
+  the service answered, is counted the same way. A request you cancel is not counted.
 - A cached answer or clip costs nothing. Local speech (Kokoro, macOS `say`) costs nothing. A model server on
   this machine or on a private network counts as $0 only when no price is known for its model (built in or in
   `pricing`), because MergeStory cannot see what you pay to run it. A warning names the model, once. With a

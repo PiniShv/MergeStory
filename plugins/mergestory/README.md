@@ -32,6 +32,8 @@ no telemetry.
 
 ## Cost
 
+After you open a pull request, Claude offers a video and makes one only when you say yes.
+
 MergeStory adds no charge by default. Writing the storyboard is extra usage in your Claude Code
 session: Claude reads MergeStory's instructions and evidence pack, often more than 10,000 tokens. If
 you pay per token, that usage is billed to you. A model or a cloud voice that you turn on, storage and

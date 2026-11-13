@@ -118,6 +118,57 @@ describe('createRemoteSpeechProvider', () => {
       message: 'speech.acme.test sent an answer larger than 64 MB.',
     });
     expect(sent).toBeLessThan(70);
+    // The service answered, so the request may still be billed.
+    expect(ctx.cost.report().records).toHaveLength(1);
+    await cleanup();
+  });
+
+  it('counts a request that timed out, also when it is tried again, because the service may still bill it', async () => {
+    const { ctx, events, cleanup } = await makeTestContext({ secrets: { OPENAI_API_KEY: KEY } });
+    const stalled = (): Promise<Response> =>
+      new Promise((_, reject) => setTimeout(() => reject(new Error('stalled')), 60));
+    // The first try times out and the second one answers: both may be billed.
+    let calls = 0;
+    mock = mockFetch(() => (++calls === 1 ? stalled() : audio()));
+    const retried = createRemoteSpeechProvider(acme().spec, {
+      retry: { attempts: 2, minDelayMs: 1, maxDelayMs: 2 },
+      timeoutMs: 10,
+    });
+    await retried.synthesize(request('Hello.'), ctx);
+    expect(ctx.cost.report().records).toMatchObject([
+      { kind: 'tts', characters: 6, estimated: true },
+      { kind: 'tts', characters: 6, estimated: true },
+    ]);
+    mock.restore();
+    // The only try times out: it is counted once, and the line fails.
+    mock = mockFetch(() => stalled());
+    const once = createRemoteSpeechProvider(acme().spec, { retry: FAST, timeoutMs: 10 });
+    await expect(once.synthesize(request('Hello.'), ctx)).rejects.toMatchObject({ code: 'TTS_FAILED' });
+    expect(ctx.cost.report().records).toHaveLength(3);
+    mock.restore();
+    // A timed-out try followed by a refused one (HTTP 500): only the timed-out try may be billed.
+    calls = 0;
+    mock = mockFetch(() => (++calls === 1 ? stalled() : new Response('{}', { status: 500 })));
+    await expect(retried.synthesize(request('Hello.'), ctx)).rejects.toMatchObject({ code: 'TTS_FAILED' });
+    expect(ctx.cost.report().records).toHaveLength(4);
+    // The warning is said once per run.
+    expect(
+      events.filter((event) => event.message.includes('timed out or its audio could not be read')),
+    ).toHaveLength(1);
+    await cleanup();
+  });
+
+  it('counts nothing for a request the user cancels', async () => {
+    const { ctx, cleanup } = await makeTestContext({ secrets: { OPENAI_API_KEY: KEY } });
+    const controller = new AbortController();
+    const cancelled = { ...ctx, signal: controller.signal };
+    mock = mockFetch(() => {
+      setTimeout(() => controller.abort(), 5);
+      return new Promise((_, reject) => setTimeout(() => reject(new Error('cancelled')), 30));
+    });
+    const provider = createRemoteSpeechProvider(acme().spec, { retry: FAST, timeoutMs: 1_000 });
+    await expect(provider.synthesize(request('Hello.'), cancelled)).rejects.toBeInstanceOf(Error);
+    expect(ctx.cost.report().records).toEqual([]);
     await cleanup();
   });
 

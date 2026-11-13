@@ -6,7 +6,7 @@
  */
 import type { SecretName } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
-import { MergeStoryError } from '../core/errors.ts';
+import { MergeStoryError, TimedOutError } from '../core/errors.ts';
 import type { TtsProvider, TtsRequest, TtsResult } from '../core/providers.ts';
 import { fetchWithRetry, type RetryOptions } from '../core/retry.ts';
 import type { EgressRecord } from '../core/types.ts';
@@ -22,6 +22,8 @@ const MAX_AUDIO_BYTES = 64 * 1_048_576;
 
 export interface RemoteSpeechOptions {
   retry?: Pick<RetryOptions, 'attempts' | 'minDelayMs' | 'maxDelayMs'>;
+  /** How long one request may take, in milliseconds. Default 120 seconds. */
+  timeoutMs?: number;
 }
 
 /** One request to the service. */
@@ -120,26 +122,50 @@ export function createRemoteSpeechProvider(
         ctx.egress.record(spec.host, 'speech synthesis', Buffer.byteLength(piece, 'utf8'), [
           'narration-text',
         ]);
+        const record = (): void =>
+          ctx.cost.record({
+            provider: spec.id,
+            kind: 'tts',
+            model: modelName,
+            characters: piece.length,
+            costUsd: ttsCostUsd(ctx, spec.id, modelName, piece.length),
+            estimated: true,
+            priceNote: ttsPriceNote(ctx, spec.id, modelName),
+          });
+        // A request that timed out, or whose audio could not be read after the service answered, may
+        // still be billed: count it at its estimate, also when it is tried again.
+        const recordMayBeBilled = (): void => {
+          record();
+          if (ctx.firstTime('speech-may-be-billed')) {
+            ctx.progress({
+              stage: 'narrate',
+              status: 'warn',
+              message: `A ${spec.service} speech request timed out or its audio could not be read. The service may still bill it, so it is counted at its estimate.`,
+            });
+          }
+        };
         let bytes: Buffer;
+        let answered = false;
         try {
           const response = await fetchWithRetry(
             call.url,
             { method: 'POST', headers: call.headers, body: JSON.stringify(call.body) },
-            { signal: ctx.signal, timeoutMs: 120_000, ...options.retry },
+            {
+              signal: ctx.signal,
+              timeoutMs: options.timeoutMs ?? 120_000,
+              ...options.retry,
+              onRetry: ({ error }) => {
+                if (error instanceof TimedOutError) recordMayBeBilled();
+              },
+            },
           );
+          answered = true;
           bytes = await readBodyLimited(response, MAX_AUDIO_BYTES, 'TTS_FAILED', spec.host);
         } catch (err) {
+          if (!ctx.signal.aborted && (answered || err instanceof TimedOutError)) recordMayBeBilled();
           throw speechRequestError(err, { service: spec.service, keyName: spec.keyName, ctx });
         }
-        ctx.cost.record({
-          provider: spec.id,
-          kind: 'tts',
-          model: modelName,
-          characters: piece.length,
-          costUsd: ttsCostUsd(ctx, spec.id, modelName, piece.length),
-          estimated: true,
-          priceNote: ttsPriceNote(ctx, spec.id, modelName),
-        });
+        record();
         if (bytes.length < 2) {
           throw new MergeStoryError('TTS_FAILED', `${spec.service} returned no audio for a narration line.`, {
             hint: 'Run again; finished lines are cached.',
