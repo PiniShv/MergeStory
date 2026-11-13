@@ -340,8 +340,8 @@ describe('a theme made from brand colors', () => {
     expect(fromBrand.file.colors?.dark).toMatchObject({ accent: '#e50914', 'accent-2': '#0ea5e9' });
     const flags = await createTheme({ name: 'stream', brand, accent: '#1ed760' });
     expect(flags.file.colors?.dark).toMatchObject({ accent: '#1ed760', 'accent-2': '#e50914' });
-    const light = await createTheme({ name: 'music', accent: '#1ed760', from: 'paper' });
-    expect(light.file).toMatchObject({ extends: 'paper', colors: { light: { accent: '#1ed760' } } });
+    const light = await createTheme({ name: 'music', accent: '#1a7f4b', from: 'paper' });
+    expect(light.file).toMatchObject({ extends: 'paper', colors: { light: { accent: '#1a7f4b' } } });
     expect(light.theme.base).toBe('light');
     expect(light.theme.colors['bg-0']).toBe('#eef1f8');
   });
@@ -357,5 +357,18 @@ describe('a theme made from brand colors', () => {
     await expect(createTheme({ name: 'mine', accent: '#ff7a1a80' })).rejects.toThrow('opaque');
     await expect(createTheme({ name: 'paper', accent: '#ff7a1a' })).rejects.toThrow('cannot be the name');
     await expect(createTheme({ name: 'mine', accent: '#ff7a1a', from: 'neon' })).rejects.toThrow('--from');
+    // A pale brand color colors labels too, so on a light theme it must be a deeper shade.
+    await expect(createTheme({ name: 'pale', accent: '#ffcc33', from: 'paper' })).rejects.toThrow(
+      /accent reaches \d\.\d\d:1 on .*; it needs 3:1/,
+    );
+    const warnings: string[] = [];
+    await createTheme({
+      name: 'pale',
+      accent: '#ffcc33',
+      from: 'paper',
+      allowLowContrast: true,
+      warn: (m) => warnings.push(m),
+    });
+    expect(warnings).toEqual([expect.stringContaining('accent reaches')]);
   });
 });

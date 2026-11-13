@@ -51,6 +51,9 @@ mergestory theme init acme --brand brand.css --from paper
 - `--from` is the built-in theme to start from. `midnight` (the default) makes a dark theme, `paper` a
   light one.
 
+On a light theme, a pale brand color such as a light yellow fails the contrast check: give a deeper
+shade of it with `--accent`, or make a dark theme.
+
 MergeStory works out the other accent colors (soft backgrounds, the colors of large text and the logo
 word, the glows) from your colors, the way the built-in themes relate theirs. It runs the checks, saves
 `~/.mergestory/themes/<name>/theme.json` and tells you how to look at it. It never replaces a theme
@@ -153,6 +156,7 @@ MergeStory also refuses a theme that is hard to read:
 |---|---|
 | `text-0`, `text-1` and `text-2` on every background | 4.5:1 |
 | `text-3` on every background | 3:1 |
+| `accent` and `accent-2`, which color labels and chips, on every background | 3:1 |
 | Captions (`cap-fg` on `cap-bg`), over any scene behind them | 7:1 |
 
 It also refuses a light `code.shiki` scheme on a dark theme, or a dark one on a light theme. The error

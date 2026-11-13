@@ -37,7 +37,7 @@ describe('theme init', () => {
       'init',
       'twice',
       '--accent',
-      '#ff7a1a',
+      '#c2410c',
       '--from',
       'light',
       '--force',

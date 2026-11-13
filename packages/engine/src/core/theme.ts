@@ -190,8 +190,15 @@ export function contrastOn(text: Rgba, background: Rgba): number {
   return (hi! + 0.05) / (lo! + 0.05);
 }
 
-/** The smallest contrast each text token needs on every background of the video. */
-const TEXT_CONTRAST: Record<string, number> = { 'text-0': 4.5, 'text-1': 4.5, 'text-2': 4.5, 'text-3': 3 };
+/** The smallest contrast each text color needs on every background. The accents color labels and chips. */
+const TEXT_CONTRAST: Record<string, number> = {
+  'text-0': 4.5,
+  'text-1': 4.5,
+  'text-2': 4.5,
+  'text-3': 3,
+  accent: 3,
+  'accent-2': 3,
+};
 const CAPTION_CONTRAST = 7;
 
 /** A theme color by token. Every theme holds all colors that the checks read (its base has them all). */
