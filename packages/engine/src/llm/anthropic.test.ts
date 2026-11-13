@@ -370,6 +370,7 @@ describe('Anthropic provider errors', () => {
     const timedOut = await failure(provider.generateJson(request(), ctx));
     expect(timedOut.code).toBe('LLM_FAILED');
     expect(timedOut.hint).toContain('llm.timeoutMs');
+    expect(timedOut.details).toEqual({ mayBeBilled: true });
     // The model may still be working on it, and bill it.
     expect(sdk.state.create).toHaveBeenCalledTimes(1);
   });
@@ -386,6 +387,29 @@ describe('Anthropic provider errors', () => {
     expect(error.code).toBe('ABORTED');
   });
 
+  it('marks an answer that is not a message as possibly billed, instead of failing with a TypeError', async () => {
+    const { ctx, provider } = setup();
+    sdk.state.create.mockResolvedValue({ unexpected: 'body' });
+    const error = await failure(provider.generateJson(request(), ctx));
+    expect(error.code).toBe('LLM_FAILED');
+    expect(error.message).toBe('The answer could not be read.');
+    expect(error.details).toEqual({ mayBeBilled: true });
+  });
+
+  it('marks a message without token counts or content as possibly billed, so no cost becomes NaN', async () => {
+    const { ctx, provider } = setup();
+    for (const body of [
+      { usage: {}, content: [], stop_reason: 'end_turn' },
+      { usage: { input_tokens: 10, output_tokens: 5 }, stop_reason: 'end_turn' },
+    ]) {
+      sdk.state.create.mockResolvedValue(body);
+      const error = await failure(provider.generateJson(request(), ctx));
+      expect(error.message).toBe('The answer could not be read.');
+      expect(error.details).toEqual({ mayBeBilled: true });
+    }
+    expect(ctx.cost.report().records).toEqual([]);
+  });
+
   it('fails with CONFIG_INVALID when the run has no key', async () => {
     const { ctx, provider } = setup();
     const withoutKey = { ...ctx, secrets: new Secrets({}) };
@@ -396,6 +420,20 @@ describe('Anthropic provider errors', () => {
 });
 
 describe('Anthropic provider setup', () => {
+  it('counts a gateway on this machine at the built-in price of a known model', () => {
+    const { config, ctx } = setup();
+    const provider = createAnthropicProvider(
+      config,
+      new Secrets({ ANTHROPIC_API_KEY: KEY }),
+      'claude-haiku-5-5',
+      {
+        ANTHROPIC_BASE_URL: 'http://localhost:8080',
+      },
+    );
+    expect(provider.estimateCostUsd(1e6, 1e6, ctx)).toBeCloseTo(0.6, 9);
+    expect(provider.priceNote?.(ctx)).toBeUndefined();
+  });
+
   it('reports api.anthropic.com as the egress host by default', () => {
     expect(setup().provider.endpointHost).toBe('api.anthropic.com');
     expect(setup().provider.id).toBe('anthropic');

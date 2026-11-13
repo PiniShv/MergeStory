@@ -41,7 +41,7 @@ import {
 } from '../publish/index.ts';
 import { publishCommand } from './commands.ts';
 import { buildCommentData } from './presentation.ts';
-import type { GenerateHooks, PublishRunOptions } from './types.ts';
+import { EARLIER_RESULT_MISSING, type GenerateHooks, type PublishRunOptions } from './types.ts';
 
 /** The files to upload. */
 export interface RunFiles {
@@ -286,7 +286,7 @@ async function readPreviousResult(
     cost: { totalUsd: 0, budgetUsd, records: [] },
     egress: [],
     warnings: [
-      `The earlier result of this run (${RUN_FILE.result}) was not found, so its cost and transfers are not listed.`,
+      `${EARLIER_RESULT_MISSING} (${RUN_FILE.result}) was not found, so its cost and transfers are not listed.`,
     ],
   };
 }

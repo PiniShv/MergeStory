@@ -15,9 +15,10 @@ import { asNumber, isRecord } from '../core/json.ts';
 import { isPrivateHostname } from '../core/net.ts';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts';
 import { defaultIsRetryable, fetchWithRetry, HttpError } from '../core/retry.ts';
-import { budgetLlmCostUsd } from './prices.ts';
+import { budgetLlmCostUsd, llmPriceNote } from './prices.ts';
 import {
   buildMessages,
+  markMayBeBilled,
   parseEndpointUrl,
   parseJsonLoose,
   readBodyLimited,
@@ -256,6 +257,8 @@ function mapFailure(
         hint: timedOut
           ? 'Raise llm.timeoutMs or shorten the change.'
           : 'Check your network connection and llm.baseUrl. A local server must be running.',
+        // A timed-out request reached the server, which may still finish and bill it; a failed connection did not.
+        ...(timedOut ? { details: { mayBeBilled: true } } : {}),
       },
     );
   }
@@ -288,7 +291,8 @@ function readCompletion(
     throw new MergeStoryError(
       'LLM_FAILED',
       failure ? `${host} returned an error: ${safeSnippet(ctx, failure)}` : `${host} returned no answer.`,
-      { hint: 'Check llm.model and llm.baseUrl.' },
+      // An error reported inside the answer is not billed; an answer with nothing in it may be.
+      { hint: 'Check llm.model and llm.baseUrl.', ...(failure ? {} : { details: { mayBeBilled: true } }) },
     );
   }
   const message = isRecord(first.message) ? first.message : {};
@@ -299,7 +303,9 @@ function readCompletion(
   const inputTokens =
     asNumber(usage?.prompt_tokens) ??
     asNumber(usage?.input_tokens) ??
-    estimateTokens(request.system + request.prompt);
+    estimateTokens(
+      request.system + request.prompt + (request.history ?? []).map((turn) => turn.content).join(''),
+    );
   const outputTokens =
     asNumber(usage?.completion_tokens) ?? asNumber(usage?.output_tokens) ?? estimateTokens(text);
   const model = typeof parsed.model === 'string' && parsed.model ? parsed.model : options.model;
@@ -411,11 +417,17 @@ export function createOpenAiProvider(options: OpenAiProviderOptions): LlmProvide
             new TextDecoder().decode(await readBodyLimited(response, MAX_ANSWER_BYTES, 'LLM_FAILED', host)),
           );
         } catch (err) {
-          if (err instanceof MergeStoryError) throw err;
-          throw new MergeStoryError('LLM_FAILED', `${host} returned an answer that is not JSON.`, {
-            cause: err,
-            hint: 'Check that llm.baseUrl points at an OpenAI-compatible /v1 endpoint.',
-          });
+          // A cancel while the body is read keeps its code and is not a billing doubt.
+          if (ctx.signal.aborted) throw abortedError(err);
+          // The server answered, so it may bill the call although its answer cannot be read.
+          throw markMayBeBilled(
+            err instanceof MergeStoryError
+              ? err
+              : new MergeStoryError('LLM_FAILED', `${host} returned an answer that is not JSON.`, {
+                  cause: err,
+                  hint: 'Check that llm.baseUrl points at an OpenAI-compatible /v1 endpoint.',
+                }),
+          );
         }
         return readCompletion(parsed, request, ctx, options, host);
       }
@@ -423,6 +435,10 @@ export function createOpenAiProvider(options: OpenAiProviderOptions): LlmProvide
 
     estimateCostUsd(inputTokens: number, outputTokens: number, ctx: RunContext): number | null {
       return budgetLlmCostUsd(options.id, options.model, inputTokens, outputTokens, ctx, local);
+    },
+
+    priceNote(ctx: RunContext) {
+      return llmPriceNote(options.id, options.model, ctx, local);
     },
   };
 }

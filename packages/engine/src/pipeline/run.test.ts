@@ -11,7 +11,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatPublishResult } from '../cli/commands/publish.ts';
+import { formatCost } from '../cli/format.ts';
+import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
+import { estimateTokens } from '../core/cost.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type { PublishBundle, Publisher, Renderer } from '../core/providers.ts';
 import type { GenerateResult, PlanResult, PublishResult } from '../core/types.ts';
@@ -20,6 +24,7 @@ import { createPublisher } from '../publish/index.ts';
 import { createRenderer } from '../render/index.ts';
 import { makePng } from '../testing/png.ts';
 import { checkStoryboard, generate, prepareAuthoring, publishRun } from './index.ts';
+import { EARLIER_RESULT_MISSING } from './types.ts';
 
 vi.mock('../render/index.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../render/index.ts')>()),
@@ -313,6 +318,55 @@ describe('a dry run', () => {
     expect(existsSync(join(home, 'plugins'))).toBe(false);
   });
 
+  it('says what a real run does when the high estimate is above the budget', async () => {
+    vi.stubEnv('OPENAI_API_KEY', 'sk-test-0123456789abcdef');
+    const result = await plan({ config: { budgetUsd: 0.001, tts: { provider: 'openai' } } });
+    const note = result.warnings.find((w) => w.includes('is above the budget of $0.00'));
+    expect(note).toContain('This high estimate');
+    expect(note).toContain('stops before any call that would go over it');
+    expect(note).toContain('a repair is skipped');
+  });
+
+  describe('with a model', () => {
+    const local = {
+      provider: 'openai-compatible',
+      baseUrl: 'http://localhost:11434/v1',
+      model: 'llama3.1',
+    } as const;
+    const speechOf = (result: PlanResult) => result.estimatedCost.records.find((r) => r.kind === 'tts');
+
+    it('prices speech at the most narration that fits the length limit, because the model may write more than the stand-in', async () => {
+      vi.stubEnv('OPENAI_API_KEY', 'sk-test-0123456789abcdef');
+      const config = { maxDurationSec: 60, tts: { provider: 'openai' as const } };
+      const offline = await plan({ config });
+      const withModel = await plan({ config: { ...config, llm: local } });
+      // 60 s x 2.5 words per second x 7 characters per word.
+      expect(speechOf(withModel)?.characters).toBe(1050);
+      expect(speechOf(offline)?.characters).toBeLessThan(1050);
+      expect(speechOf(withModel)?.costUsd).toBeGreaterThan(speechOf(offline)?.costUsd ?? 0);
+    });
+
+    it('keeps pricing the actual narration of a storyboard that is real', async () => {
+      vi.stubEnv('OPENAI_API_KEY', 'sk-test-0123456789abcdef');
+      const supplied = await readJson<unknown>(join(DEMO, 'storyboard.json'));
+      const config = { tts: { provider: 'openai' as const } };
+      const plain = await plan({ storyboard: supplied, config });
+      const withModel = await plan({ storyboard: supplied, config: { ...config, llm: local } });
+      expect(speechOf(withModel)?.characters).toBe(speechOf(plain)?.characters);
+    });
+
+    it('counts a model server on this machine with no known price as $0, and says so', async () => {
+      const result = await plan({ config: { llm: local } });
+      expect(result.estimatedCost.records.find((r) => r.kind === 'llm')).toMatchObject({
+        priceNote: 'local',
+        costUsd: 0,
+      });
+      expect(formatCost(result.estimatedCost)).toContain(
+        'a model server on this machine or your network counted as $0',
+      );
+    });
+  });
+
   it('names the speech model that would be used, next to the price of that model', async () => {
     vi.stubEnv('OPENAI_API_KEY', 'sk-test-0123456789abcdef');
     const speech = (result: PlanResult) => result.estimatedCost.records.find((r) => r.kind === 'tts');
@@ -533,7 +587,9 @@ describe('generate: publishing', () => {
     publishMock.mockReturnValue(fakePublisher('ok'));
     const result = await publishRun({ run: runDir(), config: S3_CONFIG });
     expect(result.publish).toEqual(uploaded);
-    expect(result.warnings.join(' ')).toContain('was not found');
+    expect(result.warnings.some((w) => w.startsWith(EARLIER_RESULT_MISSING))).toBe(true);
+    // The publish output does not show $0 for costs that are not known.
+    expect(formatPublishResult(result, createStyle(false))).toMatch(/Cost\s+not known/);
     expect(result.title.length).toBeGreaterThan(0);
     expect(failed.code).toBe('PUBLISH_FAILED');
   });
@@ -743,6 +799,25 @@ describe('output folders', () => {
 });
 
 describe('prepareAuthoring: AUTHORING.md', () => {
+  it('says how many tokens the agent reads: the evidence pack, the guide and the schema', async () => {
+    const messages: string[] = [];
+    const result = await prepareAuthoring(
+      { ...options({ withContext: false }), outDir: join(base, 'authoring-tokens') },
+      { onProgress: (event) => messages.push(event.message) },
+    );
+    const text = (
+      await Promise.all(
+        [result.files.evidence, result.files.guide, result.files.schema].map((f) => readFile(f, 'utf8')),
+      )
+    ).join('');
+    const line = messages.find((m) => m.startsWith('Wrote the evidence pack'));
+    const tokens = Number(
+      /reads about (\d+) tokens: the evidence pack, the guide and the schema\.$/.exec(line ?? '')?.[1],
+    );
+    // The files end with a newline that the count leaves out, so the numbers can differ by one.
+    expect(Math.abs(tokens - estimateTokens(text))).toBeLessThanOrEqual(1);
+  });
+
   it('shows validate and generate with the source and the flags of the analysis', async () => {
     const result = await prepareAuthoring({
       ...options({ withContext: false }),

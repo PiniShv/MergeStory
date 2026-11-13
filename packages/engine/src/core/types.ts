@@ -445,6 +445,11 @@ export interface UsageRecord {
   costUsd: number;
   /** true when the cost is an estimate (price table) rather than a billed amount. */
   estimated: boolean;
+  /**
+   * Set when no price was known for the model. 'assumed': the cost is counted at a fallback rate.
+   * 'local': the model runs on a server on this machine or a private network, and the cost is counted as $0.
+   */
+  priceNote?: 'assumed' | 'local';
   cached?: boolean;
 }
 

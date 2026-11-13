@@ -130,7 +130,14 @@ describe('createRemoteSpeechProvider', () => {
     );
     const records = ctx.cost.report().records;
     expect(records).toHaveLength(2);
-    expect(records[0]).toMatchObject({ provider: 'openai', kind: 'tts', model: 'acme-1', estimated: true });
+    expect(records[0]).toMatchObject({
+      provider: 'openai',
+      kind: 'tts',
+      model: 'acme-1',
+      estimated: true,
+      // The model has no listed price, so the fallback rate was used.
+      priceNote: 'assumed',
+    });
     // Transfers to the same host for the same purpose are added up.
     expect(ctx.egress.list()).toEqual([
       {

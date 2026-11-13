@@ -34,12 +34,15 @@ export async function prepareAuthoring(
     schema: folder.schema,
   };
   await writeFile(files.evidence, pack.markdown, { mode: 0o600 });
-  await writeFile(files.guide, authoringDocument(p, options.followUp ?? null), { mode: 0o600 });
-  await writeRunJson(files.schema, storyboardJsonSchema());
+  const guide = authoringDocument(p, options.followUp ?? null);
+  const schema = storyboardJsonSchema();
+  await writeFile(files.guide, guide, { mode: 0o600 });
+  await writeRunJson(files.schema, schema);
+  const readTokens = estimateTokens(pack.markdown + guide + JSON.stringify(schema, null, 2));
   ctx.progress({
     stage: 'analyze',
     status: 'done',
-    message: `Wrote the evidence pack (${pack.includedHunks.length} hunks, about ${estimateTokens(pack.markdown)} tokens)`,
+    message: `Wrote the evidence pack (${pack.includedHunks.length} hunks). The agent reads about ${readTokens} tokens: the evidence pack, the guide and the schema.`,
   });
   return {
     runId: ctx.runId,

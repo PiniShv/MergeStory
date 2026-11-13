@@ -111,13 +111,13 @@ describe('formatCost', () => {
       records: [record('llm', 0.004), record('tts', 0.0002)],
     };
     expect(formatCost(cost)).toBe(
-      '$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted',
+      '$0.0042 (LLM $0.0040, speech $0.0002), budget $0.25; your coding agent, storage and CI are billed separately',
     );
   });
 
-  it('shows zero costs, so a free run looks free', () => {
+  it('shows zero costs as zero', () => {
     expect(formatCost({ totalUsd: 0, budgetUsd: 0.25, records: [] })).toBe(
-      '$0.0000 (LLM $0.0000, speech $0.0000), budget $0.25; your coding agent, storage, CI and model servers on your network are not counted',
+      '$0.0000 (LLM $0.0000, speech $0.0000), budget $0.25; your coding agent, storage and CI are billed separately',
     );
   });
 
@@ -128,7 +128,29 @@ describe('formatCost', () => {
       records: [record('llm', 0.01, true), record('storage', 0.0005), record('other', 0)],
     };
     expect(formatCost(cost)).toBe(
-      '$0.0105 (LLM $0.0100, speech $0.0000, other $0.0005), estimated from list prices, budget $1.00; your coding agent, storage, CI and model servers on your network are not counted',
+      '$0.0105 (LLM $0.0100, speech $0.0000, other $0.0005), estimated from list prices, budget $1.00; your coding agent, storage and CI are billed separately',
+    );
+  });
+
+  it('says when a model with no known price was counted at an assumed rate', () => {
+    const cost: CostReport = {
+      totalUsd: 0.02,
+      budgetUsd: 1,
+      records: [{ ...record('llm', 0.02, true), priceNote: 'assumed' }],
+    };
+    expect(formatCost(cost)).toBe(
+      '$0.0200 (LLM $0.0200, speech $0.0000), estimated; includes an assumed rate for a model with no known price, budget $1.00; your coding agent, storage and CI are billed separately',
+    );
+  });
+
+  it('says when a model server on this machine or your network was counted as $0', () => {
+    const cost: CostReport = {
+      totalUsd: 0,
+      budgetUsd: 1,
+      records: [{ ...record('llm', 0, true), priceNote: 'local' }],
+    };
+    expect(formatCost(cost)).toBe(
+      '$0.0000 (LLM $0.0000, speech $0.0000), a model server on this machine or your network counted as $0, budget $1.00; your coding agent, storage and CI are billed separately',
     );
   });
 

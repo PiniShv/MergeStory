@@ -69,6 +69,9 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
   followUp?: { source: string; args: string[]; agent?: boolean };
 }
 
+/** Starts the warning that publish adds when it rebuilds a result because the earlier result.json is missing. */
+export const EARLIER_RESULT_MISSING = 'The earlier result of this run';
+
 export interface PublishRunOptions {
   /** Run folder (runDir from a generate result) or run id. */
   run: string;

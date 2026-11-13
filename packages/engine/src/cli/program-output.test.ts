@@ -97,6 +97,7 @@ describe('generate: output', () => {
     expect(stdout).toContain('Nothing was sent, rendered or published.');
     expect(stdout).toContain('about 1:15');
     expect(stdout).toContain('LLM none, speech say, publish local');
+    expect(stdout).toContain('Est. cost (high estimate)');
     expect(stdout).toContain('Scenes (2)');
     expect(stdout).toContain('1. The mission');
     expect(stdout).toContain('2. Retry loop');

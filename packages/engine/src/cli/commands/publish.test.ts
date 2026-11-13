@@ -561,4 +561,18 @@ describe('formatPublishResult', () => {
     expect(text).toContain('https://videos.example.com/v.mp4');
     expect(text).not.toMatch(/\n\s+Video\s/);
   });
+
+  it('does not show $0 as the cost when the earlier result of the run is missing', () => {
+    const text = formatPublishResult(
+      fakeResult({
+        publish: published(),
+        warnings: [
+          'The earlier result of this run (result.json) was not found, so its cost and transfers are not listed.',
+        ],
+      }),
+      createStyle(false),
+    );
+    expect(text).toMatch(/Cost\s+not known: the earlier result of this run is missing/);
+    expect(text).not.toContain('LLM $');
+  });
 });

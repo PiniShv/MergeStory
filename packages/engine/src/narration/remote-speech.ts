@@ -14,7 +14,7 @@ import { readBodyLimited } from '../llm/shared.ts';
 import { splitForSynthesis } from './chunking.ts';
 import { joinPcmS16le } from './convert.ts';
 import { speechRequestError } from './http-errors.ts';
-import { ttsCostUsd } from './pricing.ts';
+import { ttsCostUsd, ttsPriceNote } from './pricing.ts';
 
 const PCM_RATE = 24_000;
 /** One request carries a few thousand characters: well under 64 MB of audio, even spoken slowly. */
@@ -138,6 +138,7 @@ export function createRemoteSpeechProvider(
           characters: piece.length,
           costUsd: ttsCostUsd(ctx, spec.id, modelName, piece.length),
           estimated: true,
+          priceNote: ttsPriceNote(ctx, spec.id, modelName),
         });
         if (bytes.length < 2) {
           throw new MergeStoryError('TTS_FAILED', `${spec.service} returned no audio for a narration line.`, {

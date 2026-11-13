@@ -304,7 +304,8 @@ repository: `runs/`, `cache/`, `jobs/`, `models/`, `plugins/` and `credentials/`
 | Storage | S3-compatible | billed by your provider: fractions of a cent per month for a short video on R2; S3 also bills requests and data transfer out |
 
 Every paid call is checked against the budget before it is made and recorded in the result. A model
-whose price is unknown is counted at the highest listed rate, so it is not counted as cheap. See
+whose price is unknown is counted at the highest listed rate, so it is not counted as cheap (a server on
+this machine or your network counts as $0 only when no price is known for its model, with a warning). See
 [configuration.md](configuration.md#budget).
 
 ## Security model

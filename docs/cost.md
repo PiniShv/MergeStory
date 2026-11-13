@@ -50,6 +50,10 @@ prices, checked 2026-11. They are estimates: providers change prices, and your p
 | ElevenLabs Flash | `--tts elevenlabs` | $40 per million characters |
 | ElevenLabs v3 and Multilingual v2 | `--tts elevenlabs` with `MERGESTORY_TTS_MODEL` | $80 per million characters |
 
+The `gpt-4o-mini-tts` and ElevenLabs rates are conversions, not list prices per character. OpenAI bills that
+voice by tokens, and the price of an ElevenLabs credit depends on your plan. To use your own rate, set it
+in `pricing`.
+
 OpenAI plans to remove `gpt-4o-mini-tts` from its API on 2027-01-06. MergeStory warns about it from
 December 2026.
 
@@ -96,24 +100,32 @@ take the run over, it is not made. For the first model call or for speech, the r
 
 A flag wins over the variable, and the variable wins over the file. A model with no known price is counted at
 the highest listed rate ($10 per million input tokens and $50 per million output tokens), so it is not counted
-as cheap. See [Budget](configuration.md#budget) for every rule.
+as cheap. A model on a server on this machine or your network counts as $0 only when no price is known for it,
+built in or in `pricing`, and the run then warns once that the budget does not cover it. A model call that times out, or whose answer cannot be read,
+may still be billed, so it is counted at its estimate. See [Budget](configuration.md#budget) for every rule.
 
 The budget is per run, not per day or month. It is a safeguard, not a guarantee of your final bill. It uses
 estimates from list prices, and it covers only MergeStory's own model and voice calls. It does not cover
 storage, CI minutes or your coding agent's usage. A model server or gateway on this machine or a private
-network counts as $0, even when it forwards to a paid service. To cap your real bill, set a spending limit or
-alert with each provider.
+network counts as $0 only when no price is known for its model, built in or in `pricing`, even when it
+forwards to a paid service. To cap your real bill, set a spending limit or alert with each provider.
 
 ## See the cost
 
-- **Before.** `mergestory generate . --dry-run` prints the plan with an estimated cost and what a real run
-  would send. It renders and publishes nothing.
+- **Before.** `mergestory generate . --dry-run` prints the plan with `Est. cost (high estimate)` and what a
+  real run would send. It is a high estimate, not a promise: it counts the first model call, each repair
+  attempt and the speech, and input tokens are themselves estimated. A dry run with a model prices the speech
+  for the longest narration that fits `maxDurationSec`. It renders and publishes nothing.
 - **After.** Every run prints a `Cost` line: the total, a split between model and speech, whether it comes
-  from list prices, and the budget. It also prints a `Sent` line with each outbound transfer (host, purpose,
-  size), or says that nothing left the machine.
+  from list prices (or includes an assumed rate for a model with no known price, or a model server on your
+  network counted as $0), and the budget. It ends with "your coding agent, storage and CI are billed
+  separately". It also prints a `Sent` line with each outbound transfer (host, purpose, size), or says that
+  nothing left the machine.
 - **In the result.** `result.json` in the run folder holds the same `cost`: `totalUsd`, `budgetUsd` and one
-  record per call, with its provider, model, tokens or characters, `costUsd` and `estimated`. Free and cached
-  calls show a cost of 0.
+  record per call, with its provider, model, tokens or characters, `costUsd` and `estimated`. A record has
+  `priceNote` when no price was known: `assumed` means it was counted at the fallback rate, and `local` means
+  it ran on a server on this machine or a private network and was counted as $0. Free and cached calls show
+  a cost of 0.
 - **Your own prices.** Providers change prices. Add a `pricing` section to the config file to replace or add
   one. See [Pricing overrides](configuration.md#pricing-overrides).
 
@@ -134,8 +146,9 @@ money. Their providers bill you, not MergeStory, and the `Cost` line does not in
   [GitHub Actions](github-actions.md#what-it-costs).
 - **Your machine.** Rendering and the voice use your CPU, power and network. The first English video
   downloads the voice once (about 400 MB, then the voice model).
-- **A model server you run.** One on this machine or on a private network counts as 0, even when it forwards
-  to a paid service, because MergeStory cannot see what you pay.
+- **A model server you run.** One on this machine or on a private network counts as $0 only when no price is
+  known for its model (built in or in `pricing`), even when it forwards to a paid service, because MergeStory
+  cannot see what you pay. Add its price to `pricing` to count it.
 
 The prices on this page are estimates from list prices checked 2026-11. Providers change prices. Your
 provider's bill is the final word. The [budget](#the-budget) is a safeguard, not a guarantee of your final bill.

@@ -13,9 +13,10 @@ import { abortedError, MergeStoryError, toMergeStoryError } from '../core/errors
 import { isLoopbackHost } from '../core/net.ts';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts';
 import { parseRetryAfter, retry } from '../core/retry.ts';
-import { budgetLlmCostUsd } from './prices.ts';
+import { budgetLlmCostUsd, llmPriceNote } from './prices.ts';
 import {
   buildMessages,
+  markMayBeBilled,
   parseEndpointUrl,
   parseJsonLoose,
   recordBilledFailure,
@@ -94,6 +95,7 @@ function mapSdkError(
         cause: err,
         retryable: true,
         hint: 'Raise llm.timeoutMs, lower llm.effort, or shorten the change.',
+        details: { mayBeBilled: true },
       },
     );
   }
@@ -212,6 +214,19 @@ export function createAnthropicProvider(
         }
       }
 
+      // A gateway can answer 2xx with a body that is not a message. The call may still be billed.
+      if (
+        typeof message?.usage?.input_tokens !== 'number' ||
+        typeof message.usage.output_tokens !== 'number' ||
+        !Array.isArray(message.content)
+      ) {
+        throw markMayBeBilled(
+          new MergeStoryError('LLM_FAILED', 'The answer could not be read.', {
+            hint: `Check that ${baseUrl.host} is an Anthropic Messages endpoint.`,
+          }),
+        );
+      }
+
       const outputTokens = message.usage.output_tokens;
       const billedInput =
         message.usage.input_tokens +
@@ -274,6 +289,10 @@ export function createAnthropicProvider(
 
     estimateCostUsd(inputTokens: number, outputTokens: number, ctx: RunContext): number | null {
       return budgetLlmCostUsd('anthropic', model, inputTokens, outputTokens, ctx, local);
+    },
+
+    priceNote(ctx: RunContext) {
+      return llmPriceNote('anthropic', model, ctx, local);
     },
   };
 }
