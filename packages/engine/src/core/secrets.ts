@@ -138,7 +138,7 @@ const REFERENCE_NAME =
 const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
 /** A variable, member, call, index or type: `hashedPassword`, `config.apiKey`, `getSecret()`, `Option<String>`. */
 const CODE_VALUE =
-  /^[&*!]*[A-Za-z_$][\w$]*(?:(?:\?\.|\.|::|->)[A-Za-z_$][\w$]*|\[[^\]\s]*\]|\([^)\s]*\)|<[^\s<]*)*[!?]?$/;
+  /^[&*!]*[A-Za-z_$][\w$]*(?:(?:\?\.|\.|::|->)[A-Za-z_$][\w$]*|\[[^\]\s]*\]|\([^)\s]*\))*(?:<\S*|[!?])?$/;
 
 /** Whether an unquoted value is code that names a secret rather than the secret itself. */
 function readsLikeCode(name: string, value: string): boolean {
