@@ -178,6 +178,7 @@ variable beats the config file. Common options:
 | Comment on the PR | `--comment` (needs an uploaded video) | `GITHUB_TOKEN` (or the `gh` CLI login) |
 | Budget per run | `--budget 0.25` | `MERGESTORY_BUDGET_USD` |
 | Quality | `--quality draft`, `standard`, `high` | `MERGESTORY_QUALITY` |
+| Theme | `--theme midnight` (or `paper`, `high-contrast`, `terminal`, [your own](docs/themes.md)) | `MERGESTORY_THEME` |
 | Config file | none | `MERGESTORY_CONFIG` (default: `~/.mergestory/config.json`) |
 
 Local voice: English videos use Kokoro, an open neural voice that runs on your machine. The

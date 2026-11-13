@@ -2,6 +2,12 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Skill and plugin 1.3.0
+
+- The skill installs `mergestory@1.3.0`, which adds video themes.
+- For another look, the skill passes `--theme <name>`. It never passes a theme path, and never takes a
+  theme from the repository's files.
+
 ## 1.3.0
 
 ### Themes
