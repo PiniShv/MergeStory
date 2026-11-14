@@ -280,6 +280,17 @@ describe('a logo', () => {
     await expect(loadTheme(await logoTheme(large))).rejects.toThrow('larger than 256 KB');
   });
 
+  it('is a still image: an animated PNG is refused', async () => {
+    const png = makePng(10, 10);
+    // An animation chunk (acTL) after the signature and the header chunk (8 + 25 bytes), as an animated PNG has.
+    const actl = Buffer.alloc(20);
+    actl.writeUInt32BE(8, 0);
+    actl.write('acTL', 4, 'latin1');
+    actl.writeUInt32BE(2, 8); // frames
+    const apng = Buffer.concat([png.subarray(0, 33), actl, png.subarray(33)]);
+    await expect(loadTheme(await logoTheme(apng))).rejects.toThrow('is an animated PNG');
+  });
+
   it('is a plain file in the theme folder: never a path, a link or a file that is not there', async () => {
     for (const name of ['../logo.png', 'images/logo.png', '/etc/passwd', '.logo.png', '..']) {
       await expect(loadTheme(await themeFolder(dark({}, { logo: name }))), name).rejects.toThrow(

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { loadTheme } from '../../core/theme.ts';
 import { dir, run } from '../../testing/cli.ts';
-import { makePng } from '../../testing/png.ts';
+import { makeJpeg, makePng } from '../../testing/png.ts';
 
 vi.mock('../../pipeline/index.ts', () => ({
   generate: vi.fn(),
@@ -86,6 +86,15 @@ describe('theme init', () => {
       logo: 'logo.png',
     });
     expect((await loadTheme('marked', { home: home() })).logo).toMatchObject({ width: 240, height: 60 });
+
+    // A JPEG is saved as logo.jpg, whatever its name says.
+    await writeFile(join(dir, 'photo.png'), makeJpeg(300, 100));
+    const jpeg = await run(['theme', 'init', 'photo', '--accent', '#ff7a1a', '--logo', 'photo.png']);
+    expect(jpeg.code).toBe(0);
+    expect(JSON.parse(await readFile(join(home(), 'themes', 'photo', 'theme.json'), 'utf8'))).toMatchObject({
+      logo: 'logo.jpg',
+    });
+    expect((await loadTheme('photo', { home: home() })).logo?.src).toMatch(/^data:image\/jpeg;base64,/);
 
     await writeFile(join(dir, 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
     const svg = await run(['theme', 'init', 'vector', '--accent', '#ff7a1a', '--logo', 'logo.svg']);

@@ -2,27 +2,50 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { makePng, pngHeader } from '../testing/png.ts';
+import { makeJpeg, makePng, pngHeader } from '../testing/png.ts';
 import { detectImage, loadScreenshot, MAX_SCREENSHOT_BYTES } from './image.ts';
 
-/** A JPEG skeleton with a JFIF segment and a baseline frame header (enough to read the size from). */
-function makeJpeg(width: number, height: number): Buffer {
-  const jfif = Buffer.from([
-    0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00,
-    0x00,
-  ]);
-  const sof = Buffer.alloc(19);
-  sof.set([0xff, 0xc0, 0x00, 0x11, 0x08], 0);
-  sof.writeUInt16BE(height, 5);
-  sof.writeUInt16BE(width, 7);
-  sof.set([0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01], 9);
-  return Buffer.concat([Buffer.from([0xff, 0xd8]), jfif, sof, Buffer.from([0xff, 0xd9])]);
+/** A JPEG APP1 segment whose EXIF data holds only an orientation, in either byte order. */
+function exif(orientation: number, order: 'MM' | 'II' = 'MM'): Buffer {
+  const tiff = Buffer.alloc(26);
+  const u16 = (value: number, at: number) =>
+    order === 'II' ? tiff.writeUInt16LE(value, at) : tiff.writeUInt16BE(value, at);
+  const u32 = (value: number, at: number) =>
+    order === 'II' ? tiff.writeUInt32LE(value, at) : tiff.writeUInt32BE(value, at);
+  tiff.write(order, 0, 'latin1');
+  u16(42, 2);
+  u32(8, 4); // the first folder of tags, right after this header
+  u16(1, 8); // one tag in it
+  u16(0x0112, 10); // orientation
+  u16(3, 12); // SHORT
+  u32(1, 14); // one value
+  u16(orientation, 18);
+  const head = Buffer.from([0xff, 0xe1, 0, 0]);
+  head.writeUInt16BE(2 + 6 + tiff.length, 2);
+  return Buffer.concat([head, Buffer.from('Exif\0\0', 'latin1'), tiff]);
 }
 
 describe('detectImage', () => {
   it('reads PNG and JPEG sizes from the header', () => {
     expect(detectImage(makePng(640, 480))).toEqual({ mime: 'image/png', width: 640, height: 480 });
     expect(detectImage(makeJpeg(1280, 720))).toEqual({ mime: 'image/jpeg', width: 1280, height: 720 });
+  });
+
+  it('reads the size a browser draws a JPEG at, turned by its EXIF orientation', () => {
+    const jpeg = makeJpeg(1280, 720);
+    const withExif = (segment: Buffer, at = 2) =>
+      Buffer.concat([jpeg.subarray(0, at), segment, jpeg.subarray(at)]);
+    const turned = { mime: 'image/jpeg', width: 720, height: 1280 };
+    expect(detectImage(withExif(exif(6)))).toEqual(turned);
+    expect(detectImage(withExif(exif(8, 'II')))).toEqual(turned);
+    // After the frame header, where some cameras write it.
+    expect(detectImage(withExif(exif(5), jpeg.length - 2))).toEqual(turned);
+    // Turned by a half, mirrored, not an orientation, or pointing outside its data: the size stays.
+    const outside = exif(6);
+    outside.writeUInt32BE(0xffff, 14);
+    for (const segment of [exif(3), exif(2), exif(9), outside]) {
+      expect(detectImage(withExif(segment))).toEqual({ mime: 'image/jpeg', width: 1280, height: 720 });
+    }
   });
 
   it('rejects everything else, whatever the file name says', () => {

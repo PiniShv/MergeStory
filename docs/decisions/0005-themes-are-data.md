@@ -24,10 +24,11 @@ still say so.
   request, the repository, the HTTP API or an agent command.
 - Only plain files inside the theme folder are read: `theme.json` (at most 64 KB) and the logo it
   names. No symbolic or hard links, no `..`, no absolute paths.
-- A logo is a PNG or JPEG, told from its bytes, at most 256 KB and 2048x2048 pixels. It goes into the
-  render plan as a `data:` image, which the content security policy of the page already allows, so the
-  page still loads nothing. SVG is refused: it is a document that can hold scripts and links, not only
-  a picture.
+- A logo is a still PNG or JPEG, told from its bytes, at most 256 KB and 2048x2048 pixels. It goes into
+  the render plan as a `data:` image, which the content security policy of the page already allows, so
+  the page still loads nothing. SVG is refused: it is a document that can hold scripts and links, not
+  only a picture. An animated PNG is refused too: the browser would play it on its own clock, not the
+  video's.
 - The colors that carry meaning are locked: added, removed and changed lines, new connections in
   diagrams, and the badges for simulated pictures, real screenshots, masked secrets and reported
   results. The background must be opaque, and the locked change colors must stand out (2:1) from it

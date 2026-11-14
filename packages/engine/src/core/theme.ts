@@ -16,7 +16,7 @@ import { bundledThemesInfo } from 'shiki';
 import { z } from 'zod';
 import { BUILT_IN_THEMES, THEME_NAME } from './config.ts';
 import { MergeStoryError } from './errors.ts';
-import { detectImage } from './image.ts';
+import { detectImage, isAnimatedPng } from './image.ts';
 import { assertNoLinks, homeLayout } from './paths.ts';
 import type { ResolvedImage, ThemeName } from './render-plan.ts';
 
@@ -466,7 +466,7 @@ async function complete(file: ThemeFile, isBase: boolean): Promise<ResolvedTheme
 }
 
 /**
- * A logo as an image for the render plan: PNG or JPEG, told from its bytes, of at most
+ * A logo as an image for the render plan: a still PNG or JPEG, told from its bytes, of at most
  * MAX_LOGO_SIDE pixels each way. Never SVG: an SVG file is a document that can hold scripts and links.
  */
 export function checkLogo(data: Buffer, where: string): ResolvedImage {
@@ -476,6 +476,10 @@ export function checkLogo(data: Buffer, where: string): ResolvedImage {
       `The logo ${where} must be a PNG or JPEG image of at most ${MAX_LOGO_SIDE}x${MAX_LOGO_SIDE} pixels.`,
       'Export the logo as PNG or JPEG. SVG and other formats are not supported.',
     );
+  }
+  // The browser would play it on its own clock, not the video's.
+  if (isAnimatedPng(data)) {
+    throw themeError(`The logo ${where} is an animated PNG.`, 'Export one still frame of it as PNG or JPEG.');
   }
   return {
     src: `data:${info.mime};base64,${data.toString('base64')}`,

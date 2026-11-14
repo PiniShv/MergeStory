@@ -85,7 +85,7 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
     )
     .option(
       '--logo <file>',
-      'your logo for the top bar and the end card: PNG or JPEG, at most 256 KB and 2048x2048 pixels',
+      'your logo for the top bar and the end card: a still PNG or JPEG, at most 256 KB and 2048x2048 pixels',
     )
     .addOption(
       new Option('--from <theme>', 'the built-in theme to start from; it makes the theme dark or light')

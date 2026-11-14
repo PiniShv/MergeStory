@@ -73,8 +73,11 @@ mergestory theme init acme --accent "#ff7a1a" --logo logo.png
 The logo takes the place of the MergeStory mark and name in the top bar of the video, and leads the
 end card. The end card keeps a small "Made with MergeStory" line.
 
-- The logo must be a PNG or JPEG file, at most 256 KB and 2048x2048 pixels. MergeStory checks the
-  bytes of the file, not its name. SVG is not supported: export your logo as PNG.
+- The logo must be a still PNG or JPEG file, at most 256 KB and 2048x2048 pixels. MergeStory checks
+  the bytes of the file, not its name. SVG and animated PNG are not supported: export your logo as a
+  still PNG.
+- A JPEG that holds a rotation tag (EXIF orientation), as photos from phones often do, is turned the
+  way photo viewers show it.
 - Use a logo that shows on the background of your theme: light on a dark theme, dark on a light one. A
   PNG with a see-through background works best.
 - The end card draws the logo at most 720 pixels wide and 160 pixels tall, and the top bar at most 44
@@ -214,4 +217,5 @@ In CI, prefer a theme name. A theme folder inside the repository can be changed 
 - In a theme folder, MergeStory reads only `theme.json` (at most 64 KB) and the logo it names (at most
   256 KB), and only when each is a plain file inside the folder: not a symbolic link and not a hard
   link. A theme folder that is a symbolic link is refused.
-- A logo must be a PNG or JPEG image. SVG is refused, because an SVG file can hold scripts and links.
+- A logo must be a still PNG or JPEG image. SVG is refused, because an SVG file can hold scripts and
+  links. An animated PNG is refused too: the browser would play it on its own clock, not the video's.
