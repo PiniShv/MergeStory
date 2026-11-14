@@ -288,6 +288,14 @@ html:not(.js) .panel+.panel{border-top:1px solid var(--t-line)}
 .cmdlist .d{color:var(--t-muted);font-size:.9375rem}
 @media (max-width:699px){.cmdlist li{grid-template-columns:minmax(0,1fr)}}
 
+/* ---------- Themes ---------- */
+.looks{display:grid;gap:clamp(28px,3.5vw,44px) clamp(16px,2vw,28px);grid-template-columns:minmax(0,1fr)}
+@media (min-width:700px){.looks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.looks img{display:block;width:100%;height:auto;border-radius:clamp(12px,1.4vw,18px);box-shadow:0 0 0 1px var(--line2),0 30px 60px -36px rgba(0,0,0,.45)}
+.looks p{margin:14px 0 0;color:var(--muted);font-size:1.0625rem}
+.looks code{margin-right:.35em;color:var(--text)}
+.brandcmd{max-width:900px;margin:0 auto}
+
 /* ---------- Apps ---------- */
 .apps{display:grid;gap:clamp(12px,1.5vw,20px);grid-template-columns:repeat(12,minmax(0,1fr))}
 .app{grid-column:span 12;padding:clamp(24px,3vw,40px);border-radius:clamp(24px,3vw,32px);background:var(--card);min-width:0}
@@ -803,6 +811,40 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </div>
 <figcaption class="cap">A weather client learns to retry with exponential backoff. <a href="demo/">Open the watch page</a> for the chapters, the review checklist and every claim, linked to the code.</figcaption>
 </figure>
+</div>
+</section>
+
+<!-- Themes -->
+<section class="sec alt" id="themes" aria-labelledby="h-themes">
+<div class="wrap">
+<div class="head rv">
+<h2 id="h-themes">Your brand. Your colors.</h2>
+<p class="intro">Four themes come with MergeStory. Or make one from your brand colors with one command.</p>
+</div>
+<ul class="looks" role="list">
+<li class="rv" style="--d:0"><img src="assets/theme-midnight.jpg" width="1120" height="630" loading="lazy" decoding="async" alt="The title scene of a sample video in midnight: a white, violet and cyan title on dark blue."><p><code>midnight</code> The default.</p></li>
+<li class="rv" style="--d:1"><img src="assets/theme-paper.jpg" width="1120" height="630" loading="lazy" decoding="async" alt="The same scene in paper: a dark blue and violet title on a light background."><p><code>paper</code> Light.</p></li>
+<li class="rv" style="--d:0"><img src="assets/theme-high-contrast.jpg" width="1120" height="630" loading="lazy" decoding="async" alt="The same scene in high-contrast: a white, violet and cyan title on black, with stronger outlines."><p><code>high-contrast</code> Black, with stronger contrast.</p></li>
+<li class="rv" style="--d:1"><img src="assets/theme-terminal.jpg" width="1120" height="630" loading="lazy" decoding="async" alt="The same scene in terminal: a pale green title on dark green, with amber details."><p><code>terminal</code> Green and amber.</p></li>
+</ul>
+<h3 class="pricehead rv">Make your own.</h3>
+<div class="brandcmd rv">
+<div class="term">
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Your brand colors</span></div>
+<ul class="cmdlist" role="list">
+<li><code>mergestory theme init acme --accent "#ff7a1a"</code><span class="d">A theme from your brand color.</span></li>
+<li><code>mergestory theme init acme --brand brand.css</code><span class="d">Or from the colors in a file of yours: CSS, JSON or a list.</span></li>
+<li><code>mergestory theme preview acme</code><span class="d">See it on sample scenes. No model, no voice, no network.</span></li>
+<li><code>mergestory generate &lt;pull request URL&gt; --theme acme</code><span class="d">Make the video in your colors.</span></li>
+</ul>
+</div>
+</div>
+<div class="budget rv">
+<svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>
+<div><h3>A theme is only colors.</h3>
+<p>It cannot change how added and removed lines look, or the labels on simulated pictures and masked secrets. By default, a contrast check refuses colors that are hard to read.</p></div>
+</div>
+<p class="cost-link rv"><a href="https://github.com/PiniShv/MergeStory/blob/main/docs/themes.md">How themes work <span aria-hidden="true">&nbsp;›</span></a></p>
 </div>
 </section>
 

@@ -10,7 +10,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.2.5"
+  version: "1.3.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -24,8 +24,8 @@ Do not use it for text-only summaries, code review comments, or screen recording
 
 ## 1. Find the engine
 
-Run `mergestory --version`. It must print 1.2.4 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.2.4`. Never start
+Run `mergestory --version`. It must print 1.3.0 or newer. If the command is missing or older, ask
+the user whether you may install it, then run `npm install -g mergestory@1.3.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
