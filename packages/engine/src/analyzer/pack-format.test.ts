@@ -58,6 +58,7 @@ describe('formatting helpers', () => {
 
   it('keeps table cells and code spans on one line', () => {
     expect(cell('a|b\nc`d')).toBe("a\\|b c'd");
+    expect(cell('a\\|b')).toBe('a\\\\\\|b');
     expect(code('a`b\nc')).toBe('`a b c`');
   });
 

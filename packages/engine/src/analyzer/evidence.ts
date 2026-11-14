@@ -1,7 +1,7 @@
 /** The evidence index: every citable fact, with a short label and a link when one exists. */
 
 import { maskPrivate } from '../core/secrets.ts';
-import { truncate } from '../core/text.ts';
+import { trimTrailingSlashes, truncate } from '../core/text.ts';
 import type {
   ChangeSet,
   CodeRef,
@@ -66,7 +66,7 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
     add(issue.id, 'issue', `Issue #${issue.number}: ${cleanLabel(issue.title, 60)}`, null, issue.url || null);
   }
   for (const c of changeSet.commits) {
-    const url = web ? `${web.replace(/\/+$/, '')}/commit/${c.sha}` : null;
+    const url = web ? `${trimTrailingSlashes(web)}/commit/${c.sha}` : null;
     add(c.id, 'commit', `Commit ${shortSha(c.sha)}: ${cleanLabel(c.subject, 70)}`, null, url);
   }
 
@@ -101,7 +101,7 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
   for (const m of src.components) {
     const url =
       web && m.path !== '.'
-        ? `${web.replace(/\/+$/, '')}/tree/${headSha}/${m.path.split('/').map(encodeURIComponent).join('/')}`
+        ? `${trimTrailingSlashes(web)}/tree/${headSha}/${m.path.split('/').map(encodeURIComponent).join('/')}`
         : null;
     add(
       m.id,

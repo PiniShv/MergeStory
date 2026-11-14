@@ -9,7 +9,7 @@ export function splitSentences(text: string): string[] {
   if (!trimmed) return [];
   const sentences: string[] = [];
   let start = 0;
-  const boundary = /([.!?]+)(["')\]]*)(\s+)(?=[A-Z0-9"'([`])/g;
+  const boundary = /([.!?])(["')\]]*)(\s+)(?=[A-Z0-9"'([`])/g;
   for (const match of trimmed.matchAll(boundary)) {
     const end = (match.index ?? 0) + match[1]!.length + match[2]!.length;
     const candidate = trimmed.slice(start, end);
@@ -51,10 +51,20 @@ export function ordinal(index: number): string {
   return ORDINALS[index] ?? `Number ${index + 1}`;
 }
 
+/** The line without HTML tags. Repeats until none is left, as taking one out can join the halves of another. */
+function dropTags(line: string): string {
+  let before: string;
+  do {
+    before = line;
+    line = line.replace(/<\/?[A-Za-z][^<>]*>/g, '');
+  } while (line !== before);
+  return line;
+}
+
 /** Make Markdown readable as plain sentences: drops comments, code fences, headings, tables, links and emphasis. */
 export function stripMarkdown(markdown: string): string {
   const lines = markdown
-    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
     .replace(/```[\s\S]*?(?:```|$)/g, ' ')
     .replace(/~~~[\s\S]*?(?:~~~|$)/g, ' ')
     .split(/\r?\n/);
@@ -69,10 +79,7 @@ export function stripMarkdown(markdown: string): string {
       continue;
     if (/^[-*+]\s*\[[ xX]\]/.test(line)) continue;
     kept.push(
-      line
-        .replace(/!\[[^\]]*]\([^)]*\)/g, '')
-        .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
-        .replace(/<\/?[A-Za-z][^>]*>/g, '')
+      dropTags(line.replace(/!\[[^\]]*]\([^)]*\)/g, '').replace(/\[([^\]]+)]\([^)]*\)/g, '$1'))
         .replace(/(?:https?:\/\/|www\.)\S+/g, '')
         .replace(/^>\s*/, '')
         .replace(/^(?:[-*+]|\d+[.)])\s+/, '')

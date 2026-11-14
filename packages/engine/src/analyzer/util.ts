@@ -1,4 +1,5 @@
 /** Small helpers shared by the analyzer modules. */
+import { trimTrailingSlashes } from '../core/text.ts';
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -18,7 +19,7 @@ export function blobUrl(
   endLine?: number,
 ): string | null {
   if (!webUrl || !sha) return null;
-  const base = webUrl.replace(/\/+$/, '');
+  const base = trimTrailingSlashes(webUrl);
   const encoded = path.split('/').map(encodeURIComponent).join('/');
   let url = `${base}/blob/${sha}/${encoded}`;
   if (startLine !== undefined && startLine > 0) {

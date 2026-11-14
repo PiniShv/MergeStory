@@ -23,6 +23,7 @@
  * `isProtectedFile` (or `isShowable` where it also needs text) and never matches the patterns again.
  */
 import { isSensitivePath } from './secrets.ts';
+import { trimTrailingSlashes } from './text.ts';
 import type { ChangedFile } from './types.ts';
 
 /**
@@ -115,7 +116,7 @@ function compileGlob(pattern: string): ((path: string) => boolean) | null {
   if (!glob) return null;
   glob = glob.replace(/^(?:\.\/)+/, '');
   const directoryOnly = glob.endsWith('/');
-  glob = glob.replace(/\/+$/, '');
+  glob = trimTrailingSlashes(glob);
   if (!glob) return null;
   const anchored = glob.includes('/');
   glob = glob.replace(/^\/+/, '');

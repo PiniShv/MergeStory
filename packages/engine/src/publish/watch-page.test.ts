@@ -146,7 +146,7 @@ describe('buildWatchPage presentation', () => {
   });
 
   it('keeps the playing chapter in view inside its own list, without scrolling the page', () => {
-    const script = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? '';
+    const script = html.slice(html.indexOf('<script>'), html.indexOf('</script>'));
     expect(script).toContain('function reveal');
     expect(script).toContain('scrollTop');
     expect(script).not.toContain('scrollIntoView');
@@ -415,7 +415,8 @@ describe('buildWatchPage is self-contained', () => {
   it('only mentions URLs of the assets it was given', () => {
     const found = [...html.matchAll(/https?:\/\/[^\s"'<>]+/g)].map((m) => decodeEntities(m[0]));
     expect(found.length).toBeGreaterThan(0);
-    for (const url of found) expect(url.startsWith(ORIGIN)).toBe(true);
+    // The content security policy ends a source with `;`.
+    for (const url of found) expect(new URL(url.replace(/;$/, '')).origin).toBe(ORIGIN);
   });
 
   it('loads nothing from anywhere else', () => {

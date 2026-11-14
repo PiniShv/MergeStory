@@ -4,6 +4,7 @@ import type { RunContext } from '../core/context.ts';
 import { languageInfo } from '../core/languages.ts';
 import { compileGlobs, isProtectedFile, isShowable } from '../core/path-policy.ts';
 import { extname } from '../core/posix.ts';
+import { trimTrailingSlashes } from '../core/text.ts';
 import type {
   Analysis,
   ChangedFile,
@@ -327,7 +328,7 @@ export async function analyze(
 
   const knownPaths = new Set<string>();
   for (const s of states) if (s.file.status !== 'deleted') knownPaths.add(s.file.path);
-  for (const entry of changeSet.repoContext.tree) knownPaths.add(entry.replace(/\/+$/, ''));
+  for (const entry of changeSet.repoContext.tree) knownPaths.add(trimTrailingSlashes(entry));
   const relationships = buildRelationships({
     files: contents.map(({ state, head }) => ({ file: state.file, role: state.role, head })),
     grouping,

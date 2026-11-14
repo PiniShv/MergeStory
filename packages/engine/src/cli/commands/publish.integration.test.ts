@@ -203,9 +203,9 @@ describe('mergestory publish, from the command line to the storage service', () 
     await run(['publish', runDir, '--publish', 's3', '--visibility', 'protected']);
     const saved = JSON.parse(await readFile(join(runDir, 'result.json'), 'utf8')) as GenerateResult;
     expect(saved.publish).toMatchObject({ provider: 's3', visibility: 'protected', expiresAt: null });
-    expect(saved.publish?.watchUrl).toMatch(
-      new RegExp(`^${accessUrl.replace(/[.]/g, '\\.')}/media/mergestory/v/[0-9a-f]{32}/index\\.html$`),
-    );
+    const folder = `${accessUrl}/media/mergestory/v/`;
+    expect(saved.publish?.watchUrl?.startsWith(folder)).toBe(true);
+    expect(saved.publish?.watchUrl?.slice(folder.length)).toMatch(/^[0-9a-f]{32}\/index\.html$/);
     expect(saved.egress.map((e) => e.purpose)).toEqual(['protection check', 'video upload']);
   });
 

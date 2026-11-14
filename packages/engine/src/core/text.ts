@@ -28,6 +28,13 @@ export function splitLines(text: string): string[] {
   return lines;
 }
 
+/** The text without the slashes at its end. A loop, because a regex here is slow on long runs of slashes. */
+export function trimTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 /** Cut a string to `max` characters (not UTF-16 units, so an emoji is never cut in half) and mark the cut with an ellipsis. */
 export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
