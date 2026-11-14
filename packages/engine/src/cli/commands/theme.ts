@@ -1,7 +1,7 @@
 /** mergestory theme preview, mergestory theme init */
 import { randomBytes } from 'node:crypto';
 import { rename, rm, stat, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { type Command, Option } from 'commander';
 import { BUILT_IN_THEMES } from '../../core/config.ts';
 import { MergeStoryError } from '../../core/errors.ts';
@@ -17,6 +17,7 @@ interface InitFlags {
   accent?: string;
   accent2?: string;
   brand?: string;
+  logo?: string;
   from: string;
   force?: boolean;
   allowLowContrast?: boolean;
@@ -82,26 +83,42 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
       '--brand <file>',
       'a file with your brand colors (CSS, JSON or a list): its first color that labels can use, and the next one of a clearly different hue',
     )
+    .option(
+      '--logo <file>',
+      'your logo for the top bar and the end card: a still PNG or JPEG, at most 256 KB and 2048x2048 pixels',
+    )
     .addOption(
       new Option('--from <theme>', 'the built-in theme to start from; it makes the theme dark or light')
         .choices([...BUILT_IN_THEMES, 'dark', 'light'])
         .default('midnight'),
     )
-    .option('--force', 'replace the theme.json of an existing theme with this name')
+    .option(
+      '--force',
+      'replace the theme.json of an existing theme with this name (pass --logo again to keep a logo)',
+    )
     .option('--allow-low-contrast', 'save a theme that fails the contrast check, with a warning')
     .action(async (name: string, flags: InitFlags, cmd: Command) => {
       const env = rt.env(cmd);
       const config = await loadConfig(env);
-      const [{ createTheme }, { assertNoLinks, ensureDir, homeLayout }, { LIMITS, readTextFile }] =
-        await Promise.all([
-          import('../../core/theme.ts'),
-          import('../../core/paths.ts'),
-          import('../files.ts'),
-        ]);
+      const [
+        { checkLogo, createTheme, MAX_LOGO_BYTES },
+        { assertNoLinks, ensureDir, homeLayout },
+        { LIMITS, readFileBytes, readTextFile },
+      ] = await Promise.all([
+        import('../../core/theme.ts'),
+        import('../../core/paths.ts'),
+        import('../files.ts'),
+      ]);
       let lowContrast = false;
       const brand = flags.brand
         ? await readTextFile(flags.brand, { label: '--brand', maxBytes: LIMITS.brandBytes, cwd: env.io.cwd })
         : undefined;
+      const logo = flags.logo
+        ? await readFileBytes(flags.logo, { label: '--logo', maxBytes: MAX_LOGO_BYTES, cwd: env.io.cwd })
+        : undefined;
+      // Named for what its bytes are, whatever the name of the file given.
+      const logoName =
+        logo && (checkLogo(logo, `${flags.logo}`).src.startsWith('data:image/png') ? 'logo.png' : 'logo.jpg');
       const { file } = await createTheme({
         name,
         from: flags.from,
@@ -124,29 +141,38 @@ export function registerTheme(program: Command, rt: CliRuntime): void {
         });
       }
       const path = join(folder, 'theme.json');
-      // A new file renamed into place: never written through a hard link to a file elsewhere.
-      const temp = join(folder, `.theme.json.${randomBytes(6).toString('hex')}.tmp`);
+      const logoPath = logoName ? join(folder, logoName) : null;
+      const temps: string[] = [];
+      // New files renamed into place: never written through a hard link to a file elsewhere.
+      const place = async (target: string, data: string | Buffer) => {
+        const temp = join(folder, `.${basename(target)}.${randomBytes(6).toString('hex')}.tmp`);
+        temps.push(temp);
+        await writeFile(temp, data, { mode: 0o600, flag: 'wx' });
+        await rename(temp, target);
+      };
       try {
         await ensureDir(themes);
         await ensureDir(folder);
-        await writeFile(temp, `${JSON.stringify(file, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
-        await rename(temp, path);
+        // The logo first, so that theme.json never names a logo that is not there.
+        if (logo && logoPath) await place(logoPath, logo);
+        await place(path, `${JSON.stringify(logoName ? { ...file, logo: logoName } : file, null, 2)}\n`);
       } catch (err) {
-        await rm(temp, { force: true }).catch(() => undefined);
+        await Promise.all(temps.map((temp) => rm(temp, { force: true }).catch(() => undefined)));
         throw new MergeStoryError('USAGE', `The theme could not be saved in ${folder}.`, {
-          hint: 'theme.json there must be a plain file. Remove the folder, or choose another name.',
+          hint: 'The files of the theme there must be plain files. Remove the folder, or choose another name.',
           cause: err,
         });
       }
       const colors = file.colors?.dark ?? file.colors?.light ?? {};
       const base = file.colors?.dark ? 'dark' : 'light';
       if (env.json) {
-        env.emitJson({ ok: true, theme: name, base, path, colors });
+        env.emitJson({ ok: true, theme: name, base, path, colors, ...(logoPath && { logo: logoPath }) });
         return;
       }
       const second = colors['accent-2'] ? ` and accent-2 ${colors['accent-2']}` : '';
       env.say(`Theme ${name} (${base}, from ${file.extends}): accent ${colors.accent}${second}.`);
       env.say(`Saved ${path}`);
+      if (logoPath) env.say(`Saved ${logoPath}`);
       const allow = lowContrast ? ' --allow-low-contrast' : '';
       env.say(`See it: mergestory theme preview ${name}${allow}`);
       env.say(`Use it: mergestory generate --theme ${name}${allow}`);

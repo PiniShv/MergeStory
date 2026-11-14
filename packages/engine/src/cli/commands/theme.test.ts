@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { loadTheme } from '../../core/theme.ts';
 import { dir, run } from '../../testing/cli.ts';
+import { makeJpeg, makePng } from '../../testing/png.ts';
 
 vi.mock('../../pipeline/index.ts', () => ({
   generate: vi.fn(),
@@ -65,6 +66,41 @@ describe('theme init', () => {
     expect(await readFile(outside, 'utf8')).toBe('keep me');
     expect((await stat(join(home(), 'themes', 'shared', 'theme.json'))).nlink).toBe(1);
     expect((await loadTheme('shared', { home: home() })).colors.accent).toBe('#ff7a1a');
+  });
+
+  it('copies a logo into the theme, named for what it is, and takes only PNG or JPEG', async () => {
+    await writeFile(join(dir, 'brand-mark'), makePng(240, 60));
+    const { code, stdout } = await run([
+      'theme',
+      'init',
+      'marked',
+      '--accent',
+      '#ff7a1a',
+      '--logo',
+      'brand-mark',
+    ]);
+    expect(code).toBe(0);
+    const folder = join(home(), 'themes', 'marked');
+    expect(stdout).toContain(`Saved ${join(folder, 'logo.png')}`);
+    expect(JSON.parse(await readFile(join(folder, 'theme.json'), 'utf8'))).toMatchObject({
+      logo: 'logo.png',
+    });
+    expect((await loadTheme('marked', { home: home() })).logo).toMatchObject({ width: 240, height: 60 });
+
+    // A JPEG is saved as logo.jpg, whatever its name says.
+    await writeFile(join(dir, 'photo.png'), makeJpeg(300, 100));
+    const jpeg = await run(['theme', 'init', 'photo', '--accent', '#ff7a1a', '--logo', 'photo.png']);
+    expect(jpeg.code).toBe(0);
+    expect(JSON.parse(await readFile(join(home(), 'themes', 'photo', 'theme.json'), 'utf8'))).toMatchObject({
+      logo: 'logo.jpg',
+    });
+    expect((await loadTheme('photo', { home: home() })).logo?.src).toMatch(/^data:image\/jpeg;base64,/);
+
+    await writeFile(join(dir, 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+    const svg = await run(['theme', 'init', 'vector', '--accent', '#ff7a1a', '--logo', 'logo.svg']);
+    expect(svg.code).toBe(2);
+    expect(svg.stderr).toContain('must be a PNG or JPEG image');
+    expect(await stat(join(home(), 'themes', 'vector')).catch(() => null)).toBeNull();
   });
 
   it('prints the next commands with --allow-low-contrast when the theme needed it', async () => {

@@ -602,6 +602,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     durationSec: timeline.durationSec,
     theme: theme.base,
     colors: theme.colors,
+    ...(theme.logo && { logo: theme.logo }),
     meta: {
       title: metaScrub.text(storyboard.title),
       repoLabel,

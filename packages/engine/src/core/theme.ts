@@ -1,7 +1,7 @@
 /**
  * Video themes. A theme is data, never code: one theme.json with colors for the design tokens of the
- * video runtime and the name of a Shiki theme for code. The built-in themes are in assets/themes and
- * go through the same loader as the themes people make.
+ * video runtime and the name of a Shiki theme for code, and, if it names one, a PNG or JPEG logo. The
+ * built-in themes are in assets/themes and go through the same loader as the themes people make.
  *
  * Where a theme comes from: a name finds a built-in theme, then $MERGESTORY_HOME/themes/<name>. Any
  * other value must be the full path of a theme folder, which only the command line, the user's own
@@ -16,8 +16,9 @@ import { bundledThemesInfo } from 'shiki';
 import { z } from 'zod';
 import { BUILT_IN_THEMES, THEME_NAME } from './config.ts';
 import { MergeStoryError } from './errors.ts';
+import { detectImage, isAnimatedPng } from './image.ts';
 import { assertNoLinks, homeLayout } from './paths.ts';
-import type { ThemeName } from './render-plan.ts';
+import type { ResolvedImage, ThemeName } from './render-plan.ts';
 
 export { BUILT_IN_THEMES };
 
@@ -91,6 +92,9 @@ const CHANGE_CONTRAST = 2;
 const BUILT_IN_DIR = fileURLToPath(new URL('../../assets/themes/', import.meta.url));
 const THEME_FILE = 'theme.json';
 const MAX_THEME_BYTES = 64 * 1024;
+export const MAX_LOGO_BYTES = 256 * 1024;
+/** The largest width and height of a logo, in pixels. */
+export const MAX_LOGO_SIDE = 2048;
 /** Never part of a color, but part of every way to make CSS load something or end a declaration. */
 const FORBIDDEN = ['://', 'url(', '@import', 'expression', '<', ';'];
 const MAX_VALUE_LENGTH = 64;
@@ -104,6 +108,8 @@ export interface ResolvedTheme {
   colors: Record<string, string>;
   /** The bundled Shiki theme for code. */
   shiki: string;
+  /** Drawn instead of the MergeStory mark in the top bar and on the end card. Only themes of your own have one. */
+  logo?: ResolvedImage;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,6 +352,11 @@ const ThemeFileSchema = z.strictObject({
         ),
     })
     .optional(),
+  // A file name only: no folder, and no dot first, so never ".." or a hidden file.
+  logo: z
+    .string()
+    .regex(/^[A-Za-z0-9_][\w.-]{0,63}$/, 'must be the name of a file in the theme folder, such as logo.png')
+    .optional(),
 });
 
 type ThemeFile = z.infer<typeof ThemeFileSchema>;
@@ -358,11 +369,16 @@ function themeError(
 }
 
 /**
- * The text of a file in a theme folder. Only a plain file inside the folder: no absolute path, no
+ * The bytes of a file in a theme folder. Only a plain file inside the folder: no absolute path, no
  * "..", no symbolic link, no hard link, and its real path must stay inside the folder. Built-in
  * themes may be hard links, which some package managers make when they install.
  */
-export async function readThemeFile(folder: string, name: string, builtIn = false): Promise<string> {
+export async function readThemeFile(
+  folder: string,
+  name: string,
+  builtIn = false,
+  maxBytes = MAX_THEME_BYTES,
+): Promise<Buffer> {
   if (isAbsolute(name) || name.split(/[\\/]/).includes('..')) {
     throw themeError(`"${name}" is not a file inside the theme folder.`);
   }
@@ -390,11 +406,11 @@ export async function readThemeFile(folder: string, name: string, builtIn = fals
     if (!stats.isFile() || (!builtIn && stats.nlink !== 1)) {
       throw themeError(`${name} in ${folder} must be a plain file with a single name, not a hard link.`);
     }
-    if (stats.size > MAX_THEME_BYTES) throw themeError(`${name} in ${folder} is larger than 64 KB.`);
+    if (stats.size > maxBytes) throw themeError(`${name} in ${folder} is larger than ${maxBytes / 1024} KB.`);
     if (!(await realpath(path)).startsWith(root + sep)) {
       throw themeError(`${name} is outside the theme folder ${folder}.`);
     }
-    return await handle.readFile('utf8');
+    return await handle.readFile();
   } finally {
     await handle.close();
   }
@@ -414,7 +430,7 @@ function parseThemeFile(data: unknown, where: string): ThemeFile {
 }
 
 async function readTheme(folder: string, builtIn: boolean): Promise<ThemeFile> {
-  const text = await readThemeFile(folder, THEME_FILE, builtIn);
+  const text = (await readThemeFile(folder, THEME_FILE, builtIn)).toString('utf8');
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -449,6 +465,40 @@ async function complete(file: ThemeFile, isBase: boolean): Promise<ResolvedTheme
   };
 }
 
+/**
+ * A logo as an image for the render plan: a still PNG or JPEG, told from its bytes, of at most
+ * MAX_LOGO_SIDE pixels each way. Never SVG: an SVG file is a document that can hold scripts and links.
+ */
+export function checkLogo(data: Buffer, where: string): ResolvedImage {
+  const info = detectImage(data);
+  if (!info || info.width > MAX_LOGO_SIDE || info.height > MAX_LOGO_SIDE) {
+    throw themeError(
+      `The logo ${where} must be a PNG or JPEG image of at most ${MAX_LOGO_SIDE}x${MAX_LOGO_SIDE} pixels.`,
+      'Export the logo as PNG or JPEG. SVG and other formats are not supported.',
+    );
+  }
+  // The browser would play it on its own clock, not the video's.
+  if (isAnimatedPng(data)) {
+    throw themeError(`The logo ${where} is an animated PNG.`, 'Export one still frame of it as PNG or JPEG.');
+  }
+  return {
+    src: `data:${info.mime};base64,${data.toString('base64')}`,
+    width: info.width,
+    height: info.height,
+  };
+}
+
+/** A theme of your own, with the logo its theme.json names. */
+async function ownTheme(folder: string): Promise<ResolvedTheme> {
+  const file = await readTheme(folder, false);
+  const theme = await complete(file, false);
+  if (file.logo) {
+    const data = await readThemeFile(folder, file.logo, false, MAX_LOGO_BYTES);
+    theme.logo = checkLogo(data, `${file.logo} in ${folder}`);
+  }
+  return theme;
+}
+
 function builtInTheme(name: BuiltIn): Promise<ResolvedTheme> {
   return readTheme(join(BUILT_IN_DIR, name), true).then((file) =>
     complete(file, name === BASES.dark || name === BASES.light),
@@ -481,10 +531,9 @@ export async function loadTheme(value: string, options: LoadThemeOptions = {}): 
         `Built-in themes: ${BUILT_IN_THEMES.join(', ')}. Your own themes go in ${join(homeLayout(options.home).themes, '<name>', THEME_FILE)}. For a theme folder here, write ./${name}.`,
       );
     }
-    theme = await complete(await readTheme(folder, false), false);
+    theme = await ownTheme(folder);
   } else if (isAbsolute(value)) {
-    const folder = basename(value) === THEME_FILE ? dirname(value) : value;
-    theme = await complete(await readTheme(folder, false), false);
+    theme = await ownTheme(basename(value) === THEME_FILE ? dirname(value) : value);
   } else {
     throw themeError(`"${value}" is not a theme name or the full path of a theme folder.`);
   }

@@ -9,7 +9,7 @@
  *
  * After an intended change of the look, write new goldens with MERGESTORY_UPDATE_STILLS=1.
  */
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +20,7 @@ import { runCommand } from '../core/process.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
 import { loadTheme } from '../core/theme.ts';
 import { testConfig, testContext } from '../testing/context.ts';
+import { makePng } from '../testing/png.ts';
 import { locateBrowser } from './browser.ts';
 import { BROWSER_ARGS, renderStillFrames } from './chromium-renderer.ts';
 import { fontFacesCss } from './fonts.ts';
@@ -46,7 +47,7 @@ const FLAT_RANGE = 6;
 async function samplePlan(name: keyof typeof FRAMES, themeName: string): Promise<RenderPlan> {
   const plan = JSON.parse(await readFile(join(PLANS, `${name}-sample.json`), 'utf8')) as RenderPlan;
   const theme = await loadTheme(themeName);
-  Object.assign(plan, { theme: theme.base, colors: theme.colors, ...DRAWN });
+  Object.assign(plan, { theme: theme.base, colors: theme.colors, logo: theme.logo, ...DRAWN });
   // All four badges on the first scene, so their colours are drawn too.
   if (name === 'templates') {
     plan.scenes[0]!.badges = (['simulated', 'actual', 'masked', 'reported'] as const).map((kind) => ({
@@ -65,6 +66,21 @@ async function pixels(file: string): Promise<Buffer> {
     ...['-vf', `scale=${width}:${height}:flags=area`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
   ]);
   return result.stdoutBuffer;
+}
+
+/** Where the pure magenta of the test logo shows in a still, in compared pixels. */
+async function magenta(file: string): Promise<{ count: number; left: number; right: number; top: number }> {
+  const rgb = await pixels(file);
+  const found = { count: 0, left: COMPARED.width, right: -1, top: COMPARED.height };
+  for (let i = 0; i < rgb.length / 3; i++) {
+    if (rgb[i * 3]! < 200 || rgb[i * 3 + 1]! > 80 || rgb[i * 3 + 2]! < 200) continue;
+    const [x, y] = [i % COMPARED.width, Math.floor(i / COMPARED.width)];
+    found.count++;
+    found.left = Math.min(found.left, x);
+    found.right = Math.max(found.right, x);
+    found.top = Math.min(found.top, y);
+  }
+  return found;
 }
 
 /** Channel differences on the pixels that are flat in the golden and have only flat neighbours. */
@@ -106,9 +122,16 @@ function flatDifferences(golden: Buffer, candidate: Buffer): number[] {
 
 describe.skipIf(!available)('golden stills', () => {
   let dir: string;
+  /** terminal, with a magenta logo twice as wide as it is tall. */
+  let logoTheme: string;
 
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'mergestory-stills-'));
+    logoTheme = join(dir, 'logo-theme');
+    await mkdir(logoTheme);
+    const theme = { schema: 1, name: 'logo', extends: 'terminal', logo: 'logo.png' };
+    await writeFile(join(logoTheme, 'theme.json'), JSON.stringify(theme));
+    await writeFile(join(logoTheme, 'logo.png'), makePng(200, 100, [255, 0, 255]));
   });
   afterAll(async () => {
     await rm(dir, { recursive: true, force: true });
@@ -148,7 +171,21 @@ describe.skipIf(!available)('golden stills', () => {
     }, 120_000);
   }
 
-  it('draws a theme without a single request: the page stays offline', async () => {
+  it("draws a theme's logo in the top bar and, larger, in the middle of the end card", async () => {
+    const out = join(dir, 'logo');
+    const { ctx } = testContext({ home: out, runDir: out });
+    const [scene, end] = await renderStillFrames(await samplePlan('core', logoTheme), [4, 43.5], out, ctx);
+    const top = await magenta(scene!);
+    expect(top.count, JSON.stringify(top)).toBeGreaterThan(5);
+    expect(top.right, JSON.stringify(top)).toBeLessThan(COMPARED.width / 4);
+    expect(top.top, JSON.stringify(top)).toBeLessThan(COMPARED.height / 8);
+    const card = await magenta(end!);
+    expect(card.count, JSON.stringify(card)).toBeGreaterThan(top.count * 4);
+    expect(Math.abs((card.left + card.right) / 2 - COMPARED.width / 2), JSON.stringify(card)).toBeLessThan(2);
+    expect(card.top, JSON.stringify(card)).toBeGreaterThan(COMPARED.height / 8);
+  }, 60_000);
+
+  it('draws a theme and its logo without a single request: the page stays offline', async () => {
     const instance = await chromium.launch({
       executablePath: browser!.path,
       headless: true,
@@ -156,7 +193,7 @@ describe.skipIf(!available)('golden stills', () => {
     });
     try {
       const html = buildPageHtml({ runtimeJs: await loadRuntimeBundle(), fontsCss: await fontFacesCss() });
-      const page = await PlanPage.open(instance, await samplePlan('templates', 'terminal'), html);
+      const page = await PlanPage.open(instance, await samplePlan('templates', logoTheme), html);
       for (const time of FRAMES.templates) await page.seek(time);
       expect(page.blockedRequests).toBe(0);
       expect(page.pageErrors).toEqual([]);

@@ -2,6 +2,22 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Themes
+
+- A theme can carry your logo. `mergestory theme init <name> --logo <file>` copies a still PNG or JPEG
+  into the theme, or you name the file in `theme.json` with `"logo": "logo.png"`. The logo takes the
+  place of the MergeStory mark and name in the top bar and on the end card, which keeps a small "Made
+  with MergeStory" line. The file must be a plain file in the theme folder, at most 256 KB and
+  2048x2048 pixels. SVG and animated PNG are not supported. See
+  [docs/themes.md](docs/themes.md#add-your-logo).
+
+### Screenshots
+
+- A JPEG screenshot with a rotation tag (EXIF orientation), as phones often save them, now keeps its
+  shape. Before, a screenshot turned a quarter this way came out stretched.
+
 ## Skill and plugin 1.3.0
 
 - The skill installs `mergestory@1.3.0`, which adds video themes.

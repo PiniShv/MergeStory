@@ -26,6 +26,8 @@ export interface RenderPlan {
    * have none, and the base colors of `theme` apply.
    */
   colors?: Record<string, string>;
+  /** The theme's logo, drawn instead of the MergeStory mark in the top bar and on the end card. */
+  logo?: ResolvedImage;
   meta: PlanMeta;
   captions: { enabled: boolean; cues: PlanCue[] };
   chapters: { title: string; startSec: number }[];
