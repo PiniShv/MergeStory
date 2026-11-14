@@ -819,7 +819,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <div class="wrap">
 <div class="head rv">
 <h2 id="h-themes">Your brand. Your colors.</h2>
-<p class="intro">Four themes come with MergeStory. Or make one from your brand colors with one command.</p>
+<p class="intro">Four themes come with MergeStory. Or make one from your brand colors and logo with one command.</p>
 </div>
 <ul class="looks" role="list">
 <li class="rv" style="--d:0"><img src="assets/theme-midnight.jpg" width="1120" height="630" loading="lazy" decoding="async" alt="The title scene of a sample video in midnight: a white, violet and cyan title on dark blue."><p><code>midnight</code> The default.</p></li>
@@ -830,10 +830,11 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <h3 class="pricehead rv">Make your own.</h3>
 <div class="brandcmd rv">
 <div class="term">
-<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Your brand colors</span></div>
+<div class="term-bar"><span class="dots"><i></i><i></i><i></i></span><span class="term-title">Your brand</span></div>
 <ul class="cmdlist" role="list">
 <li><code>mergestory theme init acme --accent "#ff7a1a"</code><span class="d">A theme from your brand color.</span></li>
 <li><code>mergestory theme init acme --brand brand.css</code><span class="d">Or from the colors in a file of yours: CSS, JSON or a list.</span></li>
+<li><code>mergestory theme init acme --accent "#ff7a1a" --logo logo.png</code><span class="d">Add your logo to the top bar and the end card: a still PNG or JPEG.</span></li>
 <li><code>mergestory theme preview acme</code><span class="d">See it on sample scenes. No model, no voice, no network.</span></li>
 <li><code>mergestory generate &lt;pull request URL&gt; --theme acme</code><span class="d">Make the video in your colors.</span></li>
 </ul>
@@ -841,8 +842,8 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </div>
 <div class="budget rv">
 <svg class="i" aria-hidden="true"><use href="#i-shield"/></svg>
-<div><h3>A theme is only colors.</h3>
-<p>It cannot change how added and removed lines look, or the labels on simulated pictures and masked secrets. By default, a contrast check refuses colors that are hard to read.</p></div>
+<div><h3>A theme is only colors and a logo.</h3>
+<p>It cannot change how added and removed lines look, or the labels on simulated pictures and masked secrets. By default, a contrast check refuses colors that are hard to read. A logo must be a still PNG or JPEG: SVG can hold scripts, so it is refused.</p></div>
 </div>
 <p class="cost-link rv"><a href="https://github.com/PiniShv/MergeStory/blob/main/docs/themes.md">How themes work <span aria-hidden="true">&nbsp;›</span></a></p>
 </div>
