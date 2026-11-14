@@ -2,6 +2,10 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Skill and plugin 1.4.0
+
+- The skill installs `mergestory@1.4.0`, which adds theme logos.
+
 ## 1.4.0
 
 ### Themes
