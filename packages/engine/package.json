@@ -1,6 +1,6 @@
 {
   "name": "mergestory",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Turn a pull request into a short, narrated explainer video: the real code, animated diagrams, captions and a review checklist. Open source, local and private by default.",
   "license": "Apache-2.0",
   "repository": {

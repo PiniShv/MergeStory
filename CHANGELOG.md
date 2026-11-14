@@ -2,6 +2,23 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## 1.4.1
+
+No changes to the engine: 1.4.1 works like 1.4.0.
+
+### Skill and plugin
+
+- The plugin version and the version that the skill installs now change in the release itself,
+  before its tag. Plugin catalogs that copy the plugin from a release tag now get the plugin made
+  for that release. Before, each tag carried the plugin of the release before it.
+- The skill installs `mergestory@1.4.1`. It still accepts 1.4.0, so it does not ask you to upgrade
+  from 1.4.0.
+
+### Releasing
+
+- The release workflow stops before npm when the tag does not match the package version, the
+  plugin version or the version that the skill installs.
+
 ## Skill and plugin 1.4.0
 
 - The skill installs `mergestory@1.4.0`, which adds theme logos.

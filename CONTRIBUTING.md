@@ -111,18 +111,23 @@ technical term. Use made-up names in examples (`acme/weather-app`, `/path/to/run
 
 Maintainers release from CI, never from a laptop:
 
-1. Set the new version in `packages/engine/package.json` and `packages/engine/src/version.ts`, run
-   `npm install` so the lockfile follows, and add the section to the changelog. Merge that.
-2. Push a tag with the same version, for example `v1.2.3`.
-3. The `Release` workflow checks the tag against the version, runs every check, builds the package,
-   pins the version of every dependency in it (`npm-shrinkwrap.json`), renders a short video with
-   exactly those files, and stages the package on npm. It signs in to npm with a short-lived
-   identity from GitHub, so the repository holds no npm token.
+1. In one pull request, set the new version in `packages/engine/package.json`,
+   `packages/engine/src/version.ts`, the plugin (`plugins/mergestory/.claude-plugin/plugin.json`
+   and the `version` in `plugins/mergestory/skills/mergestory/SKILL.md`), the version that the
+   skill installs (same file) and the example workflow. Raise the version that the skill asks for
+   ("It must print … or newer") only when the skill needs something new from the engine. Run
+   `npm install` so the lockfile follows, and add the section to the changelog.
+2. Merge it, and push a tag with the same version, for example `v1.2.3`. Plugin catalogs can copy
+   the plugin from this tag, so the plugin changes before the tag, not after it. Do steps 2 to 4 in
+   one go: until the approval in step 4, a new install of the skill asks npm for a version that it
+   does not have yet.
+3. The `Release` workflow checks the tag against the versions of the package, the plugin and the
+   engine that the skill installs, runs every check, builds the package, pins the version of every
+   dependency in it (`npm-shrinkwrap.json`), renders a short video with exactly those files, and
+   stages the package on npm. It signs in to npm with a short-lived identity from GitHub, so the
+   repository holds no npm token.
 4. A maintainer approves the staged version on npmjs.com with two-step sign-in. Only then can users
    install it.
-5. After that, update the version that the skill installs
-   (`plugins/mergestory/skills/mergestory/SKILL.md`), the plugin version
-   (`plugins/mergestory/.claude-plugin/plugin.json`) and the example workflow, in one pull request.
 
 ## Reporting security problems
 

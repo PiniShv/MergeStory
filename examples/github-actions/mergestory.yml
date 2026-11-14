@@ -74,7 +74,7 @@ jobs:
           key: mergestory-${{ runner.os }}-v1
 
       - name: Install the free local voice
-        run: npx --yes mergestory@1.4.0 setup kokoro
+        run: npx --yes mergestory@1.4.1 setup kokoro
 
       - name: Make the video and comment on the pull request
         env:
@@ -89,7 +89,7 @@ jobs:
           MERGESTORY_S3_SECRET_ACCESS_KEY: ${{ secrets.MERGESTORY_S3_SECRET_ACCESS_KEY }}
           MERGESTORY_LLM_PROVIDER: ${{ vars.MERGESTORY_LLM_PROVIDER || 'none' }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx --yes mergestory@1.4.0 generate "$PR_URL" --comment --json > mergestory-result.json
+        run: npx --yes mergestory@1.4.1 generate "$PR_URL" --comment --json > mergestory-result.json
 
       # Runs even when the step above failed, so the summary shows the error. With --json, a failure
       # is also written to the result file.

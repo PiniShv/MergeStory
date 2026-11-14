@@ -35,13 +35,17 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      - name: The tag must match the package version
+      # Plugin catalogs can copy the plugin from this tag, so the tag must carry this release's plugin.
+      - name: The tag must match the package, plugin and skill versions
         run: |
-          version=$(node -p "require('./packages/engine/package.json').version")
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match the package version $version." >&2
-            exit 1
-          fi
+          version=${GITHUB_REF_NAME#v}
+          plugin=plugins/mergestory/.claude-plugin/plugin.json
+          skill=plugins/mergestory/skills/mergestory/SKILL.md
+          fail() { echo "Tag $GITHUB_REF_NAME does not match $1." >&2; exit 1; }
+          [ "$(node -p "require('./packages/engine/package.json').version")" = "$version" ] || fail "the package version"
+          [ "$(node -p "require('./$plugin').version")" = "$version" ] || fail "the version in $plugin"
+          grep -qxF "  version: \"$version\"" "$skill" || fail "the version in $skill"
+          grep -qF "npm install -g mergestory@$version\`" "$skill" || fail "the version that $skill installs"
 
       - name: Install FFmpeg
         timeout-minutes: 10
