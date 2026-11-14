@@ -2,7 +2,7 @@
 
 A theme sets the colors of a video. MergeStory has four built-in themes, and you can make your own.
 A theme is data, never code: one `theme.json` file with colors and the name of a color scheme for
-code.
+code, and, if you want, your logo as a PNG or JPEG file.
 
 ## Choose a theme
 
@@ -62,6 +62,29 @@ word, the glows) from your colors, the way the built-in themes relate theirs. It
 `~/.mergestory/themes/<name>/theme.json` and tells you how to look at it. It never replaces a theme
 unless you pass `--force`. You can change the file by hand afterwards.
 
+## Add your logo
+
+Pass `--logo` when you make the theme:
+
+```bash
+mergestory theme init acme --accent "#ff7a1a" --logo logo.png
+```
+
+The logo takes the place of the MergeStory mark and name in the top bar of the video, and leads the
+end card. The end card keeps a small "Made with MergeStory" line.
+
+- The logo must be a PNG or JPEG file, at most 256 KB and 2048x2048 pixels. MergeStory checks the
+  bytes of the file, not its name. SVG is not supported: export your logo as PNG.
+- Use a logo that shows on the background of your theme: light on a dark theme, dark on a light one. A
+  PNG with a see-through background works best.
+- The end card draws the logo at most 720 pixels wide and 160 pixels tall, and the top bar at most 44
+  pixels tall. A logo of about 720x160 pixels, or bigger, stays sharp.
+- `theme init` copies the file into the theme folder as `logo.png` or `logo.jpg` and names it in
+  `theme.json`. With `--force`, pass `--logo` again to keep the logo.
+
+In a theme you make by hand, put the file in the theme folder and name it in `theme.json`, for example
+`"logo": "logo.png"`.
+
 ## Make your own theme by hand
 
 1. Make a folder `~/.mergestory/themes/<name>`. The name has 1 to 40 characters: `a-z`, `0-9` and
@@ -103,8 +126,9 @@ The built-in themes are good examples. Each one is a `theme.json` in
 | `extends` | Optional. A built-in theme to start from. Your colors replace its colors. Without `extends`, a dark theme starts from `midnight` and a light theme from `paper`. |
 | `colors.dark` or `colors.light` | One of the two. The key says if the video is dark or light, and it holds the colors you change. A theme that extends a built-in theme uses the same key as that theme. |
 | `code.shiki` | Optional. A Shiki color scheme for code that comes with MergeStory, for example `github-dark-default`, `monokai` or `github-light-default`. Use a dark scheme for a dark theme and a light scheme for a light theme. Without it, the theme keeps the scheme of the theme it starts from. |
+| `logo` | Optional. The file name of your logo in the theme folder, for example `logo.png`: a name only, not a path. See [Add your logo](#add-your-logo). |
 
-Any other key is an error. Every value must be a color written as `#rgb`, `#rrggbb`, `#rrggbbaa`,
+Any other key is an error. Every color must be written as `#rgb`, `#rrggbb`, `#rrggbbaa`,
 `rgb()`, `rgba()`, `hsl()` or `hsla()`, with numbers of at most three digits before the point and four
 after, and a hue from 0 to 360. Color names such as `red`, `var()`, `url()` and anything else are
 refused.
@@ -138,8 +162,8 @@ follow `accent-2`, unless you set them.
 - The badges keep their colors: "Simulated UI", "Actual screenshot", "Secrets masked" and "Reported by
   caller". A theme cannot hide that a picture is simulated or that secrets were masked.
 - Secrets are masked before the theme is used. A theme has no setting for masking.
-- Fonts, sizes and the layout stay the same. The logo and the end card keep their shape and text; a
-  theme only changes their colors.
+- Fonts, sizes and the layout stay the same. A theme can put your logo in place of the MergeStory mark
+  and name. The rest of the end card keeps its text.
 
 ## The checks
 
@@ -184,8 +208,10 @@ In CI, prefer a theme name. A theme folder inside the repository can be changed 
 
 ## Safety
 
-- A theme is one JSON file with colors. It cannot run code, load a font or an image, or reach the
-  network. The render page stays offline, with the same content security policy as before.
-- In a theme folder, MergeStory reads only `theme.json`, and only when it is a plain file inside the
-  folder: not a symbolic link, not a hard link, and at most 64 KB. A theme folder that is a symbolic
-  link is refused.
+- A theme is one JSON file with colors, and at most one logo image. It cannot run code, load a font or
+  reach the network. The logo goes into the video as data, so the render page stays offline, with the
+  same content security policy as before.
+- In a theme folder, MergeStory reads only `theme.json` (at most 64 KB) and the logo it names (at most
+  256 KB), and only when each is a plain file inside the folder: not a symbolic link and not a hard
+  link. A theme folder that is a symbolic link is refused.
+- A logo must be a PNG or JPEG image. SVG is refused, because an SVG file can hold scripts and links.

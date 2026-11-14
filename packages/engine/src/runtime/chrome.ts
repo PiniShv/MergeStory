@@ -14,6 +14,7 @@ import { clamp01, ease, enter, progress, q, type StyleWriter } from './anim.ts';
 import { css, h, s } from './dom.ts';
 import { fitLines, monoChars, pad2, truncatePath } from './fit.ts';
 import { shift } from './motion.ts';
+import { fitImage, isDataImage } from './templates/parts.ts';
 import type { SceneSlot } from './transitions.ts';
 
 /** Horizontal padding of the caption pill, in pixels. */
@@ -202,6 +203,17 @@ export function brandMark(size: number): HTMLElement {
   return h('div', { class: 'ms-mark', style: { width: `${size}px`, height: `${size}px` } }, glyph);
 }
 
+/** The theme's logo, fitted into a box without distortion, or null when the plan has none. */
+export function logoImage(plan: RenderPlan, boxW: number, boxH: number): HTMLElement | null {
+  const logo = plan.logo;
+  if (!logo || !isDataImage(logo.src)) return null;
+  const { width, height } = fitImage(logo.width, logo.height, boxW, boxH);
+  return h('img', {
+    attrs: { src: logo.src, alt: '' },
+    style: { display: 'block', width: `${width}px`, height: `${height}px` },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers (no DOM)
 // ---------------------------------------------------------------------------
@@ -359,11 +371,12 @@ export function createChrome(
   const chapterTotal = chapters.length;
 
   // Top bar: brand and change label on the left, chapter counter and scene title on the right.
+  const logo = logoImage(plan, 280, 44);
   const brand = h(
     'div',
     { class: 'ms-chrome__brand' },
-    brandMark(44),
-    h('div', { class: 'ms-chrome__word' }, 'Merge', h('b', { text: 'Story' })),
+    logo ?? brandMark(44),
+    logo ? null : h('div', { class: 'ms-chrome__word' }, 'Merge', h('b', { text: 'Story' })),
     meta.repoLabel || meta.changeLabel ? h('div', { class: 'ms-chrome__sep' }) : null,
     meta.repoLabel ? h('div', { class: 'ms-chrome__repo', text: meta.repoLabel }) : null,
     meta.changeLabel ? h('div', { class: 'ms-chrome__change', text: meta.changeLabel }) : null,

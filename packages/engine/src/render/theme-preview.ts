@@ -89,7 +89,13 @@ export async function previewTheme(
   const stills: string[] = [];
   for (const shot of SHOTS) {
     const plan = JSON.parse(await readFile(join(SAMPLES, `${shot.plan}.json`), 'utf8')) as RenderPlan;
-    Object.assign(plan, { theme: theme.base, colors: theme.colors, width: 960, height: 540 });
+    Object.assign(plan, {
+      theme: theme.base,
+      colors: theme.colors,
+      logo: theme.logo,
+      width: 960,
+      height: 540,
+    });
     await recolorCode(plan, theme.shiki);
     stills.push(...(await renderStillFrames(plan, [...shot.times], join(outDir, shot.plan), ctx)));
   }

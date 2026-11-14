@@ -522,12 +522,13 @@ folder, as for `generate --theme`. See [themes.md](themes.md).
 ## `mergestory theme init`
 
 ```
-mergestory theme init <name> [--accent <color>] [--accent-2 <color>] [--brand <file>] [--from <theme>]
-                       [--force] [--allow-low-contrast]
+mergestory theme init <name> [--accent <color>] [--accent-2 <color>] [--brand <file>] [--logo <file>]
+                       [--from <theme>] [--force] [--allow-low-contrast]
 ```
 
-Makes a theme from your brand colors and saves it as `$MERGESTORY_HOME/themes/<name>/theme.json`. The
-theme goes through the same checks as any theme before it is saved. See
+Makes a theme from your brand colors and saves it as `$MERGESTORY_HOME/themes/<name>/theme.json`, with
+your logo next to it when you pass `--logo`. The theme goes through the same checks as any theme before
+it is saved. See
 [themes.md](themes.md#make-a-theme-from-your-brand-colors).
 
 | Flag | What it does | Default |
@@ -535,8 +536,9 @@ theme goes through the same checks as any theme before it is saved. See
 | `--accent <color>` | The main brand color, for example `"#ff7a1a"`. | the first brand color of `--brand` |
 | `--accent-2 <color>` | A second brand color, for labels and highlights. | the next brand color of `--brand`, else the one of `--from` |
 | `--brand <file>` | A file with your brand colors (CSS, JSON or a list), up to 1 MB, with colors written as `#hex`, `rgb()` or `hsl()`. Its first color that labels can use on the chosen look becomes the accent, and the next such color of a clearly different hue the second accent. | none |
+| `--logo <file>` | Your logo for the top bar and the end card: a PNG or JPEG file, at most 256 KB and 2048x2048 pixels. It is copied into the theme folder as `logo.png` or `logo.jpg`. See [themes.md](themes.md#add-your-logo). | none |
 | `--from <theme>` | The built-in theme to start from: `midnight` or `dark` (a dark theme), `paper` or `light` (a light one), `high-contrast` or `terminal`. | `midnight` |
-| `--force` | Replace the `theme.json` of an existing theme with this name. | off |
+| `--force` | Replace the `theme.json` of an existing theme with this name. Pass `--logo` again to keep a logo. | off |
 | `--allow-low-contrast` | Save a theme that fails the contrast check, with a warning. | off |
 
 One of `--accent` and `--brand` is needed. The name cannot be the name of a built-in theme.
@@ -679,7 +681,7 @@ request update would be skipped.
 | `jobs` | `{"jobs": [{"id", "status", "createdAt", "updatedAt", "progress", "title", "error"}]}` |
 | `serve` | `{"ok": true, "url", "host", "port", "auth", "allowRoots"}` once, at start. The server then runs until you stop it. |
 | `cache clear` | `{"ok": true, "path", "cleared": ["tts", "llm"]}` |
-| `theme init` | `{"ok": true, "theme", "base", "path", "colors"}`. `colors` are the colors written to the theme. |
+| `theme init` | `{"ok": true, "theme", "base", "path", "colors", "logo"}`. `colors` are the colors written to the theme, and `logo` is the path of the copied logo, only with `--logo`. |
 | `theme preview` | `{"ok": true, "theme", "base", "sheet", "stills"}`. `base` is `dark` or `light`, `sheet` is the page and `stills` the image files. |
 
 ## Exit codes

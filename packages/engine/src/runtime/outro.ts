@@ -1,7 +1,7 @@
 /** Branded end card shown after the last scene. */
 import type { RenderPlan } from '../core/render-plan.ts';
 import { ease, enter, type StyleWriter } from './anim.ts';
-import { brandMark } from './chrome.ts';
+import { brandMark, logoImage } from './chrome.ts';
 import { css, h } from './dom.ts';
 import { grow, pop, rise } from './motion.ts';
 import { OUTRO_FADE_SEC } from './transitions.ts';
@@ -67,12 +67,16 @@ const OUTRO_CSS = String.raw`
   white-space: nowrap;
 }
 .ms-outro__note { margin-top: 36px; max-width: 1120px; font-size: 28px; font-weight: 450; line-height: 1.45; color: var(--text-2); }
+.ms-outro__credit { margin-top: 30px; font-size: 24px; font-weight: 500; color: var(--text-3); }
 `;
 
 export interface Outro {
   root: HTMLElement;
   update(t: number): void;
 }
+
+/** Under the end card of a video with a theme's logo, which takes the place of the MergeStory name. */
+const CREDIT = 'Made with MergeStory';
 
 /** Lines at most this long become chips (repo, change, commit); longer ones become a note. */
 const CHIP_MAX_CHARS = 36;
@@ -87,16 +91,21 @@ export function createOutro(plan: RenderPlan, sw: StyleWriter): Outro | null {
   const chipLines = lines.filter((l) => l.length <= CHIP_MAX_CHARS).slice(0, 5);
   const noteLines = lines.filter((l) => l.length > CHIP_MAX_CHARS).slice(0, 2);
 
-  const mark = brandMark(128);
-  const word = h('div', { class: 'ms-outro__word' }, 'Merge', h('b', { text: 'Story' }));
+  // A theme's logo takes the place of the mark and the name; a small credit line keeps the name.
+  const logo = logoImage(plan, 720, 160);
+  const mark = logo ?? brandMark(128);
+  const word = logo ? null : h('div', { class: 'ms-outro__word' }, 'Merge', h('b', { text: 'Story' }));
   const brand = h('div', { class: 'ms-outro__brand' }, mark, word);
   const tagline = spec.tagline ? h('div', { class: 'ms-outro__tag', text: spec.tagline }) : null;
   const rule = h('div', { class: 'ms-outro__rule' });
   const chips = chipLines.map((text) => h('span', { class: 'ms-outro__chip', text }));
   const chipRow = chips.length > 0 ? h('div', { class: 'ms-outro__chips' }, ...chips) : null;
   const notes = noteLines.map((text) => h('div', { class: 'ms-outro__note', text }));
+  // Once only: the sample plans of theme preview already carry it as a line.
+  const credit =
+    logo && !lines.includes(CREDIT) ? h('div', { class: 'ms-outro__credit', text: CREDIT }) : null;
 
-  const col = h('div', { class: 'ms-outro__col' }, brand, tagline, rule, chipRow, ...notes);
+  const col = h('div', { class: 'ms-outro__col' }, brand, tagline, rule, chipRow, ...notes, credit);
   const root = h('div', { class: 'ms-outro' }, h('div', { class: 'ms-outro__glow' }), col);
   root.style.display = 'none';
 
@@ -109,12 +118,13 @@ export function createOutro(plan: RenderPlan, sw: StyleWriter): Outro | null {
       sw.visible(root, opacity > 0, 'flex');
       if (opacity <= 0) return;
       pop(sw, mark, enter(local, 0.15, 0.7, ease.linear), 0.8);
-      rise(sw, word, enter(local, 0.3, 0.7), 24);
+      if (word) rise(sw, word, enter(local, 0.3, 0.7), 24);
       if (tagline) rise(sw, tagline, enter(local, 0.6, 0.7), 20);
       sw.opacity(rule, enter(local, 0.85, 0.5));
       grow(sw, rule, 'x', enter(local, 0.85, 0.6, ease.outCubic));
       chips.forEach((chip, i) => rise(sw, chip, enter(local, 1.0 + i * 0.1, 0.55), 16));
       notes.forEach((note, i) => rise(sw, note, enter(local, 1.4 + i * 0.15, 0.6), 14));
+      if (credit) rise(sw, credit, enter(local, 1.7, 0.6), 12);
     },
   };
 }

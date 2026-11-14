@@ -57,8 +57,8 @@ export interface ReadFileOptions {
   cwd: string;
 }
 
-/** Read a UTF-8 text file of at most `maxBytes`. Only regular files are read, never directories or devices. */
-export async function readTextFile(path: string, options: ReadFileOptions): Promise<string> {
+/** Read a file of at most `maxBytes`. Only regular files are read, never directories or devices. */
+export async function readFileBytes(path: string, options: ReadFileOptions): Promise<Buffer> {
   const { label, maxBytes } = options;
   const absolute = resolve(options.cwd, path);
   assertNotSensitive(absolute, label);
@@ -84,16 +84,21 @@ export async function readTextFile(path: string, options: ReadFileOptions): Prom
     const buffer = Buffer.alloc(maxBytes + 1);
     const { bytesRead } = await handle.read(buffer, 0, maxBytes + 1, 0);
     if (bytesRead > maxBytes) throw tooLarge(bytesRead);
-    const bytes = buffer.subarray(0, bytesRead);
-    if (bytes.includes(0)) throw new MergeStoryError('USAGE', `${label}: ${path} is not a text file.`);
-    const text = bytes.toString('utf8');
-    return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+    return buffer.subarray(0, bytesRead);
   } catch (err) {
     if (err instanceof MergeStoryError) throw err;
     throw describeFsError(err, label, path);
   } finally {
     await handle.close();
   }
+}
+
+/** Read a UTF-8 text file of at most `maxBytes`. Only regular files are read, never directories or devices. */
+export async function readTextFile(path: string, options: ReadFileOptions): Promise<string> {
+  const bytes = await readFileBytes(path, options);
+  if (bytes.includes(0)) throw new MergeStoryError('USAGE', `${options.label}: ${path} is not a text file.`);
+  const text = bytes.toString('utf8');
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
 
 /** Read and parse a JSON file. `onInvalid` picks the error code for malformed JSON. */

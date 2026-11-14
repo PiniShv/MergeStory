@@ -26,9 +26,9 @@ export function pngHeader(width: number, height: number): Buffer {
   return Buffer.concat([PNG_SIGNATURE, pngHeaderChunk(width, height)]);
 }
 
-/** A valid PNG of the given size (solid black). Keep it small. */
-export function makePng(width: number, height: number): Buffer {
-  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3)]);
+/** A valid PNG of the given size in one color, black unless given. Keep it small. */
+export function makePng(width: number, height: number, rgb: [number, number, number] = [0, 0, 0]): Buffer {
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(width * 3, Buffer.from(rgb))]);
   const raw = Buffer.concat(Array.from({ length: height }, () => row));
   return Buffer.concat([
     PNG_SIGNATURE,

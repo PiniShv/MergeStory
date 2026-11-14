@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BASE_CSS } from '../runtime/styles.ts';
+import { makePng, pngHeader } from '../testing/png.ts';
 import {
   accentColors,
   BUILT_IN_THEMES,
@@ -222,7 +223,7 @@ describe('the files of a theme folder', () => {
     );
     await expect(readThemeFile(folder, '/etc/passwd')).rejects.toThrow('not a file inside the theme folder');
     await expect(readThemeFile(folder, 'missing.json')).rejects.toThrow('has no missing.json');
-    expect(await readThemeFile(folder, 'theme.json')).toContain('"schema":1');
+    expect((await readThemeFile(folder, 'theme.json')).toString()).toContain('"schema":1');
   });
 
   it('refuses a theme.json that is a symbolic link or a hard link', async () => {
@@ -248,6 +249,52 @@ describe('the files of a theme folder', () => {
     await expect(loadTheme(await themeFolder(`${' '.repeat(65 * 1024)}{}`))).rejects.toThrow(
       'larger than 64 KB',
     );
+  });
+});
+
+describe('a logo', () => {
+  /** A theme folder whose theme.json names the logo `name`, which holds `data` (none: no file). */
+  async function logoTheme(data: Buffer | null, name = 'logo.png'): Promise<string> {
+    const folder = await themeFolder(dark({}, { logo: name }));
+    if (data) await writeFile(join(folder, name), data);
+    return folder;
+  }
+
+  it('goes into the plan as an image, with its size', async () => {
+    const theme = await loadTheme(await logoTheme(makePng(320, 80)));
+    expect(theme.logo).toMatchObject({ width: 320, height: 80 });
+    expect(theme.logo?.src).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('is a PNG or JPEG, told from its bytes, of at most 2048x2048 pixels and 256 KB', async () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+    for (const name of ['logo.svg', 'logo.png']) {
+      await expect(loadTheme(await logoTheme(svg, name)), name).rejects.toThrow(
+        'must be a PNG or JPEG image',
+      );
+    }
+    await expect(loadTheme(await logoTheme(pngHeader(2049, 100)))).rejects.toThrow(
+      'at most 2048x2048 pixels',
+    );
+    const large = Buffer.concat([makePng(10, 10), Buffer.alloc(256 * 1024)]);
+    await expect(loadTheme(await logoTheme(large))).rejects.toThrow('larger than 256 KB');
+  });
+
+  it('is a plain file in the theme folder: never a path, a link or a file that is not there', async () => {
+    for (const name of ['../logo.png', 'images/logo.png', '/etc/passwd', '.logo.png', '..']) {
+      await expect(loadTheme(await themeFolder(dark({}, { logo: name }))), name).rejects.toThrow(
+        'logo: must be the name of a file in the theme folder',
+      );
+    }
+    await expect(loadTheme(await logoTheme(null))).rejects.toThrow('has no logo.png');
+    const outside = join(dir, `outside-${n++}.png`);
+    await writeFile(outside, makePng(10, 10));
+    const linked = await logoTheme(null);
+    await symlink(outside, join(linked, 'logo.png'));
+    await expect(loadTheme(linked)).rejects.toThrow('must be a plain file, not a link');
+    const hard = await logoTheme(null);
+    await link(outside, join(hard, 'logo.png'));
+    await expect(loadTheme(hard)).rejects.toThrow('not a hard link');
   });
 });
 
