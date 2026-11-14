@@ -41,14 +41,14 @@ mergestory generate . --base main --head feature/retry
 mergestory generate . --dry-run
 ```
 
-Pick a theme, or make one from your brand color:
+Pick a theme, or make one from your brand color and logo:
 
 ```bash
 mergestory generate . --theme paper
 ```
 
 ```bash
-mergestory theme init acme --accent "#ff7a1a"
+mergestory theme init acme --accent "#ff7a1a" --logo logo.png
 ```
 
 By default no paid service is called, speech and rendering run locally, and links are private.
