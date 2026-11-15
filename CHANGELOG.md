@@ -24,6 +24,9 @@ All notable changes to MergeStory are listed here, newest first.
   when the same session wrote the change.
   The website and the plugin README no longer say "often more than 10,000 tokens".
 - The website says that the checks do not prove every sentence is right.
+- The website and the README lead with "No MergeStory fee" and say what the agent's usage costs:
+  about 20 cents per video if you pay per token. The "$0" headline is gone. The cost film is a
+  new cut that says the same.
 
 ## 1.4.1
 

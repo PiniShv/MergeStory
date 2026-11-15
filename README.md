@@ -32,9 +32,10 @@ Every narration line cites evidence from the change. Code on screen is read from
 
 Claims nobody can check, like "all tests pass", are removed unless real test results were supplied.
 
-## $0. By design.
+## No MergeStory fee. By design.
 
-By default, MergeStory itself calls no paid service.[^cost] [See what it costs and why.](#what-it-costs)
+By default, MergeStory itself calls no paid service.[^cost] The real cost is your coding agent's usage:
+about 20 cents per video if you pay per token. [See what it costs and why.](#what-it-costs)
 
 ## Private by default.
 
@@ -222,7 +223,7 @@ paid call. To cap your real bill, set a spending limit or alert with each provid
 
 Read [the full cost breakdown](docs/cost.md).
 
-▶ [Watch the 70-second film on what it costs.](https://www.youtube.com/watch?v=6X5-zCe8PbU) It shows the
+▶ [Watch the short film on what it costs.](https://www.youtube.com/watch?v=qdXa9S12tpg) It shows the
 default settings. See [what can still cost money](docs/cost.md#what-can-still-cost-money).
 
 ## Privacy and security
