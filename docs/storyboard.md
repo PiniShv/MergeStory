@@ -282,6 +282,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `unverified-claim` | A sentence claims something that no reported result backs. It was removed. |
 | `url-in-text` | A sentence has a web address whose host is not in the code. It was removed. |
 | `unknown-identifier` | A sentence names something that is not in the change. It was removed. |
+| `internal-term` | A sentence uses MergeStory's own words, such as "the pack". It stays; rewrite it for the viewer. |
 | `secret-masked` | Text that looks like a secret was masked. |
 | `language-mismatch` | The storyboard names another language than the configured one. It was set to the configured one. |
 | `claims-english-only` | The configured language is not English. Claims such as "all tests pass" are found in English text only, so none were checked. |

@@ -42,6 +42,7 @@ wanted is gone:
 | `unverified-claim` | A sentence says that tests pass, CI is green, or gives a speed-up, a coverage figure or a word such as "secure". It was removed. | Cite a passing test run you reported with `--tests-file` (`T1`), or leave the claim out. |
 | `unknown-identifier` | A sentence names a function, file or constant that is not in the change. It was removed. | Check the spelling against `evidence.md`. A name that only the pull request text or the notes hold needs a line that cites that source. |
 | `url-in-text` | A sentence has a web address that is not in the code. It was removed. | Write it without the address. |
+| `internal-term` | A sentence says "the pack" or "the evidence pack". The viewer has never seen it. The sentence stays. | Say what the change shows. |
 | `code-ref-out-of-range` | The lines do not exist in the file. The visual became the changed-files overview. | Copy the line numbers from the hunk in `evidence.md`. |
 | `code-ref-unreadable` | The file could not be read at that side. The visual became the changed-files overview. | Use the other side, or another file. |
 | `diff-too-tall` | A diff view needs more than 18 rows. The range was shortened, or the mode became `snippet`. | Use a shorter range. |

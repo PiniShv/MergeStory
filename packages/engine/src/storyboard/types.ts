@@ -17,6 +17,7 @@ export type IssueCode =
   | 'url-in-text'
   | 'unverified-claim'
   | 'unknown-identifier'
+  | 'internal-term'
   | 'secret-masked'
   | 'language-mismatch'
   | 'claims-english-only'

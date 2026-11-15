@@ -261,6 +261,7 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Write for the ear: short sentences, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. Stay within the word budget in the task line.
 - One or two sentences per line, at most ${LIMITS.maxWordsPerNarrationLine} words. One to six lines per scene.
 - No markdown, no lists, no emoji.
+- The viewer has never seen the evidence pack. Do not say "the pack" or "the evidence pack"; say what the change shows. The engine warns about these words.
 - Be explicit. Name the real functions, types and constants. State the real values from the code. Say how the important lines work and why they are there. "This function changed" teaches nothing.
 - Say names naturally: function and constant names are fine to say. Never read a file path out loud character by character, because the screen shows it. Say "in the retry module" or just the file name. Write numbers without underscores.
 - Keep sentences short. One idea per sentence.

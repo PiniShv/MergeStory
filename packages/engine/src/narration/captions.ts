@@ -33,7 +33,10 @@ function wrapLines(words: string[]): string | null {
   for (let i = 1; i < words.length; i++) {
     const first = words.slice(0, i).join(' ');
     const second = words.slice(i).join(' ');
-    if (first.length > CAPTION_LINE_CHARS || second.length > CAPTION_LINE_CHARS) continue;
+    // A single word longer than a line cannot be cut, so it may have a line to itself. Without this, a
+    // long identifier forced one cue per word, each on screen for a fraction of a second.
+    if (i > 1 && first.length > CAPTION_LINE_CHARS) continue;
+    if (words.length - i > 1 && second.length > CAPTION_LINE_CHARS) continue;
     // Prefer breaking after punctuation, then the most even split.
     const punctuation = /[.,;:!?]$/.test(words[i - 1] ?? '') ? -6 : 0;
     const score = Math.abs(first.length - second.length) + punctuation;

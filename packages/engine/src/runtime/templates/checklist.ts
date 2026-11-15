@@ -235,7 +235,12 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
       const levels = checklistLevels(items.length);
       for (const level of levels) {
         apply(level);
-        if (fits()) return;
+        if (fits()) break;
+      }
+      // One or two cards used to sit at the top with the lower half empty: center a short list.
+      if (!grid) {
+        const spare = root.clientHeight - head.offsetHeight - 16 - gridEl.offsetHeight;
+        gridEl.style.marginTop = `${16 + Math.max(0, spare / 2)}px`;
       }
     },
     update(t) {
