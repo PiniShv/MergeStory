@@ -20,6 +20,18 @@ describe('names that are not in the change', () => {
     );
   });
 
+  it("warns about MergeStory's own words in the narration and keeps the sentence", async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 1).narration[1].text = 'The pack flags that no test file changed.';
+    const result = await run(sb, fx);
+    expect(result.errors).toEqual([]);
+    expect(result.storyboard!.scenes[1]!.narration[1]!.text).toBe(
+      'The pack flags that no test file changed.',
+    );
+    expect(codes(result.warnings)).toContain('internal-term');
+  });
+
   it('accepts names from the diff, the symbols, the PR text and the code on screen', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);

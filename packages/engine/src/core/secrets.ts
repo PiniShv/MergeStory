@@ -232,6 +232,11 @@ export function findSecrets(text: string): SecretMatch[] {
   for (const m of text.matchAll(ASSIGNMENT)) {
     const [full, name, value] = m as unknown as [string, string, string];
     if (!shouldMask(name, value)) continue;
+    // `key = "Customer.Field." + name`: under a weak name, a dotted name prefix that is joined to
+    // something else is not a secret. Only letters and separators, ending in "." or ":", qualify.
+    const after = (m.index ?? 0) + full.length;
+    const joined = /^[ \t]*\+/.test(text.slice(after, after + 8));
+    if (joined && !STRONG_NAME.test(name) && /^[A-Za-z][A-Za-z.:_-]*[.:]$/.test(value)) continue;
     const start = (m.index ?? 0) + full.lastIndexOf(value);
     matches.push({ rule: 'assigned-secret', start, end: start + value.length });
   }

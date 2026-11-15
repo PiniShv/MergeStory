@@ -191,3 +191,12 @@ describe('toSrt', () => {
     expect(toSrt([{ startSec: 0, endSec: 1, text: 'a < b & c' }])).toContain('a < b & c');
   });
 });
+
+describe('splitCaptionText: a word longer than a line', () => {
+  it('keeps the sentence in one cue and gives the long word its own line', () => {
+    const chunks = splitCaptionText('Check readIfEnabled in ForeignCurrencyPaymentsConfigurationManager.');
+    expect(chunks).toEqual([
+      { text: 'Check readIfEnabled in\nForeignCurrencyPaymentsConfigurationManager.', words: 4 },
+    ]);
+  });
+});

@@ -49,6 +49,12 @@ const GAP_WORD = String.raw`(?!${STOP_WORD}\b)(?:[^\s.!?;]|\.(?=\w))+`;
 const GAP = String.raw`(?:\s+${GAP_WORD}){1,8}?`;
 const GAP_RESULT = `(?:pass(?:es|ed|ing)?|succeed(?:s|ed)?|green|successful(?:ly)?|clean(?:ly)?)${PASS_END}`;
 
+/**
+ * "checks" with no word that makes it a CI check. After a word of time in the same clause it is a
+ * step in the code, not a result: "loads them only after the flag and plan checks pass".
+ */
+const BARE_CHECKS = String.raw`(?<!\b(?:after|once|when|whenever|until|before|while)\b[^.;,!?]*)checks`;
+
 /** Words that make the next one a thing and not an order: "Test suite: green" is a label, "Test the loop" is not. */
 const TEST_AS_NOUN = String.raw`(?:suites?|cases?|runs?|results?|files?|coverage|output|report|status)`;
 
@@ -92,7 +98,7 @@ const RULES: { kind: ClaimKind; patterns: RegExp[] }[] = [
       ),
       new RegExp(String.raw`\b(?:${CI_SUBJECT}|checks?|status)\s*[:=\-–—]+\s*${BADGE_OK}`, 'i'),
       new RegExp(
-        String.raw`\b(?:(?:all|the|required|status|ci|automated)\s+checks?|checks)\s+(?:(?:are|is|were|now|still|all|have|has|been)\s+)*(?:green|passing|successful|${PASS_RESULT})`,
+        String.raw`\b(?:(?:all|the|required|status|ci|automated)\s+checks?|${BARE_CHECKS})\s+(?:(?:are|is|were|now|still|all|have|has|been)\s+)*(?:green|passing|successful|${PASS_RESULT})`,
         'i',
       ),
       // "Build ✅", "CI: ✔", "✅ checks".

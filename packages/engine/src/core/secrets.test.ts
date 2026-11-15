@@ -17,6 +17,8 @@ describe('maskSecrets', () => {
     ["apiKey: 'Zx81-p0qL-77Ab-qq91'", 'Zx81-p0qL-77Ab-qq91'],
     ['SECRET_KEY_BASE=f00dfacecafe1234beef', 'f00dfacecafe1234beef'],
     ['postgres://app:Sup3rS3cret@db.internal:5432/app', 'Sup3rS3cret'],
+    ['const password = "hunter2hunter2" + suffix;', 'hunter2hunter2'],
+    ['const key = "Zx81p0qL77Abqq91Lm3T" + suffix;', 'Zx81p0qL77Abqq91Lm3T'],
   ])('masks %s', (input, secret) => {
     const { text, masked } = maskSecrets(input);
     expect(masked).toBeGreaterThan(0);
@@ -32,6 +34,7 @@ describe('maskSecrets', () => {
     'export const API_KEY = "${API_KEY}";',
     "headers: { 'x-request-id': requestId },",
     'const sha = "3f9c2ab4e1d0c5b6a7f8e9d0c1b2a3f4e5d6c7b8";',
+    'String key = "Customer.Field." + String.valueOf(i);',
   ])('leaves ordinary code alone: %s', (input) => {
     expect(maskSecrets(input)).toEqual({ text: input, masked: 0 });
   });

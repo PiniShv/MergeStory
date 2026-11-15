@@ -2,6 +2,21 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- A sentence about checks in the code, such as "only after the flag and plan checks pass", is no
+  longer removed as a claim about CI. "Checks pass" on its own is still a claim.
+- A caption with a word longer than one line stays one caption. Before, a long name split the
+  sentence into captions that were on screen for about half a second each.
+- A name prefix that is joined to something else, such as `key = "Customer.Field." + name`, is no
+  longer masked as a secret. Values under names like `password` are masked as before.
+- New warning `internal-term`: the narration says "the pack" or "the evidence pack", which a viewer
+  does not know. The sentence stays. The authoring guide now tells the agent to avoid these words.
+- A review scene with one or two cards is centered. Before, the cards sat at the top with the
+  lower half empty.
+
 ## 1.4.1
 
 No changes to the engine: 1.4.1 works like 1.4.0.

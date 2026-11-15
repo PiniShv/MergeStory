@@ -21,6 +21,10 @@ import { joinSentences, splitSentences } from './text.ts';
 import type { IssueCode, ValidationDeps, ValidationIssue } from './types.ts';
 import { codeTextOf, foreignUrls, hostsIn } from './urls.ts';
 
+/** MergeStory's own words for its input. A viewer has never seen the evidence pack. */
+const INTERNAL_TERM =
+  /\b(?:evidence pack|the pack (?:flags?|says?|shows?|lists?|notes?|reports?|marks?|has|contains?))\b/i;
+
 /** A sentence on one line, cut to 80 characters, for a message that quotes it. */
 function quoted(sentence: string): string {
   return truncate(sentence.replace(/\s+/g, ' ').trim(), 80);
@@ -233,6 +237,14 @@ export class Run {
    * `cited` cites that text. Returns null when the sentence stays, and why it went when it does not.
    */
   checkSentence(sentence: string, cited: readonly string[], path: string): Dropped | null {
+    const internal = INTERNAL_TERM.exec(sentence);
+    if (internal) {
+      this.warn(
+        path,
+        'internal-term',
+        `says "${internal[0]}", which means nothing to a viewer; say what the change shows`,
+      );
+    }
     if (foreignUrls(sentence, this.codeHosts, this.codeText).length > 0) {
       this.fix(path, `removed a sentence with a web address that is not in the code: "${quoted(sentence)}"`);
       this.warn(

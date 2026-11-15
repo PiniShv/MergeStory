@@ -347,3 +347,19 @@ describe('findClaim: a workflow that holds only under a condition', () => {
     expect(kindOf(sentence)).toBeNull();
   });
 });
+
+describe('findClaim: checks that are steps in the code', () => {
+  it.each([
+    'The overload loads them from the ERP only after the flag and plan checks pass.',
+    'It saves the row once both checks pass.',
+  ])('"%s" is a description', (sentence) => {
+    expect(kindOf(sentence)).toBeNull();
+  });
+
+  it.each(['Checks pass.', 'All checks pass after the fix.', 'After the rebase, checks pass.'])(
+    '"%s" is still a claim',
+    (sentence) => {
+      expect(kindOf(sentence)).toBe('ci-green');
+    },
+  );
+});
