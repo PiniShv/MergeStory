@@ -19,6 +19,7 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Docs
 
+- MergeStory for Chrome is in the Chrome Web Store. The website and the README link it.
 - The cost page shows what a coding agent's usage looks like, measured with a Sonnet-class model: the
   tokens, roughly $0.20 to $0.45 per video for a fresh agent, as in CI, and roughly $0.15 to $0.25
   when the same session wrote the change.

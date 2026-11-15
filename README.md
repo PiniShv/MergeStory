@@ -162,7 +162,8 @@ Public links for a private repository are blocked unless you allow them. Set-up 
 
 ### Watch inside the pull request
 
-[MergeStory for Chrome](https://github.com/PiniShv/mergestory-chrome) is a small browser extension. A
+[MergeStory for Chrome](https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl) is a small browser extension from the
+Chrome Web Store ([source](https://github.com/PiniShv/mergestory-chrome)). A
 click on the MergeStory link in the comment plays the video right there, so the reviewer stays on the
 pull request page. It works on GitHub with videos on YouTube and Google Drive, and it loads nothing
 until you click.
@@ -264,7 +265,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [Publishing to YouTube](docs/youtube.md)
 - [Publishing to Google Drive](docs/drive.md)
 - [The demo](examples/demo/README.md)
-- [MergeStory for Chrome](https://github.com/PiniShv/mergestory-chrome)
+- [MergeStory for Chrome](https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl) ([source](https://github.com/PiniShv/mergestory-chrome))
 - [Security](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
