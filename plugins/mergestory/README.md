@@ -35,8 +35,9 @@ no telemetry.
 After you open a pull request, Claude offers a video and makes one only when you say yes.
 
 MergeStory adds no charge by default. Writing the storyboard is extra usage in your Claude Code
-session: Claude reads MergeStory's instructions and evidence pack, often more than 10,000 tokens. If
-you pay per token, that usage is billed to you. A model or a cloud voice that you turn on, storage and
+session: Claude reads MergeStory's instructions and evidence pack again on each step. A fresh agent
+for each pull request used several hundred thousand tokens per video, mostly cached reads. If you pay
+per token, that usage is billed to you. A model or a cloud voice that you turn on, storage and
 CI minutes can also cost money. See [what can still cost
 money](https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md#what-can-still-cost-money).
 

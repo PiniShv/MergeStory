@@ -21,9 +21,10 @@ settings.
 **The agent already knows the change.** The expensive part of a video is understanding the change. The coding
 agent that made or reviews the change already understands it, so it writes the storyboard. No second model
 reads the whole change again. Writing the storyboard is still extra usage in your session: the agent reads
-MergeStory's instructions and evidence pack, often more than 10,000 tokens. If you pay for your agent per
-token, its provider bills that usage, and it can cost more than an opt-in model. MergeStory adds no API call
-of its own.
+MergeStory's instructions and evidence pack again on each step. If you pay for your agent per token, its
+provider bills that usage, and it can cost many times more than an opt-in model. See
+[what the agent's usage looks like](#what-the-agents-usage-looks-like). MergeStory adds no API call of its
+own.
 
 **Everything else is ordinary local software.** The voice is an open model on your CPU. The renderer is the
 browser you already have. FFmpeg encodes the video. There is no render farm, no cloud GPU, no account and
@@ -36,6 +37,31 @@ line cites evidence and that every line reference points at real code in your re
 
 **Sharing can cost a little.** YouTube has no storage fee. Google Drive uses your storage quota. Object storage
 bills storage and requests, and Amazon S3 also bills data transfer out. Keeping the video local costs nothing.
+
+## What the agent's usage looks like
+
+We measured a fresh agent for each pull request: an agent with no earlier context, as in CI or a batch
+run. The agent was Claude Sonnet 5.5, at list prices checked 2026-11.
+
+| Per video | Measured |
+|---|---|
+| Model calls | 9 to 12 |
+| Tokens written to the cache | 50,000 to 80,000 |
+| Tokens read from the cache | 630,000 to 930,000 |
+| Output tokens | 4,000 to 6,000 |
+| Cost | roughly $0.20 to $0.45, depending on how your provider bills cache writes |
+
+- **Most of the cost is fixed.** The agent reads the skill, the authoring guide and the evidence pack again
+  on each step. A change of more than 500 lines cost about a third more than a change of 50 lines or less.
+- **These numbers are for a fresh agent.** We have not measured an agent that made the change earlier in
+  the same session.
+- **For many pull requests, an opt-in model costs far less.** `--llm anthropic` is under $0.02 per video
+  at the worst case: see [the worked example](#a-worked-example). It writes from the evidence pack alone,
+  and we have not compared the two for quality.
+- **The budget does not cover this.** The $0.25 budget counts only MergeStory's own model and voice
+  calls, never your agent's usage.
+
+Your numbers will differ with the agent, the model and its prices. Your provider's bill is the final word.
 
 ## When you want more
 
@@ -135,9 +161,10 @@ forwards to a paid service. To cap your real bill, set a spending limit or alert
 MergeStory itself charges nothing, and a default run calls no paid service. Other things can still cost
 money. Their providers bill you, not MergeStory, and the `Cost` line does not include them.
 
-- **Your coding agent.** It reads MergeStory's instructions and evidence pack (often more than 10,000
-  tokens) and writes the storyboard in your session. If you pay for your agent per token, its provider bills that usage, and it can
-  cost more than an opt-in model.
+- **Your coding agent.** It reads MergeStory's instructions and evidence pack again on each step and
+  writes the storyboard in your session. If you pay for your agent per token, its provider bills that
+  usage, and it can cost many times more than an opt-in model. See
+  [what the agent's usage looks like](#what-the-agents-usage-looks-like).
 - **Models and voices you turn on.** `--llm anthropic` or `openai`, and `--tts openai` or `elevenlabs`, are
   billed to your own account by that provider. MergeStory counts them, but only as estimates.
 - **Storage and delivery.** Amazon S3 bills storage, requests and data transfer out. Cloudflare R2 bills

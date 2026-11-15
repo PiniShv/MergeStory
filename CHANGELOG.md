@@ -2,6 +2,15 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Docs
+
+- The cost page shows what a coding agent's usage looks like when a fresh agent writes each
+  storyboard, as in CI: the tokens, and roughly $0.20 to $0.45 per video with a Sonnet-class model.
+  The website and the plugin README no longer say "often more than 10,000 tokens".
+- The website says that the checks do not prove every sentence is right.
+
 ## 1.4.1
 
 No changes to the engine: 1.4.1 works like 1.4.0.
