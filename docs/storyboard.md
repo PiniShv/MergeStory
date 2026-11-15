@@ -287,9 +287,9 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `language-mismatch` | The storyboard names another language than the configured one. It was set to the configured one. |
 | `claims-english-only` | The configured language is not English. Claims such as "all tests pass" are found in English text only, so none were checked. |
 | `line-too-long` | A single sentence has more than 40 words. It was kept, but captions get hard to read. |
-| `code-ref-unreadable` | The file could not be read at that side. The visual was replaced by the changed-files overview, or the reference was removed. |
+| `code-ref-unreadable` | The file could not be read at that side. In a storyboard that an agent or a person wrote, this is an error for a code visual: rewrite the scene. Otherwise the visual was replaced by the changed-files overview, or the reference was removed. |
 | `code-ref-out-of-range` | The lines are outside the file. The visual was replaced by the changed-files overview, or the reference was removed. |
-| `diff-too-tall` | The diff view needs more than 18 rows. The range was shortened, or switched to `snippet`. |
+| `diff-too-tall` | The diff view needs more than 18 rows. In a storyboard that an agent or a person wrote, this is an error that names a range that fits. Otherwise the range was shortened, or switched to `snippet`. |
 | `no-evidence` | A new or changed node, step or item cites no valid evidence. |
 | `visual-fallback` | A visual had nothing to show and was replaced by the changed-files overview. |
 | `screenshot-unknown` | A before and after panel names a screenshot that you did not supply. The panel shows its bullets instead. |

@@ -125,6 +125,7 @@ export async function checkStoryboard(
     inputs: p.inputs,
     reader: p.reader,
     config: p.config,
+    authored: true,
   });
   if (!result.storyboard) return result;
   // Say what rendering would do when the storyboard is over the maximum length.

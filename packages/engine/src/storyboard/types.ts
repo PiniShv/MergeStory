@@ -63,6 +63,12 @@ export interface ValidationDeps {
   config: Config;
   /** The storyboard is the offline one, written in English by MergeStory itself. */
   offline?: boolean;
+  /**
+   * An agent or a person wrote the storyboard and reads this result. A code visual that cannot show
+   * what was asked is then an error for the author to fix, not something to repair silently: the
+   * narration was written for the code as asked.
+   */
+  authored?: boolean;
 }
 
 export interface GenerateStoryboardInput {

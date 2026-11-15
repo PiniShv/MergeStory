@@ -162,6 +162,8 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
     h(
       'div',
       { class: 'ms-chk__legend' },
+      // Nobody rated these: the storyboard's author proposes them.
+      h('span', { text: 'Suggested priority' }),
       ...legend.map((l) => h('span', { class: `ms-sev-${l.sev}` }, h('i'), `${l.count} ${l.sev}`)),
     ),
   );
