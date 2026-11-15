@@ -329,7 +329,7 @@ function renderChecklist(checklist: WatchPageData['checklist']): string {
             );
           })
           .join('')}</ul>`;
-  return `<section class="card" aria-labelledby="h-review"><h2 id="h-review">What to review</h2>${body}</section>`;
+  return `<section class="card" aria-labelledby="h-review"><h2 id="h-review">What to review</h2>${items.length > 0 ? '<p class="muted">The priorities are suggestions from the video, not ratings by the author.</p>' : ''}${body}</section>`;
 }
 
 function renderEvidence(evidence: EvidenceLink[]): string {

@@ -6,6 +6,17 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Changed:** for a storyboard that an agent or a person wrote (`mergestory agent validate`,
+  `agent render`, `validate` and `--storyboard`), two automatic repairs are now errors, because they
+  left the voice describing code that was not on screen:
+  - `diff-too-tall`: a diff view that needs more than 18 rows. The message names a range that fits.
+    Before, the range was shortened or the view became a snippet without the removed lines.
+  - `code-ref-unreadable` on a code visual: the file cannot be read. Before, the scene became the
+    changed-files overview.
+
+  A storyboard that a model writes (`--llm`) and the offline storyboard are repaired as before.
+- The review scene, the watch page and the pull request comment say that the priorities of review
+  items are suggestions.
 - A sentence about checks in the code, such as "only after the flag and plan checks pass", is no
   longer removed as a claim about CI. "Checks pass" on its own is still a claim.
 - A caption with a word longer than one line stays one caption. Before, a long name split the

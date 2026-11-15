@@ -160,10 +160,13 @@ export class Run {
   readonly refs: RefResolver;
   /** The storyboard is the offline one, written in English by MergeStory itself. */
   readonly offline: boolean;
+  /** An agent or a person wrote the storyboard and reads the result (see ValidationDeps.authored). */
+  readonly authored: boolean;
 
   constructor(deps: ValidationDeps) {
     this.config = deps.config;
     this.offline = deps.offline ?? false;
+    this.authored = deps.authored ?? false;
     this.evidence = new Map(deps.analysis.evidence.map((item) => [item.id, item]));
     this.tests = deps.inputs.tests;
     this.screenshots = new Map(deps.inputs.screenshots.map((shot) => [shot.id, shot]));

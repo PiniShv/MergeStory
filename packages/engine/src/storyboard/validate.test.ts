@@ -317,6 +317,24 @@ describe('code references', () => {
     expect(codes(result.warnings)).toContain('code-ref-unreadable');
   });
 
+  it('asks the author of a storyboard to rewrite a scene whose file cannot be read', async () => {
+    const fx = retryFixture();
+    const failing = {
+      ...fx.deps,
+      authored: true,
+      reader: {
+        readFile: async () => {
+          throw new Error('disk error');
+        },
+      },
+    };
+    const result = await validateStoryboard(baseStoryboard(fx), failing);
+    expect(result.storyboard).toBeNull();
+    expect(result.errors.find((e) => e.code === 'code-ref-unreadable')!.message).toContain(
+      'use a visual without code',
+    );
+  });
+
   it('shortens a long range to eighteen lines around the first focus range', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);
@@ -586,6 +604,48 @@ describe('the diff view of a code reference', () => {
     expect(visual.focus).toEqual([{ startLine: 1, endLine: 3, note: 'The start', beat: 0 }]);
     expect(result.fixes.some((f) => f.includes('shortened the range from 1-16'))).toBe(true);
     expect(codes(result.warnings)).toContain('diff-too-tall');
+  });
+
+  it('asks the author of a storyboard to fix a diff view that is too tall, and names a range that fits', async () => {
+    const fx = swapFixture();
+    const sb = swapStoryboard(
+      fx,
+      code({ focus: [{ startLine: 1, endLine: 3, note: 'The start', beat: 0 }] }),
+    );
+    const result = await validateStoryboard(sb, { ...fx.deps, authored: true });
+    expect(result.storyboard).toBeNull();
+    const error = result.errors.find((e) => e.code === 'diff-too-tall')!;
+    expect(error.path).toBe('scenes[1].visual.ref');
+    expect(error.message).toMatch(/Use lines 1-\d+, which keep the highlights/);
+    expect(error.message).toContain('"snippet"');
+  });
+
+  it('asks the author to choose when the highlights alone do not fit a diff view', async () => {
+    const fx = swapFixture();
+    const sb = swapStoryboard(
+      fx,
+      code({
+        focus: [
+          { startLine: 2, endLine: 3, note: 'First new lines', beat: 0 },
+          { startLine: 15, endLine: 16, note: 'The end', beat: 1 },
+        ],
+      }),
+    );
+    const result = await validateStoryboard(sb, { ...fx.deps, authored: true });
+    expect(result.storyboard).toBeNull();
+    expect(result.errors.find((e) => e.code === 'diff-too-tall')!.message).toContain(
+      'do not describe the removed lines',
+    );
+  });
+
+  it('accepts a snippet from an author: it has no removed lines, so it fits', async () => {
+    const fx = swapFixture();
+    const sb = swapStoryboard(
+      fx,
+      code({ mode: 'snippet', focus: [{ startLine: 1, endLine: 3, note: 'The start', beat: 0 }] }),
+    );
+    const result = await validateStoryboard(sb, { ...fx.deps, authored: true });
+    expect(result.errors).toEqual([]);
   });
 
   it('counts the added lines when the range is at the old side', async () => {

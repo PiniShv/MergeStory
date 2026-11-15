@@ -300,6 +300,20 @@ function isSoftFailure(outcome: RefFailureOutcome): boolean {
   return outcome.reason === 'unreadable' || outcome.reason === 'out-of-range';
 }
 
+/**
+ * A file that cannot be read used to turn the scene into the changed-files overview while the
+ * narration still walked through the code. An author can rewrite the scene, so it is an error for them.
+ */
+function mustFixUnreadable(outcome: RefFailureOutcome, run: Run): boolean {
+  return run.authored && outcome.reason === 'unreadable';
+}
+
+function refFailureMessage(outcome: RefFailureOutcome, run: Run): string {
+  return mustFixUnreadable(outcome, run)
+    ? `${outcome.message}. Show a file that can be read, or use a visual without code and do not walk through the code of this file`
+    : outcome.message;
+}
+
 /** The lines of a reference are on screen, so the names in them are known names. */
 function recordShownLines(lines: readonly string[], ref: CodeRefInput, run: Run): void {
   addCorpusText(run.corpus, lines.slice(ref.startLine - 1, ref.endLine).join('\n'));
@@ -384,6 +398,18 @@ function fitDiffWindow(visual: CodeVisual, file: ChangedFile, vp: string, run: R
   const range = `${ref.startLine}-${ref.endLine}`;
   const need = `the diff view of lines ${range} needs ${rows} rows because it shows the removed lines too, and at most ${max} fit on screen`;
   const fitted = fitDiffRange(file, ref.side, ref.startLine, ref.endLine, keep, max);
+  if (run.authored) {
+    // The narration was written for the range as asked. Cutting it, or dropping the removed lines,
+    // leaves the voice describing code that is not on screen, so the author decides.
+    run.error(
+      `${vp}.ref`,
+      'diff-too-tall',
+      fitted
+        ? `${need}. Use lines ${fitted[0]}-${fitted[1]}, which keep the highlights, and describe only lines that are on screen. Or set mode to "snippet", which shows no removed lines`
+        : `${need}, and the highlights alone do not fit. Highlight fewer lines or use a shorter range. Or set mode to "snippet", which shows no removed lines, and do not describe the removed lines`,
+    );
+    return;
+  }
   if (fitted) {
     visual.ref = { ...ref, startLine: fitted[0], endLine: fitted[1] };
     run.fix(`${vp}.ref`, `shortened the range from ${range} to ${fitted[0]}-${fitted[1]}: ${need}`);
@@ -412,9 +438,9 @@ async function resolveCodeRefs(scene: Scene, visual: VisualOf<'code'>, vp: strin
     : null;
   const outcome = await run.refs.resolve(visual.ref, { focusCentre: centre });
   if (!outcome.ok) {
-    if (isSoftFailure(outcome))
+    if (isSoftFailure(outcome) && !mustFixUnreadable(outcome, run))
       fallbackToFiles(scene, vp, outcome.message, run, [visual.ref.path], FAILURE_CODES[outcome.reason]);
-    else run.error(`${vp}.ref`, FAILURE_CODES[outcome.reason], outcome.message);
+    else run.error(`${vp}.ref`, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, run));
     return;
   }
   for (const note of outcome.notes) run.fix(`${vp}.ref`, note);
@@ -456,11 +482,11 @@ async function resolveBeforeAfterRefs(
     }
     const outcome = await run.refs.resolve(panel.codeRef);
     if (!outcome.ok) {
-      if (isSoftFailure(outcome)) {
+      if (isSoftFailure(outcome) && !mustFixUnreadable(outcome, run)) {
         soft ??= outcome;
         paths.push(panel.codeRef.path);
       } else {
-        run.error(`${panelPath}.codeRef`, FAILURE_CODES[outcome.reason], outcome.message);
+        run.error(`${panelPath}.codeRef`, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, run));
       }
       continue;
     }

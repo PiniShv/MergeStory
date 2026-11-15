@@ -44,8 +44,8 @@ wanted is gone:
 | `url-in-text` | A sentence has a web address that is not in the code. It was removed. | Write it without the address. |
 | `internal-term` | A sentence says "the pack" or "the evidence pack". The viewer has never seen it. The sentence stays. | Say what the change shows. |
 | `code-ref-out-of-range` | The lines do not exist in the file. The visual became the changed-files overview. | Copy the line numbers from the hunk in `evidence.md`. |
-| `code-ref-unreadable` | The file could not be read at that side. The visual became the changed-files overview. | Use the other side, or another file. |
-| `diff-too-tall` | A diff view needs more than 18 rows. The range was shortened, or the mode became `snippet`. | Use a shorter range. |
+| `code-ref-unreadable` | The file could not be read at that side. For a code visual this is an error. | Use the other side or another file. If no code can be shown, use a visual without code and do not walk through that file's code in the narration. |
+| `diff-too-tall` | A diff view needs more than 18 rows, because it shows the removed lines too. This is an error. | Use the range the message names, and describe only lines that are on screen. Or set `mode` to `snippet`, which shows no removed lines, and do not describe the removed lines. |
 | `no-evidence` | A new or changed node, step or item cites no valid evidence. | Cite an `M`, `F`, `S` or `R` id. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
