@@ -204,7 +204,7 @@ export function buildPrComment(data: CommentData): string {
   const chapters = chapterMarkdownLines(data.chapters);
   if (chapters.length > 0) lines.push('', '**Chapters**', '', ...chapters);
   const checklist = checklistLines(data.checklist);
-  if (checklist.length > 0) lines.push('', '**What to review**', '', ...checklist);
+  if (checklist.length > 0) lines.push('', '**What to review** (suggested priorities)', '', ...checklist);
 
   lines.push('', '---', `<sub>${footerText(data)}</sub>`);
   return lines.join('\n');

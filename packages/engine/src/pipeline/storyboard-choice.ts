@@ -72,7 +72,7 @@ async function offlineStoryboard(
 
 /** The storyboard that the caller wrote, checked. */
 async function suppliedStoryboard(p: Prepared, supplied: unknown): Promise<StoryboardChoice> {
-  const validation = await validateStoryboard(supplied, validationDeps(p));
+  const validation = await validateStoryboard(supplied, { ...validationDeps(p), authored: true });
   if (!validation.storyboard) {
     throw new MergeStoryError(
       'GROUNDING_FAILED',

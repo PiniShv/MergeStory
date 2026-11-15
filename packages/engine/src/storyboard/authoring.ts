@@ -250,7 +250,7 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 
 - Point at code with a CodeRef: "path" exactly as listed in the pack, "side" ("head" is the new version, "base" the old one) and line numbers from the pack.
 - Use at most ${LIMITS.maxCodeLines} lines per CodeRef. Choose the most important hunk, not the first one. Centre the range on the function you explain, so that every function or constant you name is on screen.
-- In mode "diff" the view also shows removed lines between the new ones, and the screen holds ${LIMITS.maxCodeLines} rows. When the new and removed lines of the range need more, use a shorter range or mode "snippet". The engine otherwise shortens the range around your focus ranges, or switches to "snippet".
+- In mode "diff" the view also shows removed lines between the new ones, and the screen holds ${LIMITS.maxCodeLines} rows. When the new and removed lines of the range need more, use a shorter range or mode "snippet". Otherwise the check fails with diff-too-tall. Over a snippet, do not describe removed lines.
 - Talk only about code inside the range. A viewer cannot see a function that the range leaves out.
 - Use mode "diff" only for lines inside a changed hunk. Put "focus" ranges on the lines you talk about, in the order you talk about them. Give each a short note and the beat of the line that explains it.
 - A new file exists only at "head". A deleted file exists only at "base".
