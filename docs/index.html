@@ -396,7 +396,7 @@ html:not(.js) .panel+.panel{border-top:1px solid var(--t-line)}
 
 :root{
   /* Poster images for the films. */
-  --poster-hero:url(assets/film-poster.jpg);--poster-cost:url(assets/cost-film-poster.jpg);--poster-demo:url(demo/poster.jpg);
+  --poster-hero:url(assets/film-poster.jpg);--poster-cost:url(assets/cost-film-poster.jpg);--poster-demo:url(demo/poster.jpg);--poster-chrome:url(assets/chrome-film-poster.jpg);
 }
 .brand img{border-radius:6px}
 
@@ -407,7 +407,7 @@ html:not(.js) .panel+.panel{border-top:1px solid var(--t-line)}
 .poster{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000 var(--poster) center/cover no-repeat;text-decoration:none;color:#1d1d1f}
 .poster::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,.38)}
 .poster>*{position:relative}
-.p-hero{--poster:var(--poster-hero)}.p-cost{--poster:var(--poster-cost)}.p-demo{--poster:var(--poster-demo)}
+.p-hero{--poster:var(--poster-hero)}.p-cost{--poster:var(--poster-cost)}.p-demo{--poster:var(--poster-demo)}.p-chrome{--poster:var(--poster-chrome)}
 .bigplay{display:flex;align-items:center;gap:12px;max-width:calc(100% - 32px);min-height:58px;padding:0 28px 0 20px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(245,245,247,.94);color:#1d1d1f;font:600 1.0625rem/1.2 var(--sans);box-shadow:0 20px 50px -10px rgba(0,0,0,.6)}
 .poster:hover .bigplay{background:#fff}
 .poster:focus-visible{outline:3px solid #64b5ff;outline-offset:-6px}
@@ -1083,6 +1083,17 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <li class="rv" style="--d:3"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><h3>The pull request</h3><p>Add <code class="nw">--comment</code> to post one comment with the link.</p></li>
 </ul>
 <p class="more rv" style="text-align:center"><strong>New:</strong> <a href="https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl" target="_blank" rel="noopener">MergeStory for Chrome</a> plays the video inside the pull request, so your reviewers stay on the page. It works on GitHub with videos on YouTube and Google Drive, and it loads nothing until you click.</p>
+<figure class="film small cost-film rv" data-yt="80lZhMxjrs0" data-title="MergeStory for Chrome (film)">
+<div class="shot">
+<a class="poster p-chrome" href="https://www.youtube.com/watch?v=80lZhMxjrs0" target="_blank" rel="noopener"><span class="bigplay"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg>Play the extension film<span class="sr"> (opens YouTube)</span></span></a>
+</div>
+<div class="film-bar">
+<button type="button" class="ctl vbtn" hidden><svg class="i" aria-hidden="true"><use href="#i-play"/></svg><span>Play</span><span class="sr"> the extension film</span></button>
+<button type="button" class="ctl cc" aria-pressed="false" title="Start with captions on" hidden><svg class="i" aria-hidden="true"><use href="#i-cc"/></svg><span class="ccl" aria-hidden="true">Captions</span><span class="sr">Start with captions on</span></button>
+<button type="button" class="ctl fs" title="Full screen" hidden><svg class="i" aria-hidden="true"><use href="#i-fs"/></svg><span class="fsl">Full screen</span><span class="sr"> (play the extension film in full screen)</span></button>
+<a class="ctl yt" href="https://www.youtube.com/watch?v=80lZhMxjrs0" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
+</div>
+</figure>
 </div>
 </section>
 
