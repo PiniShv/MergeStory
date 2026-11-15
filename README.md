@@ -168,6 +168,8 @@ click on the MergeStory link in the comment plays the video right there, so the 
 pull request page. It works on GitHub with videos on YouTube and Google Drive, and it loads nothing
 until you click.
 
+▶ [Watch the 30-second film on MergeStory for Chrome.](https://www.youtube.com/watch?v=80lZhMxjrs0)
+
 ## Use it in CI
 
 Run the CLI in GitHub Actions on labelled pull requests and post the link as a comment. Copy
