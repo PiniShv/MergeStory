@@ -1,10 +1,12 @@
 # What MergeStory costs
 
-**$0 per video from MergeStory.** By default MergeStory calls no paid service. Other things can still cost you
+**$0 per video from MergeStory.** By default MergeStory calls no paid service. The real cost is your coding
+agent's usage: about 20 cents per video if you pay per token. See
+[what the agent's usage looks like](#what-the-agents-usage-looks-like). Other things can still cost you
 money: see [What can still cost money](#what-can-still-cost-money).
 
 ▶ [Watch the 70-second film on what it costs.](https://www.youtube.com/watch?v=6X5-zCe8PbU) It shows the default
-settings.
+settings. The film says the storyboard brings "no extra bill". That is true for MergeStory's own fee, not for your coding agent's usage: about 20 cents per video if you pay per token.
 
 ## Step by step
 

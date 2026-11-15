@@ -591,7 +591,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <!-- Hero -->
 <section class="hero" aria-labelledby="h-hero">
 <div class="wrap">
-<a class="eyebrow" href="#cost"><b>New</b><span>$0 per video, by design<sup class="fn-ref" aria-hidden="true">1</sup></span><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></a>
+<a class="eyebrow" href="#cost"><b>New</b><span>No MergeStory fee. About 20 cents of agent usage per video.<sup class="fn-ref" aria-hidden="true">1</sup></span><svg class="i" aria-hidden="true"><use href="#i-right"/></svg></a>
 <h1 id="h-hero"><span class="nl">Every change</span> <span class="grad nl">has a story.</span></h1>
 <p class="lead">MergeStory turns a pull request into a short narrated video. What changed, why, and what to review.</p>
 <p class="sub">Open source, and it runs on your machine.</p>
@@ -876,13 +876,13 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <section class="sec" id="cost" aria-labelledby="h-cost">
 <div class="wrap">
 <div class="head rv">
-<h2 id="h-cost">$0. By design.</h2>
-<p class="intro">A default run calls no paid service of its own.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> No account. No key for your first video.</p>
+<h2 id="h-cost">No MergeStory fee. By design.</h2>
+<p class="intro">A default run calls no paid service of its own.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> No account. No key for your first video. The real cost is your coding agent's usage: about 20 cents per video if you pay per token.</p>
 </div>
 <p class="big0 rv" aria-hidden="true"><span class="grad">$0</span></p>
 <p class="big0-l rv"><span class="sr">$0 </span>per video, from MergeStory<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
 <ul class="steps5" role="list">
-<li class="rv" style="--d:0"><span class="k">Storyboard</span><span class="v">Varies</span><p class="d">Written by the coding agent you already use. That is extra usage in your session. If you pay per token, your agent's provider bills it.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
+<li class="rv" style="--d:0"><span class="k">Storyboard</span><span class="v">~$0.20</span><p class="d">Written by the coding agent you already use. That is extra usage in your session. If you pay per token, your agent's provider bills it: we measured roughly $0.15 to $0.45 per video with a Sonnet-class agent. On a subscription plan it counts toward your usage limits.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
 <li class="rv" style="--d:1"><span class="k">Voice</span><span class="v">$0</span><p class="d">Kokoro, an open English voice that runs on your own CPU. Installed once: about 400 MB, plus the voice model.</p></li>
 <li class="rv" style="--d:2"><span class="k">Rendering</span><span class="v">$0</span><p class="d">Your own browser draws each frame. FFmpeg encodes. In CI, it uses your CI minutes.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></li>
 <li class="rv" style="--d:3"><span class="k">Checks</span><span class="v">$0</span><p class="d">Every claim and line reference is checked on your machine.</p></li>
@@ -944,7 +944,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <a class="ctl yt" href="https://www.youtube.com/watch?v=6X5-zCe8PbU" target="_blank" rel="noopener">Watch on YouTube<span class="sr"> (opens a new tab)</span></a>
 </div>
 </figure>
-<p class="film-note rv">The film shows the default settings. Your coding agent's usage, storage and CI minutes can still cost money.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
+<p class="film-note rv">The film shows the default settings. The film says the storyboard brings "no extra bill". That is true for MergeStory's own fee, not for your coding agent's usage: about 20 cents per video if you pay per token. Storage and CI minutes can also cost money.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p>
 <p class="cost-link rv"><a href="https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md">How the cost works <span aria-hidden="true">&nbsp;›</span></a></p>
 </div>
 </section>
@@ -1136,7 +1136,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 </details>
 <details>
 <summary>What does it cost?</summary>
-<div class="a"><p>MergeStory charges nothing, and a default run calls no paid service.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> You may still pay others for your coding agent's usage, storage, CI minutes and any model or cloud voice you turn on. If you opt in to a model for the storyboard, Claude Haiku 5.5 is estimated at under $0.01 per video.<a class="fn-ref" href="#fn-2" aria-label="Note 2">2</a> Cloud voices are priced per million characters. A budget of $0.25 per run is checked before every paid call.<a class="fn-ref" href="#fn-3" aria-label="Note 3">3</a> <a href="#cost">See the full cost</a>.</p></div>
+<div class="a"><p>MergeStory charges nothing, and a default run calls no paid service.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a> You may still pay others for your coding agent's usage (about 20 cents per video in our measurements, if you pay per token), storage, CI minutes and any model or cloud voice you turn on. If you opt in to a model for the storyboard, Claude Haiku 5.5 is estimated at under $0.01 per video.<a class="fn-ref" href="#fn-2" aria-label="Note 2">2</a> Cloud voices are priced per million characters. A budget of $0.25 per run is checked before every paid call.<a class="fn-ref" href="#fn-3" aria-label="Note 3">3</a> <a href="#cost">See the full cost</a>.</p></div>
 </details>
 <details>
 <summary>Which agents does it work with?</summary>
