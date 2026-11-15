@@ -5,8 +5,8 @@ agent's usage: about 20 cents per video if you pay per token. See
 [what the agent's usage looks like](#what-the-agents-usage-looks-like). Other things can still cost you
 money: see [What can still cost money](#what-can-still-cost-money).
 
-▶ [Watch the 70-second film on what it costs.](https://www.youtube.com/watch?v=6X5-zCe8PbU) It shows the default
-settings. The film says the storyboard brings "no extra bill". That is true for MergeStory's own fee, not for your coding agent's usage: about 20 cents per video if you pay per token.
+▶ [Watch the short film on what it costs.](https://www.youtube.com/watch?v=qdXa9S12tpg) It shows the default
+settings.
 
 ## Step by step
 
