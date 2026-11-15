@@ -894,7 +894,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <li class="rv">
 <div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>The agent</div>
 <div><h3>The agent already knows the change.</h3>
-<p>Your coding agent made or reviewed the change, so it writes the storyboard. No second model reads the whole change again. Writing it is extra usage in your session: the agent reads MergeStory's instructions and evidence pack again on each step. With a fresh agent for each pull request, as in CI, we measured several hundred thousand tokens per video, mostly cached reads. If you pay per token, your agent's provider bills that usage.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></div>
+<p>Your coding agent made or reviewed the change, so it writes the storyboard. No second model reads the whole change again. Writing it is extra usage in your session: the agent reads MergeStory's instructions and evidence pack again on each step. We measured several hundred thousand tokens per video, mostly cached reads, for a fresh agent and for an agent that wrote the change in the same session. If you pay per token, your agent's provider bills that usage.<a class="fn-ref" href="#fn-1" aria-label="Note 1">1</a></p></div>
 </li>
 <li class="rv">
 <div class="spec-k"><svg class="i" aria-hidden="true"><use href="#i-code"/></svg>Local software</div>
@@ -1203,7 +1203,7 @@ h1 .nl{display:block}h1 .grad.nl{display:table;margin-inline:auto}
 <ol>
 <li id="fn-1">MergeStory is open source and charges nothing. A default run calls no paid service. Other costs can still apply. Their providers bill you, not MergeStory:
 <ul>
-<li>your coding agent's own usage, if you pay for it per token. The agent reads MergeStory's instructions and evidence pack again on each step, and writes the storyboard. With a fresh Sonnet-class agent for each pull request, as in CI, we measured roughly $0.20 to $0.45 per video at list prices. That is many times the cost of an opt-in model. <a href="https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md#what-the-agents-usage-looks-like">See the numbers</a>.</li>
+<li>your coding agent's own usage, if you pay for it per token. The agent reads MergeStory's instructions and evidence pack again on each step, and writes the storyboard. With a Sonnet-class agent at list prices, we measured roughly $0.20 to $0.45 per video for a fresh agent on each pull request, as in CI, and roughly $0.15 to $0.25 when the same session wrote the change. That is many times the cost of an opt-in model. <a href="https://github.com/PiniShv/MergeStory/blob/main/docs/cost.md#what-the-agents-usage-looks-like">See the numbers</a>.</li>
 <li>a model (<code>--llm</code>) or a cloud voice (<code>--tts</code>) that you turn on.</li>
 <li>storage and delivery. Amazon S3 bills storage, requests and data transfer out. Cloudflare R2 bills storage and operations above its free tier. Google Drive uses your storage quota.</li>
 <li>GitHub Actions minutes for private repositories.</li>

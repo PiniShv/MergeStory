@@ -20,7 +20,9 @@ settings.
 
 **The agent already knows the change.** The expensive part of a video is understanding the change. The coding
 agent that made or reviews the change already understands it, so it writes the storyboard. No second model
-reads the whole change again. Writing the storyboard is still extra usage in your session: the agent reads
+reads the whole change again. That keeps MergeStory itself at $0. It does not make the agent's own usage
+small: in our measurements an agent in the same session cost somewhat less than a fresh one, not far
+less. Writing the storyboard is still extra usage in your session: the agent reads
 MergeStory's instructions and evidence pack again on each step. If you pay for your agent per token, its
 provider bills that usage, and it can cost many times more than an opt-in model. See
 [what the agent's usage looks like](#what-the-agents-usage-looks-like). MergeStory adds no API call of its
@@ -40,28 +42,37 @@ bills storage and requests, and Amazon S3 also bills data transfer out. Keeping 
 
 ## What the agent's usage looks like
 
-We measured a fresh agent for each pull request: an agent with no earlier context, as in CI or a batch
-run. The agent was Claude Sonnet 5.5, at list prices checked 2026-11.
+We measured two cases with Claude Sonnet 5.5, at list prices checked 2026-11:
 
-| Per video | Measured |
-|---|---|
-| Model calls | 9 to 12 |
-| Tokens written to the cache | 50,000 to 80,000 |
-| Tokens read from the cache | 630,000 to 930,000 |
-| Output tokens | 4,000 to 6,000 |
-| Cost | roughly $0.20 to $0.45, depending on how your provider bills cache writes |
+- **A fresh agent** for each pull request: an agent with no earlier context, as in CI or a batch run.
+- **The same session**: the agent wrote the change, then made the video.
+
+| Per video | Fresh agent | Same session |
+|---|---|---|
+| Model calls | 9 to 12 | 8 to 14 |
+| Tokens written to the cache | 50,000 to 80,000 | 18,000 to 32,000 |
+| Tokens read from the cache | 630,000 to 930,000 | 500,000 to 990,000 |
+| Output tokens | 4,000 to 6,000 | 3,600 to 5,600 |
+| Cost | roughly $0.20 to $0.45 | roughly $0.15 to $0.25 |
 
 - **Most of the cost is fixed.** The agent reads the skill, the authoring guide and the evidence pack again
-  on each step. A change of more than 500 lines cost about a third more than a change of 50 lines or less.
-- **These numbers are for a fresh agent.** We have not measured an agent that made the change earlier in
-  the same session.
+  on each step. For a fresh agent, a change of more than 500 lines cost about a third more than a change of
+  50 lines or less.
+- **The same session saves a little, not a lot.** It writes less to the cache, because the session is
+  already cached. The reading on each step stays the same.
+- **A long session costs more.** The agent also reads the earlier conversation again on each step. Each
+  10,000 tokens of earlier conversation add about $0.01 per video. Our sessions were short and their
+  changes were small, from 3 to 116 lines.
+- **Cache writes change the bill.** The fresh-agent range is wide because providers bill cache writes at
+  different rates. The same-session figures are as billed.
 - **For many pull requests, an opt-in model costs far less.** `--llm anthropic` is under $0.02 per video
   at the worst case: see [the worked example](#a-worked-example). It writes from the evidence pack alone,
   and we have not compared the two for quality.
 - **The budget does not cover this.** The $0.25 budget counts only MergeStory's own model and voice
   calls, never your agent's usage.
 
-Your numbers will differ with the agent, the model and its prices. Your provider's bill is the final word.
+The two columns come from different runs, so compare their shape, not the cents. Your numbers will differ
+with the agent, the model and its prices. Your provider's bill is the final word.
 
 ## When you want more
 
