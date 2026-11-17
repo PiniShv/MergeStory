@@ -13,6 +13,7 @@ what each command prints, and the exit code it ends with. The settings behind th
 | Write the storyboard myself, or let a coding agent write it | [`analyze`](#mergestory-analyze), [`validate`](#mergestory-validate) and [`schema`](#mergestory-schema) |
 | Let a coding agent run MergeStory without asking each time | [`mergestory agent`](#commands-for-coding-agents) |
 | Make a video in the background | `generate --async`, then [`status`](#mergestory-status) and [`jobs`](#mergestory-jobs) |
+| Make videos for many pull requests | [batch.md](batch.md) |
 | Offer MergeStory over HTTP | [`mergestory serve`](#mergestory-serve) |
 | Install the free voice, or sign in to YouTube | [`mergestory setup`](#mergestory-setup) |
 | Empty the cache | [`mergestory cache clear`](#mergestory-cache-clear) |

@@ -46,7 +46,8 @@ bills storage and requests, and Amazon S3 also bills data transfer out. Keeping 
 
 We measured two cases with Claude Sonnet 5.5, at list prices checked 2026-11:
 
-- **A fresh agent** for each pull request: an agent with no earlier context, as in CI or a batch run.
+- **A fresh agent** for each pull request: an agent with no earlier context, as in CI or a
+  [batch run](batch.md).
 - **The same session**: the agent wrote the change, then made the video.
 
 | Per video | Fresh agent | Same session |
@@ -69,7 +70,7 @@ We measured two cases with Claude Sonnet 5.5, at list prices checked 2026-11:
   different rates. The same-session figures are as billed.
 - **For many pull requests, an opt-in model costs far less.** `--llm anthropic` is under $0.02 per video
   at the worst case: see [the worked example](#a-worked-example). It writes from the evidence pack alone,
-  and we have not compared the two for quality.
+  and we have not compared the two for quality. [batch.md](batch.md) shows how to run a batch.
 - **The budget does not cover this.** The $0.25 budget counts only MergeStory's own model and voice
   calls, never your agent's usage.
 
@@ -201,5 +202,6 @@ the [Apache-2.0 license](../LICENSE).
 ## Related
 
 - [Configuration](configuration.md)
+- [Videos for many pull requests](batch.md)
 - [Hosting your videos](hosting.md), [YouTube](youtube.md) and [Google Drive](drive.md)
 - [Decision 4: cheap and private by default](decisions/0004-cheap-and-private-defaults.md)
