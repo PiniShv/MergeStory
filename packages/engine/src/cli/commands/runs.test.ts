@@ -1,6 +1,6 @@
 import { mkdir, readdir, symlink, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dir, fakeResult, run } from '../../testing/cli.ts';
 
 vi.mock('../../pipeline/index.ts', () => ({
@@ -28,6 +28,27 @@ async function makeRun(id: string, files: Record<string, unknown> = {}): Promise
 }
 const withResult = (id: string, overrides = {}) =>
   makeRun(id, { 'result.json': fakeResult({ runId: id, ...overrides }), 'video.mp4': 'x'.repeat(100) });
+const jobsDir = () => join(dir, 'home', 'jobs');
+/** A job file as the job store writes it. */
+async function makeJob(id: string, status: string, runId?: string): Promise<void> {
+  await mkdir(join(jobsDir(), id), { recursive: true });
+  const stamp = '2026-11-01T10:00:00.000Z';
+  const job = {
+    version: 1,
+    id,
+    status,
+    createdAt: stamp,
+    updatedAt: stamp,
+    startedAt: null,
+    finishedAt: null,
+    pid: null,
+    options: runId ? { runId } : {},
+    progress: { stage: 'queued', message: 'x', progress: 0 },
+    result: null,
+    error: null,
+  };
+  await writeFile(join(jobsDir(), id, 'job.json'), JSON.stringify(job));
+}
 const ids = (stdout: string): string[] =>
   (JSON.parse(stdout) as { runs: { runId: string }[] }).runs.map((r) => r.runId);
 
@@ -121,5 +142,43 @@ describe('mergestory runs delete', () => {
     expect(out.errors.map((e) => e.runId)).toEqual(['bad', '../precious', outside, A, B]);
     expect(await readdir(runsDir())).toEqual([A, B]);
     expect(await readdir(outside)).toEqual(['result.json']);
+  });
+});
+
+describe('mergestory runs delete --older-than', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('deletes old runs and their finished jobs, and keeps new runs and runs still being made', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-17T12:00:00Z'));
+    await withResult(A);
+    await makeJob(A, 'succeeded');
+    await makeJob('20261101-110000-dddd', 'failed'); // its run folder is gone
+    await withResult(B);
+    await makeJob('20261102-090000-eeee', 'running', B); // B is still being made
+    await withResult(C); // made 14 days ago, newer than the cutoff
+    const { code, stdout } = await run(['runs', 'delete', '--older-than', '15', '--json']);
+    const out = JSON.parse(stdout) as { deleted: string[]; errors: { runId: string }[] };
+    expect(code).toBe(2);
+    expect(out.deleted).toEqual([A, '20261101-110000-dddd']);
+    expect(out.errors.map((e) => e.runId)).toEqual([B]);
+    expect(await readdir(runsDir())).toEqual([B, C]);
+    expect(await readdir(jobsDir())).toEqual(['20261102-090000-eeee']);
+  });
+
+  it('also deletes the job of a run deleted by id', async () => {
+    await withResult(A);
+    await makeJob(A, 'succeeded');
+    expect((await run(['runs', 'delete', A])).code).toBe(0);
+    expect(await readdir(jobsDir())).toEqual([]);
+  });
+
+  it('wants run ids or --older-than, one of the two', async () => {
+    await withResult(A);
+    expect((await run(['runs', 'delete'])).code).toBe(2);
+    expect((await run(['runs', 'delete', A, '--older-than', '1'])).code).toBe(2);
+    expect(await readdir(runsDir())).toEqual([A]);
   });
 });
