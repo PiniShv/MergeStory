@@ -158,6 +158,8 @@ export interface RenderOutput {
 
 export interface Renderer {
   readonly id: string;
+  /** Throws when a tool the render needs is missing, so a run can stop before it spends money. */
+  ready(): Promise<void>;
   render(input: RenderInput, ctx: RunContext): Promise<RenderOutput>;
 }
 

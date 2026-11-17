@@ -35,8 +35,8 @@ describe('naturalList', () => {
 });
 
 describe('splitLines', () => {
-  it('splits at every kind of line ending', () => {
-    expect(splitLines('a\nb\r\nc\rd')).toEqual(['a', 'b', 'c', 'd']);
+  it('splits where git does, so a lone \\r keeps line numbers in step with the diff', () => {
+    expect(splitLines('a\nb\r\nc\rd')).toEqual(['a', 'b', 'c\rd']);
   });
 
   it('gives no extra empty line for a final line ending, and none at all for no text', () => {

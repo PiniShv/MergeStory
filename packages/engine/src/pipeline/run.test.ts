@@ -79,6 +79,7 @@ afterAll(async () => {
 /** Writes a video and a poster, like the real renderer does. */
 const fakeRenderer: Renderer = {
   id: 'fake',
+  ready: async () => {},
   render: async (input) => {
     const videoPath = join(input.outDir, 'video.mp4');
     const posterPath = join(input.outDir, 'poster.jpg');
@@ -553,7 +554,7 @@ describe('generate: publishing', () => {
 
   it('stops a refused public link before anything is narrated or rendered', async () => {
     const render = vi.fn(fakeRenderer.render);
-    vi.mocked(createRenderer).mockReturnValue({ id: 'fake', render });
+    vi.mocked(createRenderer).mockReturnValue({ ...fakeRenderer, render });
     const error = await failure(
       generate(
         options({
@@ -650,9 +651,19 @@ describe('generate: details', () => {
     expect(off.warnings.join(' ')).not.toContain('no speech provider available');
   });
 
+  it('stops for a missing render tool before the storyboard is made', async () => {
+    const missing = new MergeStoryError('BROWSER_NOT_FOUND', 'No browser.');
+    vi.mocked(createRenderer).mockReturnValue({
+      ...fakeRenderer,
+      ready: async () => Promise.reject(missing),
+    });
+    expect(await failure(run())).toBe(missing);
+    expect(existsSync(join(runDir(), 'storyboard.json'))).toBe(false);
+  });
+
   it('finishes and publishes a video that has no poster', async () => {
     vi.mocked(createRenderer).mockReturnValue({
-      id: 'fake',
+      ...fakeRenderer,
       render: async (input) => {
         const videoPath = join(input.outDir, 'video.mp4');
         await writeFile(videoPath, Buffer.alloc(2048, 1));

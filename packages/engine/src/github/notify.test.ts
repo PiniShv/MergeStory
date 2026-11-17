@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ConfigInput } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { isMergeStoryError, type MergeStoryError } from '../core/errors.ts';
@@ -73,11 +73,6 @@ async function expectError(promise: Promise<unknown>): Promise<MergeStoryError> 
   throw new Error('expected a MergeStoryError');
 }
 
-// The tests run as outside GitHub Actions unless they say otherwise: CI itself sets GITHUB_ACTIONS.
-beforeEach(() => {
-  vi.stubEnv('GITHUB_ACTIONS', '');
-});
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -103,6 +98,11 @@ describe('replaceMarkedSection', () => {
     const before = `Intro  \n\n## Notes\n- a\n\n${block('old video')}\n\nFooter\t\n`;
     const after = replaceMarkedSection(before, 'new video');
     expect(after).toBe(`Intro  \n\n## Notes\n- a\n\n${block('new video')}\n\nFooter\t\n`);
+  });
+
+  it('keeps the marker lines that existing descriptions carry', () => {
+    expect(DESCRIPTION_START).toBe('<!-- mergestory:start -->');
+    expect(DESCRIPTION_END).toBe('<!-- mergestory:end -->');
   });
 
   it('is idempotent', () => {
@@ -139,6 +139,11 @@ describe('replaceMarkedSection', () => {
     expect(second.endsWith(block('two'))).toBe(true);
   });
 
+  it('replaces the real section after a stray end marker', () => {
+    const description = `${DESCRIPTION_END}\ntext\n\n${block('old')}`;
+    expect(replaceMarkedSection(description, 'new')).toBe(`${DESCRIPTION_END}\ntext\n\n${block('new')}`);
+  });
+
   it('ignores an end marker that comes before any start marker', () => {
     const description = `${DESCRIPTION_END}\ntext`;
     const result = replaceMarkedSection(description, 'x');
@@ -172,8 +177,8 @@ describe('upsertPullRequestComment', () => {
     );
     const result = await upsertPullRequestComment(REF, `${MARKER}\nVideo ready`, MARKER, makeContext());
     expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-2', created: true });
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'POST']);
-    expect(JSON.parse(calls[1]!.body!)).toEqual({ body: `${MARKER}\nVideo ready` });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'POST']);
+    expect(JSON.parse(calls[2]!.body!)).toEqual({ body: `${MARKER}\nVideo ready` });
   });
 
   it('adds the marker to the text when it is missing, so the next run finds the comment', async () => {
@@ -182,7 +187,7 @@ describe('upsertPullRequestComment', () => {
       route('POST', '/repos/acme/widgets/issues/7/comments', () => json(comment(2, 'x'), 201)),
     );
     await upsertPullRequestComment(REF, 'Video ready', MARKER, makeContext());
-    expect(JSON.parse(calls[1]!.body!).body).toBe(`${MARKER}\nVideo ready`);
+    expect(JSON.parse(calls[2]!.body!).body).toBe(`${MARKER}\nVideo ready`);
   });
 
   it('updates the existing comment instead of posting another', async () => {
@@ -193,6 +198,23 @@ describe('upsertPullRequestComment', () => {
     );
     const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
     expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-5', created: false });
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH']);
+  });
+
+  it('updates only a comment of the same account (any case) that starts with the marker', async () => {
+    const { calls } = mockFetch(
+      route('GET', '/user', () => json({ login: 'maintainer' })),
+      route('GET', '/repos/acme/widgets/issues/7/comments', () =>
+        json([
+          { ...comment(1, `Header\n${MARKER}`), user: { login: 'maintainer', type: 'User' } },
+          { ...comment(2, `${MARKER}\nlooks like ours`), user: { login: 'mallory', type: 'User' } },
+          { ...comment(3, `${MARKER}\nours`), user: { login: 'Maintainer', type: 'User' } },
+        ]),
+      ),
+      route('PATCH', '/repos/acme/widgets/issues/comments/3', () => json(comment(3, 'new'))),
+    );
+    const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
+    expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-3', created: false });
     expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH']);
   });
 
@@ -209,18 +231,20 @@ describe('upsertPullRequestComment', () => {
     expect(calls.map((c) => c.method)).not.toContain('PATCH');
   });
 
-  it('posts a new comment when the account behind the token cannot be told', async () => {
+  it("with an app token, never takes over a person's comment that copies the marker", async () => {
     const { calls } = mockFetch(
       route('GET', '/user', () => json({ message: 'Resource not accessible by integration' }, 403)),
+      route('GET', '/repos/acme/widgets/issues/7/comments', () =>
+        json([comment(5, `${MARKER}\nphishing link`, 'User')]),
+      ),
       route('POST', '/repos/acme/widgets/issues/7/comments', () => json(comment(6, 'fresh'), 201)),
     );
     const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
     expect(result.created).toBe(true);
-    expect(calls.map((c) => c.method)).toEqual(['GET', 'POST']);
+    expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'POST']);
   });
 
-  it('in GitHub Actions, updates the comment of github-actions[bot] when /user cannot be read', async () => {
-    vi.stubEnv('GITHUB_ACTIONS', 'true');
+  it('with an app token that cannot read /user, updates its bot comment', async () => {
     const { calls } = mockFetch(
       route('GET', '/user', () => json({ message: 'Resource not accessible by integration' }, 403)),
       route('GET', '/repos/acme/widgets/issues/7/comments', () => json([comment(5, `${MARKER}\nold`)])),
@@ -241,8 +265,22 @@ describe('upsertPullRequestComment', () => {
       );
       const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
       expect(result.created).toBe(true);
-      expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH', 'POST']);
+      expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH', 'GET', 'POST']);
     }
+  });
+
+  it("with an app token, skips another app's comment that GitHub refuses and updates its own", async () => {
+    const other = { ...comment(5, `${MARKER}\nold`), user: { login: 'github-actions[bot]', type: 'Bot' } };
+    const mine = { ...comment(8, `${MARKER}\nmine`), user: { login: 'my-app[bot]', type: 'Bot' } };
+    const { calls } = mockFetch(
+      route('GET', '/user', () => json({ message: 'Resource not accessible by integration' }, 403)),
+      route('GET', '/repos/acme/widgets/issues/7/comments', () => json([other, mine])),
+      route('PATCH', '/repos/acme/widgets/issues/comments/5', () => json({ message: 'nope' }, 403)),
+      route('PATCH', '/repos/acme/widgets/issues/comments/8', () => json(comment(8, 'new'))),
+    );
+    const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
+    expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-8', created: false });
+    expect(calls.map((c) => c.method)).not.toContain('POST');
   });
 
   it('reports GitHub failures as NOTIFY_FAILED, keeping the hint', async () => {

@@ -25,6 +25,15 @@ export function safeOutput(text: string): string {
   return text.replace(OUTPUT_CONTROLS, (_match, color: string | undefined) => color ?? '');
 }
 
+/**
+ * One line of JSON output. DEL and the C1 controls, which JSON.stringify leaves raw, are written as
+ * \u escapes, so safeOutput has nothing to drop and the value reads back unchanged.
+ */
+export function jsonLine(value: unknown): string {
+  const unicodeEscape = (c: string) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`;
+  return `${JSON.stringify(value).replace(/[\u007f-\u009f]/g, unicodeEscape)}\n`;
+}
+
 /** The real terminal, with any part replaced by `overrides`. */
 export function createIo(overrides: Partial<CliIo> = {}): CliIo {
   return {

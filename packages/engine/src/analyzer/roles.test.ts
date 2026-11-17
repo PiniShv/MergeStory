@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileRole } from '../core/types.ts';
 import { buildChange } from '../testing/change.ts';
-import { detectRole } from './roles.ts';
+import { detectRole, isWorkspaceDir } from './roles.ts';
 import { classifyTrivial } from './trivial.ts';
 
 describe('detectRole', () => {
@@ -256,4 +256,11 @@ describe('trivial detection', () => {
       });
     },
   );
+});
+
+describe('isWorkspaceDir', () => {
+  it('accepts one package folder of a monorepo, and nothing deeper or elsewhere', () => {
+    expect(['packages/api', 'apps/web', 'cmd/tool'].every(isWorkspaceDir)).toBe(true);
+    expect(['packages', 'packages/', 'packages/api/src', 'src/api', ''].some(isWorkspaceDir)).toBe(false);
+  });
 });

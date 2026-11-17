@@ -4,7 +4,7 @@ import { isMergeStoryError, toMergeStoryError } from '../core/errors.ts';
 import { createLogger, type LogFormat, type Logger, type LogLevel } from '../core/logger.ts';
 import { globalRedactor } from '../core/redact.ts';
 import type { ErrorView } from './format.ts';
-import type { CliIo } from './io.ts';
+import { type CliIo, jsonLine } from './io.ts';
 import { colorEnabled, createStyle, type Style } from './style.ts';
 
 /** Hint shown with every usage error. */
@@ -69,7 +69,7 @@ export class CliRuntime {
       say: (text) => {
         if (!json) io.stdout(text.endsWith('\n') ? text : `${text}\n`);
       },
-      emitJson: (value) => io.stdout(`${JSON.stringify(value)}\n`),
+      emitJson: (value) => io.stdout(jsonLine(value)),
       setExitCode: (code) => {
         this.exitCode = code;
       },

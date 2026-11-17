@@ -91,6 +91,10 @@ export function parseRetryAfter(value: string | null | undefined): number | null
   return null;
 }
 
+/** A 429 that reports a spending or quota limit: it will not clear by waiting, so it is not retried. */
+export const NON_RETRYABLE_429 =
+  /insufficient_quota|credit_balance|spend_limit|usage_limit|quota_exceeded|billing/i;
+
 export class HttpError extends Error {
   readonly status: number;
   readonly retryable: boolean;
@@ -104,7 +108,12 @@ export class HttpError extends Error {
     this.status = status;
     this.bodySnippet = bodySnippet;
     this.retryAfterMs = retryAfterMs;
-    this.retryable = status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+    this.retryable =
+      status === 408 ||
+      status === 409 ||
+      status === 425 ||
+      (status === 429 && !NON_RETRYABLE_429.test(bodySnippet)) ||
+      status >= 500;
   }
 }
 

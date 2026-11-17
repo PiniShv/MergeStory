@@ -40,7 +40,12 @@ export const TOKEN_SHAPES: readonly TokenShape[] = [
   { name: 'anthropic-key', pattern: /\bsk-ant-[A-Za-z0-9_-]{16,}/g },
   { name: 'openai-key', pattern: /\bsk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}/g },
   { name: 'stripe-key', pattern: /\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{16,}\b/g },
-  { name: 'slack-token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
+  { name: 'slack-token', pattern: /\b(?:xoxe\.)?(?:xox[abposre]|xapp)-[A-Za-z0-9-]{10,}/g },
+  { name: 'huggingface-token', pattern: /\bhf_[A-Za-z0-9]{30,}\b/g },
+  { name: 'google-oauth-token', pattern: /\bya29\.[A-Za-z0-9_-]{20,}/g },
+  { name: 'digitalocean-token', pattern: /\bdo[opr]_v1_[a-f0-9]{64}\b/g },
+  { name: 'shopify-token', pattern: /\bshp(?:at|ca|pa|ss)_[a-fA-F0-9]{32}\b/g },
+  { name: 'pypi-token', pattern: /\bpypi-AgE[A-Za-z0-9_-]{50,}/g },
   // Webhook addresses are credentials: Slack (services, workflows, triggers), Teams, Discord, Zapier
   // and others. A URL counts when it mentions "hook" and has a token-like segment (10+ characters with
   // a digit, or 20+ letters and digits), so documentation links such as .../webhooks/about-webhooks stay. Slashes may be escaped
@@ -96,7 +101,7 @@ const RULES: Rule[] = [
  * backtrack catastrophically on long runs of word characters (minified files, generated data).
  */
 const ASSIGNMENT =
-  /(?<![\w.$-])([A-Za-z_$][\w.$-]{0,63})["']?[ \t]{0,8}(?:=>|:=|[:=])[ \t]{0,8}["'`]([^"'`\s]{6,512})["'`]/g;
+  /(?<![\w.$-])([A-Za-z_$][\w.$-]{0,63})["']?[ \t]{0,8}(?:=>|:=|[:=])[ \t]{0,8}["'`]([^"'`\n]{1,512})["'`]/g;
 const ENV_ASSIGNMENT = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]{0,63})[ \t]*=[ \t]*([^\s#'"]{6,512})/gm;
 /** Names that always hold a secret: any non-placeholder value is masked. */
 const STRONG_NAME = /(pass(word|wd)?|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i;
@@ -107,7 +112,7 @@ const PLACEHOLDER =
 
 /** Placeholders, templates and references to the environment are not secrets. */
 function isPlaceholder(value: string): boolean {
-  if (value.length < 8 || PLACEHOLDER.test(value)) return true;
+  if (PLACEHOLDER.test(value)) return true;
   if (/^\$\{.*\}$|^\{\{.*\}\}$|^<.*>$|^%.*%$/.test(value)) return true; // ${VAR}, {{var}}, <value>, %VAR%
   return /^(?:process\.env|os\.environ|env\.|import\.meta\.env)/.test(value);
 }
@@ -115,8 +120,11 @@ function isPlaceholder(value: string): boolean {
 /** Whether an assigned value should be masked, given the name it is assigned to. */
 function shouldMask(name: string, value: string): boolean {
   if (isPlaceholder(value)) return false;
+  // A spaced value is a passphrase only under a strong name and with a digit or sign; "Enter your password" is a label.
+  if (/\s/.test(value)) return STRONG_NAME.test(name) && /[^A-Za-z\s]/.test(value);
+  // Under a strong name any length counts: "hunter2" is a real password.
   if (STRONG_NAME.test(name)) return true;
-  if (!WEAK_NAME.test(name)) return false;
+  if (!WEAK_NAME.test(name) || value.length < 8) return false;
   const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(value)).length;
   return classes >= 2 || value.length >= 20;
 }

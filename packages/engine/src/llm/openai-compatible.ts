@@ -14,7 +14,7 @@ import { abortedError, MergeStoryError, TimedOutError, toMergeStoryError } from 
 import { asNumber, isRecord } from '../core/json.ts';
 import { isPrivateHostname } from '../core/net.ts';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts';
-import { defaultIsRetryable, fetchWithRetry, HttpError } from '../core/retry.ts';
+import { defaultIsRetryable, fetchWithRetry, HttpError, NON_RETRYABLE_429 } from '../core/retry.ts';
 import { budgetLlmCostUsd, llmPriceNote } from './prices.ts';
 import {
   buildMessages,
@@ -154,19 +154,12 @@ function adaptDialect(dialect: Dialect, applied: Set<string>, errorText: string)
   return null;
 }
 
-const NON_RETRYABLE_429 = /insufficient_quota|credit_balance|spend_limit|usage_limit|quota_exceeded|billing/i;
-
 /**
- * A 429 that reports a spending or quota limit will not clear by waiting, so it is not retried.
- * Neither is a timeout: the model may still finish and bill that answer, and the next try would
- * most likely time out as well.
+ * A timeout is not retried: the model may still finish and bill that answer, and the next try would
+ * most likely time out as well. (A quota 429 is not retryable anywhere; see HttpError.)
  */
 function isRetryable(err: unknown): boolean {
   if (err instanceof TimedOutError) return false;
-  if (err instanceof HttpError) {
-    if (err.status === 429 && NON_RETRYABLE_429.test(err.bodySnippet)) return false;
-    return err.retryable;
-  }
   return defaultIsRetryable(err);
 }
 

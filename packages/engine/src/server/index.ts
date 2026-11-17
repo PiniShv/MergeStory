@@ -146,6 +146,12 @@ function checkSettings(host: string, port: number, token: string | null): void {
       hint: `Use at least ${MIN_TOKEN_LENGTH} characters, for example the output of: openssl rand -hex 24`,
     });
   }
+  // A bearer header cannot carry whitespace, so no request could ever match such a token.
+  if (token && /\s/.test(token)) {
+    throw new MergeStoryError('CONFIG_INVALID', 'The API token contains whitespace.', {
+      hint: 'Use a token without spaces, for example the output of: openssl rand -hex 24',
+    });
+  }
 }
 
 /** Providers whose sign-in belongs to the operator: an API job never uses them, also not as a default. */

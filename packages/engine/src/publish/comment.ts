@@ -7,15 +7,10 @@
  */
 import { MergeStoryError } from '../core/errors.ts';
 import { maskEmails } from '../core/secrets.ts';
+import { DESCRIPTION_END, DESCRIPTION_START } from '../github/notify.ts';
 import { SEVERITY_LABEL, severityOf, severityRank } from './severity.ts';
 import { cleanText, formatDateTime, formatTimestamp, safeHttpUrl, shortSha } from './text.ts';
-import {
-  COMMENT_MARKER,
-  type CommentData,
-  DESCRIPTION_END,
-  DESCRIPTION_START,
-  type EvidenceLink,
-} from './types.ts';
+import { COMMENT_MARKER, type CommentData, type EvidenceLink } from './types.ts';
 
 const MAX_CHECKLIST_ITEMS = 5;
 const MAX_CHAPTERS = 12;

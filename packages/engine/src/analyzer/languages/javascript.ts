@@ -253,7 +253,8 @@ function jsMethods(
 }
 
 const IMPORT_PATTERNS = [
-  /^\s*(?:import|export)\s+(?:type\s+)?[^'"`;]*?\sfrom\s*['"]([^'"\n]+)['"]/gm,
+  // Bounded, so a long file without quotes or semicolons is not scanned again from every export line.
+  /^\s*(?:import|export)\s+(?:type\s+)?[^'"`;]{0,2000}?\sfrom\s*['"]([^'"\n]+)['"]/gm,
   /^\s*import\s*['"]([^'"\n]+)['"]/gm,
   /\brequire\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g,
   /\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g,

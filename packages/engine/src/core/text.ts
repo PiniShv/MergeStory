@@ -21,9 +21,12 @@ export function countWords(text: string): number {
   return words.length;
 }
 
-/** Split text into lines at any line ending; a trailing newline does not produce an extra empty line. */
+/**
+ * Split text into lines the way git counts them (a lone \r is not a line ending), so line numbers
+ * match the diff. A trailing newline does not produce an extra empty line.
+ */
 export function splitLines(text: string): string[] {
-  const lines = text.split(/\r\n|\n|\r/);
+  const lines = text.split(/\r?\n/);
   if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
   return lines;
 }

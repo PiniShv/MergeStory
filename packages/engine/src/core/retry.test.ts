@@ -65,6 +65,10 @@ describe('defaultIsRetryable', () => {
     expect(defaultIsRetryable(new MergeStoryError('INTERNAL', 'x', { retryable: true }))).toBe(true);
     expect(defaultIsRetryable(new HttpError(503, 'HTTP 503', '', null))).toBe(true);
     expect(defaultIsRetryable(new HttpError(404, 'HTTP 404', '', null))).toBe(false);
+    expect(defaultIsRetryable(new HttpError(429, 'HTTP 429', '', null))).toBe(true);
+    expect(defaultIsRetryable(new HttpError(429, 'HTTP 429', '{"code":"insufficient_quota"}', null))).toBe(
+      false,
+    );
     expect(defaultIsRetryable(new MergeStoryError('INTERNAL', 'x'))).toBe(false);
     for (const value of [null, undefined, 'retryable', 1, { retryable: 'yes' }, new Error('x')]) {
       expect(defaultIsRetryable(value), String(value)).toBe(false);

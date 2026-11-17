@@ -505,6 +505,11 @@ export class ChromiumRenderer implements Renderer {
     this.options = options;
   }
 
+  async ready(): Promise<void> {
+    await resolveFfmpeg(this.config);
+    await locateBrowser(this.config);
+  }
+
   async render(input: RenderInput, ctx: RunContext): Promise<RenderOutput> {
     const { plan } = input;
     assertNotAborted(ctx.signal);

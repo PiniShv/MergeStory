@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MergeStoryError } from '../core/errors.ts';
+import { DESCRIPTION_END, DESCRIPTION_START } from '../github/notify.ts';
 import { buildDescriptionSection, buildPrComment, neutralizeMarkdown } from './comment.ts';
-import { COMMENT_MARKER, type CommentData, DESCRIPTION_END, DESCRIPTION_START } from './types.ts';
+import { COMMENT_MARKER, type CommentData } from './types.ts';
 
 const WATCH_URL =
   'https://media.example.com/mergestory/v/abc/index.html?X-Amz-Expires=3600&X-Amz-Signature=aa11';
