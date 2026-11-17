@@ -2,7 +2,11 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.5.1
+
+### Skill and plugin
+
+- The skill installs `mergestory@1.5.1`. It still asks for 1.5.0 or newer.
 
 ### Engine
 
