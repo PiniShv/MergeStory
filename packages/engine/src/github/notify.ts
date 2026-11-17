@@ -74,18 +74,23 @@ export async function upsertPullRequestComment(
     // never taken over. An app token (GITHUB_TOKEN too) cannot read its login: then a bot's comment
     // is tried, since a person cannot post as a bot, and GitHub refuses the edit if another app wrote it.
     const login = (await client.getAuthenticatedLogin())?.toLowerCase();
-    const existing = await client.findComment(
-      (c) =>
-        c.body.trimStart().startsWith(marker) &&
-        (login ? c.authorLogin?.toLowerCase() === login : c.authorType === 'Bot'),
-    );
-    if (existing) {
+    // Comments GitHub refused to edit (another app's, or deleted meanwhile) are skipped, so an
+    // older bot's comment never hides this account's own comment further down.
+    const refused = new Set<number>();
+    for (;;) {
+      const existing = await client.findComment(
+        (c) =>
+          !refused.has(c.id) &&
+          c.body.trimStart().startsWith(marker) &&
+          (login ? c.authorLogin?.toLowerCase() === login : c.authorType === 'Bot'),
+      );
+      if (!existing) break;
       try {
         const updated = await client.updateComment(existing.id, text);
         return { url: updated.url || existing.url, created: false };
       } catch (error) {
-        // Someone else's comment, or one that was deleted meanwhile: post a new one instead.
         if (!isUneditable(error)) throw error;
+        refused.add(existing.id);
       }
     }
     const created = await client.createComment(text);

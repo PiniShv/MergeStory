@@ -101,7 +101,7 @@ const RULES: Rule[] = [
  * backtrack catastrophically on long runs of word characters (minified files, generated data).
  */
 const ASSIGNMENT =
-  /(?<![\w.$-])([A-Za-z_$][\w.$-]{0,63})["']?[ \t]{0,8}(?:=>|:=|[:=])[ \t]{0,8}["'`]([^"'`\n]{6,512})["'`]/g;
+  /(?<![\w.$-])([A-Za-z_$][\w.$-]{0,63})["']?[ \t]{0,8}(?:=>|:=|[:=])[ \t]{0,8}["'`]([^"'`\n]{1,512})["'`]/g;
 const ENV_ASSIGNMENT = /^[ \t]*(?:export[ \t]+)?([A-Z][A-Z0-9_]{0,63})[ \t]*=[ \t]*([^\s#'"]{6,512})/gm;
 /** Names that always hold a secret: any non-placeholder value is masked. */
 const STRONG_NAME = /(pass(word|wd)?|secret|api[_-]?key|access[_-]?key|private[_-]?key|credential)/i;

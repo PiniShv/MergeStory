@@ -23,6 +23,8 @@ describe('maskSecrets', () => {
     ['DB_PASSWORD=abc123', 'abc123'],
     ['password: abc123', 'abc123'],
     ['"client_secret": "short12"', 'short12'],
+    ['const password = "abc";', 'abc'],
+    ['"client_secret": "a1b2c"', 'a1b2c'],
     ['password: "my pass phrase 123"', 'my pass phrase 123'],
   ])('masks %s', (input, secret) => {
     const { text, masked } = maskSecrets(input);

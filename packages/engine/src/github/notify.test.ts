@@ -265,8 +265,22 @@ describe('upsertPullRequestComment', () => {
       );
       const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
       expect(result.created).toBe(true);
-      expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH', 'POST']);
+      expect(calls.map((c) => c.method)).toEqual(['GET', 'GET', 'PATCH', 'GET', 'POST']);
     }
+  });
+
+  it("with an app token, skips another app's comment that GitHub refuses and updates its own", async () => {
+    const other = { ...comment(5, `${MARKER}\nold`), user: { login: 'github-actions[bot]', type: 'Bot' } };
+    const mine = { ...comment(8, `${MARKER}\nmine`), user: { login: 'my-app[bot]', type: 'Bot' } };
+    const { calls } = mockFetch(
+      route('GET', '/user', () => json({ message: 'Resource not accessible by integration' }, 403)),
+      route('GET', '/repos/acme/widgets/issues/7/comments', () => json([other, mine])),
+      route('PATCH', '/repos/acme/widgets/issues/comments/5', () => json({ message: 'nope' }, 403)),
+      route('PATCH', '/repos/acme/widgets/issues/comments/8', () => json(comment(8, 'new'))),
+    );
+    const result = await upsertPullRequestComment(REF, `${MARKER}\nnew`, MARKER, makeContext());
+    expect(result).toEqual({ url: 'https://github.com/acme/widgets/pull/7#issuecomment-8', created: false });
+    expect(calls.map((c) => c.method)).not.toContain('POST');
   });
 
   it('reports GitHub failures as NOTIFY_FAILED, keeping the hint', async () => {
