@@ -109,7 +109,10 @@ interface Finding {
   title: string;
   verb: string;
   what: string;
+  /** The first MAX_LOCS places. */
   locs: Loc[];
+  /** How many places there are, also those that `locs` does not keep. */
+  total: number;
   /** Extra sentences for the detail, without a trailing period. */
   extras: string[];
   extraEvidence: string[];
@@ -122,6 +125,8 @@ interface RecordOptions {
   severity?: RiskSeverity;
   /** The number a counting `what` of the kind reports. */
   count?: number;
+  /** How many places there are, when the caller records only the first of them. */
+  total?: number;
   /** One extra sentence for the detail. */
   extra?: string;
   extraEvidence?: readonly string[];
@@ -170,6 +175,7 @@ function newFinding(kind: RiskKindId, options: RecordOptions = {}): Finding {
     verb: spec.verb,
     what: typeof spec.what === 'function' ? spec.what(options.count ?? 0) : spec.what,
     locs: [],
+    total: 0,
     extras: [],
     extraEvidence: [],
   };
@@ -195,6 +201,8 @@ function createRecorder(
   findings: Map<string, Finding>,
   symbolAt: (fileId: string, side: Side, line: number) => string | null,
 ): Recorder {
+  // The places of each finding, so that a place past MAX_LOCS is still counted, and only once.
+  const places = new Map<string, Set<string>>();
   return (kind, site, options = {}) => {
     const key = options.key ?? kind;
     let finding = findings.get(key);
@@ -202,11 +210,16 @@ function createRecorder(
       finding = newFinding(kind, options);
       findings.set(key, finding);
     }
-    const seen = finding.locs.some(
-      (x) => x.fileId === site.fileId && x.side === site.side && x.line === site.line,
-    );
-    if (!seen && finding.locs.length < MAX_LOCS)
-      finding.locs.push({ ...site, symbolId: symbolAt(site.fileId, site.side, site.line) });
+    const seen = places.get(key) ?? new Set<string>();
+    places.set(key, seen);
+    const place = `${site.fileId}:${site.side}:${site.line}`;
+    if (!seen.has(place)) {
+      seen.add(place);
+      if (finding.locs.length < MAX_LOCS)
+        finding.locs.push({ ...site, symbolId: symbolAt(site.fileId, site.side, site.line) });
+    }
+    // A caller that records only the first places says how many there are.
+    finding.total = Math.max(finding.total, seen.size, options.total ?? 0);
     const { extra } = options;
     if (extra && finding.extras.length < 3 && !finding.extras.includes(extra)) finding.extras.push(extra);
     for (const id of options.extraEvidence ?? [])
@@ -379,6 +392,7 @@ function envVarFinding(envList: readonly CodeSite[], symbolAt: ReturnType<typeof
   const more = envList.length > 6 ? ` and ${envList.length - 6} more` : '';
   const finding = newFinding('env-vars');
   finding.what = `${finding.what} (${names}${more})`;
+  finding.total = envList.length;
   finding.locs = envList.slice(0, MAX_LOCS).map((e) => ({
     fileId: e.fileId,
     hunkId: null,
@@ -530,6 +544,7 @@ function testFindings(input: RiskInputs, record: Recorder): void {
     const passing = input.inputs.tests.length > 0 && input.inputs.tests.every((t) => t.passed);
     for (const f of sources.slice(0, 5)) {
       record('no-tests', fileSite(f.file), {
+        total: sources.length,
         severity: input.meaningfulLines >= 50 ? 'medium' : 'low',
         extra: passing ? 'The caller reported passing test runs; they are not verified here.' : undefined,
       });
@@ -569,7 +584,7 @@ function complexityFindings(input: RiskInputs, roleOf: Map<string, FileRole>, re
         side: b.side,
         line: b.line,
       },
-      { extra: `Largest block: ${b.size} lines.` },
+      { extra: `Largest block: ${b.size} lines.`, total: big.length },
     );
   }
   const longFns = input.symbols
@@ -580,20 +595,23 @@ function complexityFindings(input: RiskInputs, roleOf: Map<string, FileRole>, re
         s.endLine - s.startLine + 1 > 120 &&
         roleOf.get(s.fileId) === 'source',
     )
-    .sort((a, b) => b.endLine - b.startLine - (a.endLine - a.startLine))
-    .slice(0, 3);
-  for (const s of longFns) {
+    .sort((a, b) => b.endLine - b.startLine - (a.endLine - a.startLine));
+  for (const s of longFns.slice(0, 3)) {
     record(
       'large-function',
       { fileId: s.fileId, hunkId: null, path: s.path, side: s.side, line: s.startLine },
-      { extra: `${s.name} spans ${s.endLine - s.startLine + 1} lines.`, extraEvidence: [s.id] },
+      {
+        extra: `${s.name} spans ${s.endLine - s.startLine + 1} lines.`,
+        extraEvidence: [s.id],
+        total: longFns.length,
+      },
     );
   }
 }
 
 function toSignal(f: Finding, index: number): RiskSignal {
   const shown = f.locs.slice(0, 3).map((l) => `${l.path}:${l.line}`);
-  const more = f.locs.length > 3 ? ` and ${f.locs.length - 3} more` : '';
+  const more = f.total > shown.length ? ` and ${f.total - shown.length} more` : '';
   const where = shown.length > 0 ? ` at ${shown.join(', ')}${more}` : '';
   const evidence: string[] = [];
   for (const l of f.locs.slice(0, 6)) {
