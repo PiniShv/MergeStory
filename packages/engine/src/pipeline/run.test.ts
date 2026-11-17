@@ -19,6 +19,7 @@ import { estimateTokens } from '../core/cost.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { createLogger } from '../core/logger.ts';
 import type { PublishBundle, Publisher, Renderer } from '../core/providers.ts';
+import { BrowserVisualSchema, SceneSchema, TitleVisualSchema } from '../core/storyboard-schema.ts';
 import type { GenerateResult, PlanResult, PublishResult } from '../core/types.ts';
 import { ensureKokoroInstalled } from '../narration/kokoro-install.ts';
 import { createPublisher } from '../publish/index.ts';
@@ -842,23 +843,64 @@ describe('output folders', () => {
 });
 
 describe('prepareAuthoring: AUTHORING.md', () => {
-  it('says how many tokens the agent reads: the evidence pack, the guide and the schema', async () => {
+  it('says how many tokens the agent reads: the evidence pack and the guide, not the schema', async () => {
     const messages: string[] = [];
     const result = await prepareAuthoring(
       { ...options({ withContext: false }), outDir: join(base, 'authoring-tokens') },
       { onProgress: (event) => messages.push(event.message) },
     );
-    const text = (
-      await Promise.all(
-        [result.files.evidence, result.files.guide, result.files.schema].map((f) => readFile(f, 'utf8')),
-      )
-    ).join('');
+    const evidence = await readFile(result.files.evidence, 'utf8');
+    const guide = await readFile(result.files.guide, 'utf8');
+    const schema = await readFile(result.files.schema, 'utf8');
     const line = messages.find((m) => m.startsWith('Wrote the evidence pack'));
     const tokens = Number(
-      /reads about (\d+) tokens: the evidence pack, the guide and the schema\.$/.exec(line ?? '')?.[1],
+      /reads about (\d+) tokens: the evidence pack and the guide\.$/.exec(line ?? '')?.[1],
     );
-    // The files end with a newline that the count leaves out, so the numbers can differ by one.
-    expect(Math.abs(tokens - estimateTokens(text))).toBeLessThanOrEqual(1);
+    expect(tokens).toBe(estimateTokens(`${evidence}${guide}`));
+    // The schema is still written, for looking up a schema error. It is the largest of the three files.
+    expect(schema.length).toBeGreaterThan(guide.length);
+    expect(guide).toContain('you do not need to read `storyboard.schema.json`');
+  });
+
+  it('names every field and every allowed value of the schema in AUTHORING.md', async () => {
+    const result = await prepareAuthoring({
+      ...options({ withContext: false }),
+      outDir: join(base, 'authoring-complete'),
+    });
+    const guide = await readFile(result.files.guide, 'utf8');
+    const fields = new Set<string>();
+    const names = new Set<string>();
+    const fixed: string[][] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (typeof node !== 'object' || node === null) return;
+      const record = node as Record<string, unknown>;
+      if (Array.isArray(record.enum)) fixed.push(record.enum.map(String));
+      if (typeof record.const === 'string') names.add(record.const);
+      for (const key of Object.keys((record.properties as object | undefined) ?? {})) fields.add(key);
+      Object.values(record).forEach(walk);
+    };
+    walk(await readJson<unknown>(result.files.schema));
+    expect(fields.size).toBeGreaterThan(50);
+    expect(fixed.length).toBeGreaterThan(20);
+    for (const field of fields) expect(guide, `the field ${field}`).toContain(`"${field}"`);
+    for (const name of names) expect(guide, `the value ${name}`).toContain(`"${name}"`);
+    // A list of the section holds the values of one field: all of them, in the order of the schema.
+    const section = guide.slice(guide.indexOf('## Allowed values'));
+    const lists = [...section.matchAll(/^- .*: (.+)\.$/gm)].map((match) => match[1]?.split(', '));
+    for (const values of fixed) expect(lists, values.join(', ')).toContainEqual(values);
+    // The rules that the guide leaves to the descriptions in the schema, such as how a table keeps its rows.
+    for (const field of [
+      SceneSchema.shape.title,
+      TitleVisualSchema.shape.chips,
+      BrowserVisualSchema.shape.blocks.element.shape.items,
+    ]) {
+      expect(field.description).toBeTruthy();
+      expect(guide).toContain(field.description);
+    }
   });
 
   it('shows validate and generate with the source and the flags of the analysis', async () => {

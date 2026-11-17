@@ -195,7 +195,8 @@ export const BrowserVisualSchema = z.object({
         .array(z.string())
         .describe(
           'list: one entry per item. table: one entry per row, cells separated by "|", first row is the header. ' +
-            'input: items[0] is the value shown in the field. Other kinds: usually empty.',
+            'input: items[0] is the value shown in the field. card: one entry per line under its title. ' +
+            'toast: items[0] is the second line. Other kinds: empty.',
         ),
       emphasis: z.boolean(),
       beat,
