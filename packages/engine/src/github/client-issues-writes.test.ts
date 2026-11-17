@@ -194,28 +194,10 @@ describe('comments and writes', () => {
         link: '<https://api.github.com/repos/acme/widgets/issues/7/comments?per_page=100&page=2>; rel="next"',
       });
     });
-    const found = await (await clientWith()).findCommentByMarker(MARKER, 'github-actions[bot]');
+    const found = await (await clientWith()).findComment((c) => c.body.startsWith(MARKER));
     expect(found?.id).toBe(4);
     expect(found?.url).toContain('issuecomment-4');
     expect(calls).toHaveLength(2);
-  });
-
-  it('only matches comments by the given account that start with the marker', async () => {
-    mockFetch(
-      route('GET', '/repos/acme/widgets/issues/7/comments', () =>
-        json([
-          comment(1, `Header\n${MARKER}`, { user: { login: 'bot[bot]', type: 'Bot' } }),
-          comment(2, `${MARKER}\nlooks like ours`, { user: { login: 'mallory', type: 'User' } }),
-          comment(3, `${MARKER}\nours`, { user: { login: 'Maintainer', type: 'User' } }),
-        ]),
-      ),
-    );
-    const client = await clientWith();
-    expect(await client.findCommentByMarker(MARKER, 'bot[bot]')).toBeNull();
-    expect((await client.findCommentByMarker(MARKER, 'maintainer'))?.id).toBe(3);
-    expect(await client.findCommentByMarker(MARKER, 'someone-else')).toBeNull();
-    expect(await client.findCommentByMarker('', 'maintainer')).toBeNull();
-    expect(await client.findCommentByMarker(MARKER, '')).toBeNull();
   });
 
   it('tells which account the token belongs to, and null when it cannot', async () => {

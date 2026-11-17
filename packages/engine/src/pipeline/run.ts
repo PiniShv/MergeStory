@@ -1,7 +1,9 @@
 /** generate(): the whole pipeline, from the change to the published video. */
 import { writeFile } from 'node:fs/promises';
 import type { Config } from '../core/config.ts';
+import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
+import type { Renderer, TtsProvider } from '../core/providers.ts';
 import {
   RUN_FILE,
   resultFiles,
@@ -32,6 +34,16 @@ import { buildWatchPageData } from './presentation.ts';
 import { type PublishOutcome, publishAndNotify, saveResult } from './publish-run.ts';
 import { chooseStoryboard, fitStoryboard } from './storyboard-choice.ts';
 import type { GenerateHooks, GenerateOptions } from './types.ts';
+
+/**
+ * Checks the render tools, then picks (and if needed installs) the voice. It runs before the
+ * storyboard step, which may be paid, so a run that cannot finish stops before it spends money.
+ * In order, not in parallel: a failed check must not leave a voice install running.
+ */
+async function readyToRender(ctx: RunContext, renderer: Renderer): Promise<TtsProvider> {
+  await renderer.ready();
+  return selectTtsProvider(ctx);
+}
 
 /**
  * The error of a failed upload, with what the person needs to go on: the video was rendered and is
@@ -70,6 +82,9 @@ export async function generate(
     },
   });
 
+  const renderer = createRenderer(config);
+  const tts = ctx.dryRun ? null : await readyToRender(ctx, renderer);
+
   const choice = await chooseStoryboard(p, options.storyboard);
   const { validation } = choice;
   const fit = fitStoryboard(p, choice.storyboard);
@@ -96,10 +111,9 @@ export async function generate(
   });
   assertNotAborted(ctx.signal);
 
-  if (ctx.dryRun) return planResult(p, choice, storyboard, warnings, publishProblem);
+  if (ctx.dryRun || tts === null) return planResult(p, choice, storyboard, warnings, publishProblem);
 
   // Narration and timing
-  const tts = await selectTtsProvider(ctx);
   ctx.progress({ stage: 'narrate', status: 'start', message: `Narrating with ${tts.id}` });
   const narration = await synthesizeNarration(storyboard, tts, ctx);
   const timeline = buildTimeline(storyboard, narration);
@@ -155,7 +169,7 @@ export async function generate(
     status: 'start',
     message: `Rendering ${plan.width}x${plan.height} at ${plan.fps} fps`,
   });
-  const rendered = await createRenderer(config).render(
+  const rendered = await renderer.render(
     { plan, audioPath, outDir: ctx.runDir, quality: config.quality },
     ctx,
   );

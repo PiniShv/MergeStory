@@ -103,6 +103,16 @@ describe('startup rules', () => {
     expect((error as MergeStoryError).hint).toContain('openssl rand');
   });
 
+  it('refuses a token with whitespace, which no request could send', async () => {
+    const error = await startServer({
+      host: '127.0.0.1',
+      port: 0,
+      store,
+      token: 'my secret token value 123',
+    }).catch((e: unknown) => e);
+    expect(error).toMatchObject({ code: 'CONFIG_INVALID', message: 'The API token contains whitespace.' });
+  });
+
   it('refuses a weak token on loopback too', async () => {
     for (const host of ['127.0.0.1', 'localhost', '::1']) {
       const error = await startServer({ host, port: 0, store, token: 'test1234' }).catch((e: unknown) => e);

@@ -385,14 +385,8 @@ export class GitHubClient {
     }
   }
 
-  /**
-   * The MergeStory comment written by `authorLogin`: the first comment by that account whose body
-   * starts with the marker. Comments by anyone else are never matched, so a comment that merely copies
-   * the marker can never be taken over.
-   */
-  async findCommentByMarker(marker: string, authorLogin: string): Promise<GitHubComment | null> {
-    if (!marker || !authorLogin) return null;
-    const author = authorLogin.toLowerCase();
+  /** The first comment on the pull request that `match` accepts, reading page by page. */
+  async findComment(match: (comment: GitHubComment) => boolean): Promise<GitHubComment | null> {
     for await (const { items } of this.pages(
       `${this.repoPath}/issues/${this.ref.number}/comments`,
       'comment list',
@@ -400,9 +394,7 @@ export class GitHubClient {
     )) {
       for (const item of items) {
         const comment = toComment(item);
-        if (!comment) continue;
-        if (comment.authorLogin?.toLowerCase() !== author) continue;
-        if (comment.body.trimStart().startsWith(marker)) return comment;
+        if (comment && match(comment)) return comment;
       }
     }
     return null;

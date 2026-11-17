@@ -1,5 +1,6 @@
 /** Helpers that the language modules share. */
 import type { SymbolKind } from '../../core/types.ts';
+import { MONOREPO_PREFIXES } from '../roles.ts';
 import { blockEnd } from '../scan.ts';
 import { type RawSymbol, signature } from '../symbol-types.ts';
 
@@ -14,8 +15,6 @@ export function matchAll(text: string, pattern: RegExp): RegExpExecArray[] {
   pattern.lastIndex = 0;
   return [...text.matchAll(pattern)];
 }
-
-const MONOREPO_PREFIXES = new Set(['packages', 'apps', 'services', 'libs', 'crates', 'modules', 'cmd']);
 
 /** The package folder of a path in a monorepo ("packages/api" for "packages/api/src/a.ts"); "" elsewhere. */
 export function packageRootOf(path: string): string {

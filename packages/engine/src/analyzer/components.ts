@@ -5,7 +5,7 @@
 
 import { basename, dirname } from '../core/posix.ts';
 import type { ChangedFile, Component, ComponentKind, FileRole } from '../core/types.ts';
-import { SOURCE_ROOTS } from './roles.ts';
+import { MONOREPO_PREFIXES, SOURCE_ROOTS } from './roles.ts';
 
 export interface ComponentInput {
   file: ChangedFile;
@@ -27,7 +27,6 @@ interface Located {
   path: string;
 }
 
-const MONOREPO_PREFIXES = new Set(['packages', 'apps', 'services', 'libs', 'crates', 'modules', 'cmd']);
 const WRAPPER_DIRS = new Set(['features', 'modules', 'domains']);
 const TEST_DIRS = new Set(['__tests__', '__mocks__', 'tests', 'test', 'spec', 'specs', 'e2e', 'testdata']);
 const DOC_DIRS = new Set(['docs', 'doc', 'documentation']);

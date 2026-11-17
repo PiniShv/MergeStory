@@ -11,8 +11,6 @@ export const BUNDLE_CONTAINS: readonly EgressContent[] = [
 
 /** First line of the pull request comment; used to find and update the comment later. */
 export const COMMENT_MARKER = '<!-- mergestory:comment -->';
-export const DESCRIPTION_START = '<!-- mergestory:start -->';
-export const DESCRIPTION_END = '<!-- mergestory:end -->';
 
 export interface EvidenceLink {
   label: string;

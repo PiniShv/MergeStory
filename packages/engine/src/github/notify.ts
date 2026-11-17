@@ -9,6 +9,7 @@ export interface CommentResult {
   created: boolean;
 }
 
+/** The MergeStory section of a pull request description sits between these two lines. */
 export const DESCRIPTION_START = '<!-- mergestory:start -->';
 export const DESCRIPTION_END = '<!-- mergestory:end -->';
 
@@ -52,11 +53,6 @@ function isUneditable(error: unknown): boolean {
   );
 }
 
-/** The bot account that GitHub Actions' GITHUB_TOKEN writes as (that token cannot read /user). */
-function actionsBotLogin(): string | null {
-  return process.env.GITHUB_ACTIONS === 'true' ? 'github-actions[bot]' : null;
-}
-
 /**
  * Create or update the single MergeStory comment on a pull request (found by its HTML marker).
  * The marker is added to the top of the text when it is missing, so the next run finds the
@@ -74,10 +70,15 @@ export async function upsertPullRequestComment(
   assertFits(text, 'comment');
   try {
     const client = await GitHubClient.create(ref, ctx, { stage: 'notify' });
-    // Only a comment this same account wrote may be updated. When the account cannot be told,
-    // a new comment is posted instead of guessing.
-    const author = (await client.getAuthenticatedLogin()) ?? actionsBotLogin();
-    const existing = author ? await client.findCommentByMarker(marker, author) : null;
+    // Only a comment this same account wrote may be updated, so one that merely copies the marker is
+    // never taken over. An app token (GITHUB_TOKEN too) cannot read its login: then a bot's comment
+    // is tried, since a person cannot post as a bot, and GitHub refuses the edit if another app wrote it.
+    const login = (await client.getAuthenticatedLogin())?.toLowerCase();
+    const existing = await client.findComment(
+      (c) =>
+        c.body.trimStart().startsWith(marker) &&
+        (login ? c.authorLogin?.toLowerCase() === login : c.authorType === 'Bot'),
+    );
     if (existing) {
       try {
         const updated = await client.updateComment(existing.id, text);
@@ -106,11 +107,18 @@ export function replaceMarkedSection(description: string, section: string): stri
   const wrapped = trimmed.startsWith(DESCRIPTION_START) && trimmed.endsWith(DESCRIPTION_END);
   const block = wrapped ? content : `${DESCRIPTION_START}${newline}${content}${newline}${DESCRIPTION_END}`;
 
-  // Pair the first end marker with the closest start marker before it, so a stray start marker
-  // earlier in the text never swallows the text between the two.
-  const end = description.indexOf(DESCRIPTION_END);
-  const start = end < 0 ? -1 : description.lastIndexOf(DESCRIPTION_START, end);
-  if (start >= 0 && start < end) {
+  // Pair the first end marker that has a start marker before it with the closest such start, so a
+  // stray start marker never swallows text and a stray end marker never hides the real section.
+  let from = 0;
+  let end = description.indexOf(DESCRIPTION_END);
+  let start = -1;
+  while (end >= 0) {
+    start = description.lastIndexOf(DESCRIPTION_START, end);
+    if (start >= from) break;
+    from = end + DESCRIPTION_END.length;
+    end = description.indexOf(DESCRIPTION_END, from);
+  }
+  if (end >= 0) {
     return description.slice(0, start) + block + description.slice(end + DESCRIPTION_END.length);
   }
   const base = description.trimEnd();

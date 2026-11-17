@@ -15,7 +15,7 @@ export { buildDescriptionSection, buildPrComment } from './comment.ts';
 export { cacheControlFor, contentTypeFor } from './content-types.ts';
 export { sanitizeKeyPrefix } from './keys.ts';
 export type { CommentData, EvidenceLink, WatchPageData } from './types.ts';
-export { BUNDLE_CONTAINS, COMMENT_MARKER, DESCRIPTION_END, DESCRIPTION_START } from './types.ts';
+export { BUNDLE_CONTAINS, COMMENT_MARKER } from './types.ts';
 export { buildWatchPage } from './watch-page.ts';
 export { LocalPublisher, S3Publisher, writeWatchFolder };
 

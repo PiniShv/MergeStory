@@ -170,9 +170,9 @@ async function readDependencies(
   states: readonly FileState[],
   files: FileReader,
 ): Promise<DependencyChange[]> {
-  const manifests = states.filter(
-    (s) => !s.hidden && s.role === 'dependency-manifest' && manifestKind(s.file.path) !== null,
-  );
+  const manifests = states
+    .filter((s) => !s.hidden && s.role === 'dependency-manifest' && manifestKind(s.file.path) !== null)
+    .slice(0, MAX_CONTENT_FILES);
   const diffs = await mapLimit(manifests, READ_CONCURRENCY, async (s) => {
     const [base, head] = await Promise.all([files.base(s), files.head(s)]);
     return diffManifest(s.file, base, head);

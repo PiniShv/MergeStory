@@ -60,8 +60,3 @@ export function scopeAllows(granted: readonly string[] | null, operation: YouTub
   if (granted === null) return true;
   return ACCEPTED[operation].some((scope) => granted.includes(scope));
 }
-
-/** true when every required scope was granted. */
-export function hasScopes(granted: readonly string[], required: readonly string[]): boolean {
-  return required.every((scope) => granted.includes(scope));
-}

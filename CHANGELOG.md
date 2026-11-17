@@ -2,6 +2,29 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Fixed:** short values under names like `password` (`password = "hunter2"`, `DB_PASSWORD=abc123`)
+  and quoted passphrases with a digit or sign are now masked. Before, values under 8 characters and
+  values with spaces were shown.
+- **Fixed:** Hugging Face, Google OAuth, DigitalOcean, Shopify and PyPI tokens, and more Slack token
+  forms, are masked in videos and kept out of logs.
+- A missing browser, FFmpeg or voice setup now stops a run before the storyboard step, so a paid
+  model is not called for a run that cannot finish.
+- With a GitHub App token, the pull request comment is updated instead of a new one being posted on
+  every run.
+- A stray end marker in a pull request description no longer makes a new MergeStory section appear
+  on every run.
+- A model's answer is no longer reused from the cache after `llm.effort`, `llm.maxOutputTokens` or
+  `llm.baseUrl` changes.
+- A 429 answer that reports a quota or spending limit is no longer retried for paid voices.
+- `mergestory serve` refuses an API token that contains whitespace, which no request could send.
+- Line numbers in code views stay correct in files that contain a lone carriage return.
+- `--json` output keeps control characters, escaped, instead of dropping them.
+- The published package pins the dependency versions that CI tested.
+
 ## 1.5.0
 
 ### Skill and plugin

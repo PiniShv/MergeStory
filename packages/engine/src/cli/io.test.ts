@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createIo, safeOutput } from './io.ts';
+import { createIo, jsonLine, safeOutput } from './io.ts';
 import { createStyle } from './style.ts';
 
 afterEach(() => {
@@ -13,6 +13,14 @@ describe('safeOutput', () => {
     expect(safeOutput(text)).toBe(
       '\u001b[32mAnalysis ready\u001b[39m: Add retry ]52;c;aGVsbG8=logic[2J\n\tdone',
     );
+  });
+});
+
+describe('jsonLine', () => {
+  it('escapes the controls that safeOutput would drop, so the value survives', () => {
+    const line = jsonLine({ title: 'a\u0085b\u007f' });
+    expect(safeOutput(line)).toBe(line);
+    expect(JSON.parse(line)).toEqual({ title: 'a\u0085b\u007f' });
   });
 });
 

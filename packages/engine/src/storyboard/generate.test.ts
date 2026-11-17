@@ -593,6 +593,16 @@ describe('cache', () => {
     expect(again.egress.list()).toEqual([]);
   });
 
+  it('asks again when a setting that changes the answer changes', async () => {
+    const { fx, ctx, cache } = setup();
+    const provider = fakeProvider([validStoryboard(), validStoryboard()]);
+    await generateStoryboard(input(provider, fx), ctx);
+    const config = { ...fx.config, llm: { ...fx.config.llm, effort: 'high' as const } };
+    const { ctx: again } = testContext({ config, runId: 't2', cache });
+    expect((await generateStoryboard(input(provider, fx), again)).cached).toBe(false);
+    expect(provider.calls).toHaveLength(2);
+  });
+
   it('caches an invalid answer and its repair, so a rerun makes no calls', async () => {
     const { fx, ctx, cache } = setup();
     const provider = fakeProvider([brokenStoryboard(), validStoryboard()]);

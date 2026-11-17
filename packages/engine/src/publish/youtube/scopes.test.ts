@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  describeScope,
-  hasScopes,
-  parseScopes,
-  requiredScopes,
-  SCOPES,
-  scopeAllows,
-  shortScope,
-} from './scopes.ts';
+import { describeScope, parseScopes, requiredScopes, SCOPES, scopeAllows, shortScope } from './scopes.ts';
 
 describe('requiredScopes', () => {
   it('asks only for youtube.upload when captions and playlists are off', () => {
@@ -65,11 +57,6 @@ describe('scope helpers', () => {
   it('shortens a scope for messages', () => {
     expect(shortScope(SCOPES.upload)).toBe('youtube.upload');
     expect(shortScope('openid')).toBe('openid');
-  });
-
-  it('checks that every required scope was granted', () => {
-    expect(hasScopes([SCOPES.upload, 'openid'], [SCOPES.upload])).toBe(true);
-    expect(hasScopes(['openid'], [SCOPES.upload])).toBe(false);
   });
 
   it('explains the two scopes in plain words', () => {

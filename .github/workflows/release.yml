@@ -63,7 +63,7 @@ jobs:
 
       # The published package pins the version of every dependency, so every install gets the tree
       # that this job checked. The pin is made from the packed files, without the tools that only
-      # development needs.
+      # development needs, and starts from the repository's lockfile, so it has the versions CI tested.
       - name: Make the release folder
         run: |
           npm pack --workspace mergestory --pack-destination "$RUNNER_TEMP"
@@ -73,6 +73,7 @@ jobs:
         working-directory: ${{ runner.temp }}/release
         run: |
           cp package.json "$RUNNER_TEMP/package.json.full"
+          cp "$GITHUB_WORKSPACE/package-lock.json" .
           node -e '
             const fs = require("fs");
             const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));

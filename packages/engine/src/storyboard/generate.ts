@@ -138,6 +138,10 @@ async function ask(
   const key = hashKey({
     provider: provider.id,
     model: provider.model,
+    // Settings that change the answer: a different effort, limit or server must not reuse it.
+    effort: ctx.config.llm.effort,
+    maxOutputTokens: request.maxOutputTokens,
+    baseUrl: ctx.config.llm.baseUrl,
     system: request.system,
     prompt: request.prompt,
     schema: request.jsonSchema,

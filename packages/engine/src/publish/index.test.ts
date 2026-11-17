@@ -7,8 +7,6 @@ import {
   buildWatchPage,
   COMMENT_MARKER,
   createPublisher,
-  DESCRIPTION_END,
-  DESCRIPTION_START,
   LocalPublisher,
   S3Publisher,
 } from './index.ts';
@@ -45,8 +43,6 @@ describe('createPublisher', () => {
 describe('exports', () => {
   it('keeps the markers that other modules look for', () => {
     expect(COMMENT_MARKER).toBe('<!-- mergestory:comment -->');
-    expect(DESCRIPTION_START).toBe('<!-- mergestory:start -->');
-    expect(DESCRIPTION_END).toBe('<!-- mergestory:end -->');
   });
 
   it('exposes the builders', () => {

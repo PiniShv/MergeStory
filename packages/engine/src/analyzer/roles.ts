@@ -28,6 +28,23 @@ const LOCKFILE_NAMES = new Set([
 /** Directory names that mark source roots; "build" or "dist" below one of them is real source. */
 export const SOURCE_ROOTS = new Set(['src', 'lib', 'app', 'internal', 'pkg', 'cmd', 'source']);
 
+/** Top-level folders that hold one package per subfolder in a monorepo. */
+export const MONOREPO_PREFIXES = new Set([
+  'packages',
+  'apps',
+  'services',
+  'libs',
+  'crates',
+  'modules',
+  'cmd',
+]);
+
+/** Whether a folder is one package of a monorepo, such as "packages/api". */
+export function isWorkspaceDir(path: string): boolean {
+  const [prefix = '', name = '', ...rest] = path.split('/');
+  return rest.length === 0 && name !== '' && MONOREPO_PREFIXES.has(prefix);
+}
+
 const GENERATED_PATTERNS: RegExp[] = [
   /\.min\.[a-z0-9]+$/i,
   /\.generated\.[a-z0-9]+$/i,

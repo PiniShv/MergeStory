@@ -3,10 +3,10 @@ import { mapLimit } from '../core/concurrency.ts';
 import { basename, normalizePosix } from '../core/posix.ts';
 import { importSupport, languageSupport } from './languages/index.ts';
 import type { ImportIndex, ImportLang, ImportRef } from './languages/types.ts';
+import { isWorkspaceDir } from './roles.ts';
 
 const MAX_PARSE_CHARS = 400_000;
 const MAX_WORKSPACE_READS = 12;
-const WORKSPACE_DIR = /^(packages|apps|services|libs|modules|cmd|crates)\/[^/]+$/;
 
 /** The language of the imports in a file, or null when the analyzer does not read them. */
 export function importLang(path: string): ImportLang | null {
@@ -86,7 +86,7 @@ export async function loadResolverOptions(
 ): Promise<Required<Pick<ResolverOptions, 'goModules' | 'packageDirs'>>> {
   const { readHead, concurrency } = input;
   const dirs = input.componentPaths
-    .filter((p) => WORKSPACE_DIR.test(p))
+    .filter(isWorkspaceDir)
     .filter((p) => !input.isExcluded(`${p}/package.json`) && !input.isExcluded(`${p}/go.mod`))
     .slice(0, MAX_WORKSPACE_READS);
   const [names, modules] = await Promise.all([
