@@ -17,6 +17,13 @@ All notable changes to MergeStory are listed here, newest first.
 - **Fixed:** a review prompt reports the right number in "and N more". Before, the count stopped at
   8 places. For source files without a test change it stopped at 5, and for large blocks and long
   functions at 3.
+- **Changed:** the pull request comment is shorter. The chapters are folded, and one click opens
+  them.
+- **Changed:** a review item of the offline storyboard no longer lists its places in the detail,
+  because the item already links to the first place. A finding in several places says how many.
+  Before, the review scene, the watch page and the comment showed the file and line twice.
+- **Changed:** the authoring guide asks that the detail of a review item does not repeat its title
+  or its file and line.
 
 ## 1.5.1
 

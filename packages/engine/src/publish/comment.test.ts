@@ -73,10 +73,13 @@ describe('buildPrComment', () => {
     expect(buildPrComment(sampleComment({ durationSec: Number.NaN }))).toContain('[Watch the MergeStory](');
   });
 
-  it('lists chapters with timestamps', () => {
+  it('lists chapters with timestamps, folded so that the comment stays short', () => {
     expect(comment).toContain(
-      '**Chapters**\n\n- `0:00` Why this change\n- `0:21` The retry helper\n- `2:01` Wrap up',
+      '\n\n<details><summary><b>Chapters</b></summary>\n\n- `0:00` Why this change\n- `0:21` The retry helper\n- `2:01` Wrap up\n\n</details>\n\n',
     );
+    expect(comment).not.toContain('**Chapters**');
+    // What a reader sees without opening anything: the review items, not the chapters.
+    expect(comment.indexOf('</details>')).toBeLessThan(comment.indexOf('**What to review**'));
   });
 
   it('lists review items with file links when a link is known', () => {
@@ -190,7 +193,8 @@ describe('buildPrComment', () => {
 
   it('leaves out sections that have nothing to show', () => {
     const bare = buildPrComment(sampleComment({ chapters: [], checklist: [], summary: '' }));
-    expect(bare).not.toContain('**Chapters**');
+    expect(bare).not.toContain('Chapters');
+    expect(bare).not.toContain('<details>');
     expect(bare).not.toContain('**What to review**');
   });
 
@@ -318,9 +322,26 @@ describe('buildPrComment with hostile text', () => {
     expect(outsideCode).not.toMatch(/\]\(\s*javascript/i);
   });
 
-  it('lets no HTML through, except the footer tag the builder writes itself', () => {
+  it('lets no HTML through, except the tags the builder writes itself', () => {
     expect(comment).not.toMatch(/<script/i);
-    expect(comment.replace(COMMENT_MARKER, '').replace(/<\/?sub>/g, '')).not.toContain('<');
+    // The fold around the chapters and the footer. Each piece is there once, so no text added a second one.
+    const own = ['<details><summary><b>Chapters</b></summary>', '</details>', '<sub>', '</sub>'];
+    let rest = comment.replace(COMMENT_MARKER, '');
+    for (const tag of own) {
+      expect(rest.split(tag), tag).toHaveLength(2);
+      rest = rest.replace(tag, '');
+    }
+    expect(rest).not.toContain('<');
+  });
+
+  it('keeps a chapter title from closing or reopening the fold', () => {
+    const out = buildPrComment(
+      sampleComment({ chapters: [{ title: 'a </details> <details open> b <summary> c', startSec: 0 }] }),
+    );
+    expect(out.split('</details>')).toHaveLength(2);
+    expect(out.split('<details')).toHaveLength(2);
+    expect(out.split('<summary')).toHaveLength(2);
+    expect(out).toContain('- `0:00` a b c');
   });
 
   it('keeps the marker unique', () => {

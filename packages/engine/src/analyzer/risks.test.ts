@@ -405,6 +405,60 @@ describe('risk detection', () => {
     expect(titled(five, /long function/)!.detail).toContain('src/c.ts:1 and 2 more.');
   });
 
+  it('gives a summary without the list of places, and says how many places when there are several', async () => {
+    const notes = Array.from({ length: 12 }, (_, i) => `// TODO: step ${i + 1}`);
+    const many = await run([{ path: 'src/a.ts', base: 'a\n', head: `a\n${notes.join('\n')}\n` }, TEST_FILE]);
+    expect(titled(many, /TODO/)!.summary).toBe('Adds a TODO, FIXME or HACK note, in 12 places.');
+    const one = await run([{ path: 'src/a.ts', base: 'a\n', head: 'a\n// TODO: later\n' }, TEST_FILE]);
+    expect(titled(one, /TODO/)!.summary).toBe('Adds a TODO, FIXME or HACK note.');
+    // A finding that keeps only its first places still says how many there are.
+    const sources = Array.from({ length: 12 }, (_, i) => ({
+      path: `src/f${i}.ts`,
+      base: 'a\n',
+      head: 'a\nb\n',
+    }));
+    expect(titled(await run(sources), /covered by tests/)!.summary).toBe(
+      'Changes source files while no test file changed, in 12 places.',
+    );
+  });
+
+  it('puts the number of places before the sentences that follow the summary', async () => {
+    const body = Array.from({ length: 140 }, (_, i) => `  total += ${i};`).join('\n');
+    const long = (name: string) =>
+      `export function ${name}() {\n  let total = 0;\n${body}\n  return total;\n}\n`;
+    const five = await run([
+      ...['a', 'b', 'c', 'd', 'e'].map((name) => ({ path: `src/${name}.ts`, base: null, head: long(name) })),
+      TEST_FILE,
+    ]);
+    expect(titled(five, /long function/)!.summary).toBe(
+      'Changes a function of more than 120 lines, in 5 places. a spans 144 lines; b spans 144 lines; c spans 144 lines.',
+    );
+    expect(titled(five, /large change/)!.summary).toBe(
+      'Changes a single block of more than 80 lines, in 5 places. Largest block: 144 lines.',
+    );
+  });
+
+  it('adds no second number to a summary that already counts or names what it found', async () => {
+    const base =
+      'export function keep() {\n  return 1;\n}\n\nexport function gone() {\n  return 2;\n}\n\nexport function away() {\n  return 3;\n}\n';
+    const head = 'export function keep() {\n  return 1;\n}\n';
+    const api = await run([{ path: 'src/api.ts', base, head }, TEST_FILE]);
+    const removed = titled(api, /removed exports/)!;
+    expect(removed.detail).toBe(
+      'Removes 2 exported symbols at src/api.ts:5, src/api.ts:9. Affected: gone, away.',
+    );
+    expect(removed.summary).toBe('Removes 2 exported symbols. Affected: gone, away.');
+
+    const reads = ['export const a = process.env.NEW_A;', 'export const b = process.env.NEW_B;'];
+    const env = await run([
+      { path: 'src/config.ts', base: 'x\n', head: `x\n${reads.join('\n')}\n` },
+      TEST_FILE,
+    ]);
+    const summary = titled(env, /environment variables/)!.summary;
+    expect(summary).toContain('(NEW_A, NEW_B).');
+    expect(summary).not.toMatch(/places|src\/config\.ts/);
+  });
+
   it('counts every new environment variable in "and N more"', async () => {
     const reads = Array.from({ length: 11 }, (_, i) => `export const v${i} = process.env.NEW_VAR_${i};`);
     const analysis = await run([

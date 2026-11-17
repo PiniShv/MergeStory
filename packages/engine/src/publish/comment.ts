@@ -196,8 +196,10 @@ export function buildPrComment(data: CommentData): string {
     );
   if (summary) lines.push('', summary);
 
+  // Folded, so that the comment stays short: the chapters are an outline of the video.
   const chapters = chapterMarkdownLines(data.chapters);
-  if (chapters.length > 0) lines.push('', '**Chapters**', '', ...chapters);
+  if (chapters.length > 0)
+    lines.push('', '<details><summary><b>Chapters</b></summary>', '', ...chapters, '', '</details>');
   const checklist = checklistLines(data.checklist);
   if (checklist.length > 0) lines.push('', '**What to review** (suggested priorities)', '', ...checklist);
 

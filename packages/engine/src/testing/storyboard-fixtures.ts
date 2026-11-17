@@ -78,6 +78,7 @@ export interface FixtureRisk {
   category: RiskCategory;
   title: string;
   detail: string;
+  summary?: string;
   files?: string[];
   ref?: CodeRef | null;
 }
@@ -234,6 +235,7 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     category: r.category,
     title: r.title,
     detail: r.detail,
+    ...(r.summary === undefined ? {} : { summary: r.summary }),
     evidence: (r.files ?? []).map((p) => fileIds.get(p)!),
     ref: r.ref ?? null,
   }));

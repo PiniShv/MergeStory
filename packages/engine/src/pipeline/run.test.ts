@@ -617,6 +617,18 @@ describe('generate: publishing', () => {
 });
 
 describe('generate: details', () => {
+  it('writes the review items of the offline storyboard without a list of places', async () => {
+    await run();
+    const stored = await readJson<{
+      reviewChecklist: { title: string; detail: string; ref: { path: string } | null }[];
+    }>(join(runDir(), 'storyboard.json'));
+    const fromAnalysis = stored.reviewChecklist.filter((item) => item.ref !== null);
+    expect(fromAnalysis.length).toBeGreaterThan(0);
+    // The page, the video and the comment show the reference next to the detail. A file and line in the detail
+    // says the place twice.
+    for (const item of fromAnalysis) expect(item.detail).not.toMatch(/\.[a-z]+:\d+/);
+  });
+
   it('writes captions with the e-mail setting that the narration uses', async () => {
     const task =
       'Reported by dev@example.com: forecasts fail when the service is busy and callers retry by hand.';
