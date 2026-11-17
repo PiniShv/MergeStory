@@ -2,6 +2,14 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Added:** `mergestory runs delete --older-than <days>` removes every run and finished background
+  job made more than that many days ago. Deleting a run by id now also removes the files of the job
+  that made it. A run that a job is still making is kept.
+
 ## 1.5.1
 
 ### Skill and plugin

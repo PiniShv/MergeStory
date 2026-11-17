@@ -264,6 +264,15 @@ export class JobStore {
     }
   }
 
+  /** Delete the folder of a finished job. A job that is still queued or running is kept. */
+  async remove(id: string): Promise<void> {
+    const job = await this.get(id);
+    if (!isTerminal(job.status)) {
+      throw new MergeStoryError('SOURCE_INVALID', `Job ${id} is still ${job.status}, so it was kept.`);
+    }
+    await rm(this.jobDir(id), { recursive: true, force: true });
+  }
+
   /** Recent jobs, newest first. Ids start with a UTC timestamp, so sorting the names sorts by age. */
   async list(limit = 20): Promise<Job[]> {
     let names: string[];

@@ -495,10 +495,14 @@ where `publish` is `{"provider", "watchUrl", "expiresAt"}` or `null`.
 
 ```
 mergestory runs delete <run-id...>
+mergestory runs delete --older-than <days>
 ```
 
-Removes the folders of the run ids you give, with everything in them, and prints how many
-bytes were freed. There is no option to delete all runs. An id is refused (exit code 2, nothing deleted
+Removes the folders of the run ids you give, with everything in them, and the files of the
+background jobs that made them, and prints how many bytes were freed. `--older-than <days>`
+removes every run and finished job made more than that many days ago (1 to 3650), by the time in
+its id; a folder with any other name is kept. Give run ids or `--older-than`, not both. A run that a
+job is still making is kept, with its job. An id is refused (exit code 2, nothing deleted
 for it) when it is not a plain run id, when the folder is a symbolic link, or when the folder holds none
 of `result.json`, `publish-input.json` and `analysis.json`. The other ids are still deleted. With `--json` it prints
 `{"ok": true, "deleted": ["..."], "freedBytes": 0}`; when an id is refused, `ok` is `false` and `errors`

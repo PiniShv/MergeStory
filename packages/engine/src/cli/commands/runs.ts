@@ -8,6 +8,8 @@ import { RUN_ID_PATTERN } from '../../core/ids.ts';
 import { homeLayout } from '../../core/paths.ts';
 import { RUN_FILE, readRunJson, StoredResultSchema } from '../../core/run-folder.ts';
 import { terminalSafe } from '../../core/text.ts';
+import { isTerminal, type Job } from '../../jobs/model.ts';
+import { isValidJobId, JobStore } from '../../jobs/store.ts';
 import { formatBytes } from '../files.ts';
 import { formatDuration, formatTime } from '../format.ts';
 import { numberFlag } from '../options.ts';
@@ -27,14 +29,38 @@ interface RunSummary {
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
-/** The time in a run id ("20261103-214501-a3f9"), or the folder's modification time for any other name. */
-async function createdAt(id: string, dir: string): Promise<string> {
+/** The time in a run id ("20261103-214501-a3f9"), or null for any other name. */
+function idTime(id: string): Date | null {
   const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})-/.exec(id);
-  if (m && RUN_ID_PATTERN.test(id)) {
-    const date = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`);
-    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  if (!m || !RUN_ID_PATTERN.test(id)) return null;
+  const date = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The time in a run id, or the folder's modification time for any other name. */
+async function createdAt(id: string, dir: string): Promise<string> {
+  return (idTime(id) ?? (await stat(dir)).mtime).toISOString();
+}
+
+/** The jobs on this machine, by the run each one makes. Damaged job files are left out. */
+async function jobsByRun(store: JobStore): Promise<Map<string, Job[]>> {
+  const byRun = new Map<string, Job[]>();
+  for (const id of (await readdir(store.root).catch(() => [])).filter(isValidJobId)) {
+    const job = await store.get(id).catch(() => null);
+    if (!job) continue;
+    const runId = job.options.runId ?? job.id;
+    byRun.set(runId, [...(byRun.get(runId) ?? []), job]);
   }
-  return (await stat(dir)).mtime.toISOString();
+  return byRun;
+}
+
+/** Run ids, from run folders and jobs, whose id says they were made more than `days` days ago. */
+async function idsOlderThan(runsDir: string, jobs: Map<string, Job[]>, days: number): Promise<string[]> {
+  const cutoff = Date.now() - days * 86_400_000;
+  const names = await readdir(runsDir).catch(() => []);
+  return [...new Set([...names, ...jobs.keys()])]
+    .filter((id) => (idTime(id)?.getTime() ?? cutoff) < cutoff)
+    .sort();
 }
 
 /** The run folders that hold a readable result.json; the rest are left out. */
@@ -151,21 +177,48 @@ export function registerRuns(program: Command, rt: CliRuntime): void {
 
   runs
     .command('delete')
-    .description('Delete run folders (the video, its files and its result) from this machine')
-    .argument('<run-id...>', 'run id, as listed by `mergestory runs`')
-    .action(async (ids: string[], _options: unknown, cmd: Command) => {
+    .description('Delete run folders (the video, its files and its result) and their jobs from this machine')
+    .argument('[run-id...]', 'run id, as listed by `mergestory runs`')
+    .option(
+      '--older-than <days>',
+      'delete every run and finished job made more than this many days ago (1-3650)',
+      numberFlag({ integer: true, min: 1, max: 3650 }),
+    )
+    .action(async (ids: string[], flags: { olderThan?: number }, cmd: Command) => {
       const env = rt.env(cmd);
-      const { runs: runsDir } = homeLayout((await loadConfig(env)).home);
+      if (ids.length > 0 === (flags.olderThan !== undefined)) {
+        throw new MergeStoryError('USAGE', 'Give run ids or --older-than, one of the two.', {
+          hint: 'For example: mergestory runs delete --older-than 30',
+        });
+      }
+      const layout = homeLayout((await loadConfig(env)).home);
+      const runsDir = layout.runs;
+      const store = new JobStore(layout.jobs);
+      const jobs = await jobsByRun(store);
+      const targets =
+        flags.olderThan === undefined ? new Set(ids) : await idsOlderThan(runsDir, jobs, flags.olderThan);
       const deleted: string[] = [];
       const errors: { runId: string; message: string }[] = [];
       let freedBytes = 0;
-      for (const id of new Set(ids)) {
+      for (const id of targets) {
         try {
-          const dir = await deletableRun(runsDir, id);
-          const bytes = await folderBytes(dir);
-          await rm(dir, { recursive: true, force: true });
+          const own = jobs.get(id) ?? [];
+          // A run that a job is still making is kept whole: its folder and its job.
+          if (own.some((job) => !isTerminal(job.status))) {
+            throw new MergeStoryError('SOURCE_INVALID', `${id} is still being made, so it was kept.`);
+          }
+          // A job whose run folder is gone (a failed job, or a run deleted before) leaves only its job.
+          const onlyJobs = own.length > 0 && !(await lstat(join(runsDir, id)).catch(() => null));
+          const dir = onlyJobs ? null : await deletableRun(runsDir, id);
+          for (const job of own) {
+            freedBytes += await folderBytes(store.jobDir(job.id));
+            await store.remove(job.id);
+          }
+          if (dir) {
+            freedBytes += await folderBytes(dir);
+            await rm(dir, { recursive: true, force: true });
+          }
           deleted.push(id);
-          freedBytes += bytes;
         } catch (err) {
           if (!(err instanceof MergeStoryError)) throw err;
           errors.push({ runId: terminalSafe(id), message: err.message });
