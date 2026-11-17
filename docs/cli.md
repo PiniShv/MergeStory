@@ -283,6 +283,10 @@ It prints `errors` (these block rendering), `warnings` (something was removed or
 change made automatically). The exit code is 0 when there are no errors, even if there are warnings, and 3
 when there is at least one error. [storyboard.md](storyboard.md#what-the-checks-do) explains each code.
 
+When there are errors, it also writes one line to the log on stderr: the number of errors and how many of
+each code, for example `warn: [validate] Storyboard has errors: 3 (uncited-line 2, schema 1)`. The errors
+themselves are only in the result on stdout.
+
 ## Commands for coding agents
 
 A coding agent can be steered by text in a pull request. So the general commands, with their flexible
