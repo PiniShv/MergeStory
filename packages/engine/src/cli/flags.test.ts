@@ -407,6 +407,15 @@ describe('analyze: the commands in AUTHORING.md', () => {
     );
   });
 
+  it('mask an e-mail address in the caption of --log', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    const { stdout } = await run(['analyze', 'repo', '--log', 'run.log:sent to bob@corp.com']);
+    const args = analyzeMock.mock.calls[0]?.[0].followUp?.args ?? [];
+    expect(args.join('\n')).not.toContain('bob@corp.com');
+    expect(stdout).not.toContain('bob@corp.com');
+  });
+
   it('keep --repro-file, --redact, --screenshots-dir and --log together, with the captions masked', async () => {
     analyzeMock.mockResolvedValue(authoring);
     await mkdir(join(dir, 'repo'));

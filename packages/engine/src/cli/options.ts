@@ -18,7 +18,7 @@ import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
 import { isLoopbackAddress } from '../core/net.ts';
 import { isInside } from '../core/posix.ts';
-import { maskSecrets } from '../core/secrets.ts';
+import { maskPrivate, maskSecrets } from '../core/secrets.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import type { JobOptions } from '../jobs/model.ts';
 import { maskContext } from '../jobs/view.ts';
@@ -494,9 +494,9 @@ export function followUpFor(
   if (flags.base) refs.push('--base', flags.base);
   if (flags.head) refs.push('--head', flags.head);
   const contextArgs: string[] = [];
-  // The file becomes absolute. The caption is masked: the commands are written to AUTHORING.md.
+  // The file becomes absolute. The caption is masked, secrets and e-mail addresses: the commands are written to AUTHORING.md.
   const withCaption = (path: string, spec: string): string =>
-    `${resolve(cwd, path)}${maskSecrets(spec.slice(path.length)).text}`;
+    `${resolve(cwd, path)}${maskPrivate(spec.slice(path.length), { maskEmails: true })}`;
   if (flags.task !== undefined) contextArgs.push('--task', flags.task);
   if (flags.taskFile !== undefined) contextArgs.push('--task-file', resolve(cwd, flags.taskFile));
   if (flags.notesFile !== undefined) contextArgs.push('--notes-file', resolve(cwd, flags.notesFile));
