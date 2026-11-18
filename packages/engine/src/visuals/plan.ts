@@ -243,7 +243,10 @@ export async function loadStoryboardScreenshots(
   for (const { visual } of storyboard.scenes) {
     if (visual.type === 'screenshot') ids.add(visual.screenshotId);
     else if (visual.type === 'before-after') {
-      for (const panel of [visual.before, visual.after]) if (panel.screenshotId) ids.add(panel.screenshotId);
+      // Only a screenshot panel draws its picture; another kind of panel may still carry an old id.
+      for (const panel of [visual.before, visual.after]) {
+        if (panel.kind === 'screenshot' && panel.screenshotId) ids.add(panel.screenshotId);
+      }
     }
   }
   const out = new Map<string, ResolvedImage>();
