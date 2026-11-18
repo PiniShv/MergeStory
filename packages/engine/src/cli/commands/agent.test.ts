@@ -160,8 +160,9 @@ describe('agent: the work folder', () => {
     expect(lastGenerateOptions().storyboard).toEqual({ title: 'x' });
   });
 
-  describe('recordings/', () => {
+  describe('recordings/ and screenshots/', () => {
     const folder = (): string => join(work(), 'recordings');
+    const shots = (): string => join(work(), 'screenshots');
     const contexts = async () => {
       analyzeMock.mockResolvedValue(authoring);
       validateMock.mockResolvedValue(valid);
@@ -198,6 +199,52 @@ describe('agent: the work folder', () => {
           { path: join(folder(), 'f.m4v'), caption: 'f', moment: 'other' },
         ]);
       }
+    });
+
+    it('uses every picture of screenshots/ in name order, with its captions, together with recordings/', async () => {
+      await mkdir(shots(), { recursive: true });
+      await mkdir(folder(), { recursive: true });
+      for (const name of ['2-after.png', '1-before.PNG', 'c.jpg', 'd.jpeg', 'e.gif', 'notes.txt'])
+        await writeFile(join(shots(), name), 'x');
+      await mkdir(join(shots(), 'sub.png'));
+      await writeFile(join(folder(), 'clip.mp4'), 'x');
+      await writeFile(
+        join(shots(), 'captions.json'),
+        JSON.stringify({
+          '1-before.PNG': { caption: 'Basket: before the fix', side: 'before' },
+          '2-after.png': { side: 'after' },
+        }),
+      );
+      for (const context of await contexts()) {
+        expect(context?.screenshots).toEqual([
+          { path: join(shots(), '1-before.PNG'), caption: 'Basket: before the fix', moment: 'before' },
+          { path: join(shots(), '2-after.png'), caption: '2-after', moment: 'after' },
+          { path: join(shots(), 'c.jpg'), caption: 'c', moment: 'other' },
+          { path: join(shots(), 'd.jpeg'), caption: 'd', moment: 'other' },
+        ]);
+        expect(context?.recordings).toEqual([
+          { path: join(folder(), 'clip.mp4'), caption: 'clip', moment: 'other' },
+        ]);
+      }
+    });
+
+    it.each([
+      [
+        'a key that is not a picture',
+        { 'gone.png': {} },
+        'is not a screenshot (.png, .jpg, .jpeg) in the screenshots folder',
+      ],
+      ['an unknown field', { 'a.png': { title: 'y' } }, 'unknown field "title"'],
+      ['a side that does not exist', { 'a.png': { side: 'middle' } }, 'is not "before" or "after"'],
+    ])('refuses screenshots/captions.json with %s', async (_label, content, message) => {
+      await mkdir(shots(), { recursive: true });
+      await writeFile(join(shots(), 'a.png'), 'x');
+      await writeFile(join(shots(), 'captions.json'), JSON.stringify(content));
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain('screenshots/captions.json');
+      expect(stderr).toContain(message);
+      expect(analyzeMock).not.toHaveBeenCalled();
     });
 
     it('works without captions.json, and without the folder', async () => {
@@ -325,6 +372,7 @@ describe('agent: refused flags', () => {
     ['--tests-file', 'tests.json'],
     ['--storyboard', 'sb.json'],
     ['--screenshot', 'a.png'],
+    ['--screenshots-dir', 'shots'],
     ['--recording', 'a.mp4'],
     ['--music', 'music.mp3'],
     ['--llm', 'anthropic'],

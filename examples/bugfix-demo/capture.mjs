@@ -1,10 +1,11 @@
 // Captures the basket page before and after the fix, the way a person uses it.
 // usage: node capture.mjs <output folder>
-// Writes before.png, after.png, before.mp4 and after.mp4, and count.json: where the text of the item count
-// ends up in each picture, as fractions of it. Needs a Chrome or Chromium
+// Writes before.png, after.png, before.mp4 and after.mp4, a folder screenshots/ with the same two
+// pictures and a captions.json (for --screenshots-dir), and count.json: where the text of the item
+// count ends up in each picture, as fractions of it. Needs a Chrome or Chromium
 // (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,6 +25,8 @@ const ffmpeg = process.env.MERGESTORY_FFMPEG_PATH || 'ffmpeg';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const outDir = resolve(out);
 mkdirSync(outDir, { recursive: true });
+const shots = join(outDir, 'screenshots');
+mkdirSync(shots, { recursive: true });
 
 const VIEWPORT = { width: 960, height: 540 };
 // Where the text of the item count is at the end, as fractions of the picture: a font that is wider or
@@ -69,6 +72,7 @@ for (const side of ['before', 'after']) {
     w: text.width / VIEWPORT.width,
     h: text.height / VIEWPORT.height,
   };
+  copyFileSync(join(outDir, `${side}.png`), join(shots, `${side === 'before' ? 1 : 2}-${side}.png`));
   try {
     execFileSync(
       ffmpeg,
@@ -99,4 +103,11 @@ for (const side of ['before', 'after']) {
 }
 await browser.close();
 writeFileSync(join(outDir, 'count.json'), `${JSON.stringify(counts, null, 2)}\n`);
+writeFileSync(
+  join(shots, 'captions.json'),
+  JSON.stringify({
+    '1-before.png': { caption: 'The basket before the fix', side: 'before' },
+    '2-after.png': { caption: 'The basket after the fix', side: 'after' },
+  }),
+);
 console.log(`Captures written to ${outDir}`);

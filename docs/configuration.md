@@ -186,10 +186,11 @@ FFmpeg on the `PATH` and in the usual install folders.
 
 ### Inputs (`inputs`)
 
-Limits for the files you pass with `--recording`. They have no flag and no environment variable.
+Limits for the files you pass with `--screenshot`, `--screenshots-dir` and `--recording`. They have no flag and no environment variable.
 
 | Key | Default | What it does | Flag, environment variable |
 |---|---|---|---|
+| `inputs.maxScreenshots` | `6` | The most screenshots one video uses, from 0 to 12. More are left out, with a warning. | none, none |
 | `inputs.maxRecordings` | `4` | The most screen recordings one video uses, from 0 to 8. More are left out, with a warning. | none, none |
 | `inputs.maxRecordingMb` | `50` | The largest recording file, in megabytes, from 1 to 500. | none, none |
 | `inputs.maxRecordingSeconds` | `60` | The longest recording, in whole seconds, from 1 to 600. | none, none |

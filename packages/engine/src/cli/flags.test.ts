@@ -169,6 +169,22 @@ describe('screenshots', () => {
     expect(generateMock).not.toHaveBeenCalled();
   });
 
+  it('come from a folder with --screenshots-dir, given to generate, validate and analyze alike', async () => {
+    generateMock.mockResolvedValue(fakeResult());
+    await mkdir(join(dir, 'shots'));
+    await writeFile(join(dir, 'shots', 'a.png'), makePng(8, 8));
+    await writeFile(join(dir, 'shots', 'b.jpg'), jpeg);
+    const accepted = await run(['generate', 'acme/app#1', '--screenshots-dir', 'shots']);
+    expect(accepted.code, accepted.stderr).toBe(0);
+    expect(generateMock.mock.calls[0]?.[0].context?.screenshots).toEqual([
+      { path: join(dir, 'shots', 'a.png'), caption: 'a', moment: 'other' },
+      { path: join(dir, 'shots', 'b.jpg'), caption: 'b', moment: 'other' },
+    ]);
+    const missing = await run(['generate', 'acme/app#1', '--screenshots-dir', 'nope']);
+    expect(missing.code).toBe(2);
+    expect(missing.stderr).toContain('--screenshots-dir: nope is not a folder.');
+  });
+
   it('are refused at once for a background job, before it is created', async () => {
     await writeFile(join(dir, 'fake.png'), 'png');
     const refused = await run(['generate', 'acme/app#1', '--async', '--screenshot', 'fake.png']);
@@ -260,6 +276,35 @@ describe('analyze: the commands in AUTHORING.md', () => {
     const recordingArgs = analyzeMock.mock.calls[0]?.[0].followUp?.args;
     expect(recordingArgs).toEqual(['--recording', `${join(dir, 'clip.mp4')}:Slow: before the fix:before`]);
     expect(stdout).toContain(`--recording '${join(dir, 'clip.mp4')}:Slow: before the fix:before'`);
+  });
+
+  it('are given --screenshots-dir with an absolute path, after the screenshots', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    await mkdir(join(dir, 'shots'));
+    await writeFile(join(dir, 'shots', 'a.png'), makePng(8, 8));
+    await writeFile(join(dir, 'after.png'), makePng(8, 8));
+    const { code, stdout } = await run([
+      'analyze',
+      'repo',
+      '--screenshots-dir',
+      'shots',
+      '--screenshot',
+      'after.png',
+    ]);
+    expect(code).toBe(0);
+    expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual([
+      '--screenshot',
+      join(dir, 'after.png'),
+      '--screenshots-dir',
+      join(dir, 'shots'),
+    ]);
+    expect(stdout).toContain(`--screenshots-dir ${join(dir, 'shots')}`);
+    // The pictures are numbered SS1 for the flag and SS2 for the folder, as in the commands that follow.
+    expect(analyzeMock.mock.calls[0]?.[0].context?.screenshots?.map((s) => s.path)).toEqual([
+      join(dir, 'after.png'),
+      join(dir, 'shots', 'a.png'),
+    ]);
   });
 
   it('are given an inline task as it was typed, and nothing else when no flag was used', async () => {

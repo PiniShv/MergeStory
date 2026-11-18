@@ -10,7 +10,7 @@ MergeStory does not record anything. `capture.mjs` opens the page in a browser, 
 |---|---|
 | `create-demo-repo.sh` | Makes the demo repository, with the branches `main` (the bug) and `fix/basket-count` (the fix). |
 | `base/`, `feature/` | The files of the two branches: `index.html`, `basket.js`, and in `feature/` a test file. |
-| `capture.mjs` | Makes `before.png`, `after.png`, `before.mp4` and `after.mp4` from the two versions of the page, and `count.json`: where the text of the item count is in each picture, as fractions of it. A test checks the boxes in `storyboard.json` against it. |
+| `capture.mjs` | Makes `before.png`, `after.png`, `before.mp4` and `after.mp4` from the two versions of the page, a folder `screenshots/` with the two pictures and their captions, and `count.json`: where the text of the item count is in each picture, as fractions of it. A test checks the boxes in `storyboard.json` against it. |
 | `task.md`, `notes.md`, `tests.json` | The task, the author's notes and one reported test run (3 tests, `node --test`). |
 | `storyboard.json` | A storyboard written by hand: the bug, the code, the fix, then the two screenshots side by side. It points at the item count with `highlights`, and the camera zooms into the count in the first recording with `focus`. |
 
@@ -31,13 +31,13 @@ node examples/bugfix-demo/capture.mjs /tmp/bugfix-captures
 Check the storyboard:
 
 ```bash
-mergestory validate examples/bugfix-demo/storyboard.json /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --screenshot "/tmp/bugfix-captures/before.png:The basket before the fix:before" --screenshot "/tmp/bugfix-captures/after.png:The basket after the fix:after" --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
+mergestory validate examples/bugfix-demo/storyboard.json /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
 ```
 
 Render it. Add `--tts none` for a silent video:
 
 ```bash
-mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --storyboard examples/bugfix-demo/storyboard.json --screenshot "/tmp/bugfix-captures/before.png:The basket before the fix:before" --screenshot "/tmp/bugfix-captures/after.png:The basket after the fix:after" --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
+mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --storyboard examples/bugfix-demo/storyboard.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
 ```
 
 ## Tips for your own captures

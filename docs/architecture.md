@@ -90,7 +90,7 @@ learns what happened.
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
 - `presentation.ts`: the data for the watch page and the PR comment;
-- `inputs.ts`: the one contract for caller context (task, notes, test results, screenshots, recordings);
+- `inputs.ts`: the one contract for caller context (task, notes, test results, screenshots, recordings; the limit of screenshots is a setting);
 - `authoring.ts`: `prepareAuthoring` and `checkStoryboard` for callers that write the storyboard;
 - `publish-run.ts`: `publishRun`, which publishes a rendered run again.
 
@@ -195,7 +195,9 @@ page through Playwright. The runtime builds the whole video as HTML, CSS and SVG
 Fonts (Inter, JetBrains Mono, both under the SIL Open Font License) are embedded, and the page has
 no network access, so output does not depend on the machine. A recording is cut into JPEG frames
 with FFmpeg before narration starts, and each page receives only the frames that its part of the video
-can show, as images inside the page. The runtime shows one frame for each moment.
+can show, as images inside the page. The runtime shows one frame for each moment. A screenshot is
+embedded as it is, unless it is wider than 2560 pixels: then FFmpeg makes it 2560 pixels wide first, so a
+full-page capture does not slow the page down.
 
 A screenshot or a recording can carry highlights (boxes, in fractions of the picture) and a focus. The
 picture and its highlights sit in one camera element inside the window, which clips it. With a focus

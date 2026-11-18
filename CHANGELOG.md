@@ -6,6 +6,15 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** more screenshots, and a folder of them. The limit is now the setting `inputs.maxScreenshots`:
+  6 by default, up to 12. `--screenshots-dir <folder>` on `analyze`, `validate` and `generate` takes every
+  `.png`, `.jpg` and `.jpeg` file in a folder, in name order, after any `--screenshot`. An optional
+  `captions.json` in the folder gives each picture a caption and a side, as `recordings/captions.json` does
+  for recordings. The agent commands also read a `screenshots/` folder in the work folder. A picture wider
+  than 2560 pixels is made 2560 pixels wide with FFmpeg before it goes into the video, so a full-page
+  capture no longer makes the render slow. The file itself is not changed, and a picture of 2560 pixels or
+  less is used as it is. If FFmpeg cannot do it, the run stops and names the picture. The demo in
+  `examples/bugfix-demo` now passes its two screenshots as a folder.
 - **Added:** point at the part of a picture that matters. A `screenshot` visual, a `recording` visual and a
   `screenshot` panel in `before-after` can have `highlights`: up to 4 boxes, each `{x, y, w, h, label, beat}`
   in fractions of the picture (for a recording with a `zoom`, of the part that the zoom keeps). A box is

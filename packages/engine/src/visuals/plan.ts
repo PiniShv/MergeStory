@@ -6,6 +6,7 @@
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
+import { shownName } from '../core/media-probe.ts';
 import {
   frameDirFor,
   PANEL_CLIP_DELAY_SEC,
@@ -216,7 +217,7 @@ function screenshotFor(env: Environment, id: string): Promise<ResolvedImage> {
         hint: 'Screenshots must be passed with the run context; ids look like SS1.',
       });
     }
-    pending = loadScreenshot(input.path);
+    pending = loadScreenshot(input.path, env.config, `Screenshot ${id} (${shownName(input.path)})`);
     env.images.set(id, pending);
   }
   return pending;

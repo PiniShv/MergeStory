@@ -249,7 +249,7 @@ if ('dryRun' in result) {
 |---|---|
 | `source` | A pull request URL, `owner/repo#123` or a path (or a `SourceInput` object). |
 | `base`, `head` | The refs of a local repository. |
-| `context` | `{task, notes, tests, screenshots, recordings}`. A test is `{command, passed, summary, source}`, with `source` set to `agent`, `ci` or `user`. A screenshot is `{path, caption, moment}`. A recording is `{path, caption, moment}` too: a library call reads the file from its path, and FFmpeg must be installed. The HTTP API still takes no file. |
+| `context` | `{task, notes, tests, screenshots, recordings}`. A test is `{command, passed, summary, source}`, with `source` set to `agent`, `ci` or `user`. A screenshot is `{path, caption, moment}`; one wider than 2560 pixels is made smaller by FFmpeg when the video is made. A recording is `{path, caption, moment}` too: a library call reads the file from its path, and FFmpeg must be installed. The HTTP API still takes no file. |
 | `storyboard` | A storyboard that you wrote. It is checked like every storyboard. |
 | `config` | Settings that win over everything else. The same shape as the config file. |
 | `configPath` | The config file to use. |

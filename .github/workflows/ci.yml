@@ -79,8 +79,7 @@ jobs:
           node packages/engine/dist/cli/main.js generate "$RUNNER_TEMP/bugfix-demo" --base main --head fix/basket-count \
             --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md \
             --tests-file examples/bugfix-demo/tests.json --storyboard examples/bugfix-demo/storyboard.json \
-            --screenshot "$cap/before.png:The basket before the fix:before" \
-            --screenshot "$cap/after.png:The basket after the fix:after" \
+            --screenshots-dir "$cap/screenshots" \
             --recording "$cap/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" \
             --recording "$cap/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after" \
             --tts none --quality draft --publish local --max-render-seconds 300 \
