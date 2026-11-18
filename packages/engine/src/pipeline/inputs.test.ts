@@ -40,7 +40,9 @@ describe('buildContextInputs: screenshots', () => {
       warnings.push(m),
     );
     expect(inputs.screenshots.map((s) => s.id)).toEqual(['SS1', 'SS2', 'SS3', 'SS4', 'SS5', 'SS6']);
-    expect(warnings).toEqual(['Only the first 6 screenshots are used.']);
+    expect(warnings).toEqual([
+      'Only the first 6 screenshots are used. Raise inputs.maxScreenshots (at most 12) to use more.',
+    ]);
   });
 
   it('takes the limit from the setting', async () => {

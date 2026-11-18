@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, truncate, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, symlink, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -6,7 +6,7 @@ import { MergeStoryError } from '../core/errors.ts';
 import { makePng } from '../testing/png.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import { formatBytes, readJsonFile, readTextFile } from './files.ts';
-import { buildContext, parseScreenshotSpec } from './inputs.ts';
+import { buildContext, parseScreenshotSpec, readCaptureFolder, SCREENSHOT_KIND } from './inputs.ts';
 
 let dir: string;
 
@@ -287,6 +287,53 @@ describe('buildContext: --screenshots-dir', () => {
 
   it('is fine with an empty folder', async () => {
     expect(await buildContext({ screenshotsDir: 'shots' }, dir)).toEqual({ screenshots: [] });
+  });
+
+  it('refuses an empty or blank folder path instead of reading the current folder', async () => {
+    for (const value of ['', '  ']) {
+      await expect(buildContext({ screenshotsDir: value }, dir), value).rejects.toMatchObject({
+        code: 'USAGE',
+        message: '--screenshots-dir: missing a folder path.',
+      });
+    }
+  });
+
+  it('refuses a picture or a captions.json that is a link, naming it', async () => {
+    await writeFile(join(dir, 'real.png'), makePng(4, 4));
+    await symlink(join(dir, 'real.png'), join(folder(), 'linked.png'));
+    await expect(buildContext({ screenshotsDir: 'shots' }, dir)).rejects.toMatchObject({
+      code: 'USAGE',
+      message: '--screenshots-dir: linked.png is a link.',
+    });
+    await rm(join(folder(), 'linked.png'));
+    await writeFile(join(dir, 'other.json'), '{}');
+    await symlink(join(dir, 'other.json'), join(folder(), 'captions.json'));
+    await expect(buildContext({ screenshotsDir: 'shots' }, dir)).rejects.toMatchObject({
+      code: 'USAGE',
+      message: '--screenshots-dir: captions.json is a link.',
+    });
+  });
+
+  it('refuses a folder that cannot be listed, but the optional folder of the agent commands is just empty', async (ctx) => {
+    if (process.getuid?.() === 0) return ctx.skip();
+    await png('a.png');
+    await chmod(folder(), 0o000);
+    try {
+      await expect(buildContext({ screenshotsDir: 'shots' }, dir)).rejects.toMatchObject({
+        code: 'USAGE',
+        message: '--screenshots-dir: the folder could not be read.',
+      });
+      expect(await readCaptureFolder(folder(), SCREENSHOT_KIND)).toEqual([]);
+    } finally {
+      await chmod(folder(), 0o755);
+    }
+  });
+
+  it('names the flag, not captions.json, when a picture has a credentials-like name', async () => {
+    await png('.env.png');
+    await expect(buildContext({ screenshotsDir: 'shots' }, dir)).rejects.toMatchObject({
+      message: expect.stringMatching(/^--screenshots-dir: refusing to read \.env\.png/),
+    });
   });
 
   it('refuses a folder that is missing or is a file', async () => {

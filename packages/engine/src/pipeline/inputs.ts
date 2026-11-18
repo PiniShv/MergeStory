@@ -176,7 +176,10 @@ export async function buildContextInputs(
   if ((options?.tests?.length ?? 0) > MAX_TESTS) warn(`Only the first ${MAX_TESTS} test results are used.`);
   const maxScreenshots = config.inputs.maxScreenshots;
   if ((options?.screenshots?.length ?? 0) > maxScreenshots)
-    warn(`Only the first ${maxScreenshots} screenshots are used.`);
+    warn(
+      `Only the first ${maxScreenshots} screenshots are used.` +
+        (maxScreenshots < 12 ? ' Raise inputs.maxScreenshots (at most 12) to use more.' : ''),
+    );
   const maxRecordings = config.inputs.maxRecordings;
   if ((options?.recordings?.length ?? 0) > maxRecordings)
     warn(`Only the first ${maxRecordings} recordings are used.`);

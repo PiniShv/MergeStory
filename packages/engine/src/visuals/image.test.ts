@@ -177,15 +177,34 @@ describe('loadScreenshot: a picture wider than 2560 pixels', () => {
       const broken = join(dir, 'broken.png');
       // The header says 3000 pixels wide, and no picture data follows.
       await writeFile(broken, pngHeader(3000, 100));
-      await expect(loadScreenshot(broken, testConfig(), 'Screenshot SS2 (broken.png)')).rejects.toMatchObject(
-        {
-          code: 'USAGE',
-          message:
-            'Screenshot SS2 (broken.png) is 3000 pixels wide and could not be made smaller: FFmpeg reported an error.',
-        },
+      const error = await loadScreenshot(broken, testConfig(), 'Screenshot SS2 (broken.png)').catch(
+        (e: unknown) => e,
       );
+      // Not the last words: another FFmpeg version may fail in another way.
+      expect(error).toMatchObject({ code: 'USAGE' });
+      expect((error as Error).message).toContain('Screenshot SS2 (broken.png)');
+      expect((error as Error).message).toContain('could not be made smaller');
     },
   );
+
+  it('says that the smaller picture would be too large, and what to do, when FFmpeg writes more than the cap', async () => {
+    const fake = join(dir, 'fake-big-ffmpeg.sh');
+    await writeFile(fake, '#!/bin/sh\nhead -c 17000000 /dev/zero\n');
+    await chmod(fake, 0o755);
+    const file = join(dir, 'big-result.png');
+    await writeFile(file, makePng(3000, 10));
+    const error = await loadScreenshot(
+      file,
+      testConfig({ render: { ffmpegPath: fake, ffprobePath: fake } }),
+      'Screenshot SS1 (big-result.png)',
+    ).catch((e: unknown) => e);
+    expect(error).toMatchObject({
+      code: 'USAGE',
+      message:
+        'Screenshot SS1 (big-result.png) is 3000 pixels wide and could not be made smaller: the smaller picture would be larger than 16 MB.',
+      hint: expect.stringContaining('JPEG'),
+    });
+  });
 
   it('runs FFmpeg with only this file, only the picture type and only the two picture decoders', async () => {
     const calls = join(dir, 'calls.txt');

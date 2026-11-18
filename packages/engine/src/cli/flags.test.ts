@@ -185,6 +185,22 @@ describe('screenshots', () => {
     expect(missing.stderr).toContain('--screenshots-dir: nope is not a folder.');
   });
 
+  it('refuse --screenshots-dir when it is empty or given twice, for generate and analyze', async () => {
+    await mkdir(join(dir, 'shots'));
+    for (const command of [
+      ['generate', 'acme/app#1'],
+      ['analyze', 'repo'],
+    ]) {
+      const empty = await run([...command, '--screenshots-dir', ' ']);
+      expect(empty.code).toBe(2);
+      expect(empty.stderr).toContain('--screenshots-dir: missing a folder path.');
+      const twice = await run([...command, '--screenshots-dir', 'shots', '--screenshots-dir', 'shots']);
+      expect(twice.code).toBe(2);
+      expect(twice.stderr).toContain('Give --screenshots-dir once.');
+    }
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
   it('are refused at once for a background job, before it is created', async () => {
     await writeFile(join(dir, 'fake.png'), 'png');
     const refused = await run(['generate', 'acme/app#1', '--async', '--screenshot', 'fake.png']);

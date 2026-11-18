@@ -74,9 +74,9 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
 - `screenshots/`: screenshots that were really captured (PNG or JPEG, up to 4 MB each); never make
   one up. Copy each one into `screenshots/` in the work folder before `agent analyze` runs. A file
   tool cannot write a picture, and this skill allows no copy command, so the user may have to approve
-  the copy. The files are used in name order, and the first 6 are used. To name them, add
+  the copy. The files are used in name order, and the first `inputs.maxScreenshots` are used (6 by default, at most 12). To name them, add
   `screenshots/captions.json` as `{"page.png": {"caption": "What it shows", "side": "before"}}`.
-  This needs an engine newer than 1.6.0. An older engine ignores the folder, so cite no `SS` id
+  This needs an engine newer than 1.7.0. An older engine ignores the folder, so cite no `SS` id
   there. MergeStory masks text, not pictures: a secret or an e-mail address that shows in a screenshot
   shows in the video. Use a capture only when you know that it shows nothing its viewers must not
   see. When you are not sure, ask the user.

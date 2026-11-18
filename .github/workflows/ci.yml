@@ -91,7 +91,7 @@ jobs:
             const size = fs.statSync(dir + "/video.mp4").size;
             console.log("rendered", result.durationSec, "s of video in", result.elapsedSec, "s,", size, "bytes");
             const used = result.evidenceUsed ?? [];
-            if (result.ok !== true || !used.includes("RC1")) {
+            if (result.ok !== true || !used.includes("RC1") || !used.includes("SS1") || !used.includes("SS2")) {
               console.error("unexpected result", { ok: result.ok, evidenceUsed: used });
               process.exit(1);
             }

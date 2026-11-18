@@ -19,7 +19,7 @@ export const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
 /** A picture wider than this is made this wide before it is embedded, so a full-page capture does not slow the render. */
 export const MAX_SCREENSHOT_WIDTH = 2560;
 const SHRINK_TIMEOUT_MS = 60_000;
-/** The most that the smaller picture may be. It is smaller than the file it came from, so this only guards against a freak result. */
+/** The most that the smaller picture may be. A picture that is made smaller can be a larger file (a PNG with fine detail), so a big result is possible. */
 const MAX_SHRUNK_BYTES = 4 * MAX_SCREENSHOT_BYTES;
 
 /**
@@ -28,11 +28,17 @@ const MAX_SHRUNK_BYTES = 4 * MAX_SCREENSHOT_BYTES;
  * comes through a pipe. The result is checked. `name` is how the messages call the picture.
  */
 async function shrink(ffmpeg: string, path: string, info: ImageInfo, name: string): Promise<Buffer> {
-  const refuse = (reason: string, cause?: unknown): MergeStoryError =>
+  const capMiB = MAX_SHRUNK_BYTES / 1024 / 1024;
+  const refuse = (reason: string, cause?: unknown, tooBig = false): MergeStoryError =>
     new MergeStoryError(
       'USAGE',
       `${name} is ${info.width} pixels wide and could not be made smaller: ${reason}.`,
-      { hint: `Make it ${MAX_SCREENSHOT_WIDTH} pixels wide or less yourself, or leave it out.`, cause },
+      {
+        hint: tooBig
+          ? `Save the picture as a JPEG or crop it, or leave it out.`
+          : `Make it ${MAX_SCREENSHOT_WIDTH} pixels wide or less yourself, or leave it out.`,
+        cause,
+      },
     );
   const png = info.mime === 'image/png';
   const result = await runCommand(
@@ -62,6 +68,9 @@ async function shrink(ffmpeg: string, path: string, info: ImageInfo, name: strin
     ],
     { timeoutMs: SHRINK_TIMEOUT_MS, allowFailure: true, maxOutputBytes: MAX_SHRUNK_BYTES },
   ).catch((err: unknown) => {
+    if (err instanceof Error && err.name === 'OutputTooLargeError') {
+      throw refuse(`the smaller picture would be larger than ${capMiB} MB`, err, true);
+    }
     throw refuse(
       err instanceof Error && err.name === 'TimedOutError' ? 'it took too long' : 'FFmpeg stopped',
       err,

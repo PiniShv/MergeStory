@@ -247,6 +247,15 @@ describe('agent: the work folder', () => {
       expect(analyzeMock).not.toHaveBeenCalled();
     });
 
+    it('names screenshots/, not captions.json, for a picture with a credentials-like name', async () => {
+      await mkdir(shots(), { recursive: true });
+      await writeFile(join(shots(), '.env.png'), 'x');
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain('screenshots/: refusing to read .env.png');
+      expect(stderr).not.toContain('captions.json');
+    });
+
     it('works without captions.json, and without the folder', async () => {
       await mkdir(work(), { recursive: true });
       for (const context of await contexts()) expect(context?.recordings).toBeUndefined();

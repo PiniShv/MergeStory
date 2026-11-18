@@ -91,10 +91,11 @@ accurate, because the engine can quote them as evidence.
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
 - **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. At
   most 6 are used unless you raise the setting [`inputs.maxScreenshots`](configuration.md) (from 0 to 12); the
-  first ones are used and a warning says so. A file the video cannot draw is refused at once, before any
-  speech is paid for. A picture wider than 2560 pixels is made 2560 pixels wide when the video is made, so a
-  full-page capture does not slow the render. FFmpeg does it, and the file itself is never changed. If it
-  cannot, the run stops and names the picture. `analyze` and `validate` do not change any picture.
+  first ones are used and a warning says so. A file that is not a picture, is too large or has a
+  credentials-like name is refused at once. A picture wider than 2560 pixels is made 2560 pixels wide when
+  the video is made, so a full-page capture does not slow the render. FFmpeg does it, and the file itself is
+  never changed. This happens before any speech is paid for. If a picture cannot be made smaller, the run
+  stops and names the picture. `analyze` and `validate` do not change any picture.
   MergeStory does not look inside a picture: a secret or an e-mail address that shows in a screenshot shows
   in the video. Check a capture before you pass it.
 - **A folder of screenshots.** `--screenshots-dir <dir>` takes every file in the folder that ends in `.png`,

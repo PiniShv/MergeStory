@@ -179,7 +179,9 @@ async function contextFiles(dir: string): Promise<ContextFlags> {
   if (task) flags.taskFile = task;
   if (notes) flags.notesFile = notes;
   if (tests) flags.testsFile = tests;
-  const screenshots = await readCaptureFolder(join(dir, SCREENSHOTS_DIR), SCREENSHOT_KIND);
+  const screenshots = await readCaptureFolder(join(dir, SCREENSHOTS_DIR), SCREENSHOT_KIND, {
+    nameLabel: `${SCREENSHOTS_DIR}/`,
+  });
   if (screenshots.length > 0) flags.screenshotFiles = screenshots;
   const recordings = await readCaptureFolder(join(dir, RECORDINGS_DIR), RECORDING_KIND);
   if (recordings.length > 0) flags.recordingFiles = recordings;

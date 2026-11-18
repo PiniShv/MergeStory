@@ -174,7 +174,11 @@ export function addContextFlags(command: Command): Command {
     )
     .option(
       '--screenshots-dir <folder>',
-      'a folder of real screenshots (.png, .jpg, .jpeg), used in name order after any --screenshot; an optional captions.json names a caption and side for each',
+      'a folder of real screenshots (.png, .jpg, .jpeg), used in name order after any --screenshot; an optional captions.json names a caption and side for each (give it once)',
+      (value: string, previous: string | undefined) => {
+        if (previous !== undefined) throw new InvalidArgumentError('Give --screenshots-dir once.');
+        return value;
+      },
     )
     .option(
       '--recording <spec>',

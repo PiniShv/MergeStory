@@ -31,6 +31,7 @@ import {
 import { buildWatchPage, classifyBundle, writeWatchFolder } from '../publish/index.ts';
 import { createRenderer } from '../render/index.ts';
 import { buildRenderPlan, buildTimeline } from '../visuals/index.ts';
+import { loadStoryboardScreenshots } from '../visuals/plan.ts';
 import { extractStoryboardFrames } from '../visuals/recording-frames.ts';
 import { publishCommand } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
@@ -227,8 +228,9 @@ async function produce(
 
   if (ctx.dryRun || tts === null) return planResult(p, choice, storyboard, warnings, publishProblem);
 
-  // Before any speech is paid for: a recording that cannot be decoded stops the run here.
+  // Before any speech is paid for: a recording that cannot be decoded, or a screenshot that cannot be made smaller, stops the run here.
   const frames = await extractStoryboardFrames(storyboard, p.inputs, config, ctx.runDir, ctx.signal);
+  const images = await loadStoryboardScreenshots(storyboard, p.inputs, config);
 
   // Narration and timing
   ctx.progress({ stage: 'narrate', status: 'start', message: `Narrating with ${tts.id}` });
@@ -275,6 +277,7 @@ async function produce(
       config,
       theme,
       frames,
+      images,
     },
     ctx,
   );

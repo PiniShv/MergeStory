@@ -73,6 +73,8 @@ export interface BuildPlanInput {
   theme: ResolvedTheme;
   /** The extracted frames of the recordings that the storyboard shows, by folder (see extractStoryboardFrames). */
   frames?: ReadonlyMap<string, ExtractedFrames>;
+  /** The screenshots that the storyboard shows, already loaded (see loadStoryboardScreenshots). Any other one is loaded when it is needed. */
+  images?: ReadonlyMap<string, ResolvedImage>;
 }
 
 /** Rows shown in the changed-files visual; the rest is summarised as a count. */
@@ -217,10 +219,39 @@ function screenshotFor(env: Environment, id: string): Promise<ResolvedImage> {
         hint: 'Screenshots must be passed with the run context; ids look like SS1.',
       });
     }
-    pending = loadScreenshot(input.path, env.config, `Screenshot ${id} (${shownName(input.path)})`);
+    pending = loadScreenshot(input.path, env.config, screenshotName(id, input.path));
     env.images.set(id, pending);
   }
   return pending;
+}
+
+/** The name that a message calls a screenshot by. */
+function screenshotName(id: string, path: string): string {
+  return `Screenshot ${id} (${shownName(path)})`;
+}
+
+/**
+ * Load every screenshot that the storyboard shows, one time, so that a picture that cannot be used
+ * stops the run before any speech is paid for. An id that is not in the run is left for the plan to refuse.
+ */
+export async function loadStoryboardScreenshots(
+  storyboard: Storyboard,
+  inputs: ContextInputs,
+  config: Config,
+): Promise<Map<string, ResolvedImage>> {
+  const ids = new Set<string>();
+  for (const { visual } of storyboard.scenes) {
+    if (visual.type === 'screenshot') ids.add(visual.screenshotId);
+    else if (visual.type === 'before-after') {
+      for (const panel of [visual.before, visual.after]) if (panel.screenshotId) ids.add(panel.screenshotId);
+    }
+  }
+  const out = new Map<string, ResolvedImage>();
+  for (const id of ids) {
+    const input = inputs.screenshots.find((s) => s.id === id);
+    if (input) out.set(id, await loadScreenshot(input.path, config, screenshotName(id, input.path)));
+  }
+  return out;
 }
 
 type FilesVisual = Extract<Visual, { type: 'files' }>;
@@ -681,7 +712,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     analysis,
     inputs,
     resolver: new CodeResolver({ reader, changeSet, shiki: theme.shiki, logger: ctx.logger }),
-    images: new Map(),
+    images: new Map([...(input.images ?? [])].map(([id, image]) => [id, Promise.resolve(image)])),
     frames: input.frames ?? new Map(),
   };
   const evidence = new Map(analysis.evidence.map((item) => [item.id, item]));
