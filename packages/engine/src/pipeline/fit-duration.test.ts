@@ -109,6 +109,22 @@ describe('fitToMaxDuration', () => {
     expect(roles(result.storyboard)).toEqual(['mission', 'review']);
   });
 
+  it('drops the reproduction and proof scenes late: after the overview and every code scene', () => {
+    const storyboard = board([
+      scene('m', 'mission', 1),
+      scene('rep', 'reproduction', 1),
+      scene('a', 'big-picture', 1),
+      scene('c1', 'under-the-hood', 1),
+      scene('c2', 'before-after', 1),
+      scene('pr', 'proof', 1),
+      scene('r', 'review', 1),
+      scene('w', 'conclusion', 1),
+    ]);
+    const result = trimTo(storyboard, 1);
+    expect(result.droppedScenes.map((s) => s.id)).toEqual(['w', 'a', 'c2', 'c1', 'pr', 'rep']);
+    expect(roles(result.storyboard)).toEqual(['mission', 'review']);
+  });
+
   it('never drops the mission or the review scene, and says so when the limit cannot be reached', () => {
     const storyboard = sampleStoryboard();
     const result = trimTo(storyboard, 1);

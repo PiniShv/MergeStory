@@ -3,6 +3,7 @@ import { sampleStoryboard } from '../testing/sample-change.ts';
 import {
   HighlightSchema,
   PanelSchema,
+  SceneRoleSchema,
   STORYBOARD_LIMITS,
   StoryboardSchema,
   storyboardJsonSchema,
@@ -32,6 +33,36 @@ describe('the recording visual', () => {
   it('is listed in VISUAL_TYPES, which names every visual', () => {
     expect(VISUAL_TYPES).toContain('recording');
     expect([...VISUAL_TYPES].sort()).toEqual(VisualSchema.options.map((o) => o.shape.type.value).sort());
+  });
+});
+
+describe('the repro visual and the roles of the reproduction', () => {
+  it('parses a list of steps with their beats, and names no text of its own', () => {
+    const visual = {
+      type: 'repro',
+      steps: [
+        { step: 1, beat: 0 },
+        { step: 3, beat: 2 },
+      ],
+    };
+    expect(VisualSchema.parse(visual)).toEqual(visual);
+    expect(VisualSchema.safeParse({ ...visual, steps: [{ step: 1.5, beat: 0 }] }).success).toBe(false);
+    expect(VisualSchema.safeParse({ ...visual, steps: [{ step: 1 }] }).success).toBe(false);
+    expect(VISUAL_TYPES).toContain('repro');
+  });
+
+  it('adds the roles reproduction and proof, and keeps the others', () => {
+    expect(SceneRoleSchema.options).toEqual([
+      'mission',
+      'big-picture',
+      'under-the-hood',
+      'before-after',
+      'review',
+      'conclusion',
+      'reproduction',
+      'proof',
+    ]);
+    expect(STORYBOARD_LIMITS.maxReproSteps).toBe(6);
   });
 });
 

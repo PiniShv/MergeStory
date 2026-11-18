@@ -18,7 +18,15 @@ export const MIN_CLIP_SECONDS = 0.2;
 export const BEAT_LEAD_SEC = 0.15;
 
 /** The largest box (logical pixels) that a frame is shown in, for a recording scene and for one panel. */
-export const RECORDING_BOX = { scene: { width: 1680, height: 624 }, panel: { width: 780, height: 584 } };
+export const RECORDING_BOX = {
+  scene: { width: 1680, height: 624 },
+  panel: { width: 780, height: 584 },
+  // Larger than a reproduction step's thumbnail (at most 150 by 84), so that it stays sharp.
+  thumb: { width: 320, height: 200 },
+};
+
+/** The last part of a clip that a reproduction step keeps: its last picture shows what the step led to. */
+export const THUMB_CLIP_SECONDS = 0.25;
 
 /** The clip starts this long after the scene (or the panel) appears, when its entrance is under way. */
 export const SCENE_CLIP_START_SEC = 0.5;
@@ -87,4 +95,9 @@ export function frameFileName(index: number): string {
  */
 export function frameDirFor(sceneNumber: number, side: 'before' | 'after' | null): string {
   return `${FRAMES_DIR}/s-${sceneNumber}${side ? `.${side}` : ''}`;
+}
+
+/** Folder of the one picture that a step of a reproduction shows for its recording. Named like `frameDirFor`, by the scene's place. */
+export function frameDirForStep(sceneNumber: number, step: number): string {
+  return `${FRAMES_DIR}/s-${sceneNumber}.step-${step}`;
 }

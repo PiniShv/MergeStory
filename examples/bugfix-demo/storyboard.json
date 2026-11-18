@@ -27,8 +27,34 @@
       "targetSeconds": null
     },
     {
+      "id": "repro",
+      "role": "reproduction",
+      "title": "The steps that show the bug",
+      "narration": [
+        {
+          "text": "In the reproduction, someone opens the basket page.",
+          "evidence": ["REPRO.1"]
+        },
+        {
+          "text": "Then they type 2 for the trail mix and 3 for the oat bars.",
+          "evidence": ["REPRO.2"]
+        },
+        {
+          "text": "The reproduction shows the page saying 23 items. That is the bug.",
+          "evidence": ["REPRO.3"]
+        }
+      ],
+      "visual": {
+        "type": "repro",
+        "steps": [{ "step": 1, "beat": 0 }, { "step": 2, "beat": 1 }, { "step": 3, "beat": 2 }]
+      },
+      "visualDescription": "The steps of the reproduction, with the page that says 23 items.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
       "id": "s2",
-      "role": "mission",
+      "role": "reproduction",
       "title": "The bug on the page",
       "narration": [
         {
@@ -84,7 +110,7 @@
     },
     {
       "id": "s4",
-      "role": "before-after",
+      "role": "proof",
       "title": "The page after the fix",
       "narration": [
         {

@@ -9,6 +9,7 @@ import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
 import { shownName } from '../core/media-probe.ts';
 import {
   frameDirFor,
+  frameDirForStep,
   PANEL_CLIP_DELAY_SEC,
   RECORDING_FPS,
   SCENE_CLIP_START_SEC,
@@ -23,6 +24,7 @@ import type {
   FrameSet,
   PlannedScene,
   RenderPlan,
+  ReproResolved,
   ResolvedCode,
   ResolvedImage,
   ResolvedPanel,
@@ -167,17 +169,12 @@ interface ResolvedScene {
   actual: boolean;
   /** The scene shows a recording. */
   recorded: boolean;
+  /** The scene shows steps that their author reported (a reproduction). */
+  reported?: boolean;
 }
 
 /** The frame set of one use of a recording, with the scene second at which the clip starts. */
-function frameSetFor(
-  env: Environment,
-  sceneNumber: number,
-  side: 'before' | 'after' | null,
-  startSec: number,
-  speed: number,
-): FrameSet {
-  const dir = frameDirFor(sceneNumber, side);
+function frameSetAt(env: Environment, dir: string, startSec: number, speed: number): FrameSet {
   const made = env.frames.get(dir);
   if (!made) {
     throw new MergeStoryError('INTERNAL', `The frames of a recording were not extracted (${dir}).`, {
@@ -186,6 +183,14 @@ function frameSetFor(
   }
   return { ...made, fps: RECORDING_FPS, startSec, speed };
 }
+
+const frameSetFor = (
+  env: Environment,
+  sceneNumber: number,
+  side: 'before' | 'after' | null,
+  startSec: number,
+  speed: number,
+): FrameSet => frameSetAt(env, frameDirFor(sceneNumber, side), startSec, speed);
 
 /** The marks that a picture gets: left out of the plan when there are none, so older plans do not change. */
 function marksOf(
@@ -242,7 +247,13 @@ export async function loadStoryboardScreenshots(
   const ids = new Set<string>();
   for (const { visual } of storyboard.scenes) {
     if (visual.type === 'screenshot') ids.add(visual.screenshotId);
-    else if (visual.type === 'before-after') {
+    else if (visual.type === 'repro') {
+      // The picture of a shown step comes from the supplied reproduction, never from the storyboard.
+      for (const { step } of visual.steps) {
+        const id = inputs.repro?.steps[step - 1]?.screenshotId;
+        if (id) ids.add(id);
+      }
+    } else if (visual.type === 'before-after') {
       // Only a screenshot panel draws its picture; another kind of panel may still carry an old id.
       for (const panel of [visual.before, visual.after]) {
         if (panel.kind === 'screenshot' && panel.screenshotId) ids.add(panel.screenshotId);
@@ -344,6 +355,58 @@ function clampFocus(focus: CodeResolved['focus'], code: CodeResolved['code']): C
     out.push({ ...range, startLine, endLine });
   }
   return out;
+}
+
+type ReproVisual = Extract<Visual, { type: 'repro' }>;
+
+/** The shown steps of the supplied reproduction. Their words, results and captures come from it, never from the storyboard. */
+async function resolveRepro(
+  visual: ReproVisual,
+  env: Environment,
+  scrub: Scrubber,
+  scene: SceneRef,
+): Promise<ReproResolved> {
+  const { repro } = env.inputs;
+  if (!repro) {
+    throw new MergeStoryError(
+      'STORYBOARD_INVALID',
+      'The storyboard shows a reproduction, but none was supplied.',
+      {
+        hint: 'Pass the reproduction with --repro-file (or repro.json for the agent commands).',
+      },
+    );
+  }
+  const steps: ReproResolved['steps'] = [];
+  for (const { step, beat } of visual.steps) {
+    const source = repro.steps[step - 1];
+    if (!source) {
+      throw new MergeStoryError(
+        'STORYBOARD_INVALID',
+        `The storyboard shows reproduction step ${step}, which does not exist.`,
+        {
+          hint: `The supplied reproduction has ${repro.steps.length} steps.`,
+        },
+      );
+    }
+    const thumb: ReproResolved['steps'][number]['thumb'] = source.screenshotId
+      ? { kind: 'screenshot', image: await screenshotFor(env, source.screenshotId) }
+      : source.recordingId
+        ? { kind: 'recording', frames: frameSetAt(env, frameDirForStep(scene.number, step), 0, 1) }
+        : null;
+    steps.push({
+      number: step,
+      text: scrub.text(source.text),
+      result: source.result,
+      beat: beatIndex(beat),
+      thumb,
+    });
+  }
+  return {
+    type: 'repro',
+    title: scrub.text(repro.title),
+    environment: scrub.maybe(repro.environment),
+    steps,
+  };
 }
 
 async function resolvePanel(
@@ -620,6 +683,17 @@ async function resolveVisual(
           ...marksOf(visual, scrub),
         },
       };
+    case 'repro': {
+      const resolved = await resolveRepro(visual, env, scrub, scene);
+      const thumbs = resolved.steps.flatMap((s) => (s.thumb ? [s.thumb.kind] : []));
+      return {
+        ...base,
+        visual: resolved,
+        reported: true,
+        actual: thumbs.includes('screenshot'),
+        recorded: thumbs.includes('recording'),
+      };
+    }
     default:
       visual satisfies never;
       throw new MergeStoryError('INTERNAL', 'A scene has an unknown visual type.');
@@ -658,6 +732,7 @@ function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): Pl
   if (resolved.simulated) badges.push({ kind: 'simulated', text: resolved.simulated });
   if (resolved.actual) badges.push({ kind: 'actual', text: 'Actual screenshot' });
   if (resolved.recorded) badges.push({ kind: 'actual', text: 'Recorded' });
+  if (resolved.reported) badges.push({ kind: 'reported', text: 'Reported steps' });
   if (masked) badges.push({ kind: 'masked', text: 'Sensitive data masked' });
   if (scene.narration.some((line) => line.evidence.some((id) => /^T\d+$/.test(id)))) {
     badges.push({ kind: 'reported', text: 'Reported results' });

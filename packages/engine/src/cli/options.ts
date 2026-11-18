@@ -168,6 +168,10 @@ export function addContextFlags(command: Command): Command {
       'JSON array of test results: {command, passed, summary, source?: agent|ci|user} (max 256 KB). They are shown as reported, never run',
     )
     .option(
+      '--repro-file <file>',
+      'the steps that show the bug, JSON (at most 64 KB): {"title", "environment"?, "steps": [{"text", "screenshot"?, "recording"?, "result"?}]}',
+    )
+    .option(
       '--screenshot <spec>',
       'a real screenshot, PNG or JPEG up to 4 MB: <path>[:<caption>[:before|after]] (repeatable; the limit is the setting inputs.maxScreenshots)',
       collect,
@@ -443,7 +447,7 @@ export async function buildCommonOptions(
     const { context, masked } = maskContext(rawContext);
     if (masked > 0) {
       env.logger.warn(
-        `Masked ${masked} secret-like value(s) in the task, notes and test results you provided.`,
+        `Masked ${masked} secret-like value(s) in the task, notes, test results and reproduction you provided.`,
       );
     }
     options.context = context;
@@ -479,6 +483,7 @@ export function followUpFor(
   if (flags.taskFile !== undefined) contextArgs.push('--task-file', resolve(cwd, flags.taskFile));
   if (flags.notesFile !== undefined) contextArgs.push('--notes-file', resolve(cwd, flags.notesFile));
   if (flags.testsFile !== undefined) contextArgs.push('--tests-file', resolve(cwd, flags.testsFile));
+  if (flags.reproFile !== undefined) contextArgs.push('--repro-file', resolve(cwd, flags.reproFile));
   for (const spec of flags.screenshot ?? []) {
     const { path } = parseScreenshotSpec(spec);
     contextArgs.push('--screenshot', `${resolve(cwd, path)}${spec.slice(path.length)}`);

@@ -18,6 +18,7 @@ import type { Analysis, ChangeSet, ContextInputs, SymbolChange } from '../core/t
 import { type Ctx, cite, createCtx, type Line, safeSentence, safeText } from './heuristic-context.ts';
 import { authorStatements, recap, reportedRuns, testsLine, topSymbols } from './heuristic-facts.ts';
 import { bigPictureScene } from './heuristic-overview.ts';
+import { reproScenes } from './heuristic-repro.ts';
 import { type Review, reviewScene } from './heuristic-review.ts';
 import { codeScenes } from './heuristic-scenes.ts';
 import {
@@ -256,8 +257,10 @@ function conclusionScene(b: Build, review: Pick<Review, 'firstSubject' | 'firstE
   if (level.conclusionLines >= 2 || reported?.failed) {
     const tests = testsLine(ctx);
     if (reported) {
-      lines.push(reported.line);
-      points.push({ text: reported.point, beat: lines.length - 1 });
+      // The proof scene may have said the line already: the list keeps the point, the voice does not repeat it.
+      const said = b.used.has(reported.line.text);
+      if (!said) lines.push(reported.line);
+      points.push({ text: reported.point, beat: said ? 0 : lines.length - 1 });
     } else if (tests) {
       lines.push(tests);
       points.push({ text: tests.text.replace(/\.$/, ''), beat: lines.length - 1 });
@@ -310,7 +313,11 @@ function buildStoryboard(ctx: Ctx, level: Level): Storyboard {
   const bigPicture = bigPictureScene(b);
   const code = codeScenes(b);
   const review = reviewScene(b);
-  const scenes: Scene[] = [mission.scene, bigPicture, ...code];
+  const repro = reproScenes(b);
+  const scenes: Scene[] = [mission.scene];
+  if (repro.reproduction) scenes.push(repro.reproduction);
+  scenes.push(bigPicture, ...code);
+  if (repro.proof) scenes.push(repro.proof);
   if (review) scenes.push(review.scene);
   scenes.push(conclusionScene(b, review));
   scenes.forEach((s, index) => {

@@ -15,6 +15,9 @@ function frameSets(plan: RenderPlan): { set: FrameSet; sceneStart: number }[] {
     const { visual } = scene;
     const sets: FrameSet[] = [];
     if (visual.type === 'recording') sets.push(visual.frames);
+    if (visual.type === 'repro') {
+      for (const step of visual.steps) if (step.thumb?.kind === 'recording') sets.push(step.thumb.frames);
+    }
     if (visual.type === 'before-after') {
       for (const panel of [visual.before, visual.after])
         if (panel.kind === 'recording') sets.push(panel.frames);

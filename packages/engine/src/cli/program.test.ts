@@ -278,10 +278,12 @@ describe('generate: context files', () => {
     await writeFile(join(dir, 'big-notes.md'), 'y'.repeat(70 * 1024));
     await writeFile(join(dir, 'big-tests.json'), `[${' '.repeat(256 * 1024)}]`);
     await writeFile(join(dir, 'big-storyboard.json'), `{"x": "${'z'.repeat(1024 * 1024)}"}`);
+    await writeFile(join(dir, 'big-repro.json'), `{${' '.repeat(64 * 1024)}}`);
     for (const [flag, file, label, limit] of [
       ['--task-file', 'big-task.md', '--task-file', '64 KB'],
       ['--notes-file', 'big-notes.md', '--notes-file', '64 KB'],
       ['--tests-file', 'big-tests.json', '--tests-file', '256 KB'],
+      ['--repro-file', 'big-repro.json', '--repro-file', '64 KB'],
       ['--storyboard', 'big-storyboard.json', '--storyboard', '1 MB'],
     ] as const) {
       const result = await run(['generate', 'acme/app#1', flag, file]);
@@ -352,6 +354,57 @@ describe('generate: context files', () => {
     expect(generateMock).not.toHaveBeenCalled();
   });
 
+  it('reads --repro-file into the context, masked, with each capture named by its id', async () => {
+    const key = `sk-ant-${'Ab3De5Gh7Jk9Mn1P'.repeat(2)}`;
+    await writeFile(
+      join(dir, 'repro.json'),
+      JSON.stringify({
+        title: 'Basket count',
+        environment: 'Chrome',
+        steps: [{ text: `Open it with ${key}`, screenshot: 'SS1', result: 'bug' }, { text: 'Look' }],
+      }),
+    );
+    await writeFile(join(dir, 'before.png'), makePng(8, 8));
+    generateMock.mockResolvedValue(fakeResult());
+    const result = await run([
+      'generate',
+      'acme/app#1',
+      '--repro-file',
+      'repro.json',
+      '--screenshot',
+      'before.png:Before:before',
+    ]);
+    expect(result.code).toBe(0);
+    const repro = lastGenerateOptions().context?.repro;
+    expect(repro?.title).toBe('Basket count');
+    expect(repro?.environment).toBe('Chrome');
+    expect(repro?.steps).toHaveLength(2);
+    expect(repro?.steps[0]).toMatchObject({ screenshot: 'SS1', result: 'bug' });
+    expect(JSON.stringify(repro)).not.toContain(key);
+    expect(result.stderr).toMatch(/Masked 1 secret-like value/);
+  });
+
+  it('is strict about the shape of --repro-file, and names the step', async () => {
+    const cases: [unknown, RegExp][] = [
+      [[], /expected a JSON object/],
+      [{ title: 'T' }, /"steps" needs a list of 1 to 12 steps/],
+      [{ title: 'T', steps: [{ text: 'a' }, { text: '' }] }, /step 2 "text" needs a non-empty text/],
+      [{ title: 'T', steps: [{ text: 'a', shot: 'SS1' }] }, /step 1 has unknown field "shot"/],
+      [{ title: 'T', steps: [{ text: 'a', result: 'broken' }] }, /step 1 has result "broken"/],
+    ];
+    for (const [value, pattern] of cases) {
+      await writeFile(join(dir, 'repro.json'), JSON.stringify(value));
+      const result = await run(['generate', 'acme/app#1', '--repro-file', 'repro.json']);
+      expect(result.code, JSON.stringify(value)).toBe(2);
+      expect(result.stderr, JSON.stringify(value)).toMatch(pattern);
+    }
+    await writeFile(join(dir, 'repro.json'), '{broken');
+    const broken = await run(['generate', 'acme/app#1', '--repro-file', 'repro.json']);
+    expect(broken.code).toBe(2);
+    expect(broken.stderr).toContain('not valid JSON');
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
   it('checks screenshot files', async () => {
     const missing = await run(['generate', '--screenshot', 'none.png']);
     expect(missing.code).toBe(2);
@@ -395,6 +448,7 @@ describe('generate: context files', () => {
     expect(JSON.stringify(context)).not.toContain(key);
     expect(context?.notes).toContain('retries');
     expect(result.stderr).toMatch(/Masked 2 secret-like value/);
+    expect(result.stderr).toContain('in the task, notes, test results and reproduction you provided');
     expect(result.stderr).not.toContain(key);
   });
 });

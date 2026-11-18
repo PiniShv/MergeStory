@@ -9,7 +9,12 @@ import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, RecordingInput } from '../core/types.ts';
 import { testConfig } from '../testing/context.ts';
 import { averageColor, ffmpegTo, makeClip } from '../testing/media.ts';
-import { extractFrames, extractStoryboardFrames, frameGeometry } from './recording-frames.ts';
+import {
+  extractFrames,
+  extractLastFrame,
+  extractStoryboardFrames,
+  frameGeometry,
+} from './recording-frames.ts';
 
 describe('frameGeometry', () => {
   const box = { width: 780, height: 584 };
@@ -389,6 +394,7 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
         await probed(wide, 'RC3'),
         await probed(small, 'RC4'),
       ],
+      repro: null,
     };
     const runDir = await mkdtemp(join(dir, 'run-'));
     const frames = await extractStoryboardFrames(
@@ -463,6 +469,93 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
     const { frames } = await extract([beforeAfter('RC1', 'RC1')], 1);
     expect(frames.get('recording-frames/s-1.before')?.count).toBe(12);
     expect(frames.get('recording-frames/s-1.after')?.count).toBe(12);
+  });
+
+  describe('a reproduction', () => {
+    /** Red for 1.9 s of 2, then blue: only the last picture of the clip is blue. */
+    let lateBlue: string;
+    beforeAll(async () => {
+      lateBlue = join(dir, 'late-blue.mp4');
+      const fill = "drawbox=x=0:y=0:w=320:h=240:color=blue:t=fill:enable='gte(t,1.9)'";
+      expect(
+        await ffmpegTo(tools!.ffmpeg, [
+          ...['-f', 'lavfi', '-i', `color=c=red:size=320x240:rate=12:duration=2,${fill}`, ...PICTURE],
+          lateBlue,
+        ]),
+      ).toBe(true);
+    });
+    const step = (step: number) => ({ step, beat: 0 });
+    const reproScene = (steps: number[]) => sceneVisual({ type: 'repro', steps: steps.map(step) }, 'repro');
+    const repro = (recordingIds: (string | null)[]): ContextInputs['repro'] => ({
+      title: 'Bug',
+      environment: null,
+      steps: recordingIds.map((recordingId) => ({
+        text: 'A step',
+        screenshotId: null,
+        recordingId,
+        result: null,
+      })),
+    });
+
+    async function extractRepro(scenes: Storyboard['scenes'], reproInput: ContextInputs['repro']) {
+      const inputs: ContextInputs = {
+        task: null,
+        notes: null,
+        tests: [],
+        screenshots: [],
+        recordings: [await probed(lateBlue, 'RC1')],
+        repro: reproInput,
+      };
+      const runDir = await mkdtemp(join(dir, 'run-'));
+      const frames = await extractStoryboardFrames(
+        { scenes } as Storyboard,
+        inputs,
+        testConfig(),
+        runDir,
+        new AbortController().signal,
+      );
+      return { frames, runDir };
+    }
+
+    it('keeps the last picture of the clip, as the one frame of a folder of the step', async () => {
+      const { frames, runDir } = await extractRepro(
+        [sceneVisual({ type: 'title' }, 'intro'), reproScene([1, 3])],
+        repro(['RC1', null, 'RC1']),
+      );
+      expect([...frames.keys()].sort()).toEqual([
+        'recording-frames/s-2.step-1',
+        'recording-frames/s-2.step-3',
+      ]);
+      const folder = join(runDir, 'recording-frames/s-2.step-3');
+      expect(await readdir(folder)).toEqual(['f-00001.jpg']);
+      // The picture fits the thumbnail box (320 by 200), and is not scaled up.
+      expect(frames.get('recording-frames/s-2.step-3')).toEqual({
+        dir: 'recording-frames/s-2.step-3',
+        count: 1,
+        width: 266,
+        height: 200,
+      });
+      const [red, , blue] = await firstColor(folder);
+      expect(blue!, 'the picture is blue, not red').toBeGreaterThan(red! + 100);
+    });
+
+    it('cuts nothing for a step with no recording', async () => {
+      const { frames } = await extractRepro([reproScene([1])], repro([null]));
+      expect(frames.size).toBe(0);
+    });
+
+    it('keeps one frame whatever the length of the cut part', async () => {
+      const out = join(dir, 'whole-last');
+      const made = await extractLastFrame(tools!.ffmpeg, {
+        recording: await probed(lateBlue),
+        trim: { start: 0, end: 2 },
+        zoom: null,
+        box: { width: 320, height: 200 },
+        outDir: out,
+      });
+      expect(made.count).toBe(1);
+      expect(await readdir(out)).toEqual(['f-00001.jpg']);
+    });
   });
 
   it('works for a scene id of 70 slashes', async () => {

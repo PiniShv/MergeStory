@@ -442,6 +442,29 @@ describe('a dry run', () => {
     expect(warning).toContain('The offline storyboard never uses screenshots');
   });
 
+  it('names a screenshot that only a step of the reproduction shows in evidenceUsed', async () => {
+    const shot = join(base, 'bug.png');
+    await writeFile(shot, makePng(8, 8));
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene: Storyboard['scenes'][number] = {
+      ...structuredClone(demo.scenes[0]!),
+      id: 'repro',
+      role: 'reproduction',
+      narration: [{ text: 'In the reproduction, the page opens.', evidence: ['REPRO.1'] }],
+      visual: { type: 'repro', steps: [{ step: 1, beat: 0 }] },
+    };
+    const result = await run({
+      withContext: false,
+      storyboard: { ...demo, scenes: [...demo.scenes, scene] },
+      context: {
+        screenshots: [{ path: shot, caption: 'Bug', moment: 'before' as const }],
+        repro: { title: 'The bug', steps: [{ text: 'Open the page', screenshot: 'SS1' }] },
+      },
+    });
+    expect(result.evidenceUsed).toContain('SS1');
+    expect(result.warnings.some((w) => w.includes('not shown'))).toBe(false);
+  });
+
   it('refuses a screenshot that is not an image before it analyses anything', async () => {
     const fake = join(base, 'fake.png');
     await writeFile(fake, 'not an image');
@@ -1036,6 +1059,7 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     expect(guide).toContain('`mergestory agent validate . --name fix-1 --base main`');
     expect(guide).toContain('`mergestory agent render . --name fix-1 --base main`');
     expect(guide).toContain('`task.md`, `notes.md` in this folder');
+    expect(guide).toContain('The steps that show the bug go in `repro.json` here.');
     expect(guide).not.toContain('mergestory generate');
     expect(guide).not.toContain('--storyboard');
   });
@@ -1051,6 +1075,10 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     expect(guide).toContain(
       'Give both commands the same source and the same `--base`, `--head`, `--task-file`',
     );
+    expect(guide).toContain(
+      '`--repro-file`, `--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis',
+    );
+    expect(guide).toContain('They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1');
     expect(guide).toContain('Longest video: 150 seconds.');
   });
 });
@@ -1498,6 +1526,41 @@ describe('generate: a wide screenshot', () => {
       expect(error.code).toBe('USAGE');
       expect(error.message).toContain('Screenshot SS1 (wide-page.png)');
       expect(error.message).toContain('could not be made smaller');
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('stops before any speech when the picture of a shown reproduction step cannot be made smaller', async () => {
+    const wide = join(base, 'wide-step.png');
+    await writeFile(wide, pngHeader(3000, 100));
+    const broken = join(base, 'ffmpeg-fails-step.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene: Storyboard['scenes'][number] = {
+      ...structuredClone(demo.scenes[0]!),
+      id: 'repro',
+      role: 'reproduction',
+      narration: [{ text: 'In the reproduction, the page opens.', evidence: ['REPRO.1'] }],
+      visual: { type: 'repro', steps: [{ step: 1, beat: 0 }] },
+    };
+    const given = {
+      storyboard: { ...demo, scenes: [...demo.scenes, scene] },
+      withContext: false,
+      context: {
+        screenshots: [{ path: wide, caption: 'Page', moment: 'before' as const }],
+        repro: { title: 'The bug', steps: [{ text: 'Open the page', screenshot: 'SS1' }] },
+      },
+      config: { render: { ffmpegPath: broken } },
+    };
+    await plan(given);
+    const narration = await import('../narration/index.ts');
+    const spy = vi.spyOn(narration, 'synthesizeNarration');
+    try {
+      const error = await failure(run(given));
+      expect(error.code).toBe('USAGE');
+      expect(error.message).toContain('Screenshot SS1 (wide-step.png)');
       expect(spy).not.toHaveBeenCalled();
     } finally {
       spy.mockRestore();

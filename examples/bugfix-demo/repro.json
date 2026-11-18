@@ -1,0 +1,10 @@
+{
+  "title": "The basket shows 23 items",
+  "environment": "The basket page in a 960 by 540 browser window",
+  "steps": [
+    { "text": "Open the basket page." },
+    { "text": "Type 2 for the trail mix and 3 for the oat bars." },
+    { "text": "The page says 23 items.", "recording": "RC1", "result": "bug" },
+    { "text": "With the fix, the same steps give 5 items.", "screenshot": "SS2", "result": "fixed" }
+  ]
+}

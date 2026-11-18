@@ -2,14 +2,21 @@
  * Frames of a recording. FFmpeg cuts the part of the clip that a scene shows into JPEG files, so the
  * render never has to decode a video: it only picks one image for each moment.
  */
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Config } from '../core/config.ts';
 import { abortedError, MergeStoryError } from '../core/errors.ts';
 import { DECODER_ARGS, INPUT_WHITELIST_ARGS, shownName } from '../core/media-probe.ts';
 import { runCommand } from '../core/process.ts';
-import { frameDirFor, RECORDING_BOX, RECORDING_FPS } from '../core/recording-frames.ts';
+import {
+  frameDirFor,
+  frameDirForStep,
+  frameFileName,
+  RECORDING_BOX,
+  RECORDING_FPS,
+  THUMB_CLIP_SECONDS,
+} from '../core/recording-frames.ts';
 import type { FrameSet } from '../core/render-plan.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, RecordingInput } from '../core/types.ts';
@@ -132,11 +139,28 @@ export async function extractFrames(
   return { count, width: first.width, height: first.height };
 }
 
+/** Cut a part of a clip and keep only its last picture, as the one frame (f-00001.jpg) of the folder. */
+export async function extractLastFrame(
+  ffmpeg: string,
+  request: FrameRequest,
+  signal?: AbortSignal,
+): Promise<{ count: number; width: number; height: number }> {
+  const made = await extractFrames(ffmpeg, request, signal);
+  const keep = join(request.outDir, 'last.tmp');
+  await rename(join(request.outDir, frameFileName(made.count - 1)), keep);
+  for (const name of await readdir(request.outDir)) {
+    if (/^f-\d{5}\.jpg$/.test(name)) await rm(join(request.outDir, name));
+  }
+  await rename(keep, join(request.outDir, frameFileName(0)));
+  return { count: 1, width: made.width, height: made.height };
+}
+
 /**
  * Cut the frames of every recording that the storyboard shows, into `recording-frames/s-<number>[.side]`
  * in the run folder, where the number is the scene's place in the storyboard. Returns them by folder
  * name. A scene's own use honours its trim and zoom; a panel shows the clip from its start, at most
- * `inputs.maxClipSeconds` of it.
+ * `inputs.maxClipSeconds` of it. A step of a reproduction keeps one picture, the last one of its clip,
+ * in `s-<number>.step-<step>`.
  */
 export async function extractStoryboardFrames(
   storyboard: Storyboard,
@@ -145,7 +169,7 @@ export async function extractStoryboardFrames(
   runDir: string,
   signal: AbortSignal,
 ): Promise<Map<string, ExtractedFrames>> {
-  const uses: { dir: string; request: Omit<FrameRequest, 'outDir'> }[] = [];
+  const uses: { dir: string; request: Omit<FrameRequest, 'outDir'>; last?: boolean }[] = [];
   const recordingFor = (id: string): RecordingInput => {
     const recording = inputs.recordings.find((r) => r.id === id);
     if (!recording) throw new MergeStoryError('INTERNAL', `The recording ${id} is not part of this run.`);
@@ -170,6 +194,23 @@ export async function extractStoryboardFrames(
             : RECORDING_BOX.scene,
         },
       });
+    } else if (visual.type === 'repro') {
+      for (const { step } of visual.steps) {
+        const id = inputs.repro?.steps[step - 1]?.recordingId;
+        if (!id) continue;
+        const recording = recordingFor(id);
+        const end = recording.durationSec;
+        uses.push({
+          dir: frameDirForStep(index + 1, step),
+          request: {
+            recording,
+            trim: { start: Math.max(0, end - THUMB_CLIP_SECONDS), end },
+            zoom: null,
+            box: RECORDING_BOX.thumb,
+          },
+          last: true,
+        });
+      }
     } else if (visual.type === 'before-after') {
       for (const side of ['before', 'after'] as const) {
         const panel = visual[side];
@@ -191,7 +232,10 @@ export async function extractStoryboardFrames(
   if (uses.length === 0) return frames;
   const { ffmpeg } = await resolveFfmpeg(config);
   for (const use of uses) {
-    const made = await extractFrames(ffmpeg, { ...use.request, outDir: join(runDir, use.dir) }, signal);
+    const request = { ...use.request, outDir: join(runDir, use.dir) };
+    const made = use.last
+      ? await extractLastFrame(ffmpeg, request, signal)
+      : await extractFrames(ffmpeg, request, signal);
     frames.set(use.dir, { dir: use.dir, ...made });
   }
   return frames;

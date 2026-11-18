@@ -45,7 +45,7 @@ range limits, so that one schema works for every model provider. The checker enf
 | Field | What it is |
 |---|---|
 | `id` | A unique id such as `s1`. |
-| `role` | `mission`, `big-picture`, `under-the-hood`, `before-after`, `review` or `conclusion`. |
+| `role` | `mission`, `reproduction`, `big-picture`, `under-the-hood`, `before-after`, `proof`, `review` or `conclusion`. |
 | `title` | The chapter title, 2 to 6 words. |
 | `narration` | 1 to 6 lines. Each line has `text` (one or two short spoken sentences, at most 40 words) and `evidence` (a list of evidence ids). |
 | `visual` | One visual. See [Visuals](#visuals). |
@@ -60,11 +60,18 @@ A good story uses these scenes in this order. Skip a scene that has nothing real
 needs few scenes.
 
 1. `mission`: what the change is about, and the problem it solves.
-2. `big-picture`: which components changed and how they relate.
-3. `under-the-hood`: one to three scenes on how the key lines work.
-4. `before-after`: only when behaviour really changes.
-5. `review`: the real risks.
-6. `conclusion`: a short recap.
+2. `reproduction`: only when a reproduction or a capture of the bug (a "before" screenshot or recording) was
+   supplied. It shows the bug happening, before any code.
+3. `big-picture`: which components changed and how they relate.
+4. `under-the-hood`: one to three scenes on how the key lines work.
+5. `before-after`: only when behaviour really changes.
+6. `proof`: only when a capture of the fix working (an "after" screenshot or recording, or a reproduction
+   step marked `fixed`) or a test result was supplied. It shows the fix working, after the code.
+7. `review`: the real risks.
+8. `conclusion`: a short recap.
+
+Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that
+were supplied.
 
 The guide that `analyze` writes (`AUTHORING.md`) goes into more detail.
 
@@ -114,6 +121,7 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 | Flow actors, flow steps | 5, 8. |
 | Terminal lines, browser blocks | 12, 8. |
 | Title chips, mission points | 4. |
+| Steps of a reproduction in one scene | 6. A longer reproduction is shown in two scenes. |
 | Part of one recording that one scene shows | 20 seconds (`inputs.maxClipSeconds`). The end is cut. |
 | Speed of a recording | 0.5 to 4. |
 | Highlights on one screenshot, recording or panel | 4. The first four stay. |
@@ -121,8 +129,9 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 | Smallest side of a highlight, of a focus | 0.02, 0.2 (as fractions of the picture). |
 
 The offline generator and the length estimate use a speaking rate of 2.5 words a second. `--max-duration`
-(150 seconds by default) trims a storyboard before narration, least important scenes first. The mission and
-review scenes always stay. The target length that `analyze` gives is a guide, not a limit: narration over its
+(150 seconds by default) trims a storyboard before narration, least important scenes first. The reproduction
+and proof scenes go last, after every other scene that can be dropped. The mission and review scenes
+always stay. The target length that `analyze` gives is a guide, not a limit: narration over its
 word budget is kept as it is. Only a storyboard that is estimated to be longer than `--max-duration` is
 trimmed, and `validate` warns about it first (`over-length`).
 
@@ -147,14 +156,18 @@ same input always gives the same ids.
 | `D1`, ... | A dependency change. |
 | `SS1`, ... | A screenshot you supplied with `--screenshot` or `--screenshots-dir`. |
 | `RC1`, ... | A screen recording you supplied with `--recording`. |
+| `REPRO` | The title of the reproduction you supplied with `--repro-file`. |
+| `REPRO.1`, ... | Step 1, 2, and so on of that reproduction. |
 | `REPO` | The structure of the repository: a file tree and an excerpt of the README. |
 
-`TASK`, `NOTES`, `T1`, `SS1` and `RC1` exist only when you pass the matching flag. **Pass the same flags to
+`TASK`, `NOTES`, `T1`, `REPRO`, `SS1` and `RC1` exist only when you pass the matching flag. **Pass the same flags to
 `analyze`, `validate` and `generate`.** Otherwise those ids do not exist in the later steps, and lines that
 cite only them are removed.
 
-Cite ids on every narration line. `TASK` and `NOTES` are the author's words and are not checked against the
-code. Use them for the reason behind the change, and say whose words they are ("the notes say ...").
+Cite ids on every narration line. `TASK`, `NOTES` and `REPRO` are the author's words and are not checked against
+the code. Use them for the reason behind the change, and say whose words they are ("the notes say ...", "the
+reproduction shows ..."). A reproduction shows what its author saw. It does not prove anything about the code,
+and it is not backing evidence for a simulated visual.
 
 ## Visuals
 
@@ -176,6 +189,7 @@ never contains code.
 | `bullets` | Short points. | `heading`, `items` |
 | `screenshot` | A real screenshot that you supplied. `highlights` point at parts of it and `focus` zooms the camera into one part. See "Pointing at a part of a picture". | `screenshotId`, `caption`, `highlights`, `focus` |
 | `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1, for at most `inputs.maxClipSeconds` seconds. The two panels start one after the other, so they are not in step. A `trim` with less than 0.2 seconds inside the clip is an error. `highlights` and `focus` work as on a screenshot. | `recordingId`, `caption`, `trim`, `speed`, `zoom`, `highlights`, `focus` |
+| `repro` | The steps of the reproduction that you supplied, as a numbered list. Each step appears on its beat, with its capture as a small picture: a screenshot, or the last picture of a recording. `step` is the number of a step, from 1. The text, the result and the capture of a step come from the supplied reproduction and never from the storyboard. A step marked `bug` is red and one marked `fixed` is green, each with an icon and a word. The heading is the title of the reproduction, with its environment under it. At most 6 steps in one scene. | `steps` (`step`, `beat`) |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
@@ -261,6 +275,9 @@ model writes, and the one the offline generator builds. There are three kinds of
   that says which of the two was done. A box that only touches the edge is left as it is. The label of a highlight is checked like a caption,
   and a label of more than 40 characters is shortened. The highlights of a panel that does not show a screenshot
   are removed.
+- The steps of a `repro` visual that the reproduction does not have are dropped, and so are repeated
+  steps. Steps out of order are put in the order of the reproduction. A list of more than 6 is cut to the
+  first 6.
 - A recording's `trim` is put in order and cut to the clip, and cut to 20 seconds from its end. A `speed` or
   `zoom` outside its range is moved into it.
 - **Secrets and e-mail addresses are masked** in every string, and hidden control characters are removed.
@@ -282,8 +299,9 @@ A sentence is removed, with a warning, when it:
 - **Names something that is not in the change.** Names that look like code (camelCase or snake_case words,
   dotted calls, backticked words and file paths) must appear in the code, the files or the analysis. This
   applies to narration and to every text on screen. A name that only people's text holds (the pull request,
-  a commit, an issue, the README, the task, the notes) is accepted only on a line that cites that text.
-- **Contains a web address** whose host is not in the code change, the task or the notes. This covers
+  a commit, an issue, the README, the task, the notes, the reproduction) is accepted only on a line that
+  cites that text.
+- **Contains a web address** whose host is not in the code change, the task, the notes or the reproduction. This covers
   `https://…`, any `scheme://…`, `www.…` and a bare host such as `example.io/login`. Addresses on this
   machine, on a private network or on example hosts are fine. A bare name that ends like a file
   (`deploy.sh`, `main.py:42`) counts as a file unless a path follows it, and a name that the code contains
@@ -306,6 +324,7 @@ Each problem has a `path` (such as `scenes[3].visual.ref`), a `code` and a `mess
 | `screenshot-unknown` | A screenshot visual names an id that you did not supply. | Use an `SS` id from `evidence.md`, or another visual. |
 | `recording-unknown` | A recording visual names an id that you did not supply. | Use an `RC` id from `evidence.md`, or another visual. |
 | `recording-trim-out-of-range` | The `trim` of a recording visual has less than 0.2 seconds inside the recording. | Choose a part that lies inside the clip. |
+| `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied, or none of its steps is a step of it. | Pass `--repro-file` (`repro.json` for the agent commands) and list steps from `REPRO.1`, or use another visual. |
 | `simulated-unbacked` | A simulated terminal or browser has narration that cites no file, hunk or symbol. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 | `validator-failed` | The checker stopped on an unexpected problem. | Report it as a bug. |
@@ -334,6 +353,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `recording-trim-out-of-range` | The `trim` of a recording reached outside the clip. It was cut to fit. |
 | `recording-too-long` | A recording scene would show more than 20 seconds of the clip. The clip was shortened from its end. |
 | `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". |
+| `repro-step-unknown` | A `repro` visual lists a step number that the reproduction does not have. The step was dropped. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the
@@ -348,7 +368,11 @@ and no second model sees the code. The reading and writing are your agent's own 
 
 1. **Write down what only you know**, in a folder outside the repository: `task.md` (the task), `notes.md`
    (your decisions, edge cases and what deserves extra review) and `tests.json` (only tests you really ran).
-   Never invent a result. The `agent` commands also read real screenshots from `screenshots/` in that folder
+   Never invent a result. If you reproduced the bug, write the steps you really did in `repro.json`: its
+   `title`, an optional `environment` and 1 to 12 `steps`, each with a `text` and optionally a capture
+   (`screenshot` or `recording`: the id of one that you pass) and a `result` (`expected`, `actual`, `bug` or
+   `fixed`). The `agent` commands read it from that folder. With `analyze`, `validate` and `generate`, pass
+   `--repro-file` instead. The `agent` commands also read real screenshots from `screenshots/` in that folder
    (`.png`, `.jpg` or `.jpeg`, sorted by name, named by an optional `screenshots/captions.json`) and screen
    recordings from `recordings/` (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an
    optional `recordings/captions.json`). With `analyze`, `validate` and `generate`, pass
@@ -386,6 +410,8 @@ Rules of thumb for a good storyboard:
 - Write for the ear: short sentences, plain words, no markdown, no filler such as "powerful" or "seamless".
   Say a function name naturally, and never read a file path out loud.
 - Put what the evidence does not settle into `uncertainties`.
+- Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that
+  were supplied. Word what a reproduction says as the author's account ("in the reproduction, ...").
 - Use `before-after` only when behaviour really changes, or when a changed function is small enough to show
   both versions. Skip a scene that has nothing real to show.
 

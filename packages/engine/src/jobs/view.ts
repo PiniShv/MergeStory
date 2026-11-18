@@ -136,6 +136,15 @@ export function maskContext(context: ContextOptions): { context: ContextOptions;
       summary: mask(t.summary, 'test results'),
     }));
   }
+  if (context.repro) {
+    const { title, environment, steps } = context.repro;
+    out.repro = {
+      ...context.repro,
+      title: mask(title, 'reproduction'),
+      ...(environment === undefined ? {} : { environment: mask(environment, 'reproduction') }),
+      steps: steps.map((step) => ({ ...step, text: mask(step.text, 'reproduction') })),
+    };
+  }
   if (context.screenshots) {
     out.screenshots = context.screenshots.map((s) => ({
       ...s,

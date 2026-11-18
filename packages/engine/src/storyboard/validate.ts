@@ -523,6 +523,7 @@ async function resolveSceneRefs(scene: Scene, p: string, run: Run): Promise<void
     case 'bullets':
     case 'screenshot':
     case 'recording':
+    case 'repro':
     case 'summary':
       return;
     default:

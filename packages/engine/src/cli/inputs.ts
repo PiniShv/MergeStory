@@ -4,7 +4,7 @@ import { basename, extname, join, resolve } from 'node:path';
 import { MergeStoryError } from '../core/errors.ts';
 import type { ScreenshotInput } from '../core/types.ts';
 import type { ContextOptions } from '../pipeline/index.ts';
-import { checkScreenshotFile, checkTestResults } from '../pipeline/inputs.ts';
+import { checkRepro, checkScreenshotFile, checkTestResults } from '../pipeline/inputs.ts';
 import { assertNotSensitive, formatBytes, LIMITS, readJsonFile, readTextFile } from './files.ts';
 
 /** Flags that supply context for the video. */
@@ -13,6 +13,9 @@ export interface ContextFlags {
   taskFile?: string;
   notesFile?: string;
   testsFile?: string;
+  reproFile?: string;
+  /** How errors name the reproduction file. The agent commands set it to the name in the work folder. */
+  reproLabel?: string;
   screenshot?: string[];
   recording?: string[];
   /** A folder of screenshots (`--screenshots-dir`). */
@@ -242,6 +245,14 @@ export async function buildContext(flags: ContextFlags, cwd: string): Promise<Co
       cwd,
     });
     context.tests = checkTestResults(json, '--tests-file');
+  }
+  if (flags.reproFile !== undefined) {
+    const json = await readJsonFile(flags.reproFile, {
+      label: flags.reproLabel ?? '--repro-file',
+      maxBytes: LIMITS.reproBytes,
+      cwd,
+    });
+    context.repro = checkRepro(json, flags.reproLabel ?? '--repro-file');
   }
   if (flags.screenshot && flags.screenshot.length > 0) {
     context.screenshots = await resolveFiles(flags.screenshot, cwd, '--screenshot', (path) =>

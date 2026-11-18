@@ -163,8 +163,8 @@ follow `accent-2`, unless you set them.
 - Added, removed and changed lines keep their green, red and amber, so a theme cannot make a removal
   look like an addition. New connections in diagrams keep their color too.
 - The badges keep their colors: "Simulated output", "Simulated screen", "Actual screenshot", "Recorded",
-  "Sensitive data masked" and "Reported results". A theme cannot hide that a picture is simulated or that
-  secrets were masked.
+  "Sensitive data masked", "Reported steps" and "Reported results". A theme cannot hide that a picture is
+  simulated or that secrets were masked.
 - Secrets are masked before the theme is used. A theme has no setting for masking.
 - Fonts, sizes and the layout stay the same. A theme can put your logo in place of the MergeStory mark
   and name. The rest of the end card keeps its text.

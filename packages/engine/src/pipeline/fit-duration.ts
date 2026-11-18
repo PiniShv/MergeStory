@@ -7,7 +7,7 @@
  * lengths, transitions and end card are added the way the real timeline adds them.
  *
  * Whole scenes go first, the least important first: the wrap-up, the overview, then the code
- * scenes, later ones before earlier ones. When a scene only has to lose a little, it loses its last
+ * scenes, later ones before earlier ones, and last the reproduction and proof scenes. When a scene only has to lose a little, it loses its last
  * lines instead of disappearing. The mission and review scenes are never dropped, and every scene
  * keeps at least one line. If those scenes alone are too long, the result says so.
  *
@@ -30,6 +30,8 @@ const DROP_ORDER: Record<SceneRole, number> = {
   'big-picture': 1,
   'under-the-hood': 2,
   'before-after': 2,
+  reproduction: 3,
+  proof: 3,
   mission: 3,
   review: 3,
 };

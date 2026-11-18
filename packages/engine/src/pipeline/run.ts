@@ -366,7 +366,7 @@ async function produce(
       startSec: scene.startSec,
       durationSec: scene.durationSec,
     })),
-    evidenceUsed: evidenceUsed(storyboard),
+    evidenceUsed: evidenceUsed(storyboard, p.inputs.repro),
     storyboardSource: choice.source,
     files: { ...resultFiles(ctx.runDir), poster: rendered.posterPath ? folder.poster : null },
     publish: outcome.publish,

@@ -238,6 +238,10 @@ describe('analyze: the commands in AUTHORING.md', () => {
       join(dir, 'tests.json'),
       JSON.stringify([{ command: 'npm test', passed: true, summary: 'ok' }]),
     );
+    await writeFile(
+      join(dir, 'repro.json'),
+      JSON.stringify({ title: 'Basket count', steps: [{ text: 'Open the page' }] }),
+    );
     await writeFile(join(dir, 'after.png'), makePng(8, 8));
     const { code, stdout } = await run([
       'analyze',
@@ -252,6 +256,8 @@ describe('analyze: the commands in AUTHORING.md', () => {
       'notes.md',
       '--tests-file',
       'tests.json',
+      '--repro-file',
+      'repro.json',
       '--screenshot',
       'after.png:Dashboard: done:after',
     ]);
@@ -269,6 +275,8 @@ describe('analyze: the commands in AUTHORING.md', () => {
         join(dir, 'notes.md'),
         '--tests-file',
         join(dir, 'tests.json'),
+        '--repro-file',
+        join(dir, 'repro.json'),
         '--screenshot',
         `${join(dir, 'after.png')}:Dashboard: done:after`,
       ],
@@ -276,6 +284,7 @@ describe('analyze: the commands in AUTHORING.md', () => {
     // The steps that the terminal prints leave the context out, so the flags are given once more.
     expect(stdout).toContain('Give steps 3 and 4 the same context flags');
     expect(stdout).toContain(`--task-file ${join(dir, 'task.md')} --notes-file ${join(dir, 'notes.md')}`);
+    expect(stdout).toContain(`--repro-file ${join(dir, 'repro.json')}`);
     expect(stdout).toContain(`--screenshot '${join(dir, 'after.png')}:Dashboard: done:after'`);
   });
 

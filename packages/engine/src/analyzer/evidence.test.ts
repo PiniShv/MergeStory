@@ -78,6 +78,32 @@ describe('hunk evidence', () => {
   });
 });
 
+describe('reproduction evidence', () => {
+  const repro = {
+    title: 'Basket count',
+    environment: null,
+    steps: [
+      { text: 'Open the page', screenshotId: 'SS1', recordingId: null, result: 'bug' as const },
+      { text: 'Mail jane.doe@example.com', screenshotId: null, recordingId: null, result: null },
+    ],
+  };
+
+  it('gives the reproduction the id REPRO and each step REPRO.n, with the text as the label', () => {
+    const sources = sourcesFor([]);
+    sources.inputs = emptyInputs({ repro });
+    const items = buildEvidenceIndex(sources).filter((e) => e.kind === 'repro');
+    expect(items.map((e) => [e.id, e.label])).toEqual([
+      ['REPRO', 'Basket count'],
+      ['REPRO.1', 'Step 1: Open the page'],
+      ['REPRO.2', 'Step 2: Mail j•••@example.com'],
+    ]);
+  });
+
+  it('adds nothing without a reproduction', () => {
+    expect(buildEvidenceIndex(sourcesFor([])).some((e) => e.kind === 'repro')).toBe(false);
+  });
+});
+
 describe('capture labels', () => {
   it('masks an e-mail address in the label of a recording, whatever the privacy setting', () => {
     const sources = sourcesFor([]);

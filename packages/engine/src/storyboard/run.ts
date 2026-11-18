@@ -5,7 +5,13 @@
 import type { Config } from '../core/config.ts';
 import { isShowable } from '../core/path-policy.ts';
 import { truncate } from '../core/text.ts';
-import type { EvidenceItem, RecordingInput, ScreenshotInput, TestEvidence } from '../core/types.ts';
+import type {
+  EvidenceItem,
+  RecordingInput,
+  ReproInput,
+  ScreenshotInput,
+  TestEvidence,
+} from '../core/types.ts';
 import { backingHint, CLAIM_LABELS, claimIsSupported, findClaim } from './claims.ts';
 import { createRefResolver, type RefResolver } from './coderef.ts';
 import {
@@ -95,6 +101,11 @@ function buildKnownCorpus(deps: ValidationDeps): KnownCorpus {
   }
   for (const shot of inputs.screenshots) prose(shot.id, shot.caption);
   for (const rec of inputs.recordings) prose(rec.id, rec.caption);
+  if (inputs.repro) {
+    prose('REPRO', inputs.repro.title);
+    prose('REPRO', inputs.repro.environment);
+    for (const [i, step] of inputs.repro.steps.entries()) prose(`REPRO.${i + 1}`, step.text);
+  }
 
   // Content of sensitive or excluded files never seeds the corpus.
   for (const file of changeSet.files) {
@@ -136,6 +147,8 @@ function collectCodeHosts(deps: ValidationDeps): Set<string> {
   }
   add(deps.inputs.task);
   add(deps.inputs.notes);
+  for (const text of [deps.inputs.repro?.title, deps.inputs.repro?.environment]) add(text);
+  for (const step of deps.inputs.repro?.steps ?? []) add(step.text);
   return hosts;
 }
 
@@ -154,6 +167,7 @@ export class Run {
   readonly tests: readonly TestEvidence[];
   readonly screenshots: Map<string, ScreenshotInput>;
   readonly recordings: Map<string, RecordingInput>;
+  readonly repro: ReproInput | null;
   readonly corpus: KnownCorpus;
   /** Hosts of web addresses that appear in visible code or in the caller's task and notes. */
   readonly codeHosts: ReadonlySet<string>;
@@ -173,6 +187,7 @@ export class Run {
     this.tests = deps.inputs.tests;
     this.screenshots = new Map(deps.inputs.screenshots.map((shot) => [shot.id, shot]));
     this.recordings = new Map(deps.inputs.recordings.map((rec) => [rec.id, rec]));
+    this.repro = deps.inputs.repro;
     this.corpus = buildKnownCorpus(deps);
     this.codeHosts = collectCodeHosts(deps);
     this.codeText = codeTextOf(

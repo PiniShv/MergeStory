@@ -1,6 +1,6 @@
 # The bug-fix demo
 
-A basket page shows "23 items" when someone types 2 and 3. The fix turns the two quantities into numbers. This demo shows the bug and the fix in the video, as a screen recording and as screenshots, and it needs an engine newer than 1.7.0.
+A basket page shows "23 items" when someone types 2 and 3. The fix turns the two quantities into numbers. This demo shows the bug and the fix in the video: the steps that make the bug, a screen recording, and screenshots. It needs an engine newer than 1.7.0.
 
 MergeStory does not record anything. `capture.mjs` opens the page in a browser, types 2 and 3, and writes the recordings and the screenshots. Nothing is committed: the captures are made each time you run it.
 
@@ -12,7 +12,8 @@ MergeStory does not record anything. `capture.mjs` opens the page in a browser, 
 | `base/`, `feature/` | The files of the two branches: `index.html`, `basket.js`, and in `feature/` a test file. |
 | `capture.mjs` | Makes `before.png`, `after.png`, `before.mp4` and `after.mp4` from the two versions of the page, a folder `screenshots/` with the two pictures and their captions, and `count.json`: where the text of the item count is in each picture, as fractions of it. A test checks the boxes in `storyboard.json` against it. |
 | `task.md`, `notes.md`, `tests.json` | The task, the author's notes and one reported test run (3 tests, `node --test`). |
-| `storyboard.json` | A storyboard written by hand: the bug, the code, the fix, then the two screenshots side by side. It points at the item count with `highlights`, and the camera zooms into the count in the first recording with `focus`. |
+| `repro.json` | The steps that show the bug and, at the end, the fix working. The step with the bug uses the recording `RC1`, the last step uses the screenshot `SS2`. |
+| `storyboard.json` | A storyboard written by hand: the bug and the steps that make it, the code, the fix, then the two screenshots side by side. It points at the item count with `highlights`, and the camera zooms into the count in the first recording with `focus`. |
 
 ## Make the video
 
@@ -31,13 +32,13 @@ node examples/bugfix-demo/capture.mjs /tmp/bugfix-captures
 Check the storyboard:
 
 ```bash
-mergestory validate examples/bugfix-demo/storyboard.json /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
+mergestory validate examples/bugfix-demo/storyboard.json /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --repro-file examples/bugfix-demo/repro.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
 ```
 
 Render it. Add `--tts none` for a silent video:
 
 ```bash
-mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --storyboard examples/bugfix-demo/storyboard.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
+mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-count --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md --tests-file examples/bugfix-demo/tests.json --repro-file examples/bugfix-demo/repro.json --storyboard examples/bugfix-demo/storyboard.json --screenshots-dir /tmp/bugfix-captures/screenshots --recording "/tmp/bugfix-captures/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" --recording "/tmp/bugfix-captures/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after"
 ```
 
 ## Tips for your own captures

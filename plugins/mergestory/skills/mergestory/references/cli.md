@@ -41,9 +41,9 @@ are included.
 
 ## Context flags (analyze, validate and generate)
 
-The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json`, `screenshots/` and `recordings/` from
+The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json`, `repro.json`, `screenshots/` and `recordings/` from
 the work folder. For the other commands, pass the same context flags to all three, so the evidence
-ids (TASK, NOTES, T1, SS1, RC1) match. If you pass `--duration`, `--max-duration` or `--language` to
+ids (TASK, NOTES, T1, REPRO.1, SS1, RC1) match. If you pass `--duration`, `--max-duration` or `--language` to
 `generate`, pass the same to `validate`.
 
 | Flag | Meaning |
@@ -51,6 +51,7 @@ ids (TASK, NOTES, T1, SS1, RC1) match. If you pass `--duration`, `--max-duration
 | `--task <text>` / `--task-file <file>` | The original task (max 64 KB). Use one of them. Becomes evidence `TASK`. |
 | `--notes-file <file>` | Implementation notes and decisions (max 64 KB). Becomes evidence `NOTES`. |
 | `--tests-file <file>` | JSON array: `[{"command": "npm test", "passed": true, "summary": "212 passed"}]`. Only results you really ran. An optional `source` is `agent` (the default), `ci` or `user`. Become `T1`, `T2`, ... Only the first 10 are used. |
+| `--repro-file <file>` | The steps that show a bug, as JSON (max 64 KB): `{"title": "...", "environment": "...", "steps": [{"text": "...", "screenshot": "SS1", "result": "bug"}]}`, with 1 to 12 steps. A step may name a `screenshot` or a `recording` that you passed too, with `--screenshot`, `--screenshots-dir` or `--recording` (not both), and a `result`: `expected`, `actual`, `bug` or `fixed`. Becomes `REPRO` and `REPRO.1`, ... Needs an engine newer than 1.7.0. |
 | `--screenshot <path>[:<caption>[:before\|after]]` | A real screenshot (PNG or JPEG, max 4 MB), repeatable. Becomes `SS1`, ... The first 6 are used; the setting `inputs.maxScreenshots` raises that to 12. A picture wider than 2560 px is made smaller when the video is made. |
 | `--screenshots-dir <folder>` | A folder of real screenshots (`.png`, `.jpg`, `.jpeg`, used in name order, after any `--screenshot`), with an optional `captions.json` as `{"page.png": {"caption": "...", "side": "before"}}`. Needs an engine newer than 1.7.0. Pass it to `analyze`, `validate` and `generate` alike. |
 | `--recording <path>[:<caption>[:before\|after]]` | A real screen recording (MP4 H.264 or WebM VP8/VP9, with no sound or with AAC, MP3, Opus or Vorbis sound, at least 0.2 s, checked with ffprobe; max 4, each 50 MB and 60 s), repeatable. The text of a capture is masked, but not what its picture shows. Becomes `RC1`, ... Needs engine 1.7.0 or newer. The ids restart at `RC1` in every command, so pass the same recordings in the same order to `analyze`, `validate` and `generate`. |

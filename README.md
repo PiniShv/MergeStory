@@ -59,16 +59,19 @@ The video explains a change that adds retries with exponential backoff to a smal
 ## What a video looks like
 
 1. **The mission:** the task and the problem it solves.
-2. **The big picture:** which components changed and how they connect.
-3. **Under the hood:** the most important code, highlighted line by line.
-4. **Before and after:** how behaviour changes (only when there is something real to show).
-5. **What to review:** risky or subtle spots, with file and line links.
-6. **Conclusion:** a short, review-oriented summary.
+2. **The bug happening:** the steps that show it, with a screenshot or a recording (only when you supply them).
+3. **The big picture:** which components changed and how they connect.
+4. **Under the hood:** the most important code, highlighted line by line.
+5. **Before and after:** how behaviour changes (only when there is something real to show).
+6. **The fix working:** the capture of the fix and the real test results (only when you supply them).
+7. **What to review:** risky or subtle spots, with file and line links.
+8. **Conclusion:** a short, review-oriented summary.
 
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
 to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.
 Real captures that you supply are labelled too: "Actual screenshot" for a screenshot and "Recorded" for a
-screen recording (see [the storyboard guide](docs/storyboard.md)).
+screen recording, and the steps of a reproduction are labelled "Reported steps" (see
+[the storyboard guide](docs/storyboard.md)).
 
 ## Get started
 

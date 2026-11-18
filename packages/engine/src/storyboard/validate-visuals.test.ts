@@ -669,6 +669,113 @@ describe('highlights and focus', () => {
   });
 });
 
+describe('reproduction', () => {
+  const repro = (steps = 8) => ({
+    title: 'Basket count',
+    environment: 'Chrome',
+    steps: Array.from({ length: steps }, (_, i) => ({
+      text: `Step ${i + 1}`,
+      screenshotId: null,
+      recordingId: null,
+      result: null,
+    })),
+  });
+  const visual = (...steps: [number, number?][]): Json => ({
+    type: 'repro',
+    steps: steps.map(([step, beat = 0]) => ({ step, beat })),
+  });
+  /** Validate a repro visual over a reproduction of `count` steps, then validate the accepted result again. */
+  async function check(shown: Json, count = 8) {
+    const fx = retryFixture({ inputs: { repro: repro(count) } });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = shown;
+    const result = await run(sb, fx);
+    if (result.storyboard) {
+      const again = await run(result.storyboard, fx);
+      expect(again.fixes).toEqual([]);
+      expect(again.warnings).toEqual([]);
+      expect(again.storyboard).toEqual(result.storyboard);
+    }
+    const out = result.storyboard?.scenes[2]?.visual;
+    return { result, steps: out?.type === 'repro' ? out.steps : null };
+  }
+
+  it('accepts steps of the supplied reproduction as they are, with no fix', async () => {
+    const { result, steps } = await check(visual([1, 0], [2, 1], [5, 1]));
+    expect(result.errors).toEqual([]);
+    expect(result.fixes).toEqual([]);
+    expect(steps).toEqual([
+      { step: 1, beat: 0 },
+      { step: 2, beat: 1 },
+      { step: 5, beat: 1 },
+    ]);
+  });
+
+  it('is an error when no reproduction was supplied, and says how to supply one', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = visual([1]);
+    const result = await run(sb, fx);
+    expect(result.storyboard).toBeNull();
+    expect(codes(result.errors)).toEqual(['repro-unknown']);
+    expect(result.errors[0]?.path).toBe('scenes[2].visual.steps');
+    expect(result.errors[0]?.message).toContain('--repro-file');
+    expect(result.errors[0]?.message).toContain('repro.json');
+  });
+
+  it('drops a step that the reproduction does not have, with a fix and a warning', async () => {
+    const { result, steps } = await check(visual([1], [9], [0], [3]), 3);
+    expect(steps?.map((s) => s.step)).toEqual([1, 3]);
+    expect(codes(result.warnings)).toEqual(['repro-step-unknown', 'repro-step-unknown']);
+    expect(result.warnings[0]?.path).toBe('scenes[2].visual.steps[1].step');
+    expect(result.warnings[0]?.message).toContain('has 3 steps');
+    expect(result.fixes).toHaveLength(2);
+  });
+
+  it('drops a step that is listed twice, keeping the first', async () => {
+    const { result, steps } = await check(visual([2, 0], [3, 1], [2, 1]));
+    expect(steps).toEqual([
+      { step: 2, beat: 0 },
+      { step: 3, beat: 1 },
+    ]);
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toEqual(['scenes[2].visual.steps[2]: dropped step 2 because it is listed twice']);
+  });
+
+  it('puts steps out of order into the order of the reproduction', async () => {
+    const { result, steps } = await check(visual([3, 1], [1, 0], [2, 1]));
+    expect(steps?.map((s) => s.step)).toEqual([1, 2, 3]);
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toEqual(['scenes[2].visual.steps: put the steps in the order of the reproduction']);
+  });
+
+  it('keeps the first 6 steps, counted after the steps that do not exist are dropped', async () => {
+    const { result, steps } = await check(visual([1], [2], [3], [4], [5], [6], [7]));
+    expect(steps?.map((s) => s.step)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(result.fixes).toEqual(['scenes[2].visual.steps: kept the first 6 of 7 steps (the limit is 6)']);
+    const withGap = await check(visual([20], [1], [2], [3], [4], [5], [6]));
+    expect(withGap.steps?.map((s) => s.step)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('is an error when no step is left', async () => {
+    for (const shown of [visual(), visual([9], [10])]) {
+      const { result } = await check(shown, 3);
+      expect(result.storyboard).toBeNull();
+      expect(codes(result.errors)).toEqual(['repro-unknown']);
+      expect(result.errors[0]?.message).toContain('steps from 1 to 3');
+    }
+  });
+
+  it('keeps the beat of a step inside the narration of its scene', async () => {
+    const { result, steps } = await check(visual([1, 7], [2, 1]));
+    expect(steps).toEqual([
+      { step: 1, beat: 1 },
+      { step: 2, beat: 1 },
+    ]);
+    expect(result.fixes).toHaveLength(1);
+  });
+});
+
 describe('simulated visuals', () => {
   const terminal = (): Json => ({
     type: 'terminal',
@@ -689,6 +796,23 @@ describe('simulated visuals', () => {
     ];
     const result = await run(sb, fx);
     expect(result.storyboard).toBeNull();
+    expect(result.errors.find((e) => e.code === 'simulated-unbacked')!.path).toBe('scenes[2].visual');
+  });
+
+  it('does not take a reproduction as backing for a terminal', async () => {
+    const fx = retryFixture({
+      inputs: {
+        repro: {
+          title: 'Basket',
+          environment: null,
+          steps: [{ text: 'Open it', screenshotId: null, recordingId: null, result: null }],
+        },
+      },
+    });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = terminal();
+    scene(sb, 2).narration = [{ text: 'In the reproduction, the page opens.', evidence: ['REPRO.1'] }];
+    const result = await run(sb, fx);
     expect(result.errors.find((e) => e.code === 'simulated-unbacked')!.path).toBe('scenes[2].visual');
   });
 

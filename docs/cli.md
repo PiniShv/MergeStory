@@ -80,6 +80,7 @@ accurate, because the engine can quote them as evidence.
 | `--task-file <file>` | Read the task from a file. At most 64 KB. Use either `--task` or `--task-file`, not both. |
 | `--notes-file <file>` | Notes about your decisions, edge cases and what to review. At most 64 KB. It becomes evidence `NOTES`. |
 | `--tests-file <file>` | Test results you really ran, as a JSON array. At most 256 KB. See below. They become `T1`, `T2`, and so on. |
+| `--repro-file <file>` | The steps that show the bug, as a JSON object. At most 64 KB. See below. They become `REPRO`, and `REPRO.1`, `REPRO.2`, and so on for the steps. |
 | `--screenshot <spec>` | A real screenshot, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `SS1`, `SS2`, and so on. |
 | `--screenshots-dir <dir>` | A folder of real screenshots: every `.png`, `.jpg` and `.jpeg` file in it, in name order. Give it once. They become `SS` ids after those of any `--screenshot`. An optional `captions.json` in the folder gives a caption and a side. See below. |
 | `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
@@ -89,6 +90,16 @@ accurate, because the engine can quote them as evidence.
   Any other field is an error, so a typo such as `pass` never turns into a made-up result. MergeStory shows
   results as you report them and never runs tests. Only the first 10 entries are used, and a warning says
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
+- **Reproduction.** The steps that show the bug, written by the person who saw it:
+  `{"title": "...", "environment": "...", "steps": [{"text": "...", "screenshot": "SS1", "result": "bug"}]}`.
+  `title` is 1 to 120 characters. `environment` is optional, at most 200 characters, for example the browser.
+  `steps` has 1 to 12 steps. A step has `text` (1 to 200 characters) and may have `screenshot` (an id such as
+  `SS1`) or `recording` (an id such as `RC1`), not both, because a step shows one picture. It may also have
+  `result`: `expected`, `actual`, `bug` or `fixed`. The id must belong to a screenshot or recording that you
+  passed to the same command. Any other field, a wrong type, an empty text or an id that was not passed is an
+  error that names the step. The reproduction is the author's account, not a check of the code. A line that
+  cites it says so ("the reproduction shows ..."). A video shows the steps in a `repro` scene (see
+  [storyboard.md](storyboard.md#visuals)). MergeStory never runs the steps.
 - **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. At
   most 6 are used unless you raise the setting [`inputs.maxScreenshots`](configuration.md) (from 0 to 12); the
   first ones are used and a warning says so. A file that is not a picture, is too large or has a
@@ -141,8 +152,8 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--base <ref>` | Local repository: the older side of the change. | the merge base of `HEAD` and the default branch |
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
-**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir` and `--recording`. See
-[Context flags](#context-flags).
+**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`,
+`--screenshots-dir` and `--recording`. See [Context flags](#context-flags).
 
 **Style and length.**
 
@@ -278,7 +289,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -301,12 +312,13 @@ mergestory validate <storyboard> [source] [flags]
 
 Checks a storyboard against a change without rendering anything, without any paid call and without writing
 files. It runs the same checks that `generate --storyboard` runs. Give it the same source, refs and context flags as `analyze`.
-Otherwise the ids `TASK`, `NOTES`, `T1`, `SS1` and `RC1` do not exist, and the lines that cite only them are removed.
+Otherwise the ids `TASK`, `NOTES`, `T1`, `REPRO`, `SS1` and `RC1` do not exist, and the lines that cite
+only them are removed.
 
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -353,6 +365,7 @@ folder:
 |---|---|---|
 | `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
 | `screenshots/` | the agent | Screenshots: every `.png`, `.jpg` and `.jpeg` file in it, sorted by name, becomes `SS1`, `SS2`, and so on. An optional `screenshots/captions.json` works as the one for recordings: `{"after.png": {"caption": "After the fix", "side": "after"}}`. Same limits and checks as `--screenshot`. |
+| `repro.json` | the agent | The steps that show the bug, with the shape and the limits of `--repro-file`. Every agent command reads it. A step can use a screenshot from `screenshots/` or a recording from `recordings/`, by its id (`SS1`, `RC1`). |
 | `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
@@ -365,8 +378,8 @@ give `.`, for the local branch range (`--base`, `--head`). A pull request (URL o
 only when its repository is one of the git remotes of the current repository, on github.com or on the host of
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
-**What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--storyboard`,
-`--screenshot`, `--screenshots-dir`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+**What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
+`--storyboard`, `--screenshot`, `--screenshots-dir`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 
@@ -604,7 +617,7 @@ folder you give to `--out`. A run id looks like `20261104-101500-a1b2`.
 | `audio.wav` | The narration track. Not written when the video has no voice and no music. |
 | `captions.vtt`, `captions.srt` | The captions. |
 | `render-plan.json` | The plan the renderer turned into frames: the real code, tokens, layout and timing. |
-| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, and `s-<scene number>.before` and `.after` for the panels of a before-after scene). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
+| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, `s-<scene number>.before` and `.after` for the panels of a before-after scene, and `s-<scene number>.step-<step>` for a step of a reproduction). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
 | `video.mp4`, `poster.jpg` | The video and its poster image. |
 | `watch.html` | The watch page, next to the video. It is the page of `watch/`. It finds `video.mp4` and `poster.jpg` by name and carries the captions itself, so it still plays when you upload it together with those files. |
 | `watch/` | The watch page (`index.html`) with copies of the video, poster and captions. Always written. |
