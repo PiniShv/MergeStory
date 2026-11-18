@@ -3,7 +3,7 @@ import { type Cache, FileCache, noCache } from './cache.ts';
 import { type Config, loadSecrets, type Secrets } from './config.ts';
 import { CostTracker, EgressTracker, type Price, PriceBook } from './cost.ts';
 import { createLogger, type Logger } from './logger.ts';
-import { type HomeLayout, homeLayout } from './paths.ts';
+import { adoptHomeFolder, type HomeLayout, homeLayout } from './paths.ts';
 import { globalRedactor, type Redactor } from './redact.ts';
 import type { ProgressEvent } from './types.ts';
 
@@ -42,6 +42,8 @@ export interface CreateContextOptions {
 export function createRunContext(options: CreateContextOptions): RunContext {
   const { config } = options;
   const home = homeLayout(config.home);
+  // Before anything is loaded or started that needs a home folder.
+  adoptHomeFolder(home.home);
   const logger = options.logger ?? createLogger();
   const seen = new Set<string>();
   return {

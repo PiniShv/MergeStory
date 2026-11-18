@@ -303,13 +303,53 @@ describe('ensureKokoroInstalled', () => {
 });
 
 describe('setupKokoro', () => {
+  /** A download that fetches nothing. It never contacts the model host. */
+  const downloadModel = vi.fn(async () => undefined);
+
   it('installs even when the voice is there (a repair), under the same lock', async () => {
     const { ctx, cleanup } = await makeTestContext();
     await writeFakeKokoroInstall(pluginsDir(ctx));
     const install = fakeInstaller();
-    expect((await setupKokoro(ctx, { install })).installed).toBe(true);
+    expect((await setupKokoro(ctx, { install, downloadModel })).installed).toBe(true);
     expect(install).toHaveBeenCalledTimes(1);
     expect(await exists(lockFile(ctx))).toBe(false);
+    await cleanup();
+  });
+
+  it('downloads the speech model after the install, outside the lock, so no later run has to', async () => {
+    const { ctx, cleanup } = await makeTestContext();
+    const install = fakeInstaller();
+    const seen: { installed: boolean; locked: boolean; dtype: string }[] = [];
+    const status = await setupKokoro(ctx, {
+      install,
+      downloadModel: async (context, dtype) => {
+        seen.push({
+          installed: await isKokoroInstalled(context),
+          locked: await exists(lockFile(context)),
+          dtype,
+        });
+      },
+    });
+    expect(seen).toEqual([{ installed: true, locked: false, dtype: kokoroDtype() }]);
+    // The fake install has no model on disk: the status says what the download just made true.
+    expect(status).toMatchObject({ installed: true, modelCached: true });
+    await cleanup();
+  });
+
+  it('fails when the model cannot be downloaded, and leaves the installed packages in place', async () => {
+    const { ctx, cleanup } = await makeTestContext();
+    const failed = new MergeStoryError(
+      'TTS_FAILED',
+      'The Kokoro voice model could not be downloaded: offline',
+    );
+    const error = await setupKokoro(ctx, {
+      install: fakeInstaller(),
+      downloadModel: async () => {
+        throw failed;
+      },
+    }).catch((err: unknown) => err);
+    expect(error).toBe(failed);
+    expect(await isKokoroInstalled(ctx)).toBe(true);
     await cleanup();
   });
 
@@ -317,7 +357,7 @@ describe('setupKokoro', () => {
     const { ctx, cleanup } = await makeTestContext();
     await holdLock(ctx, { pid: 999_999, startedAt: Date.now() });
     const install = fakeInstaller();
-    const waiting = setupKokoro(ctx, { install, isAlive: () => true, pollMs: 10 });
+    const waiting = setupKokoro(ctx, { install, downloadModel, isAlive: () => true, pollMs: 10 });
     await new Promise((resolve) => setTimeout(resolve, 30));
     await writeFakeKokoroInstall(pluginsDir(ctx));
     await rm(lockFile(ctx));

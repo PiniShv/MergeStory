@@ -6,13 +6,14 @@
  * the scene templates. One test renders with the real runtime.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { chromium } from 'playwright-core';
+import { type Browser, chromium } from 'playwright-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
+import { toMergeStoryError } from '../core/errors.ts';
 import { runCommand } from '../core/process.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
 import { loadTheme } from '../core/theme.ts';
@@ -362,6 +363,115 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
     ).rejects.toMatchObject({ code: 'ABORTED' });
     expect(await readdir(out2)).toEqual([]);
   }, 90_000);
+
+  it('stops at once when the run is cancelled while the browser no longer answers', async () => {
+    const out = await outDir();
+    const controller = new AbortController();
+    let closed = false;
+    // A browser that never answers: only closing it ends what waits on it.
+    const hanging: BrowserLauncher = async () => {
+      let giveUp: (reason: Error) => void = () => undefined;
+      const never = new Promise<never>((_resolve, reject) => {
+        giveUp = reject;
+      });
+      setTimeout(() => controller.abort(), 100);
+      return {
+        newContext: () => never,
+        close: async () => {
+          closed = true;
+          giveUp(new Error('Target page, context or browser has been closed'));
+        },
+      } as unknown as Browser;
+    };
+    const started = performance.now();
+    await expect(
+      new ChromiumRenderer(config, { runtimeJs: STUB_RUNTIME, workers: 1, launch: hanging }).render(
+        { plan: stubPlan(2), audioPath: null, outDir: out, quality: 'draft' },
+        testContext({ config, home: out, runDir: out, signal: controller.signal }).ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'ABORTED' });
+    expect(closed).toBe(true);
+    expect(performance.now() - started).toBeLessThan(10_000);
+    expect(await readdir(out)).toEqual([]);
+  }, 30_000);
+
+  it('stops at once when the run is cancelled while a browser never starts', async () => {
+    const out = await outDir();
+    const controller = new AbortController();
+    const never: BrowserLauncher = () => {
+      setTimeout(() => controller.abort(), 100);
+      return new Promise<Browser>(() => undefined);
+    };
+    const started = performance.now();
+    await expect(
+      new ChromiumRenderer(config, { runtimeJs: STUB_RUNTIME, workers: 1, launch: never }).render(
+        { plan: stubPlan(2), audioPath: null, outDir: out, quality: 'draft' },
+        testContext({ config, home: out, runDir: out, signal: controller.signal }).ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'ABORTED' });
+    expect(performance.now() - started).toBeLessThan(10_000);
+    expect(await readdir(out)).toEqual([]);
+  }, 30_000);
+
+  it('closes a browser that only starts after the run was cancelled', async () => {
+    const out = await outDir();
+    const controller = new AbortController();
+    let closed = false;
+    const late: BrowserLauncher = () => {
+      setTimeout(() => controller.abort(), 50);
+      return new Promise<Browser>((resolve) => {
+        setTimeout(
+          () =>
+            resolve({
+              close: async () => {
+                closed = true;
+              },
+            } as unknown as Browser),
+          300,
+        );
+      });
+    };
+    await expect(
+      new ChromiumRenderer(config, { runtimeJs: STUB_RUNTIME, workers: 1, launch: late }).render(
+        { plan: stubPlan(2), audioPath: null, outDir: out, quality: 'draft' },
+        testContext({ config, home: out, runDir: out, signal: controller.signal }).ctx,
+      ),
+    ).rejects.toMatchObject({ code: 'ABORTED' });
+    // The browser arrives 300 ms after the start. Nobody waits for it, and it is closed all the same.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(closed).toBe(true);
+  }, 30_000);
+
+  it.skipIf(process.platform === 'win32')(
+    'leaves no video when the run is cancelled in the last step, after the video is assembled',
+    async () => {
+      const out = await outDir();
+      // An ffprobe that says it started and then never answers: the render waits in its last check.
+      const marker = join(dir, `probe-started-${n}`);
+      const slowProbe = join(dir, `slow-ffprobe-${n}.sh`);
+      await writeFile(slowProbe, `#!/bin/sh\n: > '${marker}'\nexec sleep 60\n`, { mode: 0o755 });
+      const slow = testConfig({ quality: 'draft', render: { ffprobePath: slowProbe } });
+      const controller = new AbortController();
+      const rendering = new ChromiumRenderer(slow, { runtimeJs: STUB_RUNTIME, workers: 1 })
+        .render(
+          { plan: stubPlan(2), audioPath: null, outDir: out, quality: 'draft' },
+          testContext({ config: slow, home: out, runDir: out, signal: controller.signal }).ctx,
+        )
+        .then(
+          () => 'finished',
+          // The stop can surface as the cancel of the last program, which callers report as ABORTED too.
+          (error: unknown) => toMergeStoryError(error).code,
+        );
+      for (let waited = 0; waited < 60_000 && !(await stat(marker).catch(() => null)); waited += 50)
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(await stat(marker).catch(() => null)).not.toBeNull();
+      // The video is assembled by now. A stop here must still leave nothing in the folder.
+      controller.abort();
+      expect(await rendering).toBe('ABORTED');
+      expect(await readdir(out)).toEqual([]);
+    },
+    90_000,
+  );
 
   it('reports a failing runtime with the reason, and cleans up', async () => {
     const failing = STUB_RUNTIME.replace(

@@ -317,3 +317,23 @@ describe('a pull request update that did not happen', () => {
     }
   });
 });
+
+describe('--max-render-seconds', () => {
+  it('sets the time limit of the render, next to the music file', async () => {
+    generateMock.mockResolvedValue(fakeResult());
+    const music = join(dir, 'theme.mp3');
+    await writeFile(music, 'not really music');
+    const { code } = await run(['generate', '.', '--max-render-seconds', '90', '--music', music]);
+    expect(code).toBe(0);
+    expect(generateMock.mock.calls[0]?.[0].config?.render).toEqual({ musicPath: music, maxSeconds: 90 });
+  });
+
+  it('refuses a limit that is not a whole number of seconds from 1 to 86400', async () => {
+    for (const value of ['0', '1.5', '86401', 'soon']) {
+      const { code, stderr } = await run(['generate', '.', '--max-render-seconds', value]);
+      expect(code, value).toBe(2);
+      expect(stderr, value).toContain('--max-render-seconds');
+    }
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+});

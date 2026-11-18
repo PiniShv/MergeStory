@@ -17,7 +17,7 @@ import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
 import { estimateTokens } from '../core/cost.ts';
-import { MergeStoryError } from '../core/errors.ts';
+import { abortedError, MergeStoryError } from '../core/errors.ts';
 import { createLogger } from '../core/logger.ts';
 import type { PublishBundle, Publisher, Renderer } from '../core/providers.ts';
 import { narrationWords } from '../core/storyboard-facts.ts';
@@ -1151,5 +1151,296 @@ describe('generate: a supplied storyboard with errors', () => {
     expect(lines.filter((line) => line.startsWith('  error  '))).toHaveLength(40);
     expect(lines[41]).toContain('The list shows at most 40 problems.');
     expect(lines[42]).toMatch(/^hint: /);
+  });
+});
+
+describe('generate: the result in the run folder', () => {
+  it('puts watch.html next to the video, and names the files, the scenes and the evidence in the result', async () => {
+    const result = await run();
+    for (const name of [
+      'video.mp4',
+      'poster.jpg',
+      'captions.vtt',
+      'captions.srt',
+      'watch.html',
+      'result.json',
+    ])
+      expect(existsSync(join(runDir(), name)), name).toBe(true);
+    // The page of the watch folder. It finds the video by its name, so it works next to the video as it is.
+    const page = await readFile(join(runDir(), 'watch.html'), 'utf8');
+    expect(page).toBe(await readFile(join(runDir(), 'watch', 'index.html'), 'utf8'));
+    expect(page).toContain('"video.mp4"');
+    expect(page).not.toContain(runDir());
+    expect(result.files).toMatchObject({
+      captionsSrt: join(runDir(), 'captions.srt'),
+      watchHtml: join(runDir(), 'watch.html'),
+    });
+
+    // The scenes are the rendered ones, with the timing of the video.
+    const rendered = await readJson<{
+      scenes: {
+        id: string;
+        role: string;
+        title: string;
+        startSec: number;
+        durationSec: number;
+        visual: { type: string };
+      }[];
+    }>(join(runDir(), 'render-plan.json'));
+    expect(rendered.scenes.length).toBeGreaterThan(2);
+    expect(result.scenes).toEqual(
+      rendered.scenes.map(({ id, role, title, startSec, durationSec, visual }) => ({
+        id,
+        role,
+        title,
+        visual: visual.type,
+        startSec,
+        durationSec,
+      })),
+    );
+    expect(result.scenes?.[0]?.startSec).toBe(0);
+
+    // Every id that the video cites exists, and each is named once.
+    const analysis = await readJson<{ evidence: { id: string }[] }>(join(runDir(), 'analysis.json'));
+    const known = new Set(analysis.evidence.map((item) => item.id));
+    const used = result.evidenceUsed ?? [];
+    expect(used.length).toBeGreaterThan(3);
+    expect(new Set(used).size).toBe(used.length);
+    expect(used.filter((id) => !known.has(id))).toEqual([]);
+    expect(used).toContain('TASK');
+
+    expect(await readJson(join(runDir(), 'result.json'))).toEqual(result);
+  });
+
+  it('leaves the error as result.json when a run fails after its folder exists, and no video', async () => {
+    vi.mocked(createRenderer).mockReturnValue({
+      ...fakeRenderer,
+      render: async () => {
+        throw new MergeStoryError(
+          'RENDER_FAILED',
+          'The browser stopped responding while capturing a frame.',
+          {
+            hint: 'Try another browser.',
+          },
+        );
+      },
+    });
+    const error = await failure(generate(options()));
+    expect(error.code).toBe('RENDER_FAILED');
+    expect(await readJson(join(runDir(), 'result.json'))).toEqual({
+      ok: false,
+      runId: RUN_ID,
+      runDir: runDir(),
+      error: {
+        code: 'RENDER_FAILED',
+        message: 'The browser stopped responding while capturing a frame.',
+        hint: 'Try another browser.',
+        details: null,
+      },
+    });
+    expect(existsSync(join(runDir(), 'video.mp4'))).toBe(false);
+    expect(existsSync(join(runDir(), 'watch.html'))).toBe(false);
+  });
+
+  it('never leaves the video or the result of an earlier run in a folder that is used again', async () => {
+    await run();
+    expect((await readJson<{ ok: boolean }>(join(runDir(), 'result.json'))).ok).toBe(true);
+    const delivered = [
+      'video.mp4',
+      'poster.jpg',
+      'captions.vtt',
+      'captions.srt',
+      'watch.html',
+      'publish-input.json',
+      // The copies for watching and for the local publish folder.
+      'watch/index.html',
+      'watch/video.mp4',
+      'watch/poster.jpg',
+      'publish/index.html',
+      'publish/video.mp4',
+      'publish/poster.jpg',
+    ];
+    for (const name of delivered) expect(existsSync(join(runDir(), name)), name).toBe(true);
+
+    // The same folder again, and this time the storyboard is refused.
+    const error = await failure(generate(options({ storyboard: { version: 1 } })));
+    expect(error.code).toBe('GROUNDING_FAILED');
+    const stored = await readJson<{ ok: boolean; error: { code: string; details: { errors: unknown[] } } }>(
+      join(runDir(), 'result.json'),
+    );
+    expect(stored.ok).toBe(false);
+    expect(stored.error.code).toBe('GROUNDING_FAILED');
+    expect(stored.error.details.errors.length).toBeGreaterThan(0);
+    // Nothing a caller would upload, and nothing `mergestory publish` trusts, is left from the first run.
+    for (const name of delivered) expect(existsSync(join(runDir(), name)), name).toBe(false);
+    await expect(publishRun({ run: runDir() })).rejects.toMatchObject({ code: 'SOURCE_NOT_FOUND' });
+
+    // A run that works replaces it again.
+    await run();
+    expect((await readJson<{ ok: boolean }>(join(runDir(), 'result.json'))).ok).toBe(true);
+  });
+
+  it('writes no result for a run that fails before it has read the change, and keeps an earlier one', async () => {
+    const early = await failure(generate(options({ head: 'no-such-branch' })));
+    expect(early.code).toBe('SOURCE_NOT_FOUND');
+    expect(existsSync(runDir())).toBe(false);
+
+    // The same in a folder that holds the result of an earlier run: that file is not touched.
+    const first = await run();
+    await failure(generate(options({ head: 'no-such-branch' })));
+    expect(await readJson(join(runDir(), 'result.json'))).toEqual(first);
+  });
+
+  it('removes nothing from a folder that holds no earlier run, also when the run fails', async () => {
+    // A folder that the user chose, with files of theirs that happen to have the fixed names.
+    await mkdir(runDir(), { recursive: true });
+    await writeFile(join(runDir(), 'video.mp4'), 'a video of mine');
+    await writeFile(join(runDir(), 'result.json'), '{"score": 3}');
+    vi.mocked(createRenderer).mockReturnValue({
+      ...fakeRenderer,
+      render: async () => {
+        throw new MergeStoryError('RENDER_FAILED', 'The browser stopped responding.');
+      },
+    });
+    await failure(generate(options()));
+    expect(await readFile(join(runDir(), 'video.mp4'), 'utf8')).toBe('a video of mine');
+    // The run still says what happened, in the file where a caller looks for it.
+    expect(await readJson(join(runDir(), 'result.json'))).toMatchObject({
+      ok: false,
+      error: { code: 'RENDER_FAILED' },
+    });
+  });
+
+  it('keeps the result of the finished video when only the upload fails', async () => {
+    publishMock.mockReturnValue(
+      fakePublisher(new MergeStoryError('PUBLISH_FAILED', 'Uploading video.mp4 failed.')),
+    );
+    await failure(generate(options({ config: S3_CONFIG })));
+    const stored = await readJson<GenerateResult>(join(runDir(), 'result.json'));
+    expect(stored).toMatchObject({ ok: true, publish: null });
+    expect(stored.files.video).toBe(join(runDir(), 'video.mp4'));
+  });
+
+  it('writes no result for a dry run, and leaves an earlier one alone', async () => {
+    await plan();
+    expect(existsSync(join(runDir(), 'analysis.json'))).toBe(true);
+    expect(existsSync(join(runDir(), 'result.json'))).toBe(false);
+    await run();
+    await plan();
+    expect((await readJson<{ ok: boolean }>(join(runDir(), 'result.json'))).ok).toBe(true);
+  });
+
+  it('masks a secret that the error carries before it is written', async () => {
+    const token = `ghp_${'abcdefghijklmnopqrstuvwxyz0123456789'}`;
+    vi.mocked(createRenderer).mockReturnValue({
+      ...fakeRenderer,
+      render: async () => {
+        throw new MergeStoryError('RENDER_FAILED', `The encoder said: ${token}`, {
+          details: { line: token },
+        });
+      },
+    });
+    await failure(generate(options()));
+    const text = await readFile(join(runDir(), 'result.json'), 'utf8');
+    expect(text).not.toContain(token);
+    expect(text).toContain('[redacted]');
+  });
+});
+
+describe('generate: the time limit of the render', () => {
+  /** A renderer that never finishes by itself. It stops when the run is cancelled, like the real one. */
+  const endless = (onStart: () => void = () => undefined): Renderer => ({
+    id: 'endless',
+    ready: async () => {},
+    render: (_input, ctx) =>
+      new Promise((_resolve, reject) => {
+        const stop = (): void => reject(abortedError());
+        if (ctx.signal.aborted) stop();
+        else ctx.signal.addEventListener('abort', stop, { once: true });
+        onStart();
+      }),
+  });
+
+  it('stops a render that runs past render.maxSeconds with RENDER_TIMEOUT, exit code 8 and no video', async () => {
+    vi.mocked(createRenderer).mockReturnValue(endless());
+    const started = performance.now();
+    const error = await failure(generate(options({ config: { render: { maxSeconds: 1 } } })));
+    expect(error.code).toBe('RENDER_TIMEOUT');
+    expect(error.exitCode).toBe(8);
+    expect(error.message).toContain('the limit of 1 second,');
+    expect(error.message).toContain('No video was written');
+    expect(error.hint).toContain('--max-render-seconds');
+    expect(performance.now() - started).toBeLessThan(15_000);
+    expect(existsSync(join(runDir(), 'video.mp4'))).toBe(false);
+    expect(await readJson(join(runDir(), 'result.json'))).toMatchObject({
+      ok: false,
+      error: { code: 'RENDER_TIMEOUT' },
+    });
+  });
+
+  it('reports a cancel during the render as a cancel, not as a timeout', async () => {
+    const controller = new AbortController();
+    vi.mocked(createRenderer).mockReturnValue(endless(() => setTimeout(() => controller.abort(), 20)));
+    const error = await failure(
+      generate({ ...options({ config: { render: { maxSeconds: 600 } } }), signal: controller.signal }),
+    );
+    expect(error.code).toBe('ABORTED');
+    expect(await readJson(join(runDir(), 'result.json'))).toMatchObject({
+      ok: false,
+      error: { code: 'ABORTED' },
+    });
+  });
+
+  it('counts a stop that is both a cancel and a time limit as a cancel', async () => {
+    // The limit fires first. The renderer only gives up once the run is cancelled as well.
+    const controller = new AbortController();
+    vi.mocked(createRenderer).mockReturnValue({
+      id: 'slow-to-stop',
+      ready: async () => {},
+      render: (_input, ctx) =>
+        new Promise((_resolve, reject) => {
+          ctx.signal.addEventListener(
+            'abort',
+            () => {
+              controller.abort();
+              reject(abortedError());
+            },
+            { once: true },
+          );
+        }),
+    });
+    const error = await failure(
+      generate({ ...options({ config: { render: { maxSeconds: 1 } } }), signal: controller.signal }),
+    );
+    expect(error.code).toBe('ABORTED');
+  });
+
+  it('stops its clock when the render is done, so a finished run does not wait for the limit', async () => {
+    const set = vi.spyOn(globalThis, 'setTimeout');
+    const clear = vi.spyOn(globalThis, 'clearTimeout');
+    try {
+      await run({ config: { render: { maxSeconds: 4321 } } });
+      const index = set.mock.calls.findIndex((call) => call[1] === 4_321_000);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(clear).toHaveBeenCalledWith(set.mock.results[index]?.value);
+    } finally {
+      set.mockRestore();
+      clear.mockRestore();
+    }
+  });
+
+  it('lets a render that is quick enough finish, and gives the renderer the run as it is without a limit', async () => {
+    expect((await run({ config: { render: { maxSeconds: 600 } } })).ok).toBe(true);
+    let signal: AbortSignal | null = null;
+    vi.mocked(createRenderer).mockReturnValue({
+      ...fakeRenderer,
+      render: async (input, ctx) => {
+        signal = ctx.signal;
+        return fakeRenderer.render(input, ctx);
+      },
+    });
+    const controller = new AbortController();
+    await generate({ ...options(), signal: controller.signal });
+    expect(signal).toBe(controller.signal);
   });
 });

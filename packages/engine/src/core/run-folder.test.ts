@@ -20,10 +20,12 @@ describe('runFolder', () => {
     expect(folder.video).toBe('/runs/a/video.mp4');
     expect(folder.publishInput).toBe('/runs/a/publish-input.json');
     expect(folder.watchPage).toBe('/runs/a/watch/index.html');
+    expect(folder.watchHtml).toBe('/runs/a/watch.html');
     expect(resultFiles('/runs/a')).toEqual({
       video: '/runs/a/video.mp4',
       poster: null,
       captions: '/runs/a/captions.vtt',
+      captionsSrt: '/runs/a/captions.srt',
       storyboard: '/runs/a/storyboard.json',
       watchPage: '/runs/a/watch/index.html',
     });
@@ -31,12 +33,16 @@ describe('runFolder', () => {
 });
 
 describe('resultFiles without a poster', () => {
-  it('names no poster when the file is not there', async () => {
+  it('names no poster and no watch.html when the files are not there', async () => {
     const empty = await mkdtemp(join(tmpdir(), 'mergestory-files-'));
     try {
       expect(resultFiles(empty).poster).toBeNull();
       await writeFile(join(empty, 'poster.jpg'), 'P');
       expect(resultFiles(empty).poster).toBe(join(empty, 'poster.jpg'));
+      // A folder that an older version made has no watch.html next to the video.
+      expect('watchHtml' in resultFiles(empty)).toBe(false);
+      await writeFile(join(empty, 'watch.html'), '<!doctype html>');
+      expect(resultFiles(empty).watchHtml).toBe(join(empty, 'watch.html'));
     } finally {
       await rm(empty, { recursive: true, force: true });
     }

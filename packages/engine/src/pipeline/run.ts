@@ -1,19 +1,24 @@
 /** generate(): the whole pipeline, from the change to the published video. */
-import { writeFile } from 'node:fs/promises';
+import { copyFile, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { Config } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
-import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
-import type { Renderer, TtsProvider } from '../core/providers.ts';
+import { assertNotAborted, MergeStoryError, toMergeStoryError } from '../core/errors.ts';
+import { isRecord } from '../core/json.ts';
+import type { Renderer, RenderInput, RenderOutput, TtsProvider } from '../core/providers.ts';
 import {
+  RUN_DIR,
   RUN_FILE,
   resultFiles,
   runFolder,
   type StoredPublishInput,
+  WATCH_PAGE_FILE,
   writeRunJson,
 } from '../core/run-folder.ts';
 import { groundedLines } from '../core/storyboard-facts.ts';
+import { plural } from '../core/text.ts';
 import { loadTheme } from '../core/theme.ts';
-import type { GenerateResult, PlanResult } from '../core/types.ts';
+import type { FailedResult, GenerateResult, PlanResult } from '../core/types.ts';
 import {
   assembleNarrationTrack,
   buildCaptionCues,
@@ -27,9 +32,9 @@ import { createRenderer } from '../render/index.ts';
 import { buildRenderPlan, buildTimeline } from '../visuals/index.ts';
 import { publishCommand } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
-import { unusedScreenshotWarning } from './inputs.ts';
+import { evidenceUsed, unusedScreenshotWarning } from './inputs.ts';
 import { planResult } from './plan.ts';
-import { prepare } from './prepare.ts';
+import { type Prepared, prepare } from './prepare.ts';
 import { buildWatchPageData } from './presentation.ts';
 import { type PublishOutcome, publishAndNotify, saveResult } from './publish-run.ts';
 import { chooseStoryboard, fitStoryboard } from './storyboard-choice.ts';
@@ -60,8 +65,88 @@ function failedAfterRender(error: MergeStoryError, runDir: string, config: Confi
 }
 
 /**
+ * Render within the time limit of `render.maxSeconds`. The limit stops the renderer the way a cancel
+ * does, and the run then fails with RENDER_TIMEOUT. The renderer only moves a finished video into the
+ * run folder, so a render that is stopped leaves none.
+ */
+async function renderWithin(renderer: Renderer, input: RenderInput, ctx: RunContext): Promise<RenderOutput> {
+  const seconds = ctx.config.render.maxSeconds;
+  if (seconds === null) return renderer.render(input, ctx);
+  const limit = new AbortController();
+  const timer = setTimeout(() => limit.abort(), seconds * 1000);
+  try {
+    return await renderer.render(input, { ...ctx, signal: AbortSignal.any([ctx.signal, limit.signal]) });
+  } catch (err) {
+    if (!limit.signal.aborted || ctx.signal.aborted) throw err;
+    throw new MergeStoryError(
+      'RENDER_TIMEOUT',
+      `Rendering took longer than the limit of ${plural(seconds, 'second')}, so it was stopped. No video was written.`,
+      {
+        hint: 'Raise --max-render-seconds (render.maxSeconds), render with --quality draft, or make the video shorter with --max-duration.',
+        cause: err,
+      },
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * The files of an earlier run that a new run removes when it takes a folder over: the result, what
+ * `mergestory publish` trusts, the files a caller uploads, and the copies of them in the watch folder
+ * and in the run's own publish folder. Files by their fixed names only, never a whole folder: the
+ * folder may be one that the user chose. The other files are replaced as the run writes them.
+ */
+function leftByEarlierRun(runDir: string): string[] {
+  const folder = runFolder(runDir);
+  const copies = [WATCH_PAGE_FILE, RUN_FILE.video, RUN_FILE.poster, RUN_FILE.captions];
+  return [
+    folder.result,
+    folder.publishInput,
+    folder.video,
+    folder.poster,
+    folder.captions,
+    folder.captionsSrt,
+    folder.watchHtml,
+    ...[RUN_DIR.watch, RUN_DIR.publish].flatMap((dir) => copies.map((name) => join(runDir, dir, name))),
+  ];
+}
+
+/**
+ * Whether the folder holds an earlier MergeStory run: its result, or what publishing needs, with a run
+ * id in it. Only then are the files beside them MergeStory's own. A folder that the user chose can hold
+ * a `video.mp4` of theirs, and a run that fails must not remove that.
+ */
+async function holdsEarlierRun(runDir: string): Promise<boolean> {
+  const folder = runFolder(runDir);
+  for (const path of [folder.result, folder.publishInput]) {
+    const value: unknown = await readFile(path, 'utf8')
+      .then((text) => JSON.parse(text))
+      .catch(() => null);
+    if (isRecord(value) && typeof value.runId === 'string') return true;
+  }
+  return false;
+}
+
+/** Leave the error as result.json, so that a caller that only reads the run folder learns what happened. */
+async function saveFailure(ctx: RunContext, err: unknown): Promise<void> {
+  const failed: FailedResult = {
+    ok: false,
+    runId: ctx.runId,
+    runDir: ctx.runDir,
+    error: toMergeStoryError(err).toJSON(),
+  };
+  // Best effort: a folder that cannot be written must not replace the error that is being reported.
+  await writeRunJson(runFolder(ctx.runDir).result, ctx.redactor.redactValue(failed)).catch(() => undefined);
+}
+
+/**
  * Make the video for a pull request or a local change: analyse it, write and ground the storyboard,
  * narrate, render, then publish and notify when that is configured. With `dryRun` it only plans.
+ *
+ * Once the run folder exists, the outcome of a real run is written to its result.json: the result, or
+ * the error (`ok: false`) when the run stops before its video is made. A run that fails before that (a
+ * source that cannot be read, a setting that is wrong) writes no file and touches nothing.
  */
 export async function generate(
   options: GenerateOptions,
@@ -69,6 +154,29 @@ export async function generate(
 ): Promise<GenerateResult | PlanResult> {
   const startedAt = performance.now();
   const p = await prepare(options, hooks, undefined, { checkPublishing: true, runFolder: true });
+  const progress = { resultSaved: false };
+  if (p.ctx.dryRun) return produce(p, options, startedAt, progress);
+  // The folder may hold an earlier run. From here on it speaks for this run only: what a caller reads,
+  // uploads or publishes from it must never be the video of another change.
+  if (await holdsEarlierRun(p.ctx.runDir)) {
+    for (const left of leftByEarlierRun(p.ctx.runDir)) await rm(left, { force: true });
+  }
+  try {
+    return await produce(p, options, startedAt, progress);
+  } catch (err) {
+    // After a failed upload the result of the finished video is already there, and it stays.
+    if (!progress.resultSaved) await saveFailure(p.ctx, err);
+    throw err;
+  }
+}
+
+/** Everything after the analysis: storyboard, checks, narration, rendering, publishing. */
+async function produce(
+  p: Prepared,
+  options: GenerateOptions,
+  startedAt: number,
+  progress: { resultSaved: boolean },
+): Promise<GenerateResult | PlanResult> {
   const { ctx, config, changeSet, publishProblem } = p;
   const folder = runFolder(ctx.runDir);
   const warnings: string[] = [];
@@ -169,7 +277,8 @@ export async function generate(
     status: 'start',
     message: `Rendering ${plan.width}x${plan.height} at ${plan.fps} fps`,
   });
-  const rendered = await renderer.render(
+  const rendered = await renderWithin(
+    renderer,
     { plan, audioPath, outDir: ctx.runDir, quality: config.quality },
     ctx,
   );
@@ -197,7 +306,7 @@ export async function generate(
     generatedAt,
     captionsBurnedIn: config.captions,
   });
-  await writeWatchFolder({
+  const watchPage = await writeWatchFolder({
     dir: folder.watchDir,
     files: await classifyBundle({
       files: [
@@ -211,6 +320,8 @@ export async function generate(
     captionCues: cues,
     pageMode: 0o600,
   });
+  // The same page next to the video. It finds the video by name, so the two can be uploaded together.
+  await copyFile(watchPage, folder.watchHtml);
 
   // No file paths here: the files are always the fixed names in the run folder (see runFolder).
   const stored: StoredPublishInput = {
@@ -234,6 +345,15 @@ export async function generate(
     durationSec: rendered.durationSec,
     elapsedSec: Math.round((performance.now() - startedAt) / 100) / 10,
     chapters: plan.chapters,
+    scenes: plan.scenes.map((scene) => ({
+      id: scene.id,
+      role: scene.role,
+      title: scene.title,
+      visual: scene.visual.type,
+      startSec: scene.startSec,
+      durationSec: scene.durationSec,
+    })),
+    evidenceUsed: evidenceUsed(storyboard),
     storyboardSource: choice.source,
     files: { ...resultFiles(ctx.runDir), poster: rendered.posterPath ? folder.poster : null },
     publish: outcome.publish,
@@ -246,6 +366,7 @@ export async function generate(
 
   // From here on the run is usable: `mergestory publish` can upload it even if publishing fails now.
   await saveResult(ctx.runDir, resultFor({ publish: null, notify: null, warnings: [] }));
+  progress.resultSaved = true;
   const outcome = await publishAndNotify(ctx, stored, {
     video: rendered.videoPath,
     poster: rendered.posterPath,

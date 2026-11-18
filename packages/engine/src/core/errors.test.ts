@@ -4,6 +4,7 @@ import {
   assertNotAborted,
   CommandNotFoundError,
   describeProblem,
+  EXIT_CODES,
   MergeStoryError,
   OutputTooLargeError,
   TimedOutError,
@@ -83,5 +84,13 @@ describe('typed process and network errors', () => {
     ]);
     expect(missing).not.toBeInstanceOf(TimedOutError);
     expect(large).not.toBeInstanceOf(CommandNotFoundError);
+  });
+});
+
+describe('the exit code of a render that ran out of time', () => {
+  it('is 8, and no other error ends with it', () => {
+    expect(new MergeStoryError('RENDER_TIMEOUT', 'too slow').exitCode).toBe(8);
+    const withEight = Object.entries(EXIT_CODES).flatMap(([code, exit]) => (exit === 8 ? [code] : []));
+    expect(withEight).toEqual(['RENDER_TIMEOUT']);
   });
 });

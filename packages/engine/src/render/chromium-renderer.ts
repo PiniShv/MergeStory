@@ -153,10 +153,18 @@ class RenderRun {
   private posterClaimed = false;
   private readonly encoders = new Set<SegmentEncoder>();
   private readonly browsers = new Set<Browser>();
+  /** Rejects with the first failure. A worker that is stuck cannot hold a stop up. */
+  private readonly stopped: Promise<never>;
+  private stop: (err: Error) => void = () => undefined;
 
   constructor(setup: RunSetup, frames: number) {
     this.setup = setup;
     this.frames = frames;
+    this.stopped = new Promise<never>((_resolve, reject) => {
+      this.stop = reject;
+    });
+    // Nobody may be waiting when the failure comes; that is not an error of its own.
+    this.stopped.catch(() => undefined);
   }
 
   async execute(): Promise<void> {
@@ -165,13 +173,17 @@ class RenderRun {
     ctx.signal.addEventListener('abort', onAbort, { once: true });
     if (ctx.signal.aborted) onAbort();
     try {
-      await Promise.all(
-        Array.from({ length: workers }, (_, id) =>
-          this.worker(id).catch((err: unknown) =>
-            this.fail(err instanceof Error ? err : new Error(String(err))),
+      await Promise.race([
+        Promise.all(
+          Array.from({ length: workers }, (_, id) =>
+            this.worker(id).catch((err: unknown) =>
+              this.fail(err instanceof Error ? err : new Error(String(err))),
+            ),
           ),
         ),
-      );
+        // A browser that never starts keeps its worker waiting. The stop does not wait with it.
+        this.stopped,
+      ]);
       if (this.failure) throw this.failure;
     } finally {
       ctx.signal.removeEventListener('abort', onAbort);
@@ -180,11 +192,17 @@ class RenderRun {
     }
   }
 
-  /** Record the first failure and stop everything else. */
+  /**
+   * Record the first failure and stop everything else. The browsers are closed now and not when the
+   * workers return: a page that no longer answers would otherwise hold the stop up until its command
+   * times out.
+   */
   private fail(err: Error): void {
     if (this.failure) return;
     this.failure = err;
     for (const encoder of this.encoders) encoder.kill();
+    for (const browser of this.browsers) void browser.close().catch(() => undefined);
+    this.stop(err);
   }
 
   private throwIfFailed(): void {
@@ -212,6 +230,11 @@ class RenderRun {
       browser = await launch(executablePath, this.setup.ctx.logger);
     } catch (err) {
       throw browserStartError(err);
+    }
+    if (this.failure) {
+      // The run was stopped while this browser was starting, so nobody is left to close it later.
+      void browser.close().catch(() => undefined);
+      throw this.failure;
     }
     this.browsers.add(browser);
     return browser;
@@ -438,13 +461,17 @@ export function browserSandbox(uid: number | undefined = process.getuid?.()): bo
   return uid !== 0;
 }
 
-/** What Chromium prints when the machine refuses it a sandbox. */
-const NO_SANDBOX = /no usable sandbox|sandbox helper/i;
+/**
+ * What a refused sandbox looks like: Chromium's own words, and the words that playwright-core puts in
+ * their place ("Chromium sandboxing failed!").
+ */
+const NO_SANDBOX = /no usable sandbox|sandbox helper|sandboxing failed/i;
 
 /**
  * Starts the browser with its sandbox where the machine allows one. Some do not allow it for a normal
- * user either: Ubuntu 23.10 and later block the user namespaces that a downloaded Chromium needs. There
- * the browser starts without the sandbox, as it does for root, and the user gets a warning.
+ * user either: Ubuntu 23.10 and later block the user namespaces that a downloaded Chromium needs, and
+ * so do most containers. There the browser starts without the sandbox, as it does for root, and the
+ * user gets a warning.
  */
 export async function launchWithSandbox(
   launch: (sandbox: boolean) => Promise<Browser>,
@@ -577,13 +604,13 @@ export class ChromiumRenderer implements Renderer {
         { listPath, audioPath, outPath: assembled, durationSec: frames / plan.fps },
         ctx.signal,
       );
-      await rename(assembled, videoPath);
-      if (run.posterJpeg) await writeFile(posterFile, run.posterJpeg, { mode: 0o600 });
-
       const [durationSec, size] = await Promise.all([
-        probeDuration(ffprobe, videoPath, ctx.signal),
-        stat(videoPath),
+        probeDuration(ffprobe, assembled, ctx.signal),
+        stat(assembled),
       ]);
+      if (run.posterJpeg) await writeFile(posterFile, run.posterJpeg, { mode: 0o600 });
+      // The last step, and nothing after it can be cancelled: a render that is stopped never leaves a video.
+      await rename(assembled, videoPath);
       const seconds = (performance.now() - started) / 1000;
       ctx.logger.debug('Render finished', {
         frames,

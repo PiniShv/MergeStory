@@ -10,11 +10,13 @@ import type { RunContext } from '../core/context.ts';
 import { abortedError, assertNotAborted, MergeStoryError } from '../core/errors.ts';
 import { randomToken } from '../core/ids.ts';
 import {
+  ensureModelFiles,
   isKokoroModelCached,
   KOKORO_MODEL_HOST,
   type KokoroDtype,
   kokoroDownloadMb,
   kokoroDtype,
+  kokoroModelFiles,
 } from './kokoro-model.ts';
 import {
   type InstallDeps,
@@ -54,6 +56,8 @@ export interface InstallLockDeps {
 export interface EnsureKokoroDeps extends InstallLockDeps {
   /** Replaces the install itself (tests). */
   install?: (ctx: RunContext, deps?: InstallDeps) => Promise<LocalVoiceStatus>;
+  /** Replaces the download of the speech model (tests). */
+  downloadModel?: (ctx: RunContext, dtype: KokoroDtype) => Promise<void>;
   platform?: NodeJS.Platform;
 }
 
@@ -209,9 +213,53 @@ async function underLock(
   }
 }
 
-/** `mergestory setup kokoro`: install (or repair) the voice, taking turns with any run that installs it. */
-export function setupKokoro(ctx: RunContext, deps: EnsureKokoroDeps = {}): Promise<LocalVoiceStatus> {
-  return underLock(ctx, deps, true, async () => undefined);
+/**
+ * Make sure the speech model is on disk: download what is missing and check every file. The download
+ * is reported as progress and as a connection of the run.
+ */
+export async function downloadKokoroModel(ctx: RunContext, dtype: KokoroDtype): Promise<void> {
+  const lastReport = { value: -1 };
+  await ensureModelFiles({
+    modelsRoot: ctx.home.models,
+    files: kokoroModelFiles(dtype),
+    signal: ctx.signal,
+    onDownloadStart: (file) => {
+      if (file.bytes > 1_000_000) {
+        // Nothing of the user's is sent, but the connection is part of the run's record.
+        ctx.egress.record(KOKORO_MODEL_HOST, 'voice model download', 0, []);
+        ctx.progress({
+          stage: 'narrate',
+          status: 'progress',
+          message: `Downloading the Kokoro voice model (${kokoroDownloadMb(dtype)} MB, one time) from ${KOKORO_MODEL_HOST}`,
+        });
+      }
+    },
+    onProgress: ({ file, loaded: bytes, total }) => {
+      const percent = Math.floor((bytes / total) * 10) * 10;
+      if (total > 1_000_000 && percent > lastReport.value) {
+        lastReport.value = percent;
+        ctx.progress({
+          stage: 'narrate',
+          status: 'progress',
+          progress: bytes / total,
+          message: `Downloading ${file}: ${percent}%`,
+        });
+      }
+    },
+  });
+}
+
+/**
+ * `mergestory setup kokoro`: install (or repair) the voice, taking turns with any run that installs
+ * it, then download its speech model. After it, no run has to download anything for the voice.
+ */
+export async function setupKokoro(ctx: RunContext, deps: EnsureKokoroDeps = {}): Promise<LocalVoiceStatus> {
+  // First, so that a wrong MERGESTORY_KOKORO_DTYPE stops the setup before anything is installed.
+  const dtype = kokoroDtype();
+  const status = await underLock(ctx, deps, true, async () => undefined);
+  // Outside the lock: each model file is written in one step and checked, so two downloads at once are safe.
+  await (deps.downloadModel ?? downloadKokoroModel)(ctx, dtype);
+  return { ...status, modelCached: true };
 }
 
 /** The error for a missing voice on Windows, where it cannot install itself yet. */

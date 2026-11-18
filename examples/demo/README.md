@@ -98,5 +98,7 @@ Every name and number in the video comes from the change. The video says that te
 Each run writes one folder, `~/.mergestory/runs/<run-id>/`. Set `MERGESTORY_HOME` to move the home folder, or pass `--out <dir>` to choose the folder for one run.
 
 - `watch/index.html`: open this in a browser. It has the video, the chapters, the review checklist and every claim with a link to the code it comes from.
-- `video.mp4`, `poster.jpg`, `captions.vtt`: the video and its parts.
+- `video.mp4`, `poster.jpg`, `captions.vtt`, `captions.srt`: the video and its parts.
+- `watch.html`: the same page next to the video. It still plays when you upload it together with the video, the poster and the captions.
+- `result.json`: what the run made, for a script that reads it.
 - `storyboard.json`: the storyboard that was used. Compare the three to see how they differ.

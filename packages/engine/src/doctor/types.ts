@@ -28,6 +28,18 @@ export interface DoctorReport {
   version: string;
   summary: Record<CheckStatus, number>;
   checks: DoctorCheck[];
+  /**
+   * The free local voice, as data: whether its packages are installed and whether its speech model is
+   * on disk. When both are true, a run downloads nothing for the voice.
+   */
+  kokoro: KokoroState;
+}
+
+/** What `doctor` reports about the free local voice. */
+export interface KokoroState {
+  installed: boolean;
+  version: string | null;
+  modelCached: boolean;
 }
 
 /** Outcome of running a program: exit code and output. */
@@ -56,7 +68,7 @@ export interface DoctorDeps {
   resolveBrowser(config: Config): Promise<{ path: string; source: string }>;
   /** Starts the browser and returns the size of one 1280x720 test frame (null when unreadable). Throws when it cannot start. */
   captureTestFrame(path: string): Promise<{ width: number; height: number } | null>;
-  kokoroStatus(config: Config): Promise<{ installed: boolean; version: string | null; modelCached: boolean }>;
+  kokoroStatus(config: Config): Promise<KokoroState>;
   /** Free bytes on the disk that holds `path`, or null when unknown. */
   freeBytes(path: string): Promise<number | null>;
   /** The path itself when it exists, otherwise its nearest parent that does. */

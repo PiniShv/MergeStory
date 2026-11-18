@@ -148,6 +148,8 @@ replace code review.
   was not updated. Report the link and say that the pull request update is missing.
 - Exit code 6 means FFmpeg or the browser is missing: go back to section 1.
 - Exit code 7 means publishing was blocked to protect a private repository: keep links private.
+- Exit code 8 means rendering took longer than the time limit set on this machine, and no video was
+  written. Try once with `--quality draft`. If that fails too, tell the user.
 - Network errors: tell the user which host to allow (the GitHub API, the npm registry, the
   storage endpoint, `www.googleapis.com` and `oauth2.googleapis.com` for Google Drive, or
   `huggingface.co` once for the voice) instead of retrying in a loop.

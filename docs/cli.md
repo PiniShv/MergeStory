@@ -14,6 +14,7 @@ what each command prints, and the exit code it ends with. The settings behind th
 | Let a coding agent run MergeStory without asking each time | [`mergestory agent`](#commands-for-coding-agents) |
 | Make a video in the background | `generate --async`, then [`status`](#mergestory-status) and [`jobs`](#mergestory-jobs) |
 | Make videos for many pull requests | [batch.md](batch.md) |
+| Run MergeStory from a script or an agent, with nobody watching | [Unattended runs](#unattended-runs) |
 | Offer MergeStory over HTTP | [`mergestory serve`](#mergestory-serve) |
 | Install the free voice, or sign in to YouTube | [`mergestory setup`](#mergestory-setup) |
 | Empty the cache | [`mergestory cache clear`](#mergestory-cache-clear) |
@@ -157,6 +158,7 @@ for Google Drive.
 | `--no-cache` | Do not use or fill the cache of speech clips and model answers. |
 | `--no-captions` | Leave the captions out of the picture. The `captions.vtt` file is still written. |
 | `--music <file>` | Background music (MP3, WAV, M4A, FLAC or OGG). It is mixed in quietly and lowered while someone speaks. The file must exist. |
+| `--max-render-seconds <sec>` | Stop when rendering takes longer than this many seconds (1 to 86400). The run then ends with exit code 8 (`RENDER_TIMEOUT`) and writes no `video.mp4`. The limit covers the render stage only, which draws and encodes the frames. Reading the change and making the voice come before it and are not counted. Without the flag, the setting `render.maxSeconds` applies, and without that there is no limit. |
 
 **Examples.**
 
@@ -297,7 +299,7 @@ Whatever arguments they get:
 - They read the current repository (through git), their work folder and MergeStory's own files: the
   settings, the cache and the voice.
 - They write only in the MergeStory home (the work folder, the run folder, the cache and the one-time voice
-  install) and in the system's temporary folder. During that one install, npm also fills its own cache.
+  install) and in the system's temporary folder.
 - They start only the programs MergeStory itself uses: git, `gh`, FFmpeg, a browser, the local voice and,
   once, npm to install that voice. No argument can name a program.
 - They never upload, comment or spend money.
@@ -413,6 +415,10 @@ environment variables and never prints their values.
 The exit code is 1 when any check fails. Warnings do not change it. A config file with a mistake is reported
 as a failed `config` check, and the other checks still run with the defaults.
 
+With `--json`, the report also says as data what is on disk for the free voice:
+`"kokoro": {"installed", "version", "modelCached"}`. When `installed` and `modelCached` are both `true`, a
+run downloads nothing for the voice. See [Unattended runs](#unattended-runs).
+
 ## `mergestory setup`
 
 ```
@@ -423,7 +429,7 @@ Installs optional extras and signs in to services. Without a target it lists the
 
 | Target | What it does |
 |---|---|
-| `kokoro` | Installs the free local voice ahead of time, for example in CI. Without it, the first English video installs the voice itself. It waits while another run is installing it. It adds about 400 MB of files under the MergeStory home. The speech model (about 90 MB, or about 330 MB for the full-precision model that is the default on Apple Silicon) downloads from `huggingface.co` the first time a video uses it. Set `MERGESTORY_KOKORO_DTYPE` to `q8` (small) or `fp32` (full) to choose. English only. No repository content is sent anywhere. |
+| `kokoro` | Installs the free local voice ahead of time, for example in CI. Without it, the first English video installs the voice itself. It waits while another run is installing it. It adds about 400 MB of files under the MergeStory home. It then downloads the speech model from `huggingface.co` (about 90 MB, or about 330 MB for the full-precision model that is the default on Apple Silicon), so that no later run has to download anything for the voice. Set `MERGESTORY_KOKORO_DTYPE` to `q8` (small) or `fp32` (full) to choose, and set it the same way for the runs. English only. No repository content is sent anywhere. |
 | `youtube` | Signs in to YouTube once, so videos can be uploaded to your channel. It needs a browser and installs nothing. Without a terminal it runs only when the client id and secret both come from the environment and `CI` is not set. See [youtube.md](youtube.md). |
 | `drive` | Signs in to Google Drive once, so videos can be uploaded to your Drive. It asks only for the `drive.file` permission. Same rules as `youtube` without a terminal. See [drive.md](drive.md). |
 
@@ -568,13 +574,83 @@ folder you give to `--out`. A run id looks like `20261104-101500-a1b2`.
 | `captions.vtt`, `captions.srt` | The captions. |
 | `render-plan.json` | The plan the renderer turned into frames: the real code, tokens, layout and timing. |
 | `video.mp4`, `poster.jpg` | The video and its poster image. |
+| `watch.html` | The watch page, next to the video. It is the page of `watch/`. It finds `video.mp4` and `poster.jpg` by name and carries the captions itself, so it still plays when you upload it together with those files. |
 | `watch/` | The watch page (`index.html`) with copies of the video, poster and captions. Always written. |
 | `publish/` | What the `local` publisher wrote, or the folder in `publish.localDir`. |
 | `publish-input.json` | What `mergestory publish` needs to upload the run later. |
-| `result.json` | The result, as printed. |
+| `result.json` | The result, as printed. When a run stops before its video is made, and after this folder was made, it holds the error instead (`ok` is `false`). See [Unattended runs](#unattended-runs). |
 
 The folder holds code excerpts, so treat it like the repository, and do not commit it. Delete a run
 folder when you no longer need it.
+
+## Unattended runs
+
+A script or an agent that runs MergeStory with nobody watching needs files with fixed names, one place
+that says what happened, and a run that cannot go on for ever.
+
+**Fixed names.** Give every run its own folder with `--out <dir>`. A finished run always leaves these
+files there: `video.mp4`, `captions.vtt`, `captions.srt`, `watch.html`, `result.json` and, unless the
+capture failed, `poster.jpg`. Nothing has to be read from the log.
+
+Upload only the video, the poster, the captions and `watch.html`. `watch.html` plays the `video.mp4` that
+lies next to it. Do not upload the rest of the folder: the other files hold code from the change and paths
+of this machine. `result.json` is for your script to read, not to share.
+
+**What happened.** The exit code says whether the run worked: see [Exit codes](#exit-codes). `result.json`
+says the rest.
+
+- After a run that worked, it is the [result object](#the-result-of-generate-and-publish): `ok` is `true`,
+  and it has `durationSec`, `scenes`, `evidenceUsed`, `files`, `warnings` and, in `grounding.fixes`,
+  everything the checks changed.
+- After a run that stopped before its video was made, it is
+  `{"ok": false, "runId", "runDir", "error": {"code", "message", "hint", "details"}}`. That is the error
+  that `--json` prints.
+- After a run that made the video but could not upload it, or could not update the pull request, it is
+  still the result of the finished video: `ok` is `true`, and `publish` or `notify` shows what is
+  missing. The exit code is 5, so the exit code is what says that such a run did not fully work.
+- A run that fails before its folder is made writes no `result.json`. A wrong flag, a source that cannot
+  be read and a change with nothing in it are such failures. So look at the exit code first.
+- Use a new folder for every run. A run that starts in a folder that an earlier run used takes the
+  folder over once it has read and analysed the change: it removes the earlier `result.json`,
+  `publish-input.json`, video, poster, captions and `watch.html`, and their copies in `watch/` and
+  `publish/`. So after that point the folder never holds the video of another change, also when the new
+  run fails. A run that fails before that point leaves the folder as it was. In a folder that holds no
+  earlier run, nothing is removed: a file of yours with one of these names is only replaced when the new
+  file is written.
+- A dry run writes no `result.json`.
+
+**A time limit.** `--max-render-seconds <sec>`, or the setting `render.maxSeconds`, stops a render that
+takes too long. The run ends with exit code 8 (`RENDER_TIMEOUT`). It writes no `video.mp4`, because the
+renderer only moves a finished video into the folder. To limit the whole run, stop the process from
+outside with `SIGTERM`, as `timeout` does. MergeStory then stops cleanly with exit code 130 and removes
+its temporary files. When the video was not made yet, it leaves `ABORTED` in `result.json`. When the stop
+comes later, during an upload, `result.json` stays the result of the finished video.
+
+**No download at a bad moment.** A run installs the free voice when it is missing: about 400 MB of
+packages and the speech model. In a machine image, install both while you build the image:
+
+```bash
+mergestory setup kokoro
+```
+
+Then check it once:
+
+```bash
+mergestory doctor --json
+```
+
+In the report, `kokoro.installed` and `kokoro.modelCached` are both `true` when a run has nothing left to
+download for the voice.
+
+**The home folder.** Set `MERGESTORY_HOME` to a folder that the run can write. MergeStory then keeps all
+its files there and does not need `HOME`: it works when `HOME` is not set or is empty, when the home
+folder cannot be written, and for a user that has no home folder at all. For a user with no home folder,
+the MergeStory home also serves as the home folder of the programs that MergeStory starts, such as the
+browser. Set `MERGESTORY_BROWSER_PATH` as well, so that the browser is not looked for under a home
+folder.
+
+**Containers.** Most containers do not let a user that is not root use the browser's sandbox. The browser
+then starts without it, and a warning says so. Running as root does the same without the warning.
 
 ## JSON output
 
@@ -620,13 +696,19 @@ published video: a signed link stops working without its signature, so it is kep
   "durationSec": 146.5,
   "elapsedSec": 92.4,
   "chapters": [{ "title": "The mission", "startSec": 0 }],
+  "scenes": [
+    { "id": "s1", "role": "mission", "title": "The mission", "visual": "title", "startSec": 0, "durationSec": 11.2 }
+  ],
+  "evidenceUsed": ["TASK", "F6.H1", "S12"],
   "storyboardSource": "agent",
   "files": {
     "video": "/path/to/run/video.mp4",
     "poster": "/path/to/run/poster.jpg",
     "captions": "/path/to/run/captions.vtt",
+    "captionsSrt": "/path/to/run/captions.srt",
     "storyboard": "/path/to/run/storyboard.json",
-    "watchPage": "/path/to/run/watch/index.html"
+    "watchPage": "/path/to/run/watch/index.html",
+    "watchHtml": "/path/to/run/watch.html"
   },
   "publish": {
     "provider": "s3",
@@ -648,9 +730,11 @@ published video: a signed link stops working without its signature, so it is kep
 
 | Field | Meaning |
 |---|---|
+| `scenes` | The scenes as they were rendered: `id`, `role`, `title`, the type of the `visual`, and `startSec` and `durationSec` in the finished video. |
+| `evidenceUsed` | Every [evidence id](storyboard.md#evidence-ids) that the video cites or shows, each one once. It tells you whether the video used what you supplied, for example a screenshot. |
 | `storyboardSource` | Who wrote the storyboard: `agent` (you passed `--storyboard`), `llm` or `heuristic` (the offline storyboard). |
-| `files` | Paths on this machine. `files.poster` is `null` when no poster image was made (for example when the capture failed). The run still succeeds. |
-| `publish` | `null` only when you chose `--publish none`. With the default `--publish local` it is `{"provider": "local", ...}` and the links are `file://` links to files on this machine. A local `publish` has no `expiresAt` and counts as `private`. |
+| `files` | Paths on this machine. `files.poster` is `null` when no poster image was made (for example when the capture failed). The run still succeeds. `files.watchPage` is the page in `watch/`, which has its own copies of the video, the poster and the captions. `files.watchHtml` is the same page next to `video.mp4`. |
+| `publish` | `null` when you chose `--publish none`, and in the `result.json` of a run whose upload failed (the exit code is then 5). With the default `--publish local` it is `{"provider": "local", ...}` and the links are `file://` links to files on this machine. A local `publish` has no `expiresAt` and counts as `private`. |
 | `publish.visibility` | `private`, `protected`, `public`, or `unlisted` (YouTube's link-only mode). |
 | `publish.expiresAt` | When a signed link stops working, or `null` for a link that does not expire. |
 | `notify` | `null` unless you asked for a comment or a description update and it was tried. Then it is `{commentUrl, descriptionUpdated}`. |
@@ -693,7 +777,7 @@ request update would be skipped.
 | `analyze` | `{"ok": true, "runId", "runDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary": {"title", "changeLabel", "size", "files", "suggestedDurationSec", "evidenceItems"}}` |
 | `agent analyze` | `{"ok": true, "name", "workDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary"}`. `agent validate` and `agent render` print the same object as `validate` and `generate`. |
 | `validate` | `{"ok", "errors", "warnings", "fixes", "groundedClaims"}`. `ok` is `false` when there is an error. Each error and warning has `path` (for example `scenes[3].visual.ref`), `code` and `message`. `fixes` is a list of strings. |
-| `doctor` | `{"ok", "online", "version", "summary": {"pass", "warn", "fail"}, "checks": [{"id", "name", "status", "detail", "fix"}]}` |
+| `doctor` | `{"ok", "online", "version", "summary": {"pass", "warn", "fail"}, "checks": [{"id", "name", "status", "detail", "fix"}], "kokoro": {"installed", "version", "modelCached"}}` |
 | `setup` | `{"ok": true, "targets": [{"name", "summary"}]}`. `setup kokoro` gives `{"ok": true, "kokoro": {"installed", "location", "version", "modelCached"}}`. `setup youtube` gives `{"ok": true, "youtube": {"credentialsFile", "scopes"}}`, and `setup drive` gives `{"ok": true, "drive": {"credentialsFile", "scopes"}}`. Never a token. |
 | `status` | `{"id", "status", "createdAt", "updatedAt", "startedAt", "finishedAt", "options", "progress": {"stage", "message", "progress"}, "result", "error"}`. `result` is a result or plan object once the job has succeeded. `error` is `{code, message, hint}` for a failed job. A storyboard in `options` is shown as `"[provided]"`. |
 | `jobs` | `{"jobs": [{"id", "status", "createdAt", "updatedAt", "progress", "title", "error"}]}` |
@@ -716,4 +800,5 @@ Scripts and coding agents can branch on the exit code. The `code` field of a JSO
 | 5 | `GIT_FAILED`, `GITHUB_AUTH`, `GITHUB_FAILED`, `RATE_LIMITED`, `LLM_FAILED`, `LLM_REFUSED`, `TTS_FAILED`, `PUBLISH_FAILED`, `NOTIFY_FAILED` | A service failed: git, GitHub, a model, speech or the upload. | Read the hint. Network access or credentials are the usual cause. `NOTIFY_FAILED` can come with a full result: see [`generate`](#mergestory-generate). |
 | 6 | `FFMPEG_NOT_FOUND`, `BROWSER_NOT_FOUND` | FFmpeg or a browser is missing. | Show the install hint from the error. |
 | 7 | `PRIVACY_BLOCKED` | MergeStory refused to publish, to protect a private repository or a run folder. | Keep links private, or ask the person. See [hosting.md](hosting.md). |
+| 8 | `RENDER_TIMEOUT` | Rendering took longer than `--max-render-seconds` (`render.maxSeconds`). No video was written. | Raise the limit, use `--quality draft`, or make the video shorter with `--max-duration`. |
 | 130 | `ABORTED` | The run was cancelled (Ctrl+C or SIGTERM). | Nothing to do. |

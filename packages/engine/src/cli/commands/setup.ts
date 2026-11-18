@@ -10,7 +10,7 @@ const TARGETS: { name: string; summary: string }[] = [
   {
     name: 'kokoro',
     summary:
-      'free local speech (Kokoro, English): about 400 MB of files plus a speech model that downloads on first use. The first English video installs it by itself; this does it ahead of time',
+      'free local speech (Kokoro, English): about 400 MB of files plus its speech model (roughly 90 to 330 MB). The first English video installs both by itself; this does it ahead of time',
   },
   {
     name: 'youtube',
@@ -105,7 +105,7 @@ export function registerSetup(program: Command, rt: CliRuntime, deps: SetupDeps 
       env.say('Kokoro is a free text-to-speech voice that runs on this machine (English only).');
       env.say('  - Installing it adds about 400 MB of files under your MergeStory home.');
       env.say(
-        '  - The speech model (roughly 90 to 330 MB) downloads from huggingface.co the first time a video uses it.',
+        '  - The speech model (roughly 90 to 330 MB) then downloads from huggingface.co, so no video has to wait for it later.',
       );
       env.say('  - No repository content is sent anywhere.\n');
       const config = await loadConfig(env);
@@ -123,18 +123,14 @@ export function registerSetup(program: Command, rt: CliRuntime, deps: SetupDeps 
         logger: env.logger,
         signal: env.signal,
       });
-      // The same lock as a run that installs the voice, so the two never install at once.
+      // The same lock as a run that installs the voice, so the two never install at once. The speech model comes with it.
       const status = await setupKokoro(ctx);
       if (env.json) {
         env.emitJson({ ok: true, kokoro: status });
         return;
       }
       env.say(`Kokoro${status.version ? ` ${status.version}` : ''} is installed at ${status.location}.`);
-      env.say(
-        status.modelCached
-          ? 'The speech model is already downloaded.'
-          : 'The speech model is not downloaded yet. It downloads the first time a video uses it.',
-      );
+      env.say('The speech model is downloaded, so a video needs no download for the voice.');
       env.say('Use it with --tts kokoro, or leave --tts on auto.');
     });
 }

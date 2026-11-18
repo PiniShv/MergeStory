@@ -6,6 +6,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { MergeStoryError } from '../core/errors.ts';
+import { isRecord } from '../core/json.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, TestEvidence } from '../core/types.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
@@ -173,6 +174,27 @@ function shownScreenshots(storyboard: Storyboard): Set<string> {
     }
   }
   return shown;
+}
+
+/**
+ * Every evidence id that a storyboard cites or shows: the cited ids in the order of first use, then
+ * the screenshots that are shown and not cited. After the checks, every id in it exists.
+ */
+export function evidenceUsed(storyboard: Storyboard): string[] {
+  const ids = new Set<string>();
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+    } else if (isRecord(value)) {
+      for (const [key, child] of Object.entries(value)) {
+        if (key !== 'evidence' || !Array.isArray(child)) walk(child);
+        else for (const id of child) if (typeof id === 'string') ids.add(id);
+      }
+    }
+  };
+  walk(storyboard);
+  for (const id of shownScreenshots(storyboard)) ids.add(id);
+  return [...ids];
 }
 
 /**

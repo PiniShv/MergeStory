@@ -56,7 +56,11 @@ export function numberFlag(
   };
 }
 
-const { maxDurationSec: MAX_DURATION, targetDurationSec: TARGET_DURATION } = DURATION_LIMITS;
+const {
+  maxDurationSec: MAX_DURATION,
+  targetDurationSec: TARGET_DURATION,
+  renderSec: RENDER_SEC,
+} = DURATION_LIMITS;
 
 /**
  * `--max-duration`. Says exactly what is kept: the estimate that the storyboard is trimmed to, not
@@ -125,6 +129,7 @@ export interface ConfigFlags {
   /** false when --no-captions was given. */
   captions?: boolean;
   music?: string;
+  maxRenderSeconds?: number;
 }
 
 /** Every flag of `generate`. */
@@ -269,7 +274,12 @@ export function addRunFlags(command: Command): Command {
     .option('--out <dir>', 'write the run files here instead of under the MergeStory home')
     .option('--no-cache', 'do not use or fill the cache')
     .option('--no-captions', 'leave captions out of the video')
-    .option('--music <file>', 'background music file, mixed quietly under the narration');
+    .option('--music <file>', 'background music file, mixed quietly under the narration')
+    .option(
+      '--max-render-seconds <sec>',
+      `stop when rendering takes longer than this many seconds (${RENDER_SEC.min}-${RENDER_SEC.max}); the run then ends with exit code 8 and leaves no video`,
+      numberFlag({ integer: true, min: RENDER_SEC.min, max: RENDER_SEC.max }),
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -383,7 +393,10 @@ export async function configFromFlags(flags: ConfigFlags, cwd: string): Promise<
   if (Object.keys(github).length > 0) config.github = github;
 
   if (flags.cache === false) config.cache = { enabled: false };
-  if (flags.music) config.render = { musicPath: await checkMusicFile(flags.music, cwd) };
+  const render: NonNullable<ConfigInput['render']> = {};
+  if (flags.music) render.musicPath = await checkMusicFile(flags.music, cwd);
+  if (flags.maxRenderSeconds !== undefined) render.maxSeconds = flags.maxRenderSeconds;
+  if (Object.keys(render).length > 0) config.render = render;
   return config;
 }
 

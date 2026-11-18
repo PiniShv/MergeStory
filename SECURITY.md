@@ -70,8 +70,7 @@ built so that nothing from your code or the change leaves your machine unless yo
   - The command reads the current repository (through git), its work folder and MergeStory's own
     files: the settings, the cache and the voice.
   - It writes only in the MergeStory home (the work folder, the run folder, the cache and the one-time
-    voice install) and in the system's temporary folder. During that one install, npm also fills its
-    own cache.
+    voice install) and in the system's temporary folder.
   - It starts only the programs MergeStory itself uses: git, `gh`, FFmpeg, a browser, the local voice
     and, once, npm to install that voice. No argument can name a program.
   - It never uploads, comments or spends money.
