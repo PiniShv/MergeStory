@@ -18,7 +18,6 @@ import type { ContextOptions } from './types.ts';
 
 /** Limits of the context. Longer lists and texts are cut or refused here, so every caller sees the same ones. */
 export const MAX_TEXT = 64 * 1024;
-export const MAX_SCREENSHOTS = 6;
 /** Test results that reach the evidence. A longer list is cut, with a warning. */
 export const MAX_TESTS = 10;
 /** Most entries accepted in a list of test results at all. */
@@ -175,8 +174,12 @@ export async function buildContextInputs(
   warn: (message: string) => void = () => {},
 ): Promise<ContextInputs> {
   if ((options?.tests?.length ?? 0) > MAX_TESTS) warn(`Only the first ${MAX_TESTS} test results are used.`);
-  if ((options?.screenshots?.length ?? 0) > MAX_SCREENSHOTS)
-    warn(`Only the first ${MAX_SCREENSHOTS} screenshots are used.`);
+  const maxScreenshots = config.inputs.maxScreenshots;
+  if ((options?.screenshots?.length ?? 0) > maxScreenshots)
+    warn(
+      `Only the first ${maxScreenshots} screenshots are used.` +
+        (maxScreenshots < 12 ? ' Raise inputs.maxScreenshots (at most 12) to use more.' : ''),
+    );
   const maxRecordings = config.inputs.maxRecordings;
   if ((options?.recordings?.length ?? 0) > maxRecordings)
     warn(`Only the first ${maxRecordings} recordings are used.`);
@@ -188,7 +191,7 @@ export async function buildContextInputs(
     source: t.source,
   }));
   const screenshots = [];
-  for (const [i, shot] of (options?.screenshots ?? []).slice(0, MAX_SCREENSHOTS).entries()) {
+  for (const [i, shot] of (options?.screenshots ?? []).slice(0, maxScreenshots).entries()) {
     screenshots.push({
       id: `SS${i + 1}`,
       path: await checkScreenshotFile(shot.path, cwd),

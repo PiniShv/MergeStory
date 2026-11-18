@@ -81,6 +81,7 @@ accurate, because the engine can quote them as evidence.
 | `--notes-file <file>` | Notes about your decisions, edge cases and what to review. At most 64 KB. It becomes evidence `NOTES`. |
 | `--tests-file <file>` | Test results you really ran, as a JSON array. At most 256 KB. See below. They become `T1`, `T2`, and so on. |
 | `--screenshot <spec>` | A real screenshot, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `SS1`, `SS2`, and so on. |
+| `--screenshots-dir <dir>` | A folder of real screenshots: every `.png`, `.jpg` and `.jpeg` file in it, in name order. Give it once. They become `SS` ids after those of any `--screenshot`. An optional `captions.json` in the folder gives a caption and a side. See below. |
 | `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
 
 - **Test results.** Each entry has `command`, `passed` and `summary`, and may have `source` (`agent`, `ci` or
@@ -88,10 +89,24 @@ accurate, because the engine can quote them as evidence.
   Any other field is an error, so a typo such as `pass` never turns into a made-up result. MergeStory shows
   results as you report them and never runs tests. Only the first 10 entries are used, and a warning says
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
-- **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. Only
-  the first 6 are used. A file the video cannot draw is refused at once, before any speech is paid for.
+- **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. At
+  most 6 are used unless you raise the setting [`inputs.maxScreenshots`](configuration.md) (from 0 to 12); the
+  first ones are used and a warning says so. A file that is not a picture, is too large or has a
+  credentials-like name is refused at once. A picture wider than 2560 pixels is made 2560 pixels wide when
+  the video is made, so a full-page capture does not slow the render. FFmpeg does it, and the file itself is
+  never changed. This happens before any speech is paid for. If a picture cannot be made smaller, the run
+  stops and names the picture. `analyze` and `validate` do not change any picture.
   MergeStory does not look inside a picture: a secret or an e-mail address that shows in a screenshot shows
   in the video. Check a capture before you pass it.
+- **A folder of screenshots.** `--screenshots-dir <dir>` takes every file in the folder that ends in `.png`,
+  `.jpg` or `.jpeg` (any letter case), sorted by name. Sub-folders and other files are ignored. Each file is
+  checked like a `--screenshot` file. Pictures from `--screenshot` come first, in the order you gave them,
+  then the pictures of the folder, so the ids of a command that only adds the folder do not change. A picture
+  gets its file name without the ending as its caption. An optional `captions.json` in the folder changes
+  that: `{"after.png": {"caption": "The basket after the fix", "side": "after"}}`. `side` is `before` or
+  `after`, or left out. A key that is not a picture in the folder, any other field, a wrong `side` and a
+  caption that is not text are errors. A folder that does not exist is an error. An empty folder is fine.
+  The commands that `analyze` prints repeat the flag with an absolute path.
 - **Recordings.** MP4 (H.264) or WebM (VP8 or VP9), checked by content with `ffprobe` and not by file name.
   A QuickTime (`.mov`) or Matroska (`.mkv`) file with one of these three codecs works too.
   The sound may be AAC, MP3, Opus or Vorbis, and is never used. A file with another kind of track is refused.
@@ -126,7 +141,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--base <ref>` | Local repository: the older side of the change. | the merge base of `HEAD` and the default branch |
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
-**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` and `--recording`. See
+**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir` and `--recording`. See
 [Context flags](#context-flags).
 
 **Style and length.**
@@ -263,7 +278,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -291,7 +306,7 @@ Otherwise the ids `TASK`, `NOTES`, `T1`, `SS1` and `RC1` do not exist, and the l
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -337,12 +352,13 @@ folder:
 | File | Written by | What it holds |
 |---|---|---|
 | `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
+| `screenshots/` | the agent | Screenshots: every `.png`, `.jpg` and `.jpeg` file in it, sorted by name, becomes `SS1`, `SS2`, and so on. An optional `screenshots/captions.json` works as the one for recordings: `{"after.png": {"caption": "After the fix", "side": "after"}}`. Same limits and checks as `--screenshot`. |
 | `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands. The agent commands never take a recording as a flag.
+when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot or a recording as a flag. They read `screenshots/` and `recordings/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -350,7 +366,7 @@ only when its repository is one of the git remotes of the current repository, on
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
 **What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--storyboard`,
-`--screenshot`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--screenshot`, `--screenshots-dir`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 

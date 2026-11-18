@@ -39,7 +39,7 @@ import { createPublisher } from '../publish/index.ts';
 import { createRenderer } from '../render/index.ts';
 import { testConfig } from '../testing/context.ts';
 import { makeClip } from '../testing/media.ts';
-import { makePng } from '../testing/png.ts';
+import { makePng, pngHeader } from '../testing/png.ts';
 import { checkStoryboard, generate, prepareAuthoring, publishRun } from './index.ts';
 import { EARLIER_RESULT_MISSING } from './types.ts';
 
@@ -1456,6 +1456,54 @@ describe('generate: the time limit of the render', () => {
 });
 
 const ffmpegTools = await resolveFfmpeg(testConfig()).catch(() => null);
+
+describe('generate: a wide screenshot', () => {
+  it('stops before any speech when it cannot be made smaller, naming it, and a dry run loads nothing', async () => {
+    const wide = join(base, 'wide-page.png');
+    await writeFile(wide, pngHeader(3000, 100));
+    const broken = join(base, 'ffmpeg-fails-wide.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene = structuredClone(demo.scenes[0]!);
+    const storyboard: Storyboard = {
+      ...demo,
+      scenes: [
+        ...demo.scenes,
+        {
+          ...scene,
+          id: 'shot',
+          role: 'under-the-hood',
+          narration: [{ text: 'The page shows the failure.', evidence: ['SS1'] }],
+          visual: {
+            type: 'screenshot',
+            screenshotId: 'SS1',
+            caption: 'The page',
+            highlights: [],
+            focus: null,
+          },
+        },
+      ],
+    };
+    const given = {
+      storyboard,
+      withContext: false,
+      context: { screenshots: [{ path: wide, caption: 'Page', moment: 'before' as const }] },
+      config: { render: { ffmpegPath: broken } },
+    };
+    await plan(given);
+    const narration = await import('../narration/index.ts');
+    const spy = vi.spyOn(narration, 'synthesizeNarration');
+    try {
+      const error = await failure(run(given));
+      expect(error.code).toBe('USAGE');
+      expect(error.message).toContain('Screenshot SS1 (wide-page.png)');
+      expect(error.message).toContain('could not be made smaller');
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
 
 describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
   let clip: string;

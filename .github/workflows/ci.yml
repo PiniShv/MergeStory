@@ -79,8 +79,7 @@ jobs:
           node packages/engine/dist/cli/main.js generate "$RUNNER_TEMP/bugfix-demo" --base main --head fix/basket-count \
             --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md \
             --tests-file examples/bugfix-demo/tests.json --storyboard examples/bugfix-demo/storyboard.json \
-            --screenshot "$cap/before.png:The basket before the fix:before" \
-            --screenshot "$cap/after.png:The basket after the fix:after" \
+            --screenshots-dir "$cap/screenshots" \
             --recording "$cap/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" \
             --recording "$cap/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after" \
             --tts none --quality draft --publish local --max-render-seconds 300 \
@@ -92,7 +91,7 @@ jobs:
             const size = fs.statSync(dir + "/video.mp4").size;
             console.log("rendered", result.durationSec, "s of video in", result.elapsedSec, "s,", size, "bytes");
             const used = result.evidenceUsed ?? [];
-            if (result.ok !== true || !used.includes("RC1")) {
+            if (result.ok !== true || !used.includes("RC1") || !used.includes("SS1") || !used.includes("SS2")) {
               console.error("unexpected result", { ok: result.ok, evidenceUsed: used });
               process.exit(1);
             }

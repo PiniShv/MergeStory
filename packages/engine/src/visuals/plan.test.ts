@@ -2,6 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { resolveFfmpeg } from '../core/binaries.ts';
 import {
   frameDirFor,
   PANEL_CLIP_DELAY_SEC,
@@ -14,6 +15,7 @@ import type { Highlight, Scene, Storyboard } from '../core/storyboard-schema.ts'
 import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
 import { testConfig, testContext } from '../testing/context.ts';
+import { ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
@@ -344,7 +346,10 @@ describe('buildRenderPlan: scenes', () => {
 });
 
 describe('buildRenderPlan: other visual types', () => {
-  async function extras(inputs: ContextInputs = sample().inputs): Promise<RenderPlan> {
+  async function extras(
+    inputs: ContextInputs = sample().inputs,
+    config?: Options['config'],
+  ): Promise<RenderPlan> {
     const board = sample().storyboard;
     const make = (id: string, visual: Scene['visual'], evidence: string[] = []): Scene => ({
       id,
@@ -431,7 +436,7 @@ describe('buildRenderPlan: other visual types', () => {
         }),
       ],
     };
-    return build({ storyboard, inputs });
+    return build({ storyboard, inputs, config });
   }
 
   const withShot = async (png: Buffer, name = 'shot.png'): Promise<ContextInputs> => {
@@ -594,6 +599,38 @@ describe('buildRenderPlan: other visual types', () => {
       if (compare.before.kind !== 'screenshot') throw new Error('expected a screenshot panel');
       expect(Object.keys(compare.before).sort()).toEqual(['image', 'kind', 'label']);
       expect(JSON.stringify(plan)).not.toContain('highlights');
+    });
+  });
+
+  it('gets a wide picture 2560 wide, and an error from making it smaller names the screenshot', async (ctx) => {
+    const tools = await resolveFfmpeg(testConfig()).catch(() => null);
+    const file = join(dir, 'wide-made.png');
+    if (
+      tools === null ||
+      !(await ffmpegTo(tools.ffmpeg, [
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc=size=3000x1500:rate=1:duration=1',
+        '-frames:v',
+        '1',
+        file,
+      ]))
+    ) {
+      return ctx.skip();
+    }
+    const inputs = {
+      ...sample().inputs,
+      screenshots: [{ id: 'SS1', path: file, caption: 'Wide', moment: 'after' as const }],
+    };
+    const plan = await extras(inputs);
+    expect(visualOf(plan, 'shot', 'screenshot').image).toMatchObject({ width: 2560, height: 1280 });
+
+    const broken = join(dir, 'ffmpeg-fails.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    await expect(extras(inputs, { render: { ffmpegPath: broken } })).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('Screenshot SS1 (wide-made.png)'),
     });
   });
 });

@@ -145,7 +145,7 @@ same input always gives the same ids.
 | `M1`, ... | A component: a group of files that belong together. |
 | `R1`, ... | A review signal. These are questions for the reviewer found by pattern matching, not confirmed problems. |
 | `D1`, ... | A dependency change. |
-| `SS1`, ... | A screenshot you supplied with `--screenshot`. |
+| `SS1`, ... | A screenshot you supplied with `--screenshot` or `--screenshots-dir`. |
 | `RC1`, ... | A screen recording you supplied with `--recording`. |
 | `REPO` | The structure of the repository: a file tree and an excerpt of the README. |
 
@@ -348,10 +348,11 @@ and no second model sees the code. The reading and writing are your agent's own 
 
 1. **Write down what only you know**, in a folder outside the repository: `task.md` (the task), `notes.md`
    (your decisions, edge cases and what deserves extra review) and `tests.json` (only tests you really ran).
-   Never invent a result. The `agent` commands also read screen recordings from `recordings/` in that folder
-   (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an optional
-   `recordings/captions.json`). With `analyze`, `validate` and `generate`, pass
-   `--recording <path>[:<caption>[:before|after]]` instead.
+   Never invent a result. The `agent` commands also read real screenshots from `screenshots/` in that folder
+   (`.png`, `.jpg` or `.jpeg`, sorted by name, named by an optional `screenshots/captions.json`) and screen
+   recordings from `recordings/` (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an
+   optional `recordings/captions.json`). With `analyze`, `validate` and `generate`, pass
+   `--screenshots-dir <folder>` and `--recording <path>[:<caption>[:before|after]]` instead.
 2. **Analyse the change.**
 
    ```bash

@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { analyze, targetDuration } from '../analyzer/index.ts';
+import { buildContext } from '../cli/inputs.ts';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { buildContextInputs, unusedScreenshotWarning } from '../pipeline/inputs.ts';
@@ -58,10 +59,9 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
         task: await readFile(join(DEMO, 'task.md'), 'utf8'),
         notes: await readFile(join(DEMO, 'notes.md'), 'utf8'),
         tests: JSON.parse(await readFile(join(DEMO, 'tests.json'), 'utf8')) as [],
-        screenshots: [
-          { path: join(captures, 'before.png'), caption: 'The basket before the fix', moment: 'before' },
-          { path: join(captures, 'after.png'), caption: 'The basket after the fix', moment: 'after' },
-        ],
+        // The folder that the capture script writes, read the way --screenshots-dir reads it.
+        screenshots: (await buildContext({ screenshotsDir: join(captures, 'screenshots') }, directory))
+          ?.screenshots,
         recordings: [
           {
             path: join(captures, 'before.mp4'),
@@ -89,6 +89,13 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
       else process.env[key] = value;
     }
     await rm(directory, { recursive: true, force: true });
+  });
+
+  it('gives the two screenshots of the folder the ids SS1 and SS2, with their captions', () => {
+    expect(deps.inputs.screenshots.map((s) => [s.id, s.caption, s.moment])).toEqual([
+      ['SS1', 'The basket before the fix', 'before'],
+      ['SS2', 'The basket after the fix', 'after'],
+    ]);
   });
 
   it('gives the two recordings the ids RC1 and RC2', () => {

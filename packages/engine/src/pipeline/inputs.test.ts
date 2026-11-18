@@ -32,6 +32,39 @@ describe('buildContextInputs: screenshots', () => {
     ]);
   });
 
+  it('uses 6 screenshots by default and warns about the rest, with the real number', async () => {
+    const names = Array.from({ length: 8 }, (_, i) => `s${i}.png`);
+    for (const name of names) await writeFile(join(dir, name), makePng(4, 4));
+    const warnings: string[] = [];
+    const inputs = await buildContextInputs({ screenshots: names.map(shot) }, dir, testConfig(), (m) =>
+      warnings.push(m),
+    );
+    expect(inputs.screenshots.map((s) => s.id)).toEqual(['SS1', 'SS2', 'SS3', 'SS4', 'SS5', 'SS6']);
+    expect(warnings).toEqual([
+      'Only the first 6 screenshots are used. Raise inputs.maxScreenshots (at most 12) to use more.',
+    ]);
+  });
+
+  it('takes the limit from the setting', async () => {
+    const names = Array.from({ length: 14 }, (_, i) => `s${i}.png`);
+    for (const name of names) await writeFile(join(dir, name), makePng(4, 4));
+    const warnings: string[] = [];
+    const twelve = await buildContextInputs(
+      { screenshots: names.map(shot) },
+      dir,
+      testConfig({ inputs: { maxScreenshots: 12 } }),
+      (m) => warnings.push(m),
+    );
+    expect(twelve.screenshots).toHaveLength(12);
+    expect(warnings).toEqual(['Only the first 12 screenshots are used.']);
+    const none = await buildContextInputs(
+      { screenshots: names.map(shot) },
+      dir,
+      testConfig({ inputs: { maxScreenshots: 0 } }),
+    );
+    expect(none.screenshots).toEqual([]);
+  });
+
   it('refuses a file that is not a PNG or JPEG, before anything is analysed or narrated', async () => {
     for (const [name, bytes] of [
       ['text.png', Buffer.from('not an image')],

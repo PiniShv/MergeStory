@@ -183,11 +183,19 @@ describe('resolveConfig: inputs', () => {
 
   it('has the documented defaults', () => {
     expect(resolve({})).toEqual({
+      maxScreenshots: 6,
       maxRecordings: 4,
       maxRecordingMb: 50,
       maxRecordingSeconds: 60,
       maxClipSeconds: 20,
     });
+  });
+
+  it('allows 0 to 12 screenshots', () => {
+    expect(resolve({ maxScreenshots: 0 }).maxScreenshots).toBe(0);
+    expect(resolve({ maxScreenshots: 12 }).maxScreenshots).toBe(12);
+    expect(() => resolve({ maxScreenshots: 13 })).toThrow(/maxScreenshots/);
+    expect(() => resolve({ maxScreenshots: -1 })).toThrow(/maxScreenshots/);
   });
 
   it('allows no recordings, and refuses a value out of range or a key that does not exist', () => {

@@ -81,7 +81,13 @@ export function durationOption(): Option {
   return new Option(
     '--duration <sec>',
     `target length in seconds (${TARGET_DURATION.min}-${TARGET_DURATION.max}; default: adapts to the size of the change)`,
-  ).argParser(numberFlag({ integer: true, min: TARGET_DURATION.min, max: TARGET_DURATION.max }));
+  ).argParser(
+    numberFlag({
+      integer: true,
+      min: TARGET_DURATION.min,
+      max: TARGET_DURATION.max,
+    }),
+  );
 }
 
 /** Port number parser for flags. */
@@ -163,8 +169,16 @@ export function addContextFlags(command: Command): Command {
     )
     .option(
       '--screenshot <spec>',
-      'a real screenshot, PNG or JPEG up to 4 MB: <path>[:<caption>[:before|after]] (repeatable)',
+      'a real screenshot, PNG or JPEG up to 4 MB: <path>[:<caption>[:before|after]] (repeatable; the limit is the setting inputs.maxScreenshots)',
       collect,
+    )
+    .option(
+      '--screenshots-dir <folder>',
+      'a folder of real screenshots (.png, .jpg, .jpeg), used in name order after any --screenshot; an optional captions.json names a caption and side for each (give it once)',
+      (value: string, previous: string | undefined) => {
+        if (previous !== undefined) throw new InvalidArgumentError('Give --screenshots-dir once.');
+        return value;
+      },
     )
     .option(
       '--recording <spec>',
@@ -468,6 +482,9 @@ export function followUpFor(
   for (const spec of flags.screenshot ?? []) {
     const { path } = parseScreenshotSpec(spec);
     contextArgs.push('--screenshot', `${resolve(cwd, path)}${spec.slice(path.length)}`);
+  }
+  if (flags.screenshotsDir !== undefined) {
+    contextArgs.push('--screenshots-dir', resolve(cwd, flags.screenshotsDir));
   }
   for (const spec of flags.recording ?? []) {
     const { path } = parseScreenshotSpec(spec);

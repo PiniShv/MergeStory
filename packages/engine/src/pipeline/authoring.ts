@@ -106,7 +106,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       : [
           '',
           'Give both commands the same source and the same `--base`, `--head`, `--task-file`, `--notes-file`, `--tests-file`,',
-          '`--screenshot` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, SS1 and RC1. Without them those ids do not',
+          '`--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, SS1 and RC1. Without them those ids do not',
           'exist, and lines that cite only them are removed.',
         ]),
     '',
@@ -115,6 +115,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
     'so they become citable evidence (TASK, NOTES).',
     ...(agent
       ? [
+          'Real screenshots (PNG or JPEG) go in the `screenshots/` folder here. They become SS1, SS2 and so on.',
           'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
         ]
       : []),

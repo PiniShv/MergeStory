@@ -15,9 +15,9 @@ without any error.
 - **A removed `TASK`, `NOTES`, `T1`, `SS1` or `RC1` means that context is missing.** With the `agent`
   commands, `task.md`, `notes.md` and `tests.json` must be in the work folder before `agent analyze`
   runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`,
-  `--screenshot` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
-  do not exist. A removed `RC1` means that the recording was not passed to this command (or that the
-  `recordings/` folder lacks the file, or the engine is older than the one that reads recordings).
+  `--screenshot`, `--screenshots-dir` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  do not exist. A removed `SS1` or `RC1` means that the picture or recording was not passed to this command (or that the
+  `screenshots/` or `recordings/` folder lacks the file, or the engine is older than the one that reads it).
 
 These codes are errors:
 

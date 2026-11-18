@@ -203,9 +203,10 @@ export const ConfigSchema = z.strictObject({
         .default(null),
     })
     .prefault({}),
-  /** Limits for the files a caller supplies (screen recordings). */
+  /** Limits for the files a caller supplies (screenshots, screen recordings). */
   inputs: z
     .strictObject({
+      maxScreenshots: z.number().int().min(0).max(12).default(6),
       maxRecordings: z.number().int().min(0).max(8).default(4),
       maxRecordingMb: z.number().int().min(1).max(500).default(50),
       maxRecordingSeconds: z.number().int().min(1).max(600).default(60),

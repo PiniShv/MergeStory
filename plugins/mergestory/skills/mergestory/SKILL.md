@@ -63,7 +63,7 @@ them, such as `cat`, `ls` or `node`, are not needed and can ask the user for app
 
 Pick a short name for this change, for example `retry-backoff` (lower-case letters, digits, `-`).
 Your work folder is `~/.mergestory/work/<name>`. Write these files there with your file tools
-(except the recordings, see below), never in the repository:
+(except the screenshots and recordings, see below), never in the repository:
 
 - `task.md`: the original task, in the user's words where possible.
 - `notes.md`: the key decisions you made and why, edge cases, and what deserves extra review.
@@ -71,6 +71,15 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   `[{"command": "npm test", "passed": true, "summary": "212 passed, 0 failed"}]`.
   Never invent or guess test results. Add `"source": "ci"` only to a result that CI reported.
 
+- `screenshots/`: screenshots that were really captured (PNG or JPEG, up to 4 MB each); never make
+  one up. Copy each one into `screenshots/` in the work folder before `agent analyze` runs. A file
+  tool cannot write a picture, and this skill allows no copy command, so the user may have to approve
+  the copy. The files are used in name order, and the first `inputs.maxScreenshots` are used (6 by default, at most 12). To name them, add
+  `screenshots/captions.json` as `{"page.png": {"caption": "What it shows", "side": "before"}}`.
+  This needs an engine newer than 1.7.0. An older engine ignores the folder, so cite no `SS` id
+  there. MergeStory masks text, not pictures: a secret or an e-mail address that shows in a screenshot
+  shows in the video. Use a capture only when you know that it shows nothing its viewers must not
+  see. When you are not sure, ask the user.
 - `recordings/`: screen recordings that were really captured; never make one up. Copy each one into
   `recordings/` in the work folder before `agent analyze` runs. A file tool cannot write a video, and
   this skill allows no copy command, so the user may have to approve the copy. The files are used in
@@ -82,7 +91,7 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   the video. Use a capture only when you know that it shows nothing its viewers must not see. When you
   are not sure, ask the user.
 
-These become citable evidence (TASK, NOTES, T1, RC1) in the video.
+These become citable evidence (TASK, NOTES, T1, SS1, RC1) in the video.
 
 ## 4. Write the storyboard yourself (MergeStory adds no charge; your own usage counts)
 
