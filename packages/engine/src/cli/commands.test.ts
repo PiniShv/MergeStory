@@ -90,6 +90,7 @@ describe('doctor', () => {
       { id: 'git', name: 'git', status: 'pass', detail: 'git version 2.50', fix: null },
       { id: 'github', name: 'GitHub access', status: 'warn', detail: 'no token', fix: 'Set GITHUB_TOKEN' },
     ],
+    kokoro: { installed: false, version: null, modelCached: false },
     ...overrides,
   });
 
@@ -150,19 +151,19 @@ describe('setup', () => {
     expect(JSON.parse(stdout).targets[0].name).toBe('kokoro');
   });
 
-  it('explains the size and the first-use download, then installs Kokoro', async () => {
+  it('explains the size and the model download, then installs Kokoro', async () => {
     installMock.mockResolvedValue({
       installed: true,
       location: join(dir, 'home', 'plugins', 'kokoro'),
       version: '1.2.1',
-      modelCached: false,
+      modelCached: true,
     });
     const { code, stdout } = await run(['setup', 'kokoro']);
     expect(code).toBe(0);
     expect(stdout).toContain('about 400 MB');
-    expect(stdout).toContain('downloads from huggingface.co the first time');
+    expect(stdout).toContain('then downloads from huggingface.co');
     expect(stdout).toContain('Kokoro 1.2.1 is installed at');
-    expect(stdout).toContain('not downloaded yet');
+    expect(stdout).toContain('The speech model is downloaded');
     expect(installMock).toHaveBeenCalledTimes(1);
     const ctx = installMock.mock.calls[0]?.[0];
     expect(ctx?.home.home).toBe(join(dir, 'home'));

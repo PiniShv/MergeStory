@@ -4,9 +4,9 @@
  * into $MERGESTORY_HOME/plugins.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { constants, readFileSync } from 'node:fs';
+import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SECRET_ENV_VARS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
@@ -186,6 +186,36 @@ export function kokoroManualInstall(dir: string): string {
   return `Install by hand: create ${dir}/package.json with these exact dependencies: ${JSON.stringify(KOKORO_PLUGIN_PACKAGES)} and these overrides: ${JSON.stringify(KOKORO_PLUGIN_OVERRIDES)}, copy ${KOKORO_PLUGIN_LOCKFILE} next to it, run "npm ci --ignore-scripts" there, then create ${join(dir, KOKORO_INSTALLED_MARKER)} containing ${JSON.stringify(completionMarker())}.`;
 }
 
+/** The folder inside the plugin folder that holds npm's cache when its own folder cannot be written. */
+const NPM_CACHE_DIR = '.npm-cache';
+
+/** Whether a folder, or the nearest folder above it that exists, can be written. */
+async function canWriteIn(folder: string): Promise<boolean> {
+  for (let current = folder; ; current = dirname(current)) {
+    try {
+      await access(current, constants.W_OK);
+      return true;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT' || dirname(current) === current) return false;
+    }
+  }
+}
+
+/**
+ * The cache folder to give npm for the install, or null to leave npm its own. npm keeps its cache and
+ * its logs in the home folder unless it is told otherwise, and some containers have a home folder that
+ * cannot be written. A cache that npm can write (a prefilled one, an offline mirror) is never replaced.
+ */
+async function replacementNpmCache(npm: string, dir: string, run: typeof runCommand): Promise<string | null> {
+  const answer = await run(npm, ['config', 'get', 'cache'], {
+    cwd: dir,
+    env: npmEnvironment(),
+    timeoutMs: 60_000,
+  }).catch(() => null);
+  const own = answer?.stdout.trim() ?? '';
+  return isAbsolute(own) && (await canWriteIn(own)) ? null : join(dir, NPM_CACHE_DIR);
+}
+
 export interface InstallDeps {
   run?: typeof runCommand;
   platform?: NodeJS.Platform;
@@ -253,14 +283,18 @@ export async function installKokoro(ctx: RunContext, deps: InstallDeps = {}): Pr
   ctx.logger.info('Installing the Kokoro voice packages (about 400 MB)');
   // Nothing of the user's is sent, but the connection is part of the run's record.
   ctx.egress.record(KOKORO_PACKAGES_HOST, 'voice package download', 0, []);
+  // By its full path, like every program MergeStory starts by name.
+  const npm = await findProgram('npm');
+  // Where npm cannot write its own cache, it gets one in the plugin folder, removed after the install.
+  const npmCache = await replacementNpmCache(npm, dir, run);
   try {
     await run(
-      // By its full path, like every program MergeStory starts by name.
-      await findProgram('npm'),
+      npm,
       [
         'ci',
         '--prefix',
         dir,
+        ...(npmCache ? ['--cache', npmCache] : []),
         '--no-audit',
         '--no-fund',
         '--ignore-scripts',
@@ -275,6 +309,8 @@ export async function installKokoro(ctx: RunContext, deps: InstallDeps = {}): Pr
       hint: `Check that npm works and the network is reachable, then run \`mergestory setup kokoro\` again. ${manual}`,
       cause: err,
     });
+  } finally {
+    if (npmCache) await rm(npmCache, { recursive: true, force: true });
   }
   const version = await packagesVersion(dir);
   if (version !== KOKORO_PLUGIN_PACKAGES['kokoro-js']) {

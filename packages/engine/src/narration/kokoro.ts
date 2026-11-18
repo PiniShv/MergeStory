@@ -9,16 +9,14 @@ import type { TtsProvider, TtsRequest, TtsResult } from '../core/providers.ts';
 import type { EgressRecord } from '../core/types.ts';
 import { joinWithGaps } from './audio.ts';
 import { splitForSynthesis } from './chunking.ts';
+import { downloadKokoroModel } from './kokoro-install.ts';
 import {
-  ensureModelFiles,
   isKokoroModelCached,
   KOKORO_MODEL_HOST,
   KOKORO_MODEL_ID,
   KOKORO_MODEL_REVISION,
   type KokoroDtype,
-  kokoroDownloadMb,
   kokoroDtype,
-  kokoroModelFiles,
 } from './kokoro-model.ts';
 import { ensureLoaderFile, isKokoroInstalled, KOKORO_PACKAGES_HOST, pluginsDir } from './kokoro-plugin.ts';
 import { encodeWavFloat32 } from './wav.ts';
@@ -127,35 +125,7 @@ async function loadRuntime(ctx: RunContext, dtype: KokoroDtype): Promise<KokoroR
     throw loadFailure(dir, err);
   }
 
-  const lastReport = { value: -1 };
-  await ensureModelFiles({
-    modelsRoot: ctx.home.models,
-    files: kokoroModelFiles(dtype),
-    signal: ctx.signal,
-    onDownloadStart: (file) => {
-      if (file.bytes > 1_000_000) {
-        // Nothing of the user's is sent, but the connection is part of the run's record.
-        ctx.egress.record(KOKORO_MODEL_HOST, 'voice model download', 0, []);
-        ctx.progress({
-          stage: 'narrate',
-          status: 'progress',
-          message: `Downloading the Kokoro voice model (${kokoroDownloadMb(dtype)} MB, one time) from ${KOKORO_MODEL_HOST}`,
-        });
-      }
-    },
-    onProgress: ({ file, loaded: bytes, total }) => {
-      const percent = Math.floor((bytes / total) * 10) * 10;
-      if (total > 1_000_000 && percent > lastReport.value) {
-        lastReport.value = percent;
-        ctx.progress({
-          stage: 'narrate',
-          status: 'progress',
-          progress: bytes / total,
-          message: `Downloading ${file}: ${percent}%`,
-        });
-      }
-    },
-  });
+  await downloadKokoroModel(ctx, dtype);
 
   // Everything is already on disk and verified, so transformers.js is not allowed to fetch.
   mod.env.cacheDir = ctx.home.models;

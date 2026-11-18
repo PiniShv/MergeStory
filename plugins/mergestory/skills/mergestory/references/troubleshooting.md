@@ -105,6 +105,9 @@ work, or check `--base` and `--head`.
   `MERGESTORY_BROWSER_PATH` set to the `chrome-headless-shell` program it downloaded. `mergestory doctor`
   draws one test frame and reports this before a render.
 - A render is slow on a small machine: use `--quality draft`.
+- Rendering stopped at the time limit (exit code 8, `RENDER_TIMEOUT`): the machine sets a limit with
+  `render.maxSeconds`. No video was written. Try once with `--quality draft`. Only the person who runs
+  the machine can raise the limit.
 - The first English run takes a few minutes longer: it installs the free Kokoro voice once (about
   400 MB, then the voice model). No action is needed. Without network access, use `--tts none`.
 - The voice install failed (exit code 5, `TTS_FAILED`): check the network and that npm works, then run

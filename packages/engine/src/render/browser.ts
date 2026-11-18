@@ -7,10 +7,10 @@
  */
 import { constants } from 'node:fs';
 import { access, readdir, stat } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { basename, dirname, join } from 'node:path';
+import { basename, dirname, isAbsolute, join } from 'node:path';
 import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
+import { usableHome } from '../core/paths.ts';
 import { which } from '../core/process.ts';
 import { loadPlaywright } from './playwright.ts';
 
@@ -30,7 +30,8 @@ export interface BrowserExecutable {
 export interface BrowserLookup {
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
-  homeDir?: string;
+  /** The home folder to search under, or null for none. Default: the home folder of the user, when there is one. */
+  homeDir?: string | null;
   /** Where playwright-core expects its own Chromium build. Default: ask playwright-core. */
   playwrightChromium?: string | null;
   /** Replaces the built-in list of system browser locations. */
@@ -104,19 +105,25 @@ function revisionOf(name: string, prefix: string): number | null {
 }
 
 /** Playwright browser folders, in the order they are searched. */
-function playwrightCacheDirs(env: NodeJS.ProcessEnv, platform: NodeJS.Platform, home: string): string[] {
+function playwrightCacheDirs(
+  env: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform,
+  home: string | null,
+): string[] {
   const custom = env.PLAYWRIGHT_BROWSERS_PATH;
-  const local = env.LOCALAPPDATA ?? join(home, 'AppData', 'Local');
+  const under = (...parts: string[]): string | null => (home === null ? null : join(home, ...parts));
+  const local = env.LOCALAPPDATA ?? under('AppData', 'Local');
   const defaults = {
-    darwin: join(home, 'Library', 'Caches', 'ms-playwright'),
-    linux: join(home, '.cache', 'ms-playwright'),
-    win32: join(local, 'ms-playwright'),
+    darwin: under('Library', 'Caches', 'ms-playwright'),
+    linux: under('.cache', 'ms-playwright'),
+    win32: local ? join(local, 'ms-playwright') : null,
   };
   const own =
     platform === 'darwin' ? defaults.darwin : platform === 'win32' ? defaults.win32 : defaults.linux;
-  const dirs = [own, defaults.darwin, defaults.linux, defaults.win32];
+  const dirs = [own, defaults.darwin, defaults.linux, defaults.win32].filter((dir) => dir !== null);
   if (custom && custom !== '0') dirs.unshift(custom);
-  return [...new Set(dirs)];
+  // A relative folder (from a variable) would be looked up in the current folder, so it is left out.
+  return [...new Set(dirs)].filter((dir) => isAbsolute(dir));
 }
 
 /** Search the cache folders in order. In each folder, headless shells come before full builds, newest first. */
@@ -145,7 +152,8 @@ async function ownHeadlessShell(
   playwrightChromium: string | null,
   platform: NodeJS.Platform,
 ): Promise<string | null> {
-  if (!playwrightChromium) return null;
+  // Never a relative path: it would be looked up in the current folder.
+  if (!playwrightChromium || !isAbsolute(playwrightChromium)) return null;
   let dir = dirname(playwrightChromium);
   for (let depth = 0; depth < 8 && dir !== dirname(dir); depth++, dir = dirname(dir)) {
     const revision = revisionOf(basename(dir), 'chromium-');
@@ -155,7 +163,7 @@ async function ownHeadlessShell(
   return null;
 }
 
-function systemBrowsers(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string): string[] {
+function systemBrowsers(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home: string | null): string[] {
   if (platform === 'darwin') {
     const apps = [
       ['Google Chrome.app', 'Google Chrome'],
@@ -163,7 +171,7 @@ function systemBrowsers(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, home:
       ['Microsoft Edge.app', 'Microsoft Edge'],
       ['Brave Browser.app', 'Brave Browser'],
     ] as const;
-    return [join('/Applications'), join(home, 'Applications')].flatMap((root) =>
+    return ['/Applications', ...(home === null ? [] : [join(home, 'Applications')])].flatMap((root) =>
       apps.map(([app, exe]) => join(root, app, 'Contents', 'MacOS', exe)),
     );
   }
@@ -225,7 +233,8 @@ export async function locateBrowser(
 ): Promise<BrowserExecutable> {
   const env = lookup.env ?? process.env;
   const platform = lookup.platform ?? process.platform;
-  const home = lookup.homeDir ?? homedir();
+  // Without a usable home folder, the folders under it are left out of the search.
+  const home = lookup.homeDir === undefined ? usableHome() : lookup.homeDir;
 
   const configured = config.render.browserPath?.trim();
   if (configured) {
@@ -248,7 +257,9 @@ export async function locateBrowser(
   if (cached) return { path: cached, source: 'playwright-cache' };
 
   for (const candidate of lookup.systemCandidates ?? systemBrowsers(platform, env, home)) {
-    if (await isFile(candidate, platform)) return { path: candidate, source: 'system' };
+    // The built-in list is made from variables on Windows. A relative entry is never tried.
+    if (isAbsolute(candidate) && (await isFile(candidate, platform)))
+      return { path: candidate, source: 'system' };
   }
   if (platform !== 'win32') {
     for (const name of lookup.pathNames ?? PATH_NAMES) {

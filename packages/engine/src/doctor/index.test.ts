@@ -145,3 +145,26 @@ describe('robustness', () => {
     for (const name of ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GITHUB_TOKEN']) expect(text).toContain(name);
   });
 });
+
+describe('the free voice in the report', () => {
+  it('says as data whether the voice and its speech model are on disk', async () => {
+    const status = { installed: true, version: '1.2.1', modelCached: true, location: '/data/plugins/kokoro' };
+    const report = await doctor({}, { kokoroStatus: async () => status });
+    // Three facts and no path.
+    expect(report.kokoro).toEqual({ installed: true, version: '1.2.1', modelCached: true });
+    expect((await doctor()).kokoro).toEqual({ installed: false, version: null, modelCached: false });
+  });
+
+  it('reports the voice as missing when it cannot be checked, and still finishes', async () => {
+    const report = await doctor(
+      {},
+      {
+        kokoroStatus: async () => {
+          throw new Error('EACCES: permission denied');
+        },
+      },
+    );
+    expect(report.kokoro).toEqual({ installed: false, version: null, modelCached: false });
+    expect(report.checks.length).toBeGreaterThan(8);
+  });
+});

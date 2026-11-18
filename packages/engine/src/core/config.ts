@@ -31,6 +31,8 @@ const PriceSchema = z.union([
 export const DURATION_LIMITS = {
   maxDurationSec: { min: 20, max: 600, default: 150 },
   targetDurationSec: { min: 20, max: 600 },
+  /** render.maxSeconds: the time limit of the render stage. */
+  renderSec: { min: 1, max: 86_400 },
 } as const;
 
 /** The closed value sets of the settings. The command line flags and the HTTP API use the same lists. */
@@ -191,6 +193,14 @@ export const ConfigSchema = z.strictObject({
       musicPath: z.string().nullable().default(null),
       /** Bring the narration to a standard loudness (-16 LUFS, true peak -1.5 dBTP). */
       normalizeLoudness: z.boolean().default(true),
+      /** Stop the render stage after this many seconds (RENDER_TIMEOUT); null = no limit. */
+      maxSeconds: z
+        .number()
+        .int()
+        .min(DURATION_LIMITS.renderSec.min)
+        .max(DURATION_LIMITS.renderSec.max)
+        .nullable()
+        .default(null),
     })
     .prefault({}),
   cache: z

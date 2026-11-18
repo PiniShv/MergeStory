@@ -177,6 +177,7 @@ See [Privacy options](#privacy-options) for what these do.
 | `render.reuseStaticFrames` | `true` | Skip capturing a frame that is identical to the one before it. This is why most videos render quickly. | none, none |
 | `render.musicPath` | `null` | A background music file. It is mixed in at a low level and lowered while someone speaks. | `--music`, none |
 | `render.normalizeLoudness` | `true` | Bring the narration to a standard loudness: -16 LUFS, with a true peak of at most -1.5 dBTP. This keeps the video as loud as other online video, without clipping. | none, none |
+| `render.maxSeconds` | `null` | The longest time the render stage may take, in whole seconds, from 1 to 86400. A render that takes longer is stopped: the run ends with `RENDER_TIMEOUT` (exit code 8) and writes no video. `null` means no limit. See [cli.md](cli.md#unattended-runs). | `--max-render-seconds`, none |
 
 A path you set is never replaced silently: if it does not exist, MergeStory stops with an error and does
 not look for another browser. Without a setting, MergeStory looks for a browser in Playwright's cache
@@ -216,7 +217,7 @@ the free voice) get an environment without them.
 
 | Variable | What it does |
 |---|---|
-| `MERGESTORY_HOME` | The MergeStory home folder. The default is `~/.mergestory`. |
+| `MERGESTORY_HOME` | The MergeStory home folder. The default is `~/.mergestory`. With it set, MergeStory does not need `HOME`: it works when `HOME` is not set or is empty, when the home folder cannot be written, and for a user that has no home folder. |
 | `MERGESTORY_CONFIG` | The config file to use. See [The config file](#the-config-file). |
 | `MERGESTORY_LOG_LEVEL`, `MERGESTORY_LOG_FORMAT` | The same as `--log-level` and `--log-format`. |
 | `MERGESTORY_KOKORO_DTYPE` | The precision of the free voice model: `q8` (small, about 90 MB) or `fp32` (full, about 330 MB). The default is `fp32` on Apple Silicon and `q8` elsewhere. |

@@ -1,4 +1,6 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { MergeStoryError } from '../core/errors.ts';
@@ -194,12 +196,21 @@ describe('installKokoro', () => {
     const { ctx, cleanup } = await makeTestContext();
     const dir = pluginsDir(ctx);
     const calls: { command: string; args: string[]; options?: RunOptions }[] = [];
+    const asked: string[][] = [];
     const run = async (command: string, args: string[], options?: RunOptions): Promise<RunResult> => {
+      // First npm is asked where its cache is. Here it has no usable answer.
+      if (args[0] === 'config') {
+        asked.push(args);
+        return emptyResult;
+      }
       calls.push({ command, args, options });
+      // npm fills its cache while it installs.
+      await mkdir(join(dir, '.npm-cache', '_cacache'), { recursive: true });
       await fakeInstall(dir);
       return emptyResult;
     };
     const status = await installKokoro(ctx, { run, platform: 'darwin' });
+    expect(asked).toEqual([['config', 'get', 'cache']]);
 
     expect(status).toMatchObject({ installed: true, version: '1.2.1', location: dir });
     // The download is in the run's record, with nothing of the change in it.
@@ -226,12 +237,17 @@ describe('installKokoro', () => {
       'ci',
       '--prefix',
       dir,
+      // npm cannot write its own cache here, so it gets one in the plugin folder.
+      '--cache',
+      join(dir, '.npm-cache'),
       '--no-audit',
       '--no-fund',
       '--ignore-scripts',
       '--include=optional',
       '--loglevel=error',
     ]);
+    // It is removed after the install, so nothing of it stays behind.
+    expect(existsSync(join(dir, '.npm-cache'))).toBe(false);
     expect(calls[0]?.options?.cwd).toBe(dir);
     const env = calls[0]?.options?.env ?? {};
     expect(env.OPENAI_API_KEY).toBeUndefined();
@@ -244,14 +260,70 @@ describe('installKokoro', () => {
     await cleanup();
   });
 
+  it('leaves npm its own cache when npm can write there, and gives it one when it cannot', async () => {
+    const installWith = async (cache: string): Promise<string[]> => {
+      const { ctx, cleanup } = await makeTestContext();
+      let args: string[] = [];
+      await installKokoro(ctx, {
+        platform: 'linux',
+        run: async (_command, given) => {
+          if (given[0] === 'config') return { ...emptyResult, stdout: `${cache}\n` };
+          args = given;
+          await fakeInstall(pluginsDir(ctx));
+          return emptyResult;
+        },
+      });
+      await cleanup();
+      return args;
+    };
+    // A folder that exists and one that npm would still have to make, in a folder that can be written.
+    expect(await installWith(tmpdir())).not.toContain('--cache');
+    expect(await installWith(join(tmpdir(), 'not-made-yet', 'npm'))).not.toContain('--cache');
+    // An answer that is no folder at all is never trusted.
+    expect(await installWith('relative/npm')).toContain('--cache');
+    expect(await installWith('')).toContain('--cache');
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    'gives npm a cache when its own lies in a folder that cannot be written',
+    async () => {
+      const { ctx, cleanup } = await makeTestContext();
+      const readOnly = join(ctx.home.home, 'read-only-home');
+      await mkdir(readOnly, { recursive: true });
+      await chmod(readOnly, 0o555);
+      let args: string[] = [];
+      try {
+        await installKokoro(ctx, {
+          platform: 'linux',
+          run: async (_command, given) => {
+            if (given[0] === 'config') return { ...emptyResult, stdout: `${join(readOnly, '.npm')}\n` };
+            args = given;
+            await fakeInstall(pluginsDir(ctx));
+            return emptyResult;
+          },
+        });
+      } finally {
+        await chmod(readOnly, 0o755);
+      }
+      expect(args.slice(args.indexOf('--cache'), args.indexOf('--cache') + 2)).toEqual([
+        '--cache',
+        join(pluginsDir(ctx), '.npm-cache'),
+      ]);
+      await cleanup();
+    },
+  );
+
   it('turns an npm failure into an error with the manual steps', async () => {
     const { ctx, cleanup } = await makeTestContext();
     const run = async (): Promise<RunResult> => {
+      await mkdir(join(pluginsDir(ctx), '.npm-cache', '_logs'), { recursive: true });
       throw new Error('npm exited with code 1: ENOTFOUND registry.npmjs.org');
     };
     const error = (await installKokoro(ctx, { run, platform: 'linux' }).catch(
       (e: unknown) => e,
     )) as MergeStoryError;
+    // A failed install leaves no half-filled cache for the next try.
+    expect(existsSync(join(pluginsDir(ctx), '.npm-cache'))).toBe(false);
     expect(error.code).toBe('TTS_FAILED');
     expect(error.message).toContain('ENOTFOUND');
     expect(error.hint).toContain('mergestory setup kokoro');

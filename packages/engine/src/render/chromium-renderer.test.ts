@@ -204,6 +204,17 @@ describe('launchWithSandbox', () => {
     expect(lines.join('\n')).toContain('does not allow the browser sandbox');
   });
 
+  it('knows the refusal in the words of the browser library too', async () => {
+    const refused = new Error(
+      'browserType.launch: Target page, context or browser has been closed\nBrowser logs:\n\nChromium sandboxing failed!\n' +
+        '================================\nTo avoid the sandboxing issue, do either of the following:',
+    );
+    const { calls, lines, launch, logger } = setup(refused, browser);
+    await expect(launchWithSandbox(launch, logger, 1000)).resolves.toBe(browser);
+    expect(calls).toEqual([true, false]);
+    expect(lines.join('\n')).toContain('does not allow the browser sandbox');
+  });
+
   it('passes any other start failure on, without a second try', async () => {
     const missing = new Error('Failed to launch: error while loading shared libraries: libnss3.so');
     const { calls, launch, logger } = setup(missing);

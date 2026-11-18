@@ -545,13 +545,21 @@ export interface GenerateResult {
   /** Seconds the run took, one decimal. Absent in results stored by 1.0.0. */
   elapsedSec?: number;
   chapters: Chapter[];
+  /** The scenes as rendered, with their real timing. Absent in results that an older version stored. */
+  scenes?: ResultScene[];
+  /** Every evidence id that the video cites or shows, in the order of first use. Absent in results that an older version stored. */
+  evidenceUsed?: string[];
   storyboardSource: 'llm' | 'agent' | 'heuristic';
   files: {
     video: string;
     poster: string | null;
     captions: string;
+    /** Absent in results that an older version stored. */
+    captionsSrt?: string;
     storyboard: string;
     watchPage: string;
+    /** The same page next to the video, which it finds by name. Absent when the folder has none. */
+    watchHtml?: string;
   };
   publish: PublishResult | null;
   notify: { commentUrl: string | null; descriptionUpdated: boolean } | null;
@@ -559,6 +567,28 @@ export interface GenerateResult {
   cost: CostReport;
   egress: EgressRecord[];
   warnings: string[];
+}
+
+/** One scene of a finished video. */
+export interface ResultScene {
+  id: string;
+  role: string;
+  title: string;
+  /** The type of its visual, for example "code". */
+  visual: string;
+  startSec: number;
+  durationSec: number;
+}
+
+/**
+ * What a run that failed leaves as result.json, once its run folder exists: the error in the form
+ * that `--json` prints, with the run it belongs to.
+ */
+export interface FailedResult {
+  ok: false;
+  runId: string;
+  runDir: string;
+  error: { code: string; message: string; hint: string | null; details: Record<string, unknown> | null };
 }
 
 /** Result of a dry run: everything that would happen, with no paid calls and no uploads. */

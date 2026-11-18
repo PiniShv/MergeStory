@@ -27,6 +27,8 @@ export const RUN_FILE = {
   captionsSrt: 'captions.srt',
   video: 'video.mp4',
   poster: 'poster.jpg',
+  /** The watch page next to the video: the page of the watch folder, which finds its files by the same names. */
+  watchHtml: 'watch.html',
   /** Everything needed to publish the run again later. */
   publishInput: 'publish-input.json',
   /** The result of the run, as printed. */
@@ -50,15 +52,20 @@ export function runFolder(runDir: string): RunFolder {
   return { ...paths, watchDir, watchPage: join(watchDir, WATCH_PAGE_FILE) };
 }
 
-/** The `files` of a result for a run folder. `poster` is null when the run has no poster image. */
+/**
+ * The `files` of a result for a run folder. `poster` is null when the run has no poster image, and
+ * a folder that an older version made has no watch.html.
+ */
 export function resultFiles(runDir: string): GenerateResult['files'] {
   const folder = runFolder(runDir);
   return {
     video: folder.video,
     poster: existsSync(folder.poster) ? folder.poster : null,
     captions: folder.captions,
+    captionsSrt: folder.captionsSrt,
     storyboard: folder.storyboard,
     watchPage: folder.watchPage,
+    ...(existsSync(folder.watchHtml) ? { watchHtml: folder.watchHtml } : {}),
   };
 }
 

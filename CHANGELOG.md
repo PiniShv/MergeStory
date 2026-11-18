@@ -6,6 +6,43 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** a run now leaves what a script or an agent needs when nobody is watching. The run folder
+  has `watch.html` next to `video.mp4`: the watch page, which plays the video beside it, so the two
+  can be uploaded together. The result has `scenes` (every scene with the type of its visual, its
+  start and its length), `evidenceUsed` (every evidence id that the video cites or shows), and the
+  paths `files.captionsSrt` and `files.watchHtml`. When a run stops before its video is made, and
+  after its folder was made, `result.json` holds the error (`ok` is `false`) instead of nothing. A
+  run in a folder that an earlier run used removes that run's result, video, poster, captions and
+  watch page once it has read and analysed the change, so a failed run never leaves the video of
+  another change there. "Unattended runs" in `docs/cli.md` describes all of it.
+- **Added:** `--max-render-seconds <sec>` and the setting `render.maxSeconds` stop a render that takes
+  too long. The run ends with the new exit code 8 (`RENDER_TIMEOUT`) and writes no `video.mp4`.
+- **Added:** `mergestory doctor --json` reports the free voice as data: `kokoro.installed`,
+  `kokoro.version` and `kokoro.modelCached`. A machine image can check once that a run has nothing
+  left to download.
+- **Changed:** `mergestory setup kokoro` also downloads the speech model (about 90 MB, or about 330 MB
+  on Apple Silicon). Before, the first video that used the voice downloaded it, so a machine could not
+  be made complete ahead of time.
+- **Fixed:** MergeStory works for a user that has no home folder, once `MERGESTORY_HOME` is set. Some
+  containers run as such a user, with `HOME` unset. Before, a run stopped with a system error while it
+  looked for a browser, even when `MERGESTORY_BROWSER_PATH` named one. Now the MergeStory home also
+  serves as the home folder of the programs that MergeStory loads and starts. Without
+  `MERGESTORY_HOME`, the error says to set it.
+- **Fixed:** the voice install works when the home folder cannot be written. npm keeps its cache
+  there. Where npm cannot write its cache, the install now gives it one in the MergeStory home and
+  removes it afterwards. A cache that npm can write is used as before.
+- **Security:** with `HOME` set to nothing or to a relative path, the search for a browser looked in
+  folders under the current folder, which is often the repository being explained. It could have
+  started a program from there. Such a `HOME` now counts as no home folder, and no relative path is
+  searched.
+- **Fixed:** on a machine that refuses the browser its sandbox, the browser starts without the sandbox
+  again, with a warning. Most containers refuse it for a user that is not root, and so does Ubuntu
+  23.10 and later. The check for that refusal did not know how the browser library words it, so such
+  a run stopped with "The browser could not be started".
+- **Fixed:** a render that is cancelled stops at once and leaves no video. It closes its browsers, and
+  it does not wait for a browser that is still starting. Before, a browser that no longer answered
+  could hold the stop up for a minute, one that never answered held it up for ever, and a stop in the
+  last step of a render could leave a finished video in the folder.
 - **Fixed:** when `mergestory generate --storyboard` or `mergestory agent render` refuses a
   storyboard, the text output now lists the blocking problems under the message, in the form that
   `validate` prints. It lists up to 40, and a list of 40 says that more problems may follow. Before,

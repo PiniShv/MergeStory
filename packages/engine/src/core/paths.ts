@@ -19,7 +19,38 @@ import { isInside } from './posix.ts';
 export function mergestoryHome(override?: string | null): string {
   const value = override ?? process.env.MERGESTORY_HOME;
   if (value?.trim()) return resolve(value);
-  return join(homedir(), '.mergestory');
+  const home = usableHome();
+  if (home === null) {
+    throw new MergeStoryError('CONFIG_INVALID', 'This user has no home folder to keep MergeStory files in.', {
+      hint: 'Set MERGESTORY_HOME to a folder that can be written.',
+    });
+  }
+  return join(home, '.mergestory');
+}
+
+/**
+ * The home folder of the user, or null when there is none to use. Some containers run as a user
+ * that has no home folder, and asking for it then fails. An empty or relative HOME counts as none
+ * too: a path under it would lead into the current folder, which is often the repository being
+ * explained.
+ */
+export function usableHome(): string | null {
+  try {
+    const home = homedir();
+    return isAbsolute(home) ? home : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A user with no usable home folder gets one for this process: the MergeStory home. The browser
+ * library asks for a home folder while it loads, and it fails, or looks in the current folder, without
+ * one. A user that has a home folder is left alone, also when that folder cannot be written: git and
+ * `gh` still read their settings there.
+ */
+export function adoptHomeFolder(home: string): void {
+  if (usableHome() === null) process.env.HOME = home;
 }
 
 export interface HomeLayout {

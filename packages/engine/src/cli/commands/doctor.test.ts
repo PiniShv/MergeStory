@@ -52,6 +52,7 @@ function report(overrides: Partial<DoctorReport> = {}): DoctorReport {
       { id: 'node', name: 'Node.js', status: 'pass', detail: 'v24.0.0', fix: null },
       { id: 'publish', name: 'Publishing', status: 'pass', detail: 'local: the run folder', fix: null },
     ],
+    kokoro: { installed: true, version: '1.2.1', modelCached: true },
     ...overrides,
   };
 }

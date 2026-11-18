@@ -67,7 +67,7 @@ folder of `--out`), so every step can be inspected. The files are listed in
 | Narrate | `src/narration` | Storyboard | `narration/*.wav`, `audio.wav`, `captions.vtt`, `captions.srt` |
 | Visuals | `src/visuals` | Storyboard + timing + repo | `render-plan.json` (real code, tokens, layout, timings) |
 | Render | `src/render`, `src/runtime` | RenderPlan + audio | `video.mp4`, `poster.jpg` |
-| Publish | `src/publish` | Video bundle | `watch/index.html` always; `publish/` for the local publisher; uploads for S3 and YouTube |
+| Publish | `src/publish` | Video bundle | `watch/index.html` and `watch.html` always; `publish/` for the local publisher; uploads for S3 and YouTube |
 | Notify | `src/github` | Published links | One PR comment or description section (opt-in) |
 
 `--dry-run` stops after validation and reports the storyboard outline, the estimated cost and
@@ -77,7 +77,9 @@ every outbound transfer the real run would make.
 `publish-input.json` (what publishing needs) and `result.json` (the result). `mergestory publish <run>`
 starts at the Publish stage from those files, with no rendering and no paid call, so a person or an
 agent can watch the local video before anything leaves the machine. If an upload fails, the rendered run
-is kept and the error says which command uploads it again.
+is kept and the error says which command uploads it again. A run that stops before its video is made, and
+after its folder was made, leaves its error in `result.json`, so a caller that only reads the folder
+learns what happened.
 
 ### How the pipeline is split
 
@@ -257,7 +259,8 @@ setup (tools, home folder, GitHub, speech, LLM, publishing, S3, YouTube).
 The watch page is one self-contained HTML file: player, captions, chapters, review checklist and
 the list of claims with their evidence. It loads nothing from third parties, has a strict content
 security policy, and escapes all text. It is written to `watch/index.html` in every run, whichever
-publisher you use.
+publisher you use, and again as `watch.html` next to the video, so a caller can upload the page together
+with the video.
 
 A PR comment or description section is written only after a publish that others can open: a link
 to a file on this machine is never posted.

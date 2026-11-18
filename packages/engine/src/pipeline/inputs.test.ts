@@ -8,7 +8,7 @@ import type { ContextInputs } from '../core/types.ts';
 import { makePng } from '../testing/png.ts';
 import { sampleStoryboard } from '../testing/sample-change.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
-import { buildContextInputs, checkTestResults, unusedScreenshotWarning } from './inputs.ts';
+import { buildContextInputs, checkTestResults, evidenceUsed, unusedScreenshotWarning } from './inputs.ts';
 
 let dir: string;
 beforeEach(async () => {
@@ -215,5 +215,70 @@ describe('unusedScreenshotWarning', () => {
     expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'llm')).toBe(
       'The screenshot SS1 ("Dashboard") is not shown in the video.',
     );
+  });
+});
+
+describe('evidenceUsed', () => {
+  const panel = (kind: 'bullets' | 'screenshot', screenshotId: string | null) => ({
+    label: 'Before',
+    kind,
+    codeRef: null,
+    bullets: kind === 'bullets' ? ['It failed'] : [],
+    terminal: [],
+    screenshotId,
+  });
+  const scene = (id: string, evidence: string[][], visual: unknown) => ({
+    id,
+    role: 'under-the-hood',
+    title: 'A scene',
+    narration: evidence.map((ids) => ({ text: 'A line.', evidence: ids })),
+    visual,
+    visualDescription: 'A picture.',
+    transition: 'fade',
+    targetSeconds: null,
+  });
+  const storyboard = {
+    version: 1,
+    title: 'Retry',
+    summary: 'A change.',
+    style: 'hybrid',
+    language: 'en',
+    scenes: [
+      scene(
+        's1',
+        [
+          ['TASK', 'F1'],
+          ['F1', 'S2'],
+        ],
+        { type: 'screenshot', screenshotId: 'SS2', caption: null },
+      ),
+      scene('s2', [['F1.H1']], {
+        type: 'checklist',
+        items: [
+          { title: 'Check', detail: 'It', severity: 'low', ref: null, beat: 0, evidence: ['R1', 'TASK'] },
+        ],
+      }),
+      scene('s3', [['S2']], {
+        type: 'before-after',
+        // A panel that is not a screenshot panel shows no screenshot, whatever id it still holds.
+        before: panel('bullets', 'SS9'),
+        after: panel('screenshot', 'SS1'),
+        caption: null,
+      }),
+    ],
+    reviewChecklist: [
+      { title: 'Look', detail: 'Here', severity: 'info', ref: null, evidence: ['NOTES', 'F1'] },
+    ],
+    uncertainties: [],
+  } as unknown as Storyboard;
+
+  it('lists every cited id once, in the order of first use, then the screenshots that are only shown', () => {
+    expect(evidenceUsed(storyboard)).toEqual(['TASK', 'F1', 'S2', 'F1.H1', 'R1', 'NOTES', 'SS2', 'SS1']);
+  });
+
+  it('names a shown screenshot where it is cited, not a second time', () => {
+    const cited = structuredClone(storyboard);
+    cited.scenes[0]?.narration[0]?.evidence.unshift('SS2');
+    expect(evidenceUsed(cited)).toEqual(['SS2', 'TASK', 'F1', 'S2', 'F1.H1', 'R1', 'NOTES', 'SS1']);
   });
 });

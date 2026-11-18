@@ -21,7 +21,14 @@ import { checkLlm } from './llm.ts';
 import { checkPublish } from './publish.ts';
 import { checkSpeech } from './speech.ts';
 import { checkBrowser, checkFfmpeg, checkGit, checkNode } from './tools.ts';
-import type { CheckStatus, DoctorCheck, DoctorContext, DoctorDeps, DoctorReport } from './types.ts';
+import type {
+  CheckStatus,
+  DoctorCheck,
+  DoctorContext,
+  DoctorDeps,
+  DoctorReport,
+  KokoroState,
+} from './types.ts';
 
 export { formatDoctor } from './format.ts';
 export type { DoctorReport } from './types.ts';
@@ -73,6 +80,11 @@ export async function runDoctor(options: RunDoctorOptions): Promise<DoctorReport
     online,
   };
 
+  // Asked for a second time here (the speech check asks too): it only reads a few small files.
+  const kokoro: Promise<KokoroState> = deps.kokoroStatus(config).then(
+    ({ installed, version, modelCached }) => ({ installed, version, modelCached }),
+    () => ({ installed: false, version: null, modelCached: false }),
+  );
   const groups = await Promise.all([
     guard('node', 'Node.js', () => checkNode(c)),
     guard('git', 'git', () => checkGit(c)),
@@ -101,5 +113,5 @@ export async function runDoctor(options: RunDoctorOptions): Promise<DoctorReport
 
   const summary: Record<CheckStatus, number> = { pass: 0, warn: 0, fail: 0 };
   for (const item of checks) summary[item.status] += 1;
-  return { ok: summary.fail === 0, online, version: ENGINE_VERSION, summary, checks };
+  return { ok: summary.fail === 0, online, version: ENGINE_VERSION, summary, checks, kokoro: await kokoro };
 }

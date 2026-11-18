@@ -41,3 +41,32 @@ jobs:
       - name: Check the package contents
         run: npm pack --dry-run
         working-directory: packages/engine
+      - name: Render the demo
+        timeout-minutes: 8
+        run: |
+          ./examples/demo/create-demo-repo.sh "$RUNNER_TEMP/demo"
+          node packages/engine/dist/cli/main.js generate "$RUNNER_TEMP/demo" --base main --head feature/retry \
+            --task-file examples/demo/task.md --notes-file examples/demo/notes.md \
+            --tests-file examples/demo/tests.json --storyboard examples/demo/storyboard.json \
+            --tts none --quality draft --publish local --max-render-seconds 300 \
+            --out "$RUNNER_TEMP/demo-video" --json > "$RUNNER_TEMP/demo-stdout.json"
+          # The files a caller uploads have fixed names, and result.json says what the run made.
+          for name in video.mp4 poster.jpg captions.vtt captions.srt watch.html result.json; do
+            test -s "$RUNNER_TEMP/demo-video/$name" || { echo "missing: $name"; exit 1; }
+          done
+          node -e '
+            const fs = require("node:fs");
+            const dir = process.argv[1];
+            const result = JSON.parse(fs.readFileSync(dir + "/result.json", "utf8"));
+            const size = fs.statSync(dir + "/video.mp4").size;
+            console.log("rendered", result.durationSec, "s of video in", result.elapsedSec, "s,", size, "bytes");
+            const scenes = result.scenes ?? [];
+            const used = result.evidenceUsed ?? [];
+            if (result.ok !== true || scenes.length !== 9 || !used.includes("T1")) {
+              console.error("unexpected result", { ok: result.ok, scenes: scenes.length, evidenceUsed: used });
+              process.exit(1);
+            }
+          ' "$RUNNER_TEMP/demo-video"
+        env:
+          MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
+          MERGESTORY_HOME: ${{ runner.temp }}/mergestory-home

@@ -67,7 +67,8 @@ ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or 
 | `--budget <usd>` | The most this run may spend on MergeStory's paid model and voice calls, checked against estimates (default 0.25). It does not cap your own usage, storage or CI. |
 | `--dry-run` | Plan only: scenes, a high estimate of the cost and what would leave the machine. Nothing is rendered or sent. |
 | `--async` | Run in the background; prints a job id. |
-| `--out <dir>` | Write the run files to this folder (outside the repository). |
+| `--out <dir>` | Write the run files to this folder (outside the repository). The names are fixed: `video.mp4`, `captions.vtt`, `captions.srt`, `poster.jpg`, `watch.html` and `result.json`. |
+| `--max-render-seconds <sec>` | Stop a render that takes longer than this (exit code 8, no video). |
 
 ## JSON output
 
@@ -108,6 +109,12 @@ the engine removed or changed on its own.
 
 Failure (any command): `{ "ok": false, "error": { "code": "GROUNDING_FAILED", "message": "...", "hint": "...", "details": { ... } } }`.
 
+An engine newer than 1.6.0 also gives `scenes` (each with `id`, `role`, `title`, the type of its
+`visual`, `startSec` and `durationSec`) and `evidenceUsed` (every evidence id that the video cites or
+shows) in the result. Its `result.json` in the run folder holds the result, or the failure above with
+`runId` and `runDir` when the run stopped before its video was made. Share only the video, the poster,
+the captions and `watch.html`: the other files of a run folder hold code and local paths.
+
 ## Exit codes
 
 | Code | Meaning | What to do |
@@ -120,4 +127,5 @@ Failure (any command): `{ "ok": false, "error": { "code": "GROUNDING_FAILED", "m
 | 5 | A service failed (GitHub, LLM, speech, upload) | Read the hint; network or credentials are the usual cause. With `ok: true`, the video is published but the pull request was not updated (`--comment` or `--update-description`). |
 | 6 | FFmpeg or the browser is missing | For FFmpeg, ask the user and install it (see the skill, section 1). For the browser, show the hint. |
 | 7 | Blocked to protect a private repository | Keep links private, or ask the user. |
+| 8 | Rendering took longer than the time limit of this machine (`render.maxSeconds`); no video was written | Try once with `--quality draft`, then tell the user. |
 | 130 | Cancelled | Nothing to do. |
