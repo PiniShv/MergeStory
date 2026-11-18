@@ -257,8 +257,10 @@ function conclusionScene(b: Build, review: Pick<Review, 'firstSubject' | 'firstE
   if (level.conclusionLines >= 2 || reported?.failed) {
     const tests = testsLine(ctx);
     if (reported) {
-      lines.push(reported.line);
-      points.push({ text: reported.point, beat: lines.length - 1 });
+      // The proof scene may have said the line already: the list keeps the point, the voice does not repeat it.
+      const said = b.used.has(reported.line.text);
+      if (!said) lines.push(reported.line);
+      points.push({ text: reported.point, beat: said ? 0 : lines.length - 1 });
     } else if (tests) {
       lines.push(tests);
       points.push({ text: tests.text.replace(/\.$/, ''), beat: lines.length - 1 });

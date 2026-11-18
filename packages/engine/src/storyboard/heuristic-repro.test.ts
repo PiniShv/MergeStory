@@ -152,6 +152,14 @@ describe('the proof scene of the offline storyboard', () => {
     expect(proof.visual).toEqual({ type: 'repro', steps: [{ step: 4, beat: 0 }] });
   });
 
+  it('says the reported test line once: the conclusion does not repeat it', () => {
+    const fx = withRepro(fixed, {
+      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci' }],
+    });
+    const all = make(fx, 150).scenes.flatMap((s) => lines(s));
+    expect(all.filter((text) => text.includes('reported that npm test passed'))).toHaveLength(1);
+  });
+
   it('has no proof scene when no step is marked as fixed, even with test results', () => {
     const fx = withRepro(repro(step('Open it'), step('Look', 'bug')), {
       tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci' }],

@@ -51,6 +51,8 @@ function reproScene(
     .filter((entry): entry is Shown => entry !== null);
   if (shown.length === 0) return null;
   const lines = [...shown.map((entry) => entry.line), ...(closing ? [closing] : [])];
+  // The conclusion must not say the same sentence again.
+  if (closing) b.used.add(closing.text);
   return scene(
     role,
     title,

@@ -617,7 +617,7 @@ folder you give to `--out`. A run id looks like `20261104-101500-a1b2`.
 | `audio.wav` | The narration track. Not written when the video has no voice and no music. |
 | `captions.vtt`, `captions.srt` | The captions. |
 | `render-plan.json` | The plan the renderer turned into frames: the real code, tokens, layout and timing. |
-| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, and `s-<scene number>.before` and `.after` for the panels of a before-after scene). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
+| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, `s-<scene number>.before` and `.after` for the panels of a before-after scene, and `s-<scene number>.step-<step>` for a step of a reproduction). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
 | `video.mp4`, `poster.jpg` | The video and its poster image. |
 | `watch.html` | The watch page, next to the video. It is the page of `watch/`. It finds `video.mp4` and `poster.jpg` by name and carries the captions itself, so it still plays when you upload it together with those files. |
 | `watch/` | The watch page (`index.html`) with copies of the video, poster and captions. Always written. |
