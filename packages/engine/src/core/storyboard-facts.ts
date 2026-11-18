@@ -47,6 +47,8 @@ export function beatHolders(visual: Visual): { beat: number }[] {
     case 'checklist':
     case 'bullets':
       return visual.items;
+    case 'repro':
+      return visual.steps;
     case 'screenshot':
     case 'recording':
       return visual.highlights;

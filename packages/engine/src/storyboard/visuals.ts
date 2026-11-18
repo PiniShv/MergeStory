@@ -111,6 +111,7 @@ export function applyVisualLimits(visual: Visual, p: string, run: Run): void {
       break;
     case 'files':
     case 'code':
+    case 'repro':
       break;
     default:
       exhaustive(visual);
@@ -159,6 +160,7 @@ export function filterVisualEvidence(visual: Visual, p: string, run: Run): void 
     case 'bullets':
     case 'screenshot':
     case 'recording':
+    case 'repro':
     case 'summary':
       break;
     default:
@@ -245,6 +247,9 @@ export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner)
     case 'recording':
       visual.caption = cleaner.optional(visual.caption, `${p}.caption`);
       visual.highlights = cleanHighlightLabels(visual.highlights, `${p}.highlights`, cleaner);
+      break;
+    case 'repro':
+      // A repro visual holds only step numbers; the text comes from the reproduction and is masked when the plan is built.
       break;
     case 'summary':
       visual.points = cleaner.keepTexts(visual.points, `${p}.points`);
@@ -436,6 +441,54 @@ function checkFocus(visual: { focus: PictureBox | null }, path: string, run: Run
   if (visual.focus) visual.focus = repairBox(visual.focus, LIMITS.minFocusSide, 'focus', path, run);
 }
 
+/**
+ * The steps of a repro visual: only steps of the supplied reproduction, each once, in order, at most
+ * 6. Every repair lands on a list that passes the same check again, so a second validation changes nothing.
+ */
+function checkReproSteps(visual: Extract<Visual, { type: 'repro' }>, vp: string, run: Run): void {
+  const repro = run.repro;
+  if (!repro) {
+    run.error(
+      `${vp}.steps`,
+      'repro-unknown',
+      'no reproduction was supplied, so use another visual; pass --repro-file (repro.json for the agent commands) to supply one',
+    );
+    return;
+  }
+  const count = repro.steps.length;
+  const seen = new Set<number>();
+  visual.steps = visual.steps.filter(({ step }, index) => {
+    if (step < 1 || step > count) {
+      run.warn(
+        `${vp}.steps[${index}].step`,
+        'repro-step-unknown',
+        `step ${step} is not a step of the supplied reproduction, which has ${count} step${count === 1 ? '' : 's'}; it was dropped`,
+      );
+      run.fix(`${vp}.steps[${index}]`, `dropped step ${step} because the reproduction has no such step`);
+      return false;
+    }
+    if (seen.has(step)) {
+      run.fix(`${vp}.steps[${index}]`, `dropped step ${step} because it is listed twice`);
+      return false;
+    }
+    seen.add(step);
+    return true;
+  });
+  if (visual.steps.length === 0) {
+    run.error(
+      `${vp}.steps`,
+      'repro-unknown',
+      `the repro visual has no step of the supplied reproduction; list steps from 1 to ${count}, or use another visual`,
+    );
+    return;
+  }
+  if (visual.steps.some(({ step }, index) => index > 0 && step < (visual.steps[index - 1]?.step ?? 0))) {
+    visual.steps.sort((a, b) => a.step - b.step);
+    run.fix(`${vp}.steps`, 'put the steps in the order of the reproduction');
+  }
+  visual.steps = trimList(visual.steps, LIMITS.maxReproSteps, `${vp}.steps`, 'steps', run);
+}
+
 /** Internal consistency of one visual after the other steps: dangling ids, empty lists, screenshots, addresses. */
 export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner: TextCleaner): void {
   const visual = scene.visual;
@@ -508,6 +561,9 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
       checkFocus(visual, `${vp}.focus`, run);
       break;
     }
+    case 'repro':
+      checkReproSteps(visual, vp, run);
+      break;
     case 'before-after': {
       let empty = false;
       for (const name of ['before', 'after'] as const) {

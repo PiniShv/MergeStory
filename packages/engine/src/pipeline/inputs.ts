@@ -12,7 +12,15 @@ import { isRecord } from '../core/json.ts';
 import { probeRecording, shownName } from '../core/media-probe.ts';
 import { maskPrivate, type PrivateMaskOptions } from '../core/secrets.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
-import type { ContextInputs, RecordingInput, TestEvidence } from '../core/types.ts';
+import { stripInvisible } from '../core/text.ts';
+import {
+  type ContextInputs,
+  REPRO_RESULTS,
+  type RecordingInput,
+  type ReproFile,
+  type ReproInput,
+  type TestEvidence,
+} from '../core/types.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import type { ContextOptions } from './types.ts';
 
@@ -73,6 +81,96 @@ export function checkTestResults(value: unknown, label = 'tests'): Omit<TestEvid
     const issue = parsed.error.issues.find((i) => i.code === 'unrecognized_keys') ?? parsed.error.issues[0];
     return fail(`entry ${index + 1} ${issue?.message ?? 'is not valid.'}`);
   });
+}
+
+/** Limits of a reproduction file. */
+export const MAX_REPRO_STEPS = 12;
+export const MAX_REPRO_TITLE = 120;
+export const MAX_REPRO_ENVIRONMENT = 200;
+export const MAX_REPRO_STEP_TEXT = 200;
+const REPRO_KEYS = ['title', 'environment', 'steps'];
+const REPRO_STEP_KEYS = ['text', 'screenshot', 'recording', 'result'];
+const REPRO_HINT =
+  'Expected {"title": "...", "environment": "...", "steps": [{"text": "...", "screenshot": "SS1", "result": "bug"}]}. "environment", "screenshot", "recording" and "result" are optional. A step has a screenshot or a recording, not both. "result" is one of: expected, actual, bug, fixed.';
+
+/**
+ * Check a reproduction, strictly: a typo in a field name or a wrong type must never turn into a made-up
+ * step. `label` names the input in the error ("--repro-file"). Whether a screenshot or recording id was
+ * supplied is checked later, in buildContextInputs, where the ids are known.
+ */
+export function checkRepro(value: unknown, label = 'repro'): ReproFile {
+  const fail = (message: string): never => {
+    throw new MergeStoryError('USAGE', `${label}: ${message}`, { hint: REPRO_HINT });
+  };
+  const text = (field: unknown, what: string, max: number): string => {
+    if (typeof field !== 'string' || field.trim() === '') return fail(`${what} needs a non-empty text.`);
+    // Hidden and reordering characters are removed, as they are from storyboard text.
+    const trimmed = stripInvisible(field).trim();
+    if (trimmed === '') return fail(`${what} needs a non-empty text.`);
+    if (trimmed.length > max) return fail(`${what} is ${trimmed.length} characters, the limit is ${max}.`);
+    return trimmed;
+  };
+  if (!isRecord(value)) return fail('expected a JSON object.');
+  const unknown = Object.keys(value).find((key) => !REPRO_KEYS.includes(key));
+  if (unknown !== undefined) return fail(`unknown field "${unknown}". Allowed: ${REPRO_KEYS.join(', ')}.`);
+  const file: ReproFile = { title: text(value.title, '"title"', MAX_REPRO_TITLE), steps: [] };
+  if (value.environment !== undefined)
+    file.environment = text(value.environment, '"environment"', MAX_REPRO_ENVIRONMENT);
+  const steps = value.steps;
+  if (!Array.isArray(steps) || steps.length === 0) return fail('"steps" needs a list of 1 to 12 steps.');
+  if (steps.length > MAX_REPRO_STEPS)
+    return fail(`${steps.length} steps is too many (at most ${MAX_REPRO_STEPS}).`);
+  for (const [index, raw] of steps.entries()) {
+    const at = `step ${index + 1}`;
+    if (!isRecord(raw)) return fail(`${at} is not an object.`);
+    const extra = Object.keys(raw).find((key) => !REPRO_STEP_KEYS.includes(key));
+    if (extra !== undefined)
+      return fail(`${at} has unknown field "${extra}". Allowed: ${REPRO_STEP_KEYS.join(', ')}.`);
+    const step: ReproFile['steps'][number] = { text: text(raw.text, `${at} "text"`, MAX_REPRO_STEP_TEXT) };
+    if (raw.screenshot !== undefined) step.screenshot = text(raw.screenshot, `${at} "screenshot"`, 20);
+    if (raw.recording !== undefined) step.recording = text(raw.recording, `${at} "recording"`, 20);
+    if (step.screenshot !== undefined && step.recording !== undefined)
+      return fail(`${at} has both a screenshot and a recording. Use one thumbnail for each step.`);
+    if (raw.result !== undefined) {
+      const result = REPRO_RESULTS.find((name) => name === raw.result);
+      if (result === undefined)
+        return fail(`${at} has result "${String(raw.result)}". Use one of: ${REPRO_RESULTS.join(', ')}.`);
+      step.result = result;
+    }
+    file.steps.push(step);
+  }
+  return file;
+}
+
+/** The reproduction with its captures made known: each step names a screenshot or recording that was supplied to this command. */
+function reproInput(
+  options: ReproFile,
+  screenshots: readonly { id: string }[],
+  recordings: readonly { id: string }[],
+): ReproInput {
+  const file = checkRepro(options);
+  const supplied = (kind: string, id: string | undefined, known: readonly { id: string }[], at: string) => {
+    if (id === undefined) return null;
+    if (known.some((item) => item.id === id)) return id;
+    const have = known.map((item) => item.id).join(', ');
+    throw new MergeStoryError(
+      'USAGE',
+      `The reproduction ${at} uses ${kind} ${id}, which was not supplied to this command${have ? ` (supplied: ${have})` : ''}.`,
+      {
+        hint: `Pass the ${kind} to this command first (--${kind}; for the agent commands, the file in the work folder), or take the capture off the step.`,
+      },
+    );
+  };
+  return {
+    title: file.title,
+    environment: file.environment ?? null,
+    steps: file.steps.map((step, index) => ({
+      text: step.text,
+      screenshotId: supplied('screenshot', step.screenshot, screenshots, `step ${index + 1}`),
+      recordingId: supplied('recording', step.recording, recordings, `step ${index + 1}`),
+      result: step.result ?? null,
+    })),
+  };
 }
 
 function normalizeContextText(value: string | null | undefined, what: string): string | null {
@@ -218,14 +316,25 @@ export async function buildContextInputs(
     tests,
     screenshots,
     recordings,
+    repro: options?.repro ? reproInput(options.repro, screenshots, recordings) : null,
   };
 }
 
 /** Ids of the screenshots and recordings that a storyboard shows. */
-export function shownMedia(storyboard: Storyboard): { screenshots: Set<string>; recordings: Set<string> } {
+export function shownMedia(
+  storyboard: Storyboard,
+  repro: ReproInput | null = null,
+): { screenshots: Set<string>; recordings: Set<string> } {
   const screenshots = new Set<string>();
   const recordings = new Set<string>();
   for (const { visual } of storyboard.scenes) {
+    if (visual.type === 'repro') {
+      for (const { step } of visual.steps) {
+        const shown = repro?.steps[step - 1];
+        if (shown?.screenshotId) screenshots.add(shown.screenshotId);
+        if (shown?.recordingId) recordings.add(shown.recordingId);
+      }
+    }
     if (visual.type === 'screenshot') screenshots.add(visual.screenshotId);
     if (visual.type === 'recording') recordings.add(visual.recordingId);
     if (visual.type === 'before-after') {
@@ -242,7 +351,7 @@ export function shownMedia(storyboard: Storyboard): { screenshots: Set<string>; 
  * Every evidence id that a storyboard cites or shows: the cited ids in the order of first use, then
  * the screenshots and recordings that are shown and not cited. After the checks, every id in it exists.
  */
-export function evidenceUsed(storyboard: Storyboard): string[] {
+export function evidenceUsed(storyboard: Storyboard, repro: ReproInput | null = null): string[] {
   const ids = new Set<string>();
   const walk = (value: unknown): void => {
     if (Array.isArray(value)) {
@@ -255,7 +364,7 @@ export function evidenceUsed(storyboard: Storyboard): string[] {
     }
   };
   walk(storyboard);
-  const shown = shownMedia(storyboard);
+  const shown = shownMedia(storyboard, repro);
   for (const id of [...shown.screenshots, ...shown.recordings]) ids.add(id);
   return [...ids];
 }
@@ -271,7 +380,7 @@ export function unusedScreenshotWarning(
   source: 'llm' | 'agent' | 'heuristic',
   privacy: PrivateMaskOptions,
 ): string | null {
-  const shown = shownMedia(storyboard);
+  const shown = shownMedia(storyboard, inputs.repro);
   const sentence = (
     items: readonly { id: string; caption: string }[],
     one: string,
@@ -284,9 +393,11 @@ export function unusedScreenshotWarning(
       .map((item) => (item.caption ? `${item.id} ("${maskPrivate(item.caption, privacy)}")` : item.id))
       .join(', ');
     const reason =
-      source === 'heuristic'
-        ? ` The offline storyboard never uses ${plural}: write the storyboard yourself (--storyboard) or use --llm to show them.`
-        : '';
+      source !== 'heuristic'
+        ? ''
+        : inputs.repro
+          ? ` The offline storyboard shows only the ${plural} that a step of the reproduction names: write the storyboard yourself (--storyboard) or use --llm to show the others.`
+          : ` The offline storyboard never uses ${plural}: write the storyboard yourself (--storyboard) or use --llm to show them.`;
     return `${items.length === 1 ? one : many} ${names} ${items.length === 1 ? 'is' : 'are'} not shown in the video.${reason}`;
   };
   const parts = [

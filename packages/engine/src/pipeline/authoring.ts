@@ -67,8 +67,8 @@ export async function prepareAuthoring(
 
 /**
  * The text of AUTHORING.md. Steps 3 and 4 show `validate` and `generate` with the source and flags
- * that `analyze` ran with. Task, notes, test results, screenshots and recordings are what create the ids TASK,
- * NOTES, T1, SS1 and RC1, so a command that leaves them out would remove every line that cites them.
+ * that `analyze` ran with. Task, notes, test results, reproduction, screenshots and recordings are what create the ids TASK,
+ * NOTES, T1, REPRO, SS1 and RC1, so a command that leaves them out would remove every line that cites them.
  */
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
@@ -106,7 +106,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       : [
           '',
           'Give both commands the same source and the same `--base`, `--head`, `--task-file`, `--notes-file`, `--tests-file`,',
-          '`--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, SS1 and RC1. Without them those ids do not',
+          '`--repro-file`, `--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1. Without them those ids do not',
           'exist, and lines that cite only them are removed.',
         ]),
     '',
@@ -117,6 +117,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       ? [
           'Real screenshots (PNG or JPEG) go in the `screenshots/` folder here. They become SS1, SS2 and so on.',
           'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
+          'The steps that show the bug go in `repro.json` here. They become REPRO, REPRO.1, REPRO.2 and so on.',
         ]
       : []),
     '',

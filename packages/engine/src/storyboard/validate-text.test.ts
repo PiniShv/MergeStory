@@ -194,6 +194,39 @@ describe('names that are not in the change', () => {
         { linkedIssues: [{ title: 'Add purgeLegacyCache', body: 'It should drop old entries.' }] },
         'IS1',
       ],
+      [
+        'a step of the reproduction',
+        {
+          inputs: {
+            repro: {
+              title: 'Basket',
+              environment: null,
+              steps: [
+                {
+                  text: 'Add purgeLegacyCache() to drop old entries.',
+                  screenshotId: null,
+                  recordingId: null,
+                  result: null,
+                },
+              ],
+            },
+          },
+        },
+        'REPRO.1',
+      ],
+      [
+        'the title of the reproduction',
+        {
+          inputs: {
+            repro: {
+              title: 'purgeLegacyCache drops old entries',
+              environment: null,
+              steps: [{ text: 'Open it', screenshotId: null, recordingId: null, result: null }],
+            },
+          },
+        },
+        'REPRO',
+      ],
     ];
 
     it.each(sources)(
@@ -348,6 +381,31 @@ describe('web addresses and hidden characters', () => {
     expect(result.errors).toEqual([]);
     const visual = result.storyboard!.scenes[2]!.visual;
     expect(visual.type === 'terminal' && visual.lines).toHaveLength(3);
+    expect(codes(result.warnings)).not.toContain('url-in-text');
+  });
+
+  it('allows a host that only the reproduction names', async () => {
+    const fx = retryFixture({
+      inputs: {
+        repro: {
+          title: 'Basket',
+          environment: null,
+          steps: [
+            {
+              text: 'Open https://shop.test-only.dev/basket',
+              screenshotId: null,
+              recordingId: null,
+              result: null,
+            },
+          ],
+        },
+      },
+    });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).narration[0].text =
+      'The retry code is small. Open https://shop.test-only.dev/basket to see it.';
+    const result = await run(sb, fx);
+    expect(result.storyboard!.scenes[2]!.narration[0]!.text).toContain('shop.test-only.dev');
     expect(codes(result.warnings)).not.toContain('url-in-text');
   });
 

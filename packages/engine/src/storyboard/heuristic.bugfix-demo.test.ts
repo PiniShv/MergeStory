@@ -13,7 +13,7 @@ import { analyze, targetDuration } from '../analyzer/index.ts';
 import { buildContext } from '../cli/inputs.ts';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
-import { buildContextInputs, unusedScreenshotWarning } from '../pipeline/inputs.ts';
+import { buildContextInputs, checkRepro, unusedScreenshotWarning } from '../pipeline/inputs.ts';
 import { locateBrowser } from '../render/browser.ts';
 import { LocalGitSource } from '../sources/local.ts';
 import { expectCleanStoryboard } from '../testing/analysed.ts';
@@ -74,6 +74,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
             moment: 'after',
           },
         ],
+        repro: checkRepro(JSON.parse(await readFile(join(DEMO, 'repro.json'), 'utf8')), '--repro-file'),
       },
       directory,
       ctx.config,
@@ -144,12 +145,25 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     }
   });
 
-  it('still gets an offline storyboard, which says it does not show the recordings', async () => {
+  it('reads the reproduction steps from repro.json, with the captures that they name', () => {
+    expect(deps.inputs.repro?.steps.map((s) => [s.recordingId, s.screenshotId, s.result])).toEqual([
+      [null, null, null],
+      [null, null, null],
+      ['RC1', null, 'bug'],
+      [null, 'SS2', 'fixed'],
+    ]);
+  });
+
+  it('still gets an offline storyboard, which shows the reproduction but not the other captures', async () => {
     const board = heuristicStoryboard(deps.changeSet, deps.analysis, deps.inputs, deps.config, targetSec);
     expect(board.scenes.some((s) => s.visual.type === 'recording')).toBe(false);
+    expect(board.scenes.map((s) => s.role).filter((r) => r === 'reproduction' || r === 'proof')).toEqual([
+      'reproduction',
+      'proof',
+    ]);
     expect(await expectCleanStoryboard(deps, board)).toEqual([]);
-    expect(unusedScreenshotWarning(board, deps.inputs, 'heuristic', { maskEmails: true })).toContain(
-      'The recordings RC1',
-    );
+    const warning = unusedScreenshotWarning(board, deps.inputs, 'heuristic', { maskEmails: true });
+    expect(warning).toContain('The recording RC2');
+    expect(warning).not.toContain('RC1');
   });
 });

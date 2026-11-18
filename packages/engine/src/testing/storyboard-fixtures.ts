@@ -321,6 +321,7 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     tests: [],
     screenshots: [],
     recordings: [],
+    repro: null,
     ...spec.inputs,
   };
 
@@ -382,6 +383,17 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     evidence.push({ id: s.id, kind: 'screenshot', label: s.caption, ref: null, url: null });
   for (const r of inputs.recordings)
     evidence.push({ id: r.id, kind: 'recording', label: r.caption, ref: null, url: null });
+  if (inputs.repro) {
+    evidence.push({ id: 'REPRO', kind: 'repro', label: inputs.repro.title, ref: null, url: null });
+    for (const [i, step] of inputs.repro.steps.entries())
+      evidence.push({
+        id: `REPRO.${i + 1}`,
+        kind: 'repro',
+        label: `Step ${i + 1}: ${step.text}`,
+        ref: null,
+        url: null,
+      });
+  }
   evidence.push({ id: 'REPO', kind: 'repo', label: 'Repository structure', ref: null, url: null });
 
   const analysis: Analysis = {

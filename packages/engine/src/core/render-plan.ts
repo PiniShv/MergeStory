@@ -301,6 +301,25 @@ export interface RecordingResolved {
   focus?: { x: number; y: number; w: number; h: number };
 }
 
+/** One picture of a reproduction step: a screenshot, or the last picture of a recording (a frame set of one frame). */
+export type ReproThumb =
+  | { kind: 'screenshot'; image: ResolvedImage }
+  | { kind: 'recording'; frames: FrameSet };
+
+export interface ReproResolved {
+  type: 'repro';
+  title: string;
+  environment: string | null;
+  steps: {
+    /** The number of the step in the reproduction, from 1. */
+    number: number;
+    text: string;
+    result: 'expected' | 'actual' | 'bug' | 'fixed' | null;
+    beat: number;
+    thumb: ReproThumb | null;
+  }[];
+}
+
 export interface SummaryResolved {
   type: 'summary';
   points: TextBeat[];
@@ -321,6 +340,7 @@ export type ResolvedVisual =
   | BulletsResolved
   | ScreenshotResolved
   | RecordingResolved
+  | ReproResolved
   | SummaryResolved;
 
 // ---------------------------------------------------------------------------

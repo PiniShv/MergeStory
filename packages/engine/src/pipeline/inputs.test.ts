@@ -11,7 +11,13 @@ import { makeClip } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { sampleStoryboard } from '../testing/sample-change.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
-import { buildContextInputs, checkTestResults, evidenceUsed, unusedScreenshotWarning } from './inputs.ts';
+import {
+  buildContextInputs,
+  checkRepro,
+  checkTestResults,
+  evidenceUsed,
+  unusedScreenshotWarning,
+} from './inputs.ts';
 
 let dir: string;
 beforeEach(async () => {
@@ -207,6 +213,7 @@ describe('unusedScreenshotWarning', () => {
     notes: null,
     tests: [],
     recordings: [],
+    repro: null,
     screenshots: Array.from({ length: count }, (_, i) => ({
       id: `SS${i + 1}`,
       path: `/x/${i}.png`,
@@ -287,6 +294,7 @@ describe('unusedScreenshotWarning for recordings', () => {
     tests: [],
     screenshots: [],
     recordings,
+    repro: null,
   });
   const showing = (visual: Storyboard['scenes'][number]['visual']): Storyboard => {
     const storyboard = sampleStoryboard();
@@ -360,7 +368,7 @@ describe('unusedScreenshotWarning for recordings', () => {
 describe('unusedScreenshotWarning masks captions', () => {
   const key = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
   const caption = `Sent to jane.doe@example.com with ${key}`;
-  const base = { task: null, notes: null, tests: [] };
+  const base = { task: null, notes: null, tests: [], repro: null };
   const screenshots = [{ id: 'SS1', path: '/x/a.png', caption, moment: 'other' as const }];
   const recordings = [
     {
@@ -573,6 +581,307 @@ describe('buildContextInputs: recordings', () => {
       buildContextInputs({ recordings: [rec('folder.mp4')] }, dir, testConfig()),
     ).rejects.toMatchObject({
       message: expect.stringContaining('not a regular file'),
+    });
+  });
+});
+
+describe('checkRepro', () => {
+  const step = (extra: Record<string, unknown> = {}) => ({
+    text: 'Open the page',
+    ...extra,
+  });
+  const valid = { title: 'Basket count is wrong', steps: [step()] };
+  const message = (value: unknown): string | null => {
+    try {
+      checkRepro(value, '--repro-file');
+    } catch (err) {
+      expect(err).toMatchObject({ code: 'USAGE' });
+      return (err as Error).message;
+    }
+    return null;
+  };
+
+  it('keeps what was written and trims the texts', () => {
+    expect(
+      checkRepro({
+        title: '  Basket count  ',
+        environment: 'Chrome 130',
+        steps: [
+          step({ screenshot: 'SS2', result: 'bug' }),
+          step({ recording: 'RC1', result: 'fixed' }),
+          step(),
+        ],
+      }),
+    ).toEqual({
+      title: 'Basket count',
+      environment: 'Chrome 130',
+      steps: [
+        { text: 'Open the page', screenshot: 'SS2', result: 'bug' },
+        { text: 'Open the page', recording: 'RC1', result: 'fixed' },
+        { text: 'Open the page' },
+      ],
+    });
+    expect(checkRepro(valid)).toEqual(valid);
+  });
+
+  it('says what is wrong, and names the step', () => {
+    expect(message('text')).toBe('--repro-file: expected a JSON object.');
+    expect(message({ steps: valid.steps })).toBe('--repro-file: "title" needs a non-empty text.');
+    expect(message({ ...valid, title: '  ' })).toBe('--repro-file: "title" needs a non-empty text.');
+    expect(message({ ...valid, title: 'x'.repeat(121) })).toBe(
+      '--repro-file: "title" is 121 characters, the limit is 120.',
+    );
+    expect(message({ ...valid, environment: 'x'.repeat(201) })).toBe(
+      '--repro-file: "environment" is 201 characters, the limit is 200.',
+    );
+    expect(message({ ...valid, extra: 1 })).toBe(
+      '--repro-file: unknown field "extra". Allowed: title, environment, steps.',
+    );
+    expect(message({ title: 'T' })).toBe('--repro-file: "steps" needs a list of 1 to 12 steps.');
+    expect(message({ title: 'T', steps: [] })).toBe('--repro-file: "steps" needs a list of 1 to 12 steps.');
+    expect(message({ title: 'T', steps: Array.from({ length: 13 }, () => step()) })).toBe(
+      '--repro-file: 13 steps is too many (at most 12).',
+    );
+    expect(message({ title: 'T', steps: [step(), 'text'] })).toBe('--repro-file: step 2 is not an object.');
+    expect(message({ title: 'T', steps: [step(), { text: '' }] })).toBe(
+      '--repro-file: step 2 "text" needs a non-empty text.',
+    );
+    expect(message({ title: 'T', steps: [{ text: 5 }] })).toBe(
+      '--repro-file: step 1 "text" needs a non-empty text.',
+    );
+    expect(message({ title: 'T', steps: [step({ text: 'x'.repeat(201) })] })).toBe(
+      '--repro-file: step 1 "text" is 201 characters, the limit is 200.',
+    );
+    expect(message({ title: 'T', steps: [step({ shot: 'SS1' })] })).toBe(
+      '--repro-file: step 1 has unknown field "shot". Allowed: text, screenshot, recording, result.',
+    );
+    expect(
+      message({
+        title: 'T',
+        steps: [step(), step({ screenshot: 'SS1', recording: 'RC1' })],
+      }),
+    ).toBe('--repro-file: step 2 has both a screenshot and a recording. Use one thumbnail for each step.');
+    expect(message({ title: 'T', steps: [step({ result: 'broken' })] })).toBe(
+      '--repro-file: step 1 has result "broken". Use one of: expected, actual, bug, fixed.',
+    );
+    expect(message({ title: 'T', steps: [step({ screenshot: null })] })).toBe(
+      '--repro-file: step 1 "screenshot" needs a non-empty text.',
+    );
+  });
+});
+
+describe('buildContextInputs: reproduction', () => {
+  const file = (steps: Record<string, unknown>[]) => ({
+    title: 'Basket count',
+    environment: 'Chrome',
+    steps: steps as { text: string }[],
+  });
+
+  it('is null without a reproduction', async () => {
+    expect((await buildContextInputs({}, dir, testConfig())).repro).toBeNull();
+  });
+
+  it('makes the captures known by the ids that were supplied to this command', async () => {
+    await writeFile(join(dir, 'a.png'), makePng(4, 4));
+    const inputs = await buildContextInputs(
+      {
+        screenshots: [{ path: 'a.png', caption: 'A', moment: 'before' }],
+        repro: file([{ text: 'Open it', screenshot: 'SS1', result: 'bug' }, { text: 'Look' }]),
+      },
+      dir,
+      testConfig(),
+    );
+    expect(inputs.repro).toEqual({
+      title: 'Basket count',
+      environment: 'Chrome',
+      steps: [
+        {
+          text: 'Open it',
+          screenshotId: 'SS1',
+          recordingId: null,
+          result: 'bug',
+        },
+        { text: 'Look', screenshotId: null, recordingId: null, result: null },
+      ],
+    });
+  });
+
+  it('refuses a capture that was not supplied, and names the step', async () => {
+    await writeFile(join(dir, 'a.png'), makePng(4, 4));
+    const shots = [{ path: 'a.png', caption: 'A', moment: 'before' as const }];
+    await expect(
+      buildContextInputs(
+        {
+          screenshots: shots,
+          repro: file([{ text: 'Open' }, { text: 'Look', screenshot: 'SS2' }]),
+        },
+        dir,
+        testConfig(),
+      ),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message:
+        'The reproduction step 2 uses screenshot SS2, which was not supplied to this command (supplied: SS1).',
+    });
+    await expect(
+      buildContextInputs({ repro: file([{ text: 'Look', recording: 'RC1' }]) }, dir, testConfig()),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'The reproduction step 1 uses recording RC1, which was not supplied to this command.',
+      hint: expect.stringContaining('for the agent commands, the file in the work folder'),
+    });
+  });
+
+  it('checks the shape again, for a caller that does not use the command line', async () => {
+    await expect(
+      buildContextInputs({ repro: { title: 'T', steps: [{ text: ' ' }] } }, dir, testConfig()),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'repro: step 1 "text" needs a non-empty text.',
+    });
+  });
+});
+
+describe('the captures of a shown reproduction', () => {
+  const repro = {
+    title: 'T',
+    environment: null,
+    steps: [
+      { text: 'a', screenshotId: 'SS1', recordingId: null, result: null },
+      { text: 'b', screenshotId: null, recordingId: 'RC1', result: null },
+      { text: 'c', screenshotId: 'SS2', recordingId: null, result: null },
+    ],
+  };
+  const showing = (steps: number[]): Storyboard => {
+    const storyboard = sampleStoryboard();
+    storyboard.scenes[2]!.visual = {
+      type: 'repro',
+      steps: steps.map((step) => ({ step, beat: 0 })),
+    };
+    return storyboard;
+  };
+  const inputs: ContextInputs = {
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: ['SS1', 'SS2'].map((id) => ({
+      id,
+      path: '/x/a.png',
+      caption: '',
+      moment: 'other' as const,
+    })),
+    recordings: [
+      {
+        id: 'RC1',
+        path: '/x/a.mp4',
+        caption: '',
+        moment: 'other' as const,
+        durationSec: 5,
+        width: 640,
+        height: 360,
+        codec: 'h264',
+      },
+    ],
+    repro,
+  };
+
+  it('count as shown, and only the captures of the shown steps', () => {
+    expect(unusedScreenshotWarning(showing([1, 2, 3]), inputs, 'agent', PRIVACY)).toBeNull();
+    expect(unusedScreenshotWarning(showing([1]), inputs, 'agent', PRIVACY)).toBe(
+      'The screenshot SS2 is not shown in the video. The recording RC1 is not shown in the video.',
+    );
+  });
+
+  it('are named by evidenceUsed', () => {
+    const used = evidenceUsed(showing([2, 3]), repro);
+    expect(used).toContain('RC1');
+    expect(used).toContain('SS2');
+    expect(used).not.toContain('SS1');
+    // Without the reproduction nothing is known about the steps.
+    expect(evidenceUsed(showing([2, 3]))).not.toContain('RC1');
+  });
+});
+
+describe('the warning about captures that the offline storyboard leaves out, with a reproduction', () => {
+  // The demo: RC1 and SS2 are shown through steps of the reproduction, RC2 and SS1 are not.
+  const capture = (id: string) => ({ id, path: `/x/${id}`, caption: '', moment: 'other' as const });
+  const inputs = (withRepro: boolean): ContextInputs => ({
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: [capture('SS1'), capture('SS2')],
+    recordings: [
+      { ...capture('RC1'), durationSec: 5, width: 640, height: 360, codec: 'h264' },
+      { ...capture('RC2'), durationSec: 5, width: 640, height: 360, codec: 'h264' },
+    ],
+    repro: withRepro
+      ? {
+          title: 'T',
+          environment: null,
+          steps: [
+            { text: 'a', screenshotId: null, recordingId: 'RC1', result: null },
+            { text: 'b', screenshotId: 'SS2', recordingId: null, result: null },
+          ],
+        }
+      : null,
+  });
+  const showing = (): Storyboard => {
+    const storyboard = sampleStoryboard();
+    storyboard.scenes[2]!.visual = {
+      type: 'repro',
+      steps: [
+        { step: 1, beat: 0 },
+        { step: 2, beat: 0 },
+      ],
+    };
+    return storyboard;
+  };
+
+  it('says that the offline storyboard shows the captures that a step names', () => {
+    expect(unusedScreenshotWarning(showing(), inputs(true), 'heuristic', PRIVACY)).toBe(
+      'The screenshot SS1 is not shown in the video. The offline storyboard shows only the screenshots that a step of the reproduction names: write the storyboard yourself (--storyboard) or use --llm to show the others. ' +
+        'The recording RC2 is not shown in the video. The offline storyboard shows only the recordings that a step of the reproduction names: write the storyboard yourself (--storyboard) or use --llm to show the others.',
+    );
+  });
+
+  it('keeps the old sentence when there is no reproduction', () => {
+    const warning = unusedScreenshotWarning(sampleStoryboard(), inputs(false), 'heuristic', PRIVACY);
+    expect(warning).toContain('The offline storyboard never uses screenshots');
+    expect(warning).toContain('The offline storyboard never uses recordings');
+    expect(warning).not.toContain('reproduction');
+  });
+});
+
+describe('checkRepro: hidden characters', () => {
+  const dirty = {
+    title: 'Basket \u202eshows\u200b 23',
+    environment: 'win\u0000dow\u0007',
+    steps: [{ text: 'Open\u202e the basket\u200b page' }],
+  };
+
+  it('removes them from the title, the environment and the steps', () => {
+    expect(checkRepro(dirty)).toEqual({
+      title: 'Basket shows 23',
+      environment: 'window',
+      steps: [{ text: 'Open the basket page' }],
+    });
+  });
+
+  it('treats a text that is empty after that as an empty text', () => {
+    expect(() => checkRepro({ ...dirty, title: '\u202e\u200b' }, '--repro-file')).toThrow(
+      '--repro-file: "title" needs a non-empty text.',
+    );
+    expect(() => checkRepro({ ...dirty, steps: [{ text: ' \u0007 ' }] }, '--repro-file')).toThrow(
+      '--repro-file: step 1 "text" needs a non-empty text.',
+    );
+  });
+
+  it('gives a plan that holds the clean text', async () => {
+    const inputs = await buildContextInputs({ repro: dirty }, dir, testConfig());
+    expect(inputs.repro).toMatchObject({
+      title: 'Basket shows 23',
+      environment: 'window',
+      steps: [{ text: 'Open the basket page' }],
     });
   });
 });

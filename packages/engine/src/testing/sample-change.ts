@@ -390,6 +390,7 @@ export function sampleInputs(): ContextInputs {
     tests: [{ id: 'T1', command: 'npm test', passed: true, summary: '42 passed', source: 'agent' }],
     screenshots: [],
     recordings: [],
+    repro: null,
   };
 }
 

@@ -9,7 +9,7 @@ import {
   speechSeconds,
   wordBudget,
 } from './storyboard-facts.ts';
-import { STORYBOARD_LIMITS } from './storyboard-schema.ts';
+import { STORYBOARD_LIMITS, type Visual } from './storyboard-schema.ts';
 
 const visualOf = (id: string) => {
   const scene = sampleStoryboard().scenes.find((s) => s.id === id);
@@ -73,6 +73,18 @@ describe('beatHolders', () => {
     };
     expect(beatHolders(clip)).toEqual([]);
     expect(isSimulated(clip)).toBe(false);
+  });
+
+  it('gives the steps of a reproduction as the elements that carry a beat, and it is not simulated', () => {
+    const visual: Visual = {
+      type: 'repro',
+      steps: [
+        { step: 1, beat: 0 },
+        { step: 2, beat: 1 },
+      ],
+    };
+    expect(beatHolders(visual).map((h) => h.beat)).toEqual([0, 1]);
+    expect(isSimulated(visual)).toBe(false);
   });
 
   it('returns nothing for visuals without beats', () => {

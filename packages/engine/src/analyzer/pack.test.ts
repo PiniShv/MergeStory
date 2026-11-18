@@ -100,6 +100,41 @@ describe('evidence pack structure', () => {
     expect(analysis.evidence.filter((e) => e.kind === 'recording').map((e) => e.id)).toEqual(['RC1', 'RC2']);
   });
 
+  it('lists the reproduction with its steps, results and captures, masked, and names its ids', async () => {
+    const { markdown, analysis } = await pack(
+      SAMPLE,
+      { maskEmails: true },
+      {},
+      emptyInputs({
+        repro: {
+          title: 'Basket count',
+          environment: `Chrome, key ${AWS_KEY}`,
+          steps: [
+            { text: 'Open the page', screenshotId: 'SS1', recordingId: null, result: 'bug' },
+            { text: 'Mail jane.doe@example.com', screenshotId: null, recordingId: 'RC1', result: null },
+          ],
+        },
+      }),
+    );
+    expect(markdown).toContain('## Reproduction (supplied by the caller)');
+    expect(markdown).toContain('not verified against the code');
+    expect(markdown).toContain('REPRO: Basket count');
+    expect(markdown).toContain('Environment: Chrome, key ');
+    expect(markdown).toContain('- REPRO.1 (bug, capture SS1): Open the page');
+    expect(markdown).toContain('- REPRO.2 (capture RC1): Mail j•••@example.com');
+    expect(markdown).not.toMatch(new RegExp(`${AWS_KEY}|jane\\.doe@`));
+    expect(markdown).toMatch(/- Context: .*REPRO, REPRO\.1, REPRO\.2/);
+    expect(analysis.evidence.filter((e) => e.kind === 'repro').map((e) => e.id)).toEqual([
+      'REPRO',
+      'REPRO.1',
+      'REPRO.2',
+    ]);
+  });
+
+  it('has no reproduction section without a reproduction', async () => {
+    expect((await pack(SAMPLE)).markdown).not.toContain('## Reproduction');
+  });
+
   it('masks an e-mail address in the caption of a recording and of a screenshot, in the pack and in the evidence', async () => {
     const { markdown, analysis } = await pack(
       SAMPLE,

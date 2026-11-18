@@ -13,7 +13,7 @@ import { countWords } from '../core/text.ts';
 import { createOpenAiFromConfig } from '../llm/openai-compatible.ts';
 import { testContext } from '../testing/context.ts';
 import { type Fixture, retryFixture } from '../testing/storyboard-fixtures.ts';
-import { AUTHORING_GUIDE, EXAMPLE_STORYBOARD, VISUAL_SHAPES } from './authoring.ts';
+import { AUTHORING_GUIDE, AUTHORING_VALUES, EXAMPLE_STORYBOARD, VISUAL_SHAPES } from './authoring.ts';
 import { estimateStoryboardCost, generateStoryboard } from './generate.ts';
 import { buildSystemPrompt, buildUserPrompt, sceneRange } from './prompts.ts';
 import { validateStoryboard } from './validate.ts';
@@ -159,6 +159,32 @@ describe('authoring guide', () => {
     ]) {
       expect(AUTHORING_GUIDE).toContain(phrase);
     }
+  });
+
+  it('puts the reproduction and the proof in the story arc, in order, and states the rules about them', () => {
+    const arc = AUTHORING_GUIDE.slice(
+      AUTHORING_GUIDE.indexOf('## Story arc'),
+      AUTHORING_GUIDE.indexOf('## Visuals'),
+    );
+    const at = [
+      'mission',
+      'reproduction',
+      'big-picture',
+      'under-the-hood',
+      'before-after',
+      'proof',
+      'review',
+      'conclusion',
+    ].map((role) => arc.indexOf(`. ${role}:`));
+    expect(at.every((position) => position >= 0)).toBe(true);
+    expect(at).toEqual([...at].sort((a, b) => a - b));
+    expect(arc).toContain(
+      'Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that were supplied.',
+    );
+    // A line that cites only the reproduction says whose words they are.
+    expect(AUTHORING_GUIDE).toContain('"The reproduction shows ..."');
+    expect(AUTHORING_GUIDE).toContain(`At most ${STORYBOARD_LIMITS.maxReproSteps} steps in a scene`);
+    expect(AUTHORING_VALUES).toContain('reproduction, proof');
   });
 
   it('is short enough to send with every request', () => {

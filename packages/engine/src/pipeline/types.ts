@@ -2,7 +2,13 @@
 import type { ConfigInput } from '../core/config.ts';
 import type { Logger } from '../core/logger.ts';
 import type { SourceInput } from '../core/providers.ts';
-import type { ProgressEvent, RecordingInput, ScreenshotInput, TestEvidence } from '../core/types.ts';
+import type {
+  ProgressEvent,
+  RecordingInput,
+  ReproFile,
+  ScreenshotInput,
+  TestEvidence,
+} from '../core/types.ts';
 
 export interface ContextOptions {
   task?: string | null;
@@ -11,6 +17,8 @@ export interface ContextOptions {
   screenshots?: Omit<ScreenshotInput, 'id'>[];
   /** Screen recordings: absolute paths, checked again with ffprobe when the context is built. */
   recordings?: Pick<RecordingInput, 'path' | 'caption' | 'moment'>[];
+  /** Reproduction steps, as the caller wrote them. A step may name a supplied screenshot (SS1) or recording (RC1). */
+  repro?: ReproFile | null;
 }
 
 export interface GenerateOptions {

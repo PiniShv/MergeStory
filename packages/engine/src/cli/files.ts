@@ -10,6 +10,8 @@ export const LIMITS = {
   textBytes: 64 * 1024,
   /** --tests-file */
   testsBytes: 256 * 1024,
+  /** --repro-file */
+  reproBytes: 64 * 1024,
   /** --storyboard */
   storyboardBytes: 1024 * 1024,
   /** theme init --brand */

@@ -90,7 +90,8 @@ learns what happened.
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
 - `presentation.ts`: the data for the watch page and the PR comment;
-- `inputs.ts`: the one contract for caller context (task, notes, test results, screenshots, recordings; the limit of screenshots is a setting);
+- `inputs.ts`: the one contract for caller context (task, notes, test results, reproduction, screenshots,
+  recordings; the limit of screenshots is a setting);
 - `authoring.ts`: `prepareAuthoring` and `checkStoryboard` for callers that write the storyboard;
 - `publish-run.ts`: `publishRun`, which publishes a rendered run again.
 
@@ -138,16 +139,17 @@ stage asks `isProtectedFile` or `isShowable` and never matches a pattern itself.
 
 The analyzer gives every citable fact an id: `PR`, `TASK`, `NOTES`, `T1` (test result supplied by
 the caller), `IS1` (linked issue), `CM1` (commit), `F2` (file), `F2.H1` (diff hunk), `S3` (symbol),
-`M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen recording), `REPO`.
+`M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen
+recording), `REPRO` and `REPRO.1` (the reproduction and its steps), `REPO`.
 Storyboards cite these ids. The watch page lists every claim with links to the cited code.
 
 ### Storyboard
 
 A storyboard has a title, a two-sentence summary, scenes, a review checklist and a list of
-uncertainties. Each scene has a role (mission, big picture, under the hood, before/after, review,
-conclusion), narration lines with evidence ids, one visual, a transition and an optional target
-length. There are 14 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
-`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `recording`, `summary`.
+uncertainties. Each scene has a role (mission, reproduction, big picture, under the hood, before/after, proof,
+review, conclusion), narration lines with evidence ids, one visual, a transition and an optional target
+length. There are 15 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
+`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `recording`, `repro`, `summary`.
 
 Visual elements carry a `beat`: the index of the narration line at which they appear. After speech
 is generated, beats get exact times, so the picture follows the voice.
@@ -195,7 +197,9 @@ page through Playwright. The runtime builds the whole video as HTML, CSS and SVG
 Fonts (Inter, JetBrains Mono, both under the SIL Open Font License) are embedded, and the page has
 no network access, so output does not depend on the machine. A recording is cut into JPEG frames
 with FFmpeg before narration starts, and each page receives only the frames that its part of the video
-can show, as images inside the page. The runtime shows one frame for each moment. A screenshot is
+can show, as images inside the page. The runtime shows one frame for each moment. A step of a
+reproduction that has a recording keeps one picture of it, the last one, in its own folder of
+`recording-frames/`. A screenshot is
 embedded as it is, unless it is wider than 2560 pixels: then FFmpeg makes it 2560 pixels wide first, so a
 full-page capture does not slow the page down.
 

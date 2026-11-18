@@ -239,6 +239,25 @@ function testEvidence(c: Ctx): string[] {
   return out;
 }
 
+function reproduction(c: Ctx): string[] {
+  const { repro } = c.inputs;
+  if (!repro) return [];
+  const out = [
+    '## Reproduction (supplied by the caller)',
+    '',
+    'The caller wrote these steps. They show what the author saw; they are not verified against the code.',
+    '',
+    `REPRO: ${c.mask.text(repro.title)}`,
+  ];
+  if (repro.environment) out.push(`Environment: ${c.mask.text(repro.environment)}`);
+  for (const [i, step] of repro.steps.entries()) {
+    const capture = step.screenshotId ?? step.recordingId;
+    const notes = [step.result, capture ? `capture ${capture}` : null].filter(Boolean).join(', ');
+    out.push(`- REPRO.${i + 1}${notes ? ` (${notes})` : ''}: ${c.mask.text(step.text)}`);
+  }
+  return out;
+}
+
 function issues(c: Ctx, l: Limits): string[] {
   const list = c.changeSet.linkedIssues.slice(0, l.issues);
   if (list.length === 0) return [];
@@ -480,7 +499,7 @@ function recordings(c: Ctx): string[] {
 }
 
 const KIND_LABELS: [EvidenceKind[], string][] = [
-  [['pr', 'task', 'notes', 'test', 'issue', 'commit'], 'Context'],
+  [['pr', 'task', 'notes', 'repro', 'test', 'issue', 'commit'], 'Context'],
   [['file'], 'Files'],
   [['hunk'], 'Hunks'],
   [['symbol'], 'Symbols'],
@@ -547,6 +566,7 @@ export function buildEvidencePack(
       pullRequest(c),
       taskAndNotes(c),
       testEvidence(c),
+      reproduction(c),
       issues(c, l),
       commits(c, l),
       repositoryContext(c, l),

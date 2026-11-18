@@ -214,6 +214,25 @@ describe('maskContext', () => {
     );
   });
 
+  it('masks the title, the environment and every step of a reproduction, and keeps the rest', () => {
+    const { context, masked } = maskContext({
+      repro: {
+        title: `Title ${KEY}`,
+        environment: `Env ${KEY}`,
+        steps: [{ text: `Step ${KEY}`, screenshot: 'SS1', result: 'bug' }, { text: 'Plain' }],
+      },
+    });
+    expect(masked).toBe(3);
+    expect(JSON.stringify(context)).not.toContain(KEY);
+    expect(context.repro?.steps[0]).toMatchObject({ screenshot: 'SS1', result: 'bug' });
+    expect(context.repro?.steps[1]).toEqual({ text: 'Plain' });
+    expect(maskContext({ repro: { title: 'T', steps: [{ text: 'a' }] } }).context.repro).not.toHaveProperty(
+      'environment',
+    );
+    const blob = 'password.'.repeat(200);
+    expect(() => maskContext({ repro: { title: 'T', steps: [{ text: blob }] } })).toThrow(/reproduction/);
+  });
+
   it('keeps nulls and leaves absent fields absent', () => {
     expect(maskContext({})).toEqual({ context: {}, masked: 0 });
     expect(maskContext({ task: null, notes: null })).toEqual({

@@ -12,9 +12,9 @@ without any error.
 - **An evidence id that is not in `evidence.md` is not an error.** The engine removes it and adds a
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
-- **A removed `TASK`, `NOTES`, `T1`, `SS1` or `RC1` means that context is missing.** With the `agent`
-  commands, `task.md`, `notes.md` and `tests.json` must be in the work folder before `agent analyze`
-  runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`,
+- **A removed `TASK`, `NOTES`, `T1`, `REPRO`, `SS1` or `RC1` means that context is missing.** With the `agent`
+  commands, `task.md`, `notes.md`, `tests.json` and `repro.json` must be in the work folder before `agent analyze`
+  runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
   `--screenshot`, `--screenshots-dir` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
   do not exist. A removed `SS1` or `RC1` means that the picture or recording was not passed to this command (or that the
   `screenshots/` or `recordings/` folder lacks the file, or the engine is older than the one that reads it).
@@ -34,6 +34,7 @@ These codes are errors:
 | `screenshot-unknown` | A screenshot visual names an id that was not supplied. | Use an `SS` id from `evidence.md`, or another visual. |
 | `recording-unknown` | A recording visual names an id that was not supplied. | Use an `RC` id from `evidence.md`, or another visual. |
 | `recording-trim-out-of-range` | A recording `trim` has less than 0.2 seconds inside the clip. | Choose a part that lies inside the clip. |
+| `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied (this needs an engine newer than 1.7.0), or none of its steps exists. | Write `repro.json` (or pass `--repro-file`) and list steps from `REPRO.1`, or use another visual. |
 | `simulated-unbacked` | A terminal or browser visual has narration that cites no file, hunk or symbol id. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 
@@ -54,6 +55,7 @@ wanted is gone:
 | `recording-trim-out-of-range` | A recording `trim` reached outside the clip. It was cut to fit. | Check the part that is shown. |
 | `recording-too-long` | A recording scene would show more than 20 seconds. The clip was shortened from its end. | Pick the part that matters with `trim`. |
 | `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". | Write a shorter label. |
+| `repro-step-unknown` | A `repro` visual lists a step that the reproduction does not have. The step was dropped. | List only steps from `REPRO.1` up to the last step. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
 repository.

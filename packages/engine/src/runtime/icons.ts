@@ -107,6 +107,7 @@ export const ICONS = {
   back: { paths: ['M19 12H5', 'M11 6l-6 6 6 6'] },
   reload: { paths: ['M20 12a8 8 0 1 1-2.5-5.8', 'M20 4v4.5h-4.5'] },
   check: { paths: ['M5 12.5l4.5 4.5L19 7.5'] },
+  cross: { paths: ['M6 6l12 12', 'M18 6L6 18'] },
   plus: { paths: ['M12 5v14', 'M5 12h14'] },
   image: {
     paths: [

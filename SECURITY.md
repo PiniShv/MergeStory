@@ -151,9 +151,12 @@ See [docs/api.md](docs/api.md#safety-rules).
 
 - Masking looks for patterns. It is eager on purpose, but it cannot know every kind of secret. Watch the
   video before you share it outside your team, and do not keep secrets in code.
+- The words of a reproduction file are masked like any other text. The reproduction is the account of the
+  person who wrote it, and MergeStory never runs its steps.
 - Masking is for text: code, captions, narration and logs. MergeStory does not look inside a screenshot or a
   recording. A secret or an e-mail address that shows in a capture shows in the video, and in the pictures
-  that the run folder keeps in `recording-frames/`. Check a capture before you pass it.
+  that the run folder keeps in `recording-frames/` (a step of a reproduction keeps one picture of its
+  recording there). Check a capture before you pass it.
 - MergeStory never runs your tests or your code. Test results in a video are the ones you reported, and
   the video says who reported them.
 - A model server on this machine or on a private network counts as $0 in the budget check when no price is

@@ -41,6 +41,8 @@ export const SceneRoleSchema = z.enum([
   'before-after',
   'review',
   'conclusion',
+  'reproduction',
+  'proof',
 ]);
 
 export const NodeKindSchema = z.enum([
@@ -284,6 +286,20 @@ export const RecordingVisualSchema = z.object({
   focus,
 });
 
+export const ReproVisualSchema = z.object({
+  type: z.literal('repro'),
+  steps: z
+    .array(
+      z.object({
+        step: z.number().int().describe('The number of a step of the supplied reproduction, from 1.'),
+        beat,
+      }),
+    )
+    .describe(
+      'Up to 6 steps. The text, the result and the capture of a step come from the supplied reproduction.',
+    ),
+});
+
 export const SummaryVisualSchema = z.object({
   type: z.literal('summary'),
   points: z.array(textBeat),
@@ -304,6 +320,7 @@ export const VisualSchema = z.discriminatedUnion('type', [
   BulletsVisualSchema,
   ScreenshotVisualSchema,
   RecordingVisualSchema,
+  ReproVisualSchema,
   SummaryVisualSchema,
 ]);
 
@@ -376,6 +393,7 @@ export const VISUAL_TYPES: readonly VisualType[] = [
   'bullets',
   'screenshot',
   'recording',
+  'repro',
   'summary',
 ];
 
@@ -454,6 +472,7 @@ export const STORYBOARD_LIMITS = {
   maxBrowserBlocks: 8,
   maxChips: 4,
   maxMissionPoints: 4,
+  maxReproSteps: 6,
   maxTitleLength: 60,
   minRecordingSpeed: 0.5,
   maxRecordingSpeed: 4,

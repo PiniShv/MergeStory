@@ -71,6 +71,13 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   `[{"command": "npm test", "passed": true, "summary": "212 passed, 0 failed"}]`.
   Never invent or guess test results. Add `"source": "ci"` only to a result that CI reported.
 
+- `repro.json`: only when you really did the steps that show the bug. Write the steps you did, in order, as
+  `{"title": "The basket shows 23 items", "steps": [{"text": "Open the basket page"}, {"text": "Type 2 and 3", "result": "bug"}]}`.
+  A step may have `"screenshot": "SS1"` or `"recording": "RC1"` (not both): the id of a capture that you
+  copied into `screenshots/` or `recordings/`, below. A step may also have a `result` of `expected`,
+  `actual`, `bug` or `fixed`. Use 1 to 12 steps. Never make up a step you did not do. Without this file the
+  video has no reproduction. This needs an engine newer than 1.7.0. An older engine ignores the file, so
+  cite no `REPRO` id there.
 - `screenshots/`: screenshots that were really captured (PNG or JPEG, up to 4 MB each); never make
   one up. Copy each one into `screenshots/` in the work folder before `agent analyze` runs. A file
   tool cannot write a picture, and this skill allows no copy command, so the user may have to approve
@@ -91,7 +98,7 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   the video. Use a capture only when you know that it shows nothing its viewers must not see. When you
   are not sure, ask the user.
 
-These become citable evidence (TASK, NOTES, T1, SS1, RC1) in the video.
+These become citable evidence (TASK, NOTES, T1, REPRO.1, SS1, RC1) in the video.
 
 ## 4. Write the storyboard yourself (MergeStory adds no charge; your own usage counts)
 
@@ -102,7 +109,10 @@ These become citable evidence (TASK, NOTES, T1, SS1, RC1) in the video.
 3. Write `storyboard.json` in the work folder, following the guide. Open `storyboard.schema.json`
    only if the guide sends you there, or if validate reports a schema error that its message does
    not explain. Cite evidence ids on every narration line. Point at code with line ranges; never
-   paste code.
+   paste code. Show the bug before the code, and the fix working after the code: a `reproduction`
+   scene with a `repro` visual, then a `proof` scene. Use only screenshots and recordings that were
+   really captured and supplied. A line that cites `REPRO` says what the reproduction shows, not
+   what the code does. This needs an engine newer than 1.7.0.
    To show a recording, point at the part that matters with `highlights` (boxes in fractions of the
    picture, each on a narration `beat`) and use `focus` when it is small. Both need an engine newer
    than 1.7.0. An engine up to 1.7.0 leaves them out without a warning.

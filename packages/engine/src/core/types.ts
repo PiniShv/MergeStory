@@ -13,6 +13,7 @@
  *   R<n>      review risk signal                       D<n>   dependency change
  *   SS<n>     screenshot supplied by the caller        REPO   repository structure context
  *   RC<n>     screen recording supplied by the caller
+ *   REPRO     reproduction steps from the caller        REPRO.<n>  step n of the reproduction
  */
 
 export type Side = 'base' | 'head';
@@ -189,6 +190,31 @@ export interface RecordingInput {
   codec: string;
 }
 
+export const REPRO_RESULTS = ['expected', 'actual', 'bug', 'fixed'] as const;
+export type ReproResult = (typeof REPRO_RESULTS)[number];
+
+/** The reproduction as the caller wrote it (the file of `--repro-file`). It is the author's words, not checked against the code. */
+export interface ReproFile {
+  title: string;
+  environment?: string;
+  steps: { text: string; screenshot?: string; recording?: string; result?: ReproResult }[];
+}
+
+/** One step of the reproduction. The capture, when there is one, is a supplied screenshot or recording. */
+export interface ReproStep {
+  text: string;
+  screenshotId: string | null;
+  recordingId: string | null;
+  result: ReproResult | null;
+}
+
+/** The steps that show a bug happening, as the caller wrote them. Evidence ids REPRO and REPRO.1, REPRO.2, ... */
+export interface ReproInput {
+  title: string;
+  environment: string | null;
+  steps: ReproStep[];
+}
+
 export interface ContextInputs {
   /** Original task description, if known. */
   task: string | null;
@@ -197,6 +223,7 @@ export interface ContextInputs {
   tests: TestEvidence[];
   screenshots: ScreenshotInput[];
   recordings: RecordingInput[];
+  repro: ReproInput | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -365,6 +392,7 @@ export type EvidenceKind =
   | 'dependency'
   | 'screenshot'
   | 'recording'
+  | 'repro'
   | 'repo';
 
 /** One citable fact. Storyboards may only cite ids that exist in the evidence index. */

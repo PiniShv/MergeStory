@@ -6,6 +6,23 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** reproduction steps. `--repro-file <file>` passes the steps that show a bug to `analyze`,
+  `validate` and `generate`, as JSON: a `title`, an optional `environment` and 1 to 12 `steps`. A step has a
+  `text`, and may have a `screenshot` or a `recording` (an id such as `SS1` or `RC1` of a capture that you
+  passed too) and a `result` (`expected`, `actual`, `bug` or `fixed`). The file is at most 64 KB, and a
+  mistake in it is refused with the step named. The agent commands read `repro.json` from the work folder.
+  The reproduction gets the evidence ids `REPRO` and `REPRO.1`, `REPRO.2`, and so on. Like the notes, it is the
+  author's account and is not checked against the code, so a line that cites it says so ("the reproduction
+  shows ..."), and it is not backing evidence for a simulated visual. The new `repro` visual lists steps by
+  number, each on its beat. The new scene roles `reproduction` and `proof` put the bug before the code and the
+  fix working after it, when something real was supplied to show them. The checks are `repro-unknown` and
+  `repro-step-unknown`; a longer list is cut to 6 steps and the cut is listed in `fixes`. The offline
+  storyboard shows a reproduction too. When a video must be shortened, these two scenes are dropped last. A
+  model that writes a storyboard gets about 430 more tokens in every request. A step with a screenshot shows
+  it as a small picture; a step with a recording shows the last picture of the clip, which is the page that
+  the step led to. A step marked `bug` is red with a cross and the word "Bug", and one marked `fixed` is green
+  with a check and the word "Fixed", so the colour is never the only sign. The scene is labelled "Reported
+  steps". See "Visuals" in `docs/storyboard.md` and the example in `examples/bugfix-demo`.
 - **Added:** more screenshots, and a folder of them. The limit is now the setting `inputs.maxScreenshots`:
   6 by default, up to 12. `--screenshots-dir <folder>` on `analyze`, `validate` and `generate` takes every
   `.png`, `.jpg` and `.jpeg` file in a folder, in name order, after any `--screenshot`. An optional

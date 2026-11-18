@@ -44,6 +44,8 @@ const plan = (): RenderPlan =>
 
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'mergestory-media-'));
+  await mkdir(join(dir, 'recording-frames', 's-3.step-2'), { recursive: true });
+  await writeFile(join(dir, 'recording-frames', 's-3.step-2', frameFileName(0)), 'the last picture');
   for (const name of ['s-1', 's-2.before', 's-2.after']) {
     await mkdir(join(dir, 'recording-frames', name), { recursive: true });
     for (let i = 0; i < 36; i++)
@@ -87,6 +89,35 @@ describe('planWithMedia', () => {
   it('returns a plan without recordings as it is', async () => {
     const none = { scenes: [] } as unknown as RenderPlan;
     expect(await planWithMedia(none, dir, 0, 1)).toBe(none);
+  });
+
+  it('gives a page the one picture of a reproduction step that has a recording, and nothing for a screenshot', async () => {
+    const image = { src: 'data:image/png;base64,AAAA', width: 4, height: 2 };
+    const reproPlan = {
+      scenes: [
+        scene('r', 30, {
+          type: 'repro',
+          title: 'Bug',
+          environment: null,
+          steps: [
+            { number: 1, text: 'Open', result: null, beat: 0, thumb: { kind: 'screenshot', image } },
+            {
+              number: 2,
+              text: 'Type',
+              result: 'bug',
+              beat: 1,
+              thumb: { kind: 'recording', frames: { ...frames('s-3.step-2', 0), count: 1 } },
+            },
+            { number: 3, text: 'Look', result: null, beat: 1, thumb: null },
+          ],
+        }),
+      ],
+    } as unknown as RenderPlan;
+    const copy = await planWithMedia(reproPlan, dir, 0, 40);
+    expect(sizes(copy.media)).toEqual({ 'recording-frames/s-3.step-2': 1 });
+    expect(copy.media!['recording-frames/s-3.step-2']![0]).toBe(
+      `data:image/jpeg;base64,${Buffer.from('the last picture').toString('base64')}`,
+    );
   });
 
   it('names a missing frame file', async () => {

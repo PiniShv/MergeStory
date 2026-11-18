@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import {
   frameDirFor,
+  frameDirForStep,
   PANEL_CLIP_DELAY_SEC,
   SCENE_CLIP_START_SEC,
   scenePanelStarts,
@@ -14,6 +15,7 @@ import { MASK_CHAR } from '../core/secrets.ts';
 import type { Highlight, Scene, Storyboard } from '../core/storyboard-schema.ts';
 import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
+import { buildContextInputs } from '../pipeline/inputs.ts';
 import { testConfig, testContext } from '../testing/context.ts';
 import { ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
@@ -771,6 +773,146 @@ describe('buildRenderPlan: recordings', () => {
       };
     });
     await expect(build({ storyboard })).rejects.toMatchObject({ code: 'INTERNAL' });
+  });
+});
+
+describe('buildRenderPlan: a reproduction', () => {
+  const secret = `ghp_${'a1B2c3D4e5'.repeat(4)}`;
+  const REPRO_SCENE = sample().storyboard.scenes.length + 1;
+  const repro = (): NonNullable<ContextInputs['repro']> => ({
+    title: 'The basket total is wrong',
+    environment: 'Chrome 140 on a laptop',
+    steps: [
+      { text: 'Open the basket page', screenshotId: null, recordingId: null, result: null },
+      { text: `Type 2 and 3, token ${secret}`, screenshotId: 'SS1', recordingId: null, result: 'bug' },
+      { text: 'The page says 23 items', screenshotId: null, recordingId: 'RC1', result: 'actual' },
+    ],
+  });
+
+  async function reproRun(steps: { step: number; beat: number }[], inputs?: Partial<ContextInputs>) {
+    const base = sample().storyboard;
+    const path = join(dir, 'repro-shot.png');
+    await writeFile(path, makePng(4, 2));
+    const scene: Scene = {
+      ...structuredClone(base.scenes[0]!),
+      id: 'rp',
+      role: 'reproduction',
+      visual: { type: 'repro', steps },
+      narration: [
+        { text: 'In the reproduction, the page opens.', evidence: ['REPRO.1'] },
+        { text: 'Then the total is wrong.', evidence: ['REPRO.2'] },
+      ],
+    };
+    return build({
+      storyboard: { ...base, scenes: [...base.scenes, scene] },
+      inputs: {
+        ...sample().inputs,
+        repro: repro(),
+        screenshots: [{ id: 'SS1', path, caption: 'The page', moment: 'before' }],
+        ...inputs,
+      },
+      frames: new Map([
+        [
+          frameDirForStep(REPRO_SCENE, 3),
+          { dir: frameDirForStep(REPRO_SCENE, 3), count: 1, width: 320, height: 180 },
+        ],
+      ]),
+    });
+  }
+  const all = [
+    { step: 1, beat: 0 },
+    { step: 2, beat: 1 },
+    { step: 3, beat: 1 },
+  ];
+
+  it('takes the words, results and pictures from the supplied reproduction, in the order of the storyboard', async () => {
+    const plan = await reproRun([
+      { step: 3, beat: 1 },
+      { step: 1, beat: 0 },
+    ]);
+    const visual = visualOf(plan, 'rp', 'repro');
+    expect(visual.title).toBe('The basket total is wrong');
+    expect(visual.environment).toBe('Chrome 140 on a laptop');
+    expect(visual.steps.map((s) => [s.number, s.text, s.result, s.beat])).toEqual([
+      [3, 'The page says 23 items', 'actual', 1],
+      [1, 'Open the basket page', null, 0],
+    ]);
+    expect(visual.steps[1]!.thumb).toBeNull();
+  });
+
+  it('holds the text of a reproduction file without hidden characters', async () => {
+    const { repro: clean } = await buildContextInputs(
+      {
+        repro: {
+          title: 'Basket \u202eshows\u200b 23',
+          environment: 'win\u0000dow',
+          steps: [{ text: 'Open\u202e the basket\u200b page' }],
+        },
+      },
+      dir,
+      testConfig(),
+    );
+    const plan = await reproRun([{ step: 1, beat: 0 }], { repro: clean });
+    const visual = visualOf(plan, 'rp', 'repro');
+    expect([visual.title, visual.environment, visual.steps[0]?.text]).toEqual([
+      'Basket shows 23',
+      'window',
+      'Open the basket page',
+    ]);
+  });
+
+  it('masks a secret in a step and says so with a badge', async () => {
+    const plan = await reproRun(all);
+    const visual = visualOf(plan, 'rp', 'repro');
+    expect(visual.steps[1]!.text).not.toContain(secret);
+    expect(visual.steps[1]!.text).toContain(MASK_CHAR);
+    expect(plan.scenes.find((s) => s.id === 'rp')!.badges.map((b) => b.text)).toContain(
+      'Sensitive data masked',
+    );
+    expect(JSON.stringify(plan)).not.toContain(secret);
+  });
+
+  it('draws a screenshot as it is, and a recording as the one frame of its own folder', async () => {
+    const plan = await reproRun(all);
+    const visual = visualOf(plan, 'rp', 'repro');
+    expect(visual.steps[1]!.thumb).toMatchObject({ kind: 'screenshot', image: { width: 4, height: 2 } });
+    expect(visual.steps[2]!.thumb).toEqual({
+      kind: 'recording',
+      frames: {
+        dir: `recording-frames/s-${REPRO_SCENE}.step-3`,
+        count: 1,
+        width: 320,
+        height: 180,
+        fps: 12,
+        startSec: 0,
+        speed: 1,
+      },
+    });
+  });
+
+  it('labels the scene as reported steps, with an actual screenshot and a recording', async () => {
+    const plan = await reproRun(all);
+    expect(plan.scenes.find((s) => s.id === 'rp')!.badges).toEqual([
+      { kind: 'actual', text: 'Actual screenshot' },
+      { kind: 'actual', text: 'Recorded' },
+      { kind: 'reported', text: 'Reported steps' },
+      { kind: 'masked', text: 'Sensitive data masked' },
+    ]);
+    const words = await reproRun([{ step: 1, beat: 0 }]);
+    expect(words.scenes.find((s) => s.id === 'rp')!.badges).toEqual([
+      { kind: 'reported', text: 'Reported steps' },
+    ]);
+  });
+
+  it('stops when no reproduction was supplied, or a step does not exist', async () => {
+    await expect(reproRun(all, { repro: null })).rejects.toMatchObject({
+      code: 'STORYBOARD_INVALID',
+      hint: expect.stringContaining('--repro-file'),
+    });
+    await expect(reproRun([{ step: 4, beat: 0 }])).rejects.toMatchObject({
+      code: 'STORYBOARD_INVALID',
+      message: expect.stringContaining('step 4'),
+    });
   });
 });
 

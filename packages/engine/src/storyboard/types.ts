@@ -36,6 +36,8 @@ export type IssueCode =
   | 'recording-trim-out-of-range'
   | 'recording-too-long'
   | 'highlight-label-too-long'
+  | 'repro-unknown'
+  | 'repro-step-unknown'
   | 'simulated-unbacked'
   | 'over-length';
 

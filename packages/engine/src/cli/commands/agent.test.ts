@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
-import { mkdir, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '../../core/config.ts';
@@ -158,6 +158,54 @@ describe('agent: the work folder', () => {
     }
     expect(validateMock.mock.calls[0]?.[0].storyboard).toEqual({ title: 'x' });
     expect(lastGenerateOptions().storyboard).toEqual({ title: 'x' });
+  });
+
+  it('reads repro.json in every command, masked, and leaves the context without it when there is none', async () => {
+    await mkdir(work(), { recursive: true });
+    const key = ['sk', 'ant', 'api03', 'abcdefghijklmnopqrstuvwxyz0123456789ABCD'].join('-');
+    await writeFile(
+      join(work(), 'repro.json'),
+      JSON.stringify({
+        title: 'Basket count',
+        steps: [{ text: `Open the page with ${key}`, result: 'bug' }],
+      }),
+    );
+    await writeFile(join(work(), 'storyboard.json'), JSON.stringify({ title: 'x' }));
+    analyzeMock.mockResolvedValue(authoring);
+    validateMock.mockResolvedValue(valid);
+    generateMock.mockResolvedValue(fakeResult());
+    expect((await run(['agent', 'analyze', '--name', 'fix-1'])).code).toBe(0);
+    expect((await run(['agent', 'validate', '--name', 'fix-1'])).code).toBe(0);
+    expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
+    for (const context of [
+      analyzeMock.mock.calls[0]?.[0].context,
+      validateMock.mock.calls[0]?.[0].context,
+      lastGenerateOptions().context,
+    ]) {
+      expect(context?.repro?.title).toBe('Basket count');
+      expect(context?.repro?.steps[0]).toMatchObject({ result: 'bug' });
+      expect(context?.repro?.steps[0]?.text).toContain('Open the page');
+      expect(context?.repro?.steps[0]?.text).not.toContain(key);
+    }
+    await rm(join(work(), 'repro.json'));
+    expect((await run(['agent', 'analyze', '--name', 'fix-1'])).code).toBe(0);
+    expect(analyzeMock.mock.calls[1]?.[0].context?.repro).toBeUndefined();
+  });
+
+  it('refuses a repro.json that is not valid, and names the file and the step', async () => {
+    await mkdir(work(), { recursive: true });
+    await writeFile(
+      join(work(), 'repro.json'),
+      JSON.stringify({
+        title: 'T',
+        steps: [{ text: 'a' }, { text: 'b', screenshot: 'SS1', recording: 'RC1' }],
+      }),
+    );
+    const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+    expect(code).toBe(2);
+    expect(stderr).toContain('repro.json: step 2 has both a screenshot and a recording');
+    expect(stderr).not.toContain('--repro-file');
+    expect(analyzeMock).not.toHaveBeenCalled();
   });
 
   describe('recordings/ and screenshots/', () => {
@@ -379,6 +427,7 @@ describe('agent: refused flags', () => {
     ['--task-file', 'task.md'],
     ['--notes-file', 'notes.md'],
     ['--tests-file', 'tests.json'],
+    ['--repro-file', 'repro.json'],
     ['--storyboard', 'sb.json'],
     ['--screenshot', 'a.png'],
     ['--screenshots-dir', 'shots'],

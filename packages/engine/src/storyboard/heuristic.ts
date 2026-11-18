@@ -18,6 +18,7 @@ import type { Analysis, ChangeSet, ContextInputs, SymbolChange } from '../core/t
 import { type Ctx, cite, createCtx, type Line, safeSentence, safeText } from './heuristic-context.ts';
 import { authorStatements, recap, reportedRuns, testsLine, topSymbols } from './heuristic-facts.ts';
 import { bigPictureScene } from './heuristic-overview.ts';
+import { reproScenes } from './heuristic-repro.ts';
 import { type Review, reviewScene } from './heuristic-review.ts';
 import { codeScenes } from './heuristic-scenes.ts';
 import {
@@ -310,7 +311,11 @@ function buildStoryboard(ctx: Ctx, level: Level): Storyboard {
   const bigPicture = bigPictureScene(b);
   const code = codeScenes(b);
   const review = reviewScene(b);
-  const scenes: Scene[] = [mission.scene, bigPicture, ...code];
+  const repro = reproScenes(b);
+  const scenes: Scene[] = [mission.scene];
+  if (repro.reproduction) scenes.push(repro.reproduction);
+  scenes.push(bigPicture, ...code);
+  if (repro.proof) scenes.push(repro.proof);
   if (review) scenes.push(review.scene);
   scenes.push(conclusionScene(b, review));
   scenes.forEach((s, index) => {
