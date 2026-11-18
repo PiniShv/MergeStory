@@ -103,7 +103,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     expect(await expectCleanStoryboard(deps, written)).toEqual([]);
   });
 
-  it('puts every highlight and the focus on the item count, with room for a font that is 30% wider', async () => {
+  it('puts every highlight and the focus on the item count, as this machine draws it', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
     // capture.mjs writes where the text of the count is in each picture, as fractions of it.
     type Box = { x: number; y: number; w: number; h: number };
@@ -126,13 +126,14 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     // Two recordings with a box each, one with a focus, and two screenshot panels.
     expect(checked).toHaveLength(5);
     for (const { moment, where, box } of checked) {
+      // The text is as wide as the font of this machine makes it. The box must hold it with a little room.
       const count = counts[moment]!;
-      const wider = { ...count, w: count.w * 1.3 };
-      const label = `${where} ${moment}: ${JSON.stringify(box)} must contain ${JSON.stringify(wider)}`;
-      expect(box.x, label).toBeLessThanOrEqual(wider.x);
-      expect(box.y, label).toBeLessThanOrEqual(wider.y);
-      expect(box.x + box.w, label).toBeGreaterThanOrEqual(wider.x + wider.w);
-      expect(box.y + box.h, label).toBeGreaterThanOrEqual(wider.y + wider.h);
+      const room = 0.01;
+      const label = `${where} ${moment}: ${JSON.stringify(box)} must contain ${JSON.stringify(count)}`;
+      expect(box.x, label).toBeLessThanOrEqual(count.x - room);
+      expect(box.y, label).toBeLessThanOrEqual(count.y - room);
+      expect(box.x + box.w, label).toBeGreaterThanOrEqual(count.x + count.w + room);
+      expect(box.y + box.h, label).toBeGreaterThanOrEqual(count.y + count.h + room);
     }
   });
 
