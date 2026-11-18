@@ -74,6 +74,9 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
 /** Starts the warning that publish adds when it rebuilds a result because the earlier result.json is missing. */
 export const EARLIER_RESULT_MISSING = 'The earlier result of this run';
 
+/** The most problems that the error of a refused storyboard holds, and that the text of that error lists. */
+export const MAX_LISTED_PROBLEMS = 40;
+
 export interface PublishRunOptions {
   /** Run folder (runDir from a generate result) or run id. */
   run: string;

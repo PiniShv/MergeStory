@@ -347,8 +347,9 @@ Rules of thumb for a good storyboard:
 - Use `before-after` only when behaviour really changes, or when a changed function is small enough to show
   both versions. Skip a scene that has nothing real to show.
 
-When `generate --storyboard` fails with exit code 3, read `error.details.errors` of the JSON error. When
-`validate` fails, read `errors` at the top of its JSON. [cli.md](cli.md#exit-codes) lists every exit code.
+When `generate --storyboard` fails with exit code 3, it lists the errors under the message, and the JSON
+error holds them in `error.details.errors`. When `validate` fails, read `errors` at the top of its JSON.
+[cli.md](cli.md#exit-codes) lists every exit code.
 
 ## The example
 

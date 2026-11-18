@@ -6,6 +6,14 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Fixed:** when `mergestory generate --storyboard` or `mergestory agent render` refuses a
+  storyboard, the text output now lists the blocking problems under the message, in the form that
+  `validate` prints. It lists up to 40, and a list of 40 says that more problems may follow. Before,
+  the hint said "Fix the listed problems" and none was shown, so the author had to run `validate` to
+  see them. The `--json` output and the exit code (3) are unchanged.
+- **Fixed:** `validate` and the list above show each problem on one line. A line break or tab inside
+  the path or the message of a problem is now shown as a space. Before, such a problem could print
+  as several lines.
 - **Changed:** `AUTHORING.md` states four more rules. A terminal holds at most 12 lines and a browser
   page at most 8 blocks. The `text` of a browser block is its label, title, header, first line or
   caption, depending on the kind. A focus range outside the code is dropped, and neither the ranges
