@@ -112,6 +112,16 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
   ].join('\n');
 }
 
+/** "Storyboard has errors: 3 (schema 2, uncited-line 1)". Numbers and codes only, so it quotes no narration or code. */
+function errorSummary(errors: ValidationResult['errors']): string {
+  const counts = new Map<string, number>();
+  for (const error of errors) counts.set(error.code, (counts.get(error.code) ?? 0) + 1);
+  const codes = [...counts]
+    .sort(([a, x], [b, y]) => y - x || a.localeCompare(b))
+    .map(([code, count]) => `${code} ${count}`);
+  return `Storyboard has errors: ${errors.length} (${codes.join(', ')})`;
+}
+
 /** Validate a storyboard against a change without rendering (mergestory validate). */
 export async function checkStoryboard(
   options: Omit<GenerateOptions, 'dryRun'> & { storyboard: unknown },
@@ -127,6 +137,10 @@ export async function checkStoryboard(
     config: p.config,
     authored: true,
   });
+  // The caller gets the errors as data. This line is for whoever reads the log.
+  if (result.errors.length > 0) {
+    p.ctx.progress({ stage: 'validate', status: 'warn', message: errorSummary(result.errors) });
+  }
   if (!result.storyboard) return result;
   // Say what rendering would do when the storyboard is over the maximum length.
   const messages = describeFit(fitStoryboard(p, result.storyboard), p.config.maxDurationSec, 'would');

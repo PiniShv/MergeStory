@@ -17,6 +17,7 @@ import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
 import { estimateTokens } from '../core/cost.ts';
 import { MergeStoryError } from '../core/errors.ts';
+import { createLogger } from '../core/logger.ts';
 import type { PublishBundle, Publisher, Renderer } from '../core/providers.ts';
 import type { GenerateResult, PlanResult, PublishResult } from '../core/types.ts';
 import { ensureKokoroInstalled } from '../narration/kokoro-install.ts';
@@ -943,5 +944,56 @@ describe('checkStoryboard', () => {
     expect(notice).toHaveLength(1);
     expect(notice[0]?.message).toContain('Rendering would leave out');
     expect(notice[0]?.message).toContain('over the maximum of 20 s (--max-duration)');
+  });
+
+  it('logs one line when the storyboard has errors: how many, and how many of each code', async () => {
+    type Board = {
+      scenes: { narration: { evidence: string[] }[]; visual: { ref?: { path: string } } }[];
+    };
+    const check = async (uncitedScenes: number[]) => {
+      const board = await readJson<Board>(join(DEMO, 'storyboard.json'));
+      for (const index of uncitedScenes)
+        for (const line of board.scenes[index]!.narration) line.evidence = [];
+      // Scene 4 shows code from a file that is not in the change.
+      board.scenes[3]!.visual.ref!.path = 'src/nope.ts';
+      const lines: string[] = [];
+      const events: { stage: string; status: string; message: string }[] = [];
+      const result = await checkStoryboard(
+        { ...options(), storyboard: board, logger: createLogger({ write: (line) => lines.push(line) }) },
+        { onProgress: (event) => events.push(event) },
+      );
+      return { result, lines: lines.filter((line) => line.includes('[validate]')), events };
+    };
+
+    // The most frequent code comes first.
+    const mixed = await check([0, 1]);
+    expect(mixed.result.errors.map((error) => error.code).sort()).toEqual([
+      'code-ref-unknown-path',
+      'uncited-line',
+      'uncited-line',
+    ]);
+    const summary = 'Storyboard has errors: 3 (uncited-line 2, code-ref-unknown-path 1)';
+    expect(mixed.events.filter((event) => event.stage === 'validate')).toEqual([
+      { stage: 'validate', status: 'warn', message: summary },
+    ]);
+    expect(mixed.lines).toEqual([`warn: [validate] ${summary}`]);
+
+    // Codes with the same number are in alphabetical order, so the line does not depend on the order of the scenes.
+    const tied = await check([0]);
+    expect(tied.lines).toEqual([
+      'warn: [validate] Storyboard has errors: 2 (code-ref-unknown-path 1, uncited-line 1)',
+    ]);
+  });
+
+  it('logs no such line for a storyboard without errors', async () => {
+    const board = await readJson<unknown>(join(DEMO, 'storyboard.json'));
+    const lines: string[] = [];
+    const result = await checkStoryboard({
+      ...options(),
+      storyboard: board,
+      logger: createLogger({ write: (line) => lines.push(line) }),
+    });
+    expect(result.errors).toEqual([]);
+    expect(lines.filter((line) => line.includes('Storyboard has errors'))).toEqual([]);
   });
 });

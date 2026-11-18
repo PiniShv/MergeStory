@@ -9,6 +9,9 @@ All notable changes to MergeStory are listed here, newest first.
 - **Added:** `mergestory runs delete --older-than <days>` removes every run and finished background
   job made more than that many days ago. Deleting a run by id now also removes the files of the job
   that made it. A run that a job is still making is kept.
+- **Added:** `mergestory validate` and `mergestory agent validate` write one line to the log when a
+  storyboard has errors: the number of errors and how many of each code. Before, a failed check left
+  no trace on stderr. The result on stdout and the exit codes are unchanged.
 - **Fixed:** the evidence pack says that its test line counts test files, not test cases. Before,
   "Tests: 0 added" could be read as "no tests were added" when modified test files held new cases.
 - **Fixed:** a review prompt reports the right number in "and N more". Before, the count stopped at
