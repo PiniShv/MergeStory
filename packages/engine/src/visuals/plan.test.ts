@@ -17,7 +17,7 @@ import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
 import { buildContextInputs } from '../pipeline/inputs.ts';
 import { testConfig, testContext } from '../testing/context.ts';
-import { ffmpegTo } from '../testing/media.ts';
+import { averageColor, ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
@@ -30,6 +30,9 @@ import {
 } from './plan.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
 import { buildTimeline } from './timeline.ts';
+
+const hasFfmpeg = (await resolveFfmpeg(testConfig()).catch(() => null)) !== null;
+const HIDDEN = [{ x: 0, y: 0, w: 0.5, h: 0.5 }];
 
 let dir: string;
 beforeAll(async () => {
@@ -503,6 +506,30 @@ describe('buildRenderPlan: other visual types', () => {
     expect(plan.scenes.find((s) => s.id === 'compare')!.badges.map((b) => b.kind)).toEqual(['actual']);
   });
 
+  it.skipIf(!hasFfmpeg)(
+    'puts only the picture with its hidden regions into the plan, and says so in the badges',
+    async () => {
+      const png = makePng(64, 64, [200, 100, 50]);
+      const inputs = await withShot(png);
+      const plan = await extras({
+        ...inputs,
+        screenshots: inputs.screenshots.map((shot) => ({ ...shot, hidden: HIDDEN })),
+      });
+      const shot = visualOf(plan, 'shot', 'screenshot');
+      expect(shot.image.src).toMatch(/^data:image\/png;base64,/);
+      expect(shot.image.src).not.toBe(`data:image/png;base64,${png.toString('base64')}`);
+      expect(plan.scenes.find((s) => s.id === 'shot')!.badges.map((b) => b.text)).toEqual([
+        'Actual screenshot',
+        'Sensitive data masked',
+      ]);
+      // A before-after scene shows the badge when one of its panels has a hidden region.
+      expect(plan.scenes.find((s) => s.id === 'compare')!.badges.map((b) => b.text)).toEqual([
+        'Actual screenshot',
+        'Sensitive data masked',
+      ]);
+    },
+  );
+
   it('rejects unusable screenshots with a clear error', async () => {
     await expect(extras()).rejects.toMatchObject({
       code: 'STORYBOARD_INVALID',
@@ -522,8 +549,16 @@ describe('buildRenderPlan: other visual types', () => {
     const HIGHLIGHT = { x: 0.1, y: 0.2, w: 0.3, h: 0.4, label: 'The count', beat: 1 };
     const FOCUS = { x: 0.05, y: 0.1, w: 0.5, h: 0.5 };
 
-    async function marked(over: { highlights?: Highlight[]; focus?: unknown; label?: string | null }) {
-      const inputs = await withShot(makePng(4, 2));
+    async function marked(over: {
+      highlights?: Highlight[];
+      focus?: unknown;
+      label?: string | null;
+      hidden?: boolean;
+    }) {
+      const withPicture = await withShot(over.hidden ? makePng(64, 64, [200, 100, 50]) : makePng(4, 2));
+      const inputs: ContextInputs = over.hidden
+        ? { ...withPicture, screenshots: withPicture.screenshots.map((s) => ({ ...s, hidden: HIDDEN })) }
+        : withPicture;
       const base = sample().storyboard;
       const make = (id: string, visual: Scene['visual']): Scene => ({
         ...structuredClone(base.scenes[0]!),
@@ -576,6 +611,24 @@ describe('buildRenderPlan: other visual types', () => {
       expect(shot.highlights).toEqual([HIGHLIGHT]);
       expect(shot.focus).toEqual(FOCUS);
     });
+
+    it.skipIf(!hasFfmpeg)(
+      'draws the highlights and the focus over a picture that has a hidden region: the cover is in the picture',
+      async () => {
+        const plan = await marked({ focus: FOCUS, hidden: true });
+        const shot = visualOf(plan, 'shot', 'screenshot');
+        expect(shot.highlights).toEqual([HIGHLIGHT]);
+        expect(shot.focus).toEqual(FOCUS);
+        const original = makePng(64, 64, [200, 100, 50]).toString('base64');
+        expect(shot.image.src).not.toBe(`data:image/png;base64,${original}`);
+        const compare = visualOf(plan, 'compare', 'before-after');
+        if (compare.before.kind !== 'screenshot') throw new Error('expected a screenshot panel');
+        expect(compare.before.highlights).toEqual([HIGHLIGHT]);
+        expect(plan.scenes.find((s) => s.id === 'shot')!.badges.map((b) => b.text)).toContain(
+          'Sensitive data masked',
+        );
+      },
+    );
 
     it('puts the highlights of a screenshot panel into the plan, and none for a panel without any', async () => {
       const compare = visualOf(await marked({}), 'compare', 'before-after');
@@ -661,7 +714,7 @@ describe('buildRenderPlan: recordings', () => {
   const frames = (dirs: string[]): Map<string, ExtractedFrames> =>
     new Map(dirs.map((d) => [d, { dir: d, count: 30, width: 640, height: 360 }]));
 
-  async function recordings(second: 'recording' | 'terminal') {
+  async function recordings(second: 'recording' | 'terminal', inputs?: ContextInputs) {
     const base = sample().storyboard;
     const make = (id: string, visual: Scene['visual']): Scene => ({
       ...structuredClone(base.scenes[0]!),
@@ -696,6 +749,7 @@ describe('buildRenderPlan: recordings', () => {
     };
     return build({
       storyboard,
+      inputs,
       frames: frames([
         frameDirFor(RECORDING_SCENE, null),
         frameDirFor(RECORDING_SCENE + 1, 'before'),
@@ -759,6 +813,34 @@ describe('buildRenderPlan: recordings', () => {
       3,
     );
     expect(scene.badges.map((b) => b.text)).toEqual(['Simulated output', 'Recorded']);
+  });
+
+  it('adds the "Sensitive data masked" badge to a scene whose recording has a hidden region', async () => {
+    const recording = {
+      id: 'RC1',
+      path: '/x.mp4',
+      caption: '',
+      moment: 'other' as const,
+      durationSec: 3,
+      width: 640,
+      height: 360,
+      codec: 'h264',
+    };
+    const plan = await recordings('terminal', {
+      ...sample().inputs,
+      recordings: [{ ...recording, hidden: HIDDEN }],
+    });
+    expect(plan.scenes.find((s) => s.id === 'rec')!.badges.map((b) => b.text)).toEqual([
+      'Recorded',
+      'Sensitive data masked',
+    ]);
+    expect(plan.scenes.find((s) => s.id === 'cmp')!.badges.map((b) => b.text)).toEqual([
+      'Simulated output',
+      'Recorded',
+      'Sensitive data masked',
+    ]);
+    const plain = await recordings('terminal', { ...sample().inputs, recordings: [recording] });
+    expect(plain.scenes.find((s) => s.id === 'rec')!.badges.map((b) => b.text)).toEqual(['Recorded']);
   });
 
   it('keeps every frame out of the plan that is written to disk', async () => {
@@ -910,6 +992,83 @@ describe('buildRenderPlan: a reproduction', () => {
     expect(words.scenes.find((s) => s.id === 'rp')!.badges).toEqual([
       { kind: 'reported', text: 'Reported steps' },
     ]);
+  });
+
+  describe('a step whose capture has a hidden region', () => {
+    // Step 2 has the screenshot and step 3 the recording (reproRun cuts frames for step 3), with no secret in the text.
+    const clean = (screenshotId: string | null, recordingId: string | null) => ({
+      title: 'The basket total is wrong',
+      environment: null,
+      steps: [
+        { text: 'Open the page', screenshotId: null, recordingId: null, result: null },
+        { text: 'Type 2 and 3', screenshotId, recordingId: null, result: null },
+        { text: 'The page says 23', screenshotId: null, recordingId, result: null },
+      ],
+    });
+    const recording = {
+      id: 'RC1',
+      path: '/x.mp4',
+      caption: '',
+      moment: 'other' as const,
+      durationSec: 3,
+      width: 640,
+      height: 360,
+      codec: 'h264',
+    };
+    const badges = async (step: number, inputs: Partial<ContextInputs>) =>
+      (await reproRun([{ step, beat: 0 }], inputs)).scenes
+        .find((s) => s.id === 'rp')!
+        .badges.map((b) => b.text);
+
+    it('says "Sensitive data masked" for a screenshot step and for a recording step, and only then', async () => {
+      const shot = { id: 'SS1', path: join(dir, 'repro-shot.png'), caption: '', moment: 'before' as const };
+      const plain = ['Reported steps'];
+      expect(await badges(2, { repro: clean('SS1', null), screenshots: [shot] })).toEqual([
+        'Actual screenshot',
+        ...plain,
+      ]);
+      expect(
+        await badges(2, { repro: clean('SS1', null), screenshots: [{ ...shot, hidden: HIDDEN }] }),
+      ).toEqual(['Actual screenshot', ...plain, 'Sensitive data masked']);
+      expect(await badges(3, { repro: clean(null, 'RC1'), recordings: [recording] })).toEqual([
+        'Recorded',
+        ...plain,
+      ]);
+      expect(
+        await badges(3, { repro: clean(null, 'RC1'), recordings: [{ ...recording, hidden: HIDDEN }] }),
+      ).toEqual(['Recorded', ...plain, 'Sensitive data masked']);
+    });
+
+    it.skipIf(!hasFfmpeg)(
+      'puts the cover in the thumbnail of a screenshot step, and not the picture',
+      async () => {
+        const original = makePng(64, 64, [200, 100, 50]);
+        const path = join(dir, 'repro-secret.png');
+        await writeFile(path, original);
+        const plan = await reproRun([{ step: 2, beat: 0 }], {
+          repro: clean('SS1', null),
+          screenshots: [{ id: 'SS1', path, caption: '', moment: 'before', hidden: HIDDEN }],
+        });
+        const thumb = visualOf(plan, 'rp', 'repro').steps[0]!.thumb;
+        expect(thumb).toMatchObject({ kind: 'screenshot' });
+        const src = thumb?.kind === 'screenshot' ? thumb.image.src : '';
+        expect(src).toMatch(/^data:image\/png;base64,/);
+        expect(JSON.stringify(plan)).not.toContain(original.toString('base64'));
+        const { ffmpeg } = (await resolveFfmpeg(testConfig()))!;
+        const shown = join(dir, 'repro-thumb.png');
+        await writeFile(shown, Buffer.from(src.split(',')[1]!, 'base64'));
+        const at = async (name: string, x: number, y: number) => {
+          const out = join(dir, `repro-${name}.png`);
+          expect(await ffmpegTo(ffmpeg, ['-y', '-i', shown, '-vf', `crop=8:8:${x}:${y}`, out])).toBe(true);
+          return averageColor(ffmpeg, out);
+        };
+        const [r, g, b] = await at('inside', 12, 12);
+        // The cover is grey: its three channels are alike, and the orange picture has 200, 100 and 50.
+        expect(Math.max(r, g, b) - Math.min(r, g, b), 'the region is the cover').toBeLessThan(12);
+        const [r2, , b2] = await at('outside', 48, 48);
+        expect(r2 - b2, 'the rest is the picture').toBeGreaterThan(100);
+      },
+    );
   });
 
   it('stops when no reproduction was supplied, or a step does not exist', async () => {

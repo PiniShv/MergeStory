@@ -84,6 +84,7 @@ accurate, because the engine can quote them as evidence.
 | `--screenshot <spec>` | A real screenshot, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `SS1`, `SS2`, and so on. |
 | `--screenshots-dir <dir>` | A folder of real screenshots: every `.png`, `.jpg` and `.jpeg` file in it, in name order. Give it once. They become `SS` ids after those of any `--screenshot`. An optional `captions.json` in the folder gives a caption and a side. See below. |
 | `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
+| `--redact <file>` | A JSON file of regions to hide in your screenshots and recordings. At most 64 KB. See "Hidden regions" below. |
 
 - **Test results.** Each entry has `command`, `passed` and `summary`, and may have `source` (`agent`, `ci` or
   `user`; the default is `agent`). Example: `[{"command": "npm test", "passed": true, "summary": "42 passed"}]`.
@@ -108,7 +109,7 @@ accurate, because the engine can quote them as evidence.
   never changed. This happens before any speech is paid for. If a picture cannot be made smaller, the run
   stops and names the picture. `analyze` and `validate` do not change any picture.
   MergeStory does not look inside a picture: a secret or an e-mail address that shows in a screenshot shows
-  in the video. Check a capture before you pass it.
+  in the video. Hide such parts with `--redact`, and check a capture before you pass it.
 - **A folder of screenshots.** `--screenshots-dir <dir>` takes every file in the folder that ends in `.png`,
   `.jpg` or `.jpeg` (any letter case), sorted by name. Sub-folders and other files are ignored. Each file is
   checked like a `--screenshot` file. Pictures from `--screenshot` come first, in the order you gave them,
@@ -128,7 +129,33 @@ accurate, because the engine can quote them as evidence.
   `validate` need `ffprobe` only when you pass a recording; `generate` always needs FFmpeg and `ffprobe`.
   Use only recordings that were really captured: MergeStory never makes one up. It does not look inside a
   recording: a secret or an e-mail address that shows in it shows in the video, and in the pictures that
-  the run folder keeps in `recording-frames/`. Check a capture before you pass it.
+  the run folder keeps in `recording-frames/`. Hide such parts with `--redact`, and check a capture before
+  you pass it.
+- **Hidden regions.** `--redact <file>` covers parts of your screenshots and recordings before anything is
+  kept. The file is JSON, at most 64 KB, given once: an object whose keys are ids of this command (`SS1`, `RC2`, and so
+  on), each with a list of at most 20 regions, for example
+  `{"SS2": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`.
+  `x`, `y`, `w` and `h` are fractions (0 to 1) of the whole picture as a player shows it: upright, before
+  any `zoom` of a storyboard, before any scaling. A region that reaches outside the picture is cut to it.
+  A region of a recording is hidden in every frame of the clip. It cannot be limited to a part of the
+  clip: a region with `from` or `to` is an error. Each region is covered by one opaque block: a dark grey fill (`#262626`) inside a light grey edge
+  (`#b0b0b0`), so it shows on a dark picture and on a light one. No pixel of the picture under it is kept,
+  so the cover is the same whatever was under it, also in a picture with transparency. It is not a blur,
+  because a blurred or pixelated text can sometimes be read back. FFmpeg does this: a screenshot is hidden
+  when it is loaded for the video, before it is made smaller if it is wider than 2560 pixels, and a
+  recording in every frame that is cut from it. The video, the render
+  plan and the files in `recording-frames/` hold only the hidden picture; the original exists only in your
+  own file. A scene with a hidden region gets the badge "Sensitive data masked".
+  The file is checked strictly, and an error stops the run, for a screenshot before any speech is paid
+  for. Nothing is skipped. These are errors: an id that
+  this command does not have (also one that the limits dropped), an unknown field, a value that is not a
+  list, more than 20 regions for one capture, a number that is missing or not finite, `w` or `h` of 0 or
+  less, a region with `from` or `to`, a region with no part inside the picture, an id or
+  a field given twice, a backslash anywhere in the file (no value needs one), `--redact` given twice, a
+  screenshot with hidden regions that is stored turned (a JPEG or PNG with an EXIF orientation: save it
+  upright first), and FFmpeg failing to hide a region. A region smaller than 2 pixels grows to 2. MergeStory finds nothing by itself: it hides only the regions that you
+  name. `analyze`, `validate` and a dry run only check the file. A storyboard cannot ask for hiding or
+  undo it, and the HTTP API takes no such file.
 - **Safety.** A file that looks like a credentials file (`.env`, a key file) is refused. Text that looks like
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
@@ -153,7 +180,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
 **Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`,
-`--screenshots-dir` and `--recording`. See [Context flags](#context-flags).
+`--screenshots-dir`, `--recording` and `--redact`. See [Context flags](#context-flags).
 
 **Style and length.**
 
@@ -289,7 +316,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -318,7 +345,7 @@ only them are removed.
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -367,11 +394,12 @@ folder:
 | `screenshots/` | the agent | Screenshots: every `.png`, `.jpg` and `.jpeg` file in it, sorted by name, becomes `SS1`, `SS2`, and so on. An optional `screenshots/captions.json` works as the one for recordings: `{"after.png": {"caption": "After the fix", "side": "after"}}`. Same limits and checks as `--screenshot`. |
 | `repro.json` | the agent | The steps that show the bug, with the shape and the limits of `--repro-file`. Every agent command reads it. A step can use a screenshot from `screenshots/` or a recording from `recordings/`, by its id (`SS1`, `RC1`). |
 | `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
+| `redact.json` | the agent | Regions to hide in the screenshots and recordings, in the format of `--redact`: keys are `SS1`, `RC1`, and so on, by the order of the files in `screenshots/` and `recordings/`. Same checks. Every agent command reads it, so the video never shows what it hides. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot or a recording as a flag. They read `screenshots/` and `recordings/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
+when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot, a recording or a region as a flag. They read `screenshots/` and `recordings/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -379,7 +407,7 @@ only when its repository is one of the git remotes of the current repository, on
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
 **What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
-`--storyboard`, `--screenshot`, `--screenshots-dir`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--storyboard`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 

@@ -6,6 +6,19 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** hide parts of a screenshot or a recording. `--redact <file>` on `analyze`, `validate` and
+  `generate` takes a JSON file with a list of regions for each capture, for example
+  `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`.
+  The numbers are fractions of the picture, and a region of a recording is hidden in every frame of the clip. FFmpeg covers each
+  region with one solid grey block, which is the same whatever was under it, before the picture is used anywhere:
+  the video, the render plan and the pictures in `recording-frames/` hold only the hidden picture, and if
+  hiding fails the run stops. This includes the small pictures of a reproduction step. The agent commands
+  read `redact.json` from the work folder. A scene that
+  shows such a capture carries the badge "Sensitive data masked", and the evidence pack marks the capture
+  "parts hidden". The file is checked strictly: an id that was not passed, an unknown field or a region
+  outside the picture is an error, and nothing is skipped. MergeStory finds nothing by itself. A publish
+  target only ever gets the video, its poster, its captions and the watch page, and a publisher now refuses
+  any other file. It needs an engine newer than 1.7.0. See "Hidden regions" in `docs/cli.md`.
 - **Added:** reproduction steps. `--repro-file <file>` passes the steps that show a bug to `analyze`,
   `validate` and `generate`, as JSON: a `title`, an optional `environment` and 1 to 12 `steps`. A step has a
   `text`, and may have a `screenshot` or a `recording` (an id such as `SS1` or `RC1` of a capture that you

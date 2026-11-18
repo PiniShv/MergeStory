@@ -2,10 +2,52 @@
 import { lstat, readdir, stat } from 'node:fs/promises';
 import { basename, extname, join, resolve } from 'node:path';
 import { MergeStoryError } from '../core/errors.ts';
+import { isRecord } from '../core/json.ts';
 import type { ScreenshotInput } from '../core/types.ts';
 import type { ContextOptions } from '../pipeline/index.ts';
 import { checkRepro, checkScreenshotFile, checkTestResults } from '../pipeline/inputs.ts';
 import { assertNotSensitive, formatBytes, LIMITS, readJsonFile, readTextFile } from './files.ts';
+
+/**
+ * Parse the file of regions to hide. A name given twice is refused: JSON.parse keeps only the last one,
+ * so the regions of the first would be dropped in silence.
+ */
+export function parseRedactFile(text: string, path: string): unknown {
+  const refuse = (message: string): never => {
+    throw new MergeStoryError('USAGE', `--redact: ${path} ${message}`, {
+      hint: 'Give each id once, and each field once in a region.',
+    });
+  };
+  // No value of this file needs a backslash. Without one, every string in the text is a plain "...".
+  if (text.includes('\\')) refuse('has a backslash. Write ids and fields as plain text, with no escapes.');
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (err) {
+    throw new MergeStoryError('USAGE', `--redact: ${path} is not valid JSON: ${(err as Error).message}`, {
+      cause: err,
+    });
+  }
+  // Every string of the text, in order; the ones followed by ":" are names.
+  const names = [...text.matchAll(/"([^"]*)"(\s*:)?/g)].filter((m) => m[2] !== undefined).map((m) => m[1]!);
+  const parsed = (v: unknown): number =>
+    Array.isArray(v)
+      ? v.reduce((sum: number, item) => sum + parsed(item), 0)
+      : isRecord(v)
+        ? Object.values(v).reduce((sum: number, item) => sum + 1 + parsed(item), 0)
+        : 0;
+  if (names.length !== parsed(value)) {
+    const id = isRecord(value)
+      ? Object.keys(value).find((key) => names.filter((n) => n === key).length > 1)
+      : undefined;
+    refuse(
+      id !== undefined && /^(SS|RC)\d+$/.test(id)
+        ? `gives ${id} twice.`
+        : 'gives a field twice in one region.',
+    );
+  }
+  return value;
+}
 
 /** Flags that supply context for the video. */
 export interface ContextFlags {
@@ -18,6 +60,7 @@ export interface ContextFlags {
   reproLabel?: string;
   screenshot?: string[];
   recording?: string[];
+  redact?: string;
   /** A folder of screenshots (`--screenshots-dir`). */
   screenshotsDir?: string;
   /** Screenshots and recordings that are already parsed. Only the agent commands set them, from their work folder. */
@@ -285,6 +328,10 @@ export async function buildContext(flags: ContextFlags, cwd: string): Promise<Co
     context.recordings = await resolveFiles(flags.recording, cwd, '--recording', async (path) =>
       resolve(cwd, path),
     );
+  }
+  if (flags.redact !== undefined) {
+    const text = await readTextFile(flags.redact, { label: '--redact', maxBytes: LIMITS.textBytes, cwd });
+    context.redact = parseRedactFile(text, flags.redact);
   }
   if (flags.recordingFiles && flags.recordingFiles.length > 0) {
     context.recordings = [...(context.recordings ?? []), ...flags.recordingFiles];

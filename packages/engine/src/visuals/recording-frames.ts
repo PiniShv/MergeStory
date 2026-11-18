@@ -20,6 +20,7 @@ import {
 import type { FrameSet } from '../core/render-plan.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, RecordingInput } from '../core/types.ts';
+import { hideFilter } from './hide-regions.ts';
 import { detectImage } from './image.ts';
 
 const EXTRACT_TIMEOUT_MS = 120_000;
@@ -80,9 +81,19 @@ export async function extractFrames(
   // FFmpeg reads a number such as 1e-7 as an error, so every time is written with three decimals.
   const seconds = (value: number): string => value.toFixed(3);
   const filter = [
-    // The rate comes first. A screen recording has no frames while nothing moves, and this step fills
-    // those gaps (and a late start) with the picture that was on screen, so the cut that follows
-    // shows the right moment. The last picture is held to the end of the part.
+    // Hidden regions come first, so every picture of the recording is covered before anything else. A zoom
+    // cannot move them, and the copies that the rate step makes (of the first picture of a clip that starts
+    // late, too) are copies of covered pictures. The scale keeps them in place if a clip changes its
+    // picture size after its header.
+    ...(recording.hidden?.length
+      ? [
+          `scale=${recording.width}:${recording.height}`,
+          hideFilter(recording.hidden, recording.width, recording.height),
+        ]
+      : []),
+    // A screen recording has no frames while nothing moves, and this step fills those gaps (and a late
+    // start) with the picture that was on screen, so the cut that follows shows the right moment. The last
+    // picture is held to the end of the part.
     `fps=${RECORDING_FPS}:start_time=0`,
     `tpad=stop_mode=clone:stop_duration=${seconds(trim.end)}`,
     `trim=start=${seconds(trim.start)}:end=${seconds(trim.end)}`,
@@ -91,6 +102,11 @@ export async function extractFrames(
     // A JPEG is read as BT.601 with the full range. Without these two, the colours of a BT.709 recording shift.
     `scale=${geometry.width}:${geometry.height}:out_color_matrix=bt601:out_range=pc`,
   ].join(',');
+  // A failed cut leaves nothing of this capture behind, not even the frames that were written before it stopped.
+  const fail = async (error: MergeStoryError): Promise<never> => {
+    await rm(outDir, { recursive: true, force: true });
+    throw error;
+  };
   const result = await runCommand(
     ffmpeg,
     [
@@ -128,14 +144,18 @@ export async function extractFrames(
     },
   ).catch((err: unknown) => {
     if (signal?.aborted) throw abortedError(err);
-    if (err instanceof Error && err.name === 'TimedOutError') throw refuse('it took too long', err);
-    throw refuse('FFmpeg stopped', err);
+    return fail(
+      refuse(
+        err instanceof Error && err.name === 'TimedOutError' ? 'it took too long' : 'FFmpeg stopped',
+        err,
+      ),
+    );
   });
-  if (result.code !== 0) throw refuse('FFmpeg reported an error');
+  if (result.code !== 0) return fail(refuse('FFmpeg reported an error'));
   const count = (await readdir(outDir)).filter((name) => /^f-\d{5}\.jpg$/.test(name)).length;
-  if (count === 0) throw refuse('the part to show has no picture');
+  if (count === 0) return fail(refuse('the part to show has no picture'));
   const first = detectImage(await readFile(join(outDir, 'f-00001.jpg')));
-  if (!first) throw refuse('its pictures could not be read');
+  if (!first) return fail(refuse('its pictures could not be read'));
   return { count, width: first.width, height: first.height };
 }
 

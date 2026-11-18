@@ -135,6 +135,37 @@ describe('evidence pack structure', () => {
     expect((await pack(SAMPLE)).markdown).not.toContain('## Reproduction');
   });
 
+  it('marks a screenshot and a recording that have hidden regions, and only those', async () => {
+    const hidden = [{ x: 0, y: 0, w: 0.5, h: 0.5 }];
+    const { markdown } = await pack(
+      SAMPLE,
+      {},
+      {},
+      emptyInputs({
+        screenshots: [
+          { id: 'SS1', path: '/a.png', caption: 'Plain', moment: 'before' },
+          { id: 'SS2', path: '/b.png', caption: 'Masked', moment: 'after', hidden },
+        ],
+        recordings: [
+          {
+            id: 'RC1',
+            path: '/a.mp4',
+            caption: 'Clip',
+            moment: 'before',
+            durationSec: 3,
+            width: 640,
+            height: 480,
+            codec: 'h264',
+            hidden,
+          },
+        ],
+      }),
+    );
+    expect(markdown).toContain('- SS1 (before): Plain');
+    expect(markdown).toContain('- SS2 (after, parts hidden): Masked');
+    expect(markdown).toContain('- RC1 (before, 3 s, 640x480, parts hidden): Clip');
+  });
+
   it('masks an e-mail address in the caption of a recording and of a screenshot, in the pack and in the evidence', async () => {
     const { markdown, analysis } = await pack(
       SAMPLE,

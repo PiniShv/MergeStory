@@ -196,12 +196,15 @@ page through Playwright. The runtime builds the whole video as HTML, CSS and SVG
 
 Fonts (Inter, JetBrains Mono, both under the SIL Open Font License) are embedded, and the page has
 no network access, so output does not depend on the machine. A recording is cut into JPEG frames
-with FFmpeg before narration starts, and each page receives only the frames that its part of the video
+with FFmpeg before narration starts (with the regions that the caller hides already covered in every
+frame), and each page receives only the frames that its part of the video
 can show, as images inside the page. The runtime shows one frame for each moment. A step of a
 reproduction that has a recording keeps one picture of it, the last one, in its own folder of
-`recording-frames/`. A screenshot is
+`recording-frames/`, cut with the same regions. A screenshot is
 embedded as it is, unless it is wider than 2560 pixels: then FFmpeg makes it 2560 pixels wide first, so a
-full-page capture does not slow the page down.
+full-page capture does not slow the page down. The regions that the caller hides are covered in the
+stored picture first, in the same call, so the cover is never made from a picture that was already
+smaller.
 
 A screenshot or a recording can carry highlights (boxes, in fractions of the picture) and a focus. The
 picture and its highlights sit in one camera element inside the window, which clips it. With a focus

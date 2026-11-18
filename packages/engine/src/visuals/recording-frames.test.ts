@@ -9,6 +9,8 @@ import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, RecordingInput } from '../core/types.ts';
 import { testConfig } from '../testing/context.ts';
 import { averageColor, ffmpegTo, makeClip } from '../testing/media.ts';
+import { COVER_EDGE, COVER_FILL } from './hide-regions.ts';
+import { detectImage } from './image.ts';
 import {
   extractFrames,
   extractLastFrame,
@@ -562,5 +564,345 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
     const { frames, runDir } = await extract([recordingScene('RC1', '/'.repeat(70))]);
     expect(frames.get('recording-frames/s-1')?.count).toBe(36);
     expect((await readdir(join(runDir, 'recording-frames/s-1'))).length).toBe(36);
+  });
+});
+
+describe.skipIf(tools === null)('hidden regions in the frames of a recording', () => {
+  let dir: string;
+  let stripes: string;
+  const frameName = (index: number) => `f-${String(index).padStart(5, '0')}.jpg`;
+  const hidden = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+  /** The largest difference in brightness inside a box of a frame, with the box as fractions of the frame. */
+  async function spread(file: string, box: { x: number; y: number; w: number; h: number }): Promise<number> {
+    const info = detectImage(await readFile(file))!;
+    const { stdoutBuffer } = await runCommand(
+      tools!.ffmpeg,
+      ['-v', 'error', '-i', file, '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
+      { timeoutMs: 60_000 },
+    );
+    const values: number[] = [];
+    for (let y = Math.ceil(box.y * info.height); y < Math.floor((box.y + box.h) * info.height); y++)
+      for (let x = Math.ceil(box.x * info.width); x < Math.floor((box.x + box.w) * info.width); x++)
+        values.push(stdoutBuffer[y * info.width + x]!);
+    return Math.max(...values) - Math.min(...values);
+  }
+  /**
+   * How far the pixels inside a box of a frame are from the two greys of a cover, at most: 0 when every
+   * pixel is the fill or the edge. The frames are JPEG, so a few levels are normal.
+   */
+  async function offCover(
+    file: string,
+    box: { x: number; y: number; w: number; h: number },
+  ): Promise<number> {
+    const info = detectImage(await readFile(file))!;
+    const { stdoutBuffer } = await runCommand(
+      tools!.ffmpeg,
+      ['-v', 'error', '-i', file, '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+      { timeoutMs: 60_000 },
+    );
+    let worst = 0;
+    for (let y = Math.ceil(box.y * info.height); y < Math.floor((box.y + box.h) * info.height); y++)
+      for (let x = Math.ceil(box.x * info.width); x < Math.floor((box.x + box.w) * info.width); x++)
+        for (let c = 0; c < 3; c++) {
+          const value = stdoutBuffer[(y * info.width + x) * 3 + c]!;
+          worst = Math.max(worst, Math.min(Math.abs(value - COVER_FILL), Math.abs(value - COVER_EDGE)));
+        }
+    return worst;
+  }
+  /** A cover is within this many levels of its greys in a JPEG frame. Without a cover, the stripes are 38 or more away. */
+  const COVERED = 16;
+  const request = (
+    recording: RecordingInput,
+    outDir: string,
+    over: Partial<Parameters<typeof extractFrames>[1]> = {},
+  ) => ({
+    recording,
+    trim: { start: 0, end: 2 },
+    zoom: null,
+    box: { width: 640, height: 640 },
+    outDir,
+    ...over,
+  });
+
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'mergestory-hidden-frames-'));
+    stripes = join(dir, 'stripes.mp4');
+    expect(
+      await ffmpegTo(tools!.ffmpeg, [
+        ...[
+          '-f',
+          'lavfi',
+          '-i',
+          'color=c=black:size=320x240:rate=12:duration=2,drawgrid=w=8:h=8:t=4:c=white',
+        ],
+        ...PICTURE,
+        stripes,
+      ]),
+    ).toBe(true);
+  });
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('covers a region in the first, a middle and the last frame of the clip, and nothing outside it', async () => {
+    const recording = { ...(await probed(stripes)), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] };
+    const out = join(dir, 'whole');
+    const { count } = await extractFrames(tools!.ffmpeg, request(recording, out));
+    expect(count).toBe(24);
+    for (const n of [1, 12, count]) {
+      expect(
+        await offCover(join(out, frameName(n)), { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }),
+        `frame ${n}`,
+      ).toBeLessThan(COVERED);
+      expect(await spread(join(out, frameName(n)), { x: 0.02, y: 0.02, w: 0.2, h: 0.2 })).toBeGreaterThan(
+        150,
+      );
+    }
+  });
+
+  it('covers the copies of the first picture of a clip whose picture starts after its sound', async (ctx) => {
+    // The sound starts at 0 and the picture at 1 s, with a white box only in its first second. The rate step
+    // fills 0 to 1 s with copies of the first picture, and the cover must be on them too. The picture and the
+    // sound are made as two files and joined with an offset on the picture file, which every FFmpeg applies.
+    const picture = await need(ctx, join(dir, 'late-picture.mp4'), [
+      ...['-f', 'lavfi', '-i'],
+      "color=c=black:size=320x240:rate=12:duration=3,drawbox=x=80:y=60:w=160:h=120:color=white:t=fill:enable='lt(t,1)'",
+      ...PICTURE,
+    ]);
+    const sound = await need(ctx, join(dir, 'late-sound.m4a'), [
+      ...['-f', 'lavfi', '-i', 'sine=duration=4', '-c:a', 'aac'],
+    ]);
+    const clip = await need(ctx, join(dir, 'starts-late.mp4'), [
+      ...['-itsoffset', '1', '-i', picture, '-i', sound],
+      ...['-map', '0:v', '-map', '1:a', '-c', 'copy'],
+    ]);
+    // The clip must really start its picture late, or this test would check nothing.
+    const starts = await runCommand(
+      tools!.ffprobe,
+      ['-v', 'error', '-show_entries', 'stream=codec_type,start_time', '-of', 'csv=p=0', clip],
+      { timeoutMs: 20_000 },
+    );
+    const start = (type: string) =>
+      Number(
+        starts.stdout
+          .split('\n')
+          .find((line) => line.startsWith(`${type},`))
+          ?.split(',')[1],
+      );
+    if (!(start('video') - start('audio') > 0.5)) {
+      return ctx.skip(
+        `this FFmpeg did not start the picture late (${starts.stdout.trim().replace(/\n/g, '; ')})`,
+      );
+    }
+    const recording = { ...(await probed(clip)), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] };
+    const out = join(dir, 'starts-late');
+    const { count } = await extractFrames(
+      tools!.ffmpeg,
+      request(recording, out, { trim: { start: 0, end: 3 } }),
+    );
+    const shown: number[] = [];
+    for (let n = 1; n <= count; n++)
+      if ((await offCover(join(out, frameName(n)), { x: 0.25, y: 0.25, w: 0.5, h: 0.5 })) > 60) shown.push(n);
+    expect(shown).toEqual([]);
+  });
+
+  it('cuts a clip with 20 regions, the most a capture may have, in seconds and covers every one', async () => {
+    const clip = join(dir, 'many.mp4');
+    expect(
+      await ffmpegTo(tools!.ffmpeg, [
+        ...[
+          '-f',
+          'lavfi',
+          '-i',
+          'color=c=black:size=640x360:rate=30:duration=6,drawgrid=w=8:h=8:t=4:c=white',
+        ],
+        ...PICTURE,
+        clip,
+      ]),
+    ).toBe(true);
+    // Five by four regions.
+    const regions = Array.from({ length: 20 }, (_, i) =>
+      hidden((i % 5) / 5, Math.floor(i / 5) / 4, 0.1, 0.1),
+    );
+    const out = join(dir, 'many');
+    const started = Date.now();
+    await extractFrames(
+      tools!.ffmpeg,
+      request({ ...(await probed(clip)), hidden: regions }, out, { trim: { start: 0, end: 6 } }),
+    );
+    // One split for all regions keeps this near a second. A split for each region took minutes.
+    expect(Date.now() - started).toBeLessThan(30_000);
+    const frame = join(out, frameName(48));
+    for (const [i, region] of regions.entries()) {
+      expect(await offCover(frame, region), `region ${i + 1}`).toBeLessThan(COVERED);
+    }
+    expect(await spread(frame, { x: 0.1, y: 0.1, w: 0.1, h: 0.1 })).toBeGreaterThan(150);
+  }, 60_000);
+
+  it('keeps the region on the picture of the recording when a scene zooms: the zoom cannot move it', async () => {
+    // The region is the top left quarter of the whole picture. A zoom to the top left half shows it in the top left half of the frame.
+    const recording = { ...(await probed(stripes)), hidden: [hidden(0, 0, 0.25, 0.25)] };
+    const out = join(dir, 'zoomed');
+    await extractFrames(tools!.ffmpeg, request(recording, out, { zoom: { x: 0, y: 0, w: 0.5, h: 0.5 } }));
+    const file = join(out, frameName(3));
+    expect(await offCover(file, { x: 0, y: 0, w: 0.5, h: 0.5 })).toBeLessThan(COVERED);
+    expect(await spread(file, { x: 0.55, y: 0.55, w: 0.4, h: 0.4 })).toBeGreaterThan(150);
+  });
+
+  it('hides the right part of a clip that a phone stored turned on its side', async (ctx) => {
+    const turned = join(dir, 'turned.mp4');
+    if (!(await ffmpegTo(tools!.ffmpeg, ['-display_rotation', '90', '-i', stripes, '-c', 'copy', turned])))
+      ctx.skip();
+    const recording = await probed(turned);
+    expect(recording).toMatchObject({ width: 240, height: 320 });
+    // The bottom half of the upright picture.
+    const out = join(dir, 'turned');
+    await extractFrames(tools!.ffmpeg, request({ ...recording, hidden: [hidden(0, 0.5, 1, 0.5)] }, out));
+    const file = join(out, frameName(2));
+    expect(await offCover(file, { x: 0, y: 0.5, w: 1, h: 0.5 })).toBeLessThan(COVERED);
+    expect(await spread(file, { x: 0.1, y: 0.05, w: 0.8, h: 0.35 })).toBeGreaterThan(150);
+  });
+
+  it('stops, names the recording and leaves no frame of it when FFmpeg fails after it has written one', async () => {
+    const program = join(dir, 'fail-after-a-frame.sh');
+    await writeFile(
+      program,
+      '#!/bin/sh\nfor last; do :; done\nmkdir -p "$(dirname "$last")"\ncp "$(dirname "$last")/../seed.jpg" "$(dirname "$last")/f-00001.jpg"\nexit 1\n',
+      { mode: 0o700 },
+    );
+    await writeFile(join(dir, 'seed.jpg'), 'a frame');
+    const out = join(dir, 'failed');
+    const recording = { ...(await probed(stripes)), hidden: [hidden(0, 0, 1, 1)] };
+    await expect(extractFrames(program, request(recording, out))).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('Recording RC1 (stripes.mp4) could not be decoded'),
+    });
+    expect(await readdir(out).catch(() => [])).toEqual([]);
+  });
+
+  it('hides a panel of a before-after scene too, in every use of the clip', async () => {
+    const scene = (visual: object): Storyboard['scenes'][number] =>
+      ({ id: 's', visual }) as unknown as Storyboard['scenes'][number];
+    const panel = { kind: 'recording', recordingId: 'RC1' };
+    const inputs: ContextInputs = {
+      task: null,
+      notes: null,
+      tests: [],
+      screenshots: [],
+      recordings: [{ ...(await probed(stripes, 'RC1')), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] }],
+      repro: null,
+    };
+    const runDir = await mkdtemp(join(dir, 'run-'));
+    const frames = await extractStoryboardFrames(
+      { scenes: [scene({ type: 'before-after', before: panel, after: panel })] } as Storyboard,
+      inputs,
+      testConfig(),
+      runDir,
+      new AbortController().signal,
+    );
+    expect([...frames.keys()].sort()).toEqual(['recording-frames/s-1.after', 'recording-frames/s-1.before']);
+    for (const side of ['before', 'after']) {
+      const file = join(runDir, `recording-frames/s-1.${side}`, frameName(4));
+      expect(await offCover(file, { x: 0.25, y: 0.25, w: 0.5, h: 0.5 }), side).toBeLessThan(COVERED);
+      expect(await spread(file, { x: 0.02, y: 0.02, w: 0.2, h: 0.2 }), side).toBeGreaterThan(150);
+    }
+  });
+
+  it('hides the picture of a reproduction step by the same regions', async () => {
+    const reproScene = {
+      id: 's',
+      visual: { type: 'repro', steps: [{ step: 1, beat: 0 }] },
+    } as unknown as Storyboard['scenes'][number];
+    const covered = async (regions: ReturnType<typeof hidden>[]) => {
+      const inputs: ContextInputs = {
+        task: null,
+        notes: null,
+        tests: [],
+        screenshots: [],
+        recordings: [{ ...(await probed(stripes, 'RC1')), hidden: regions }],
+        repro: {
+          title: 'Bug',
+          environment: null,
+          steps: [{ text: 'A step', screenshotId: null, recordingId: 'RC1', result: null }],
+        },
+      };
+      const runDir = await mkdtemp(join(dir, 'run-'));
+      await extractStoryboardFrames(
+        { scenes: [reproScene] } as Storyboard,
+        inputs,
+        testConfig(),
+        runDir,
+        new AbortController().signal,
+      );
+      const folder = join(runDir, 'recording-frames/s-1.step-1');
+      expect(await readdir(folder)).toEqual(['f-00001.jpg']);
+      const file = join(folder, 'f-00001.jpg');
+      return {
+        off: await offCover(file, { x: 0.3, y: 0.3, w: 0.4, h: 0.4 }),
+        detail: await spread(file, { x: 0.02, y: 0.02, w: 0.2, h: 0.2 }),
+      };
+    };
+    const always = await covered([hidden(0.25, 0.25, 0.5, 0.5)]);
+    expect(always.off).toBeLessThan(COVERED);
+    expect(always.detail, 'the rest of the picture is not covered').toBeGreaterThan(150);
+    // Without a region the same picture is not covered, so the check above sees the cover.
+    expect((await covered([])).off).toBeGreaterThan(COVERED);
+  });
+
+  it('keeps the region on the picture when a scene has a focus, which keeps larger frames', async () => {
+    const big = join(dir, 'big-stripes.mp4');
+    expect(
+      await ffmpegTo(tools!.ffmpeg, [
+        ...[
+          '-f',
+          'lavfi',
+          '-i',
+          'color=c=black:size=2560x960:rate=6:duration=1,drawgrid=w=16:h=16:t=8:c=white',
+        ],
+        ...PICTURE,
+        big,
+      ]),
+    ).toBe(true);
+    const inputs: ContextInputs = {
+      task: null,
+      notes: null,
+      tests: [],
+      screenshots: [],
+      recordings: [{ ...(await probed(big, 'RC1')), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] }],
+      repro: null,
+    };
+    const visual = {
+      type: 'recording',
+      recordingId: 'RC1',
+      caption: 'x',
+      trim: null,
+      speed: null,
+      zoom: null,
+      highlights: [],
+      focus: { x: 0.6, y: 0.6, w: 0.2, h: 0.2 },
+    };
+    const runDir = await mkdtemp(join(dir, 'run-'));
+    const frames = await extractStoryboardFrames(
+      { scenes: [{ id: 's', visual }] } as unknown as Storyboard,
+      inputs,
+      testConfig(),
+      runDir,
+      new AbortController().signal,
+    );
+    // The frames are the larger ones that a focus asks for, not the plain size of a scene.
+    expect(frames.get('recording-frames/s-1')!.width).toBeGreaterThan(1664);
+    const file = join(runDir, 'recording-frames/s-1', frameName(2));
+    expect(await offCover(file, { x: 0.27, y: 0.27, w: 0.46, h: 0.46 })).toBeLessThan(COVERED);
+    expect(await spread(file, { x: 0.02, y: 0.02, w: 0.2, h: 0.2 })).toBeGreaterThan(150);
+  });
+
+  it('cuts the frames as before when there is nothing to hide', async () => {
+    const recording = await probed(stripes);
+    const plain = join(dir, 'plain');
+    await extractFrames(tools!.ffmpeg, request(recording, plain));
+    expect(await spread(join(plain, frameName(3)), { x: 0.3, y: 0.3, w: 0.4, h: 0.4 })).toBeGreaterThan(150);
+    const empty = join(dir, 'empty-list');
+    await extractFrames(tools!.ffmpeg, request({ ...recording, hidden: [] }, empty));
+    expect(await readFile(join(empty, frameName(3)))).toEqual(await readFile(join(plain, frameName(3))));
   });
 });

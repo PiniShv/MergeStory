@@ -15,12 +15,14 @@ import type { Storyboard } from '../core/storyboard-schema.ts';
 import { stripInvisible } from '../core/text.ts';
 import {
   type ContextInputs,
+  type HiddenRegion,
   REPRO_RESULTS,
   type RecordingInput,
   type ReproFile,
   type ReproInput,
   type TestEvidence,
 } from '../core/types.ts';
+import { turnedReason } from '../visuals/hide-regions.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import type { ContextOptions } from './types.ts';
 
@@ -193,6 +195,81 @@ function normalizeContextText(value: string | null | undefined, what: string): s
   return text;
 }
 
+/** Most regions to hide for one screenshot or recording. */
+export const MAX_HIDDEN_REGIONS = 20;
+const REGION_KEYS = ['x', 'y', 'w', 'h'];
+const REDACT_HINT =
+  'Use {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}. ' +
+  'x, y, w and h are fractions (0 to 1) of the whole picture. A region of a recording is hidden for the whole clip.';
+
+/**
+ * Check the regions that the caller wants hidden. Strict, and it fails closed: nothing that is wrong
+ * is skipped, because a skipped region would show what the caller wanted hidden. Returns the regions
+ * by evidence id as given, not yet cut to the picture (see cutRegion).
+ */
+export function checkRedactions(value: unknown): Map<string, HiddenRegion[]> {
+  const fail = (message: string): never => {
+    throw new MergeStoryError('USAGE', `Hidden regions: ${message}`, { hint: REDACT_HINT });
+  };
+  const shown = (text: string): string => maskPrivate(text.slice(0, 40), { maskEmails: true });
+  if (!isRecord(value)) return fail('expected a JSON object with a list of regions for each id.');
+  const out = new Map<string, HiddenRegion[]>();
+  for (const [id, list] of Object.entries(value)) {
+    if (!/^(SS|RC)[1-9]\d*$/.test(id)) {
+      return fail(`"${shown(id)}" is not the id of a screenshot or a recording (SS1, RC1, ...).`);
+    }
+    if (!Array.isArray(list)) return fail(`${id} needs a list of regions.`);
+    if (list.length > MAX_HIDDEN_REGIONS) {
+      return fail(`${id} has ${list.length} regions, the most is ${MAX_HIDDEN_REGIONS}.`);
+    }
+    out.set(
+      id,
+      list.map((entry: unknown, index) => {
+        const at = `${id}, region ${index + 1}`;
+        if (!isRecord(entry)) return fail(`${at} is not an object.`);
+        const timed = Object.keys(entry).find((key) => key === 'from' || key === 'to');
+        if (timed !== undefined) {
+          return fail(
+            `${at} has "${timed}": a region cannot be limited to a part of a clip. Leave out "from" and "to", and the region is hidden for the whole clip.`,
+          );
+        }
+        const unknown = Object.keys(entry).find((key) => !REGION_KEYS.includes(key));
+        if (unknown !== undefined) {
+          return fail(`${at} has unknown field "${shown(unknown)}". Allowed: ${REGION_KEYS.join(', ')}.`);
+        }
+        const number = (key: string): number => {
+          const field = entry[key];
+          return typeof field === 'number' && Number.isFinite(field)
+            ? field
+            : fail(`${at} needs "${key}" as a number.`);
+        };
+        const region = { x: number('x'), y: number('y'), w: number('w'), h: number('h') };
+        if (!(region.w > 0 && region.h > 0)) return fail(`${at} needs "w" and "h" above 0.`);
+        return region;
+      }),
+    );
+  }
+  return out;
+}
+
+/**
+ * Cut a region to the picture. Throws USAGE when nothing of it is left, because a region that hides
+ * nothing is a mistake that must not pass.
+ */
+function cutRegion(region: HiddenRegion, at: string): HiddenRegion {
+  // The part of [start, start + length] that lies inside 0 to 1. A region that already does is kept exactly.
+  const inside = (start: number, length: number): [number, number] =>
+    start >= 0 ? [start, Math.min(length, 1 - start)] : [0, Math.min(start + length, 1)];
+  const [x, w] = inside(region.x, region.w);
+  const [y, h] = inside(region.y, region.h);
+  if (!(w > 0 && h > 0)) {
+    throw new MergeStoryError('USAGE', `Hidden regions: ${at} has no part inside the picture.`, {
+      hint: REDACT_HINT,
+    });
+  }
+  return { x, y, w, h };
+}
+
 /** "5.2 MB", rounded up, for a size that is over the screenshot limit. */
 function megabytes(bytes: number): string {
   return `${Math.ceil((bytes / (1024 * 1024)) * 10) / 10} MB`;
@@ -202,8 +279,14 @@ function megabytes(bytes: number): string {
  * Check a screenshot the way the video does: PNG or JPEG by content (never by file name), at most
  * 4 MiB and 40 megapixels. A file that the video could not draw is refused here, at once, and not
  * after narration has been paid for. Returns the absolute path. `label` names the input in errors.
+ * With `hidden` (the screenshot has regions to hide), a picture that is stored turned is refused too.
  */
-export async function checkScreenshotFile(path: string, cwd: string, label = 'Screenshot'): Promise<string> {
+export async function checkScreenshotFile(
+  path: string,
+  cwd: string,
+  label = 'Screenshot',
+  hidden = false,
+): Promise<string> {
   const absolute = resolve(cwd, path);
   const info = await stat(absolute).catch(() => null);
   if (!info) {
@@ -223,13 +306,20 @@ export async function checkScreenshotFile(path: string, cwd: string, label = 'Sc
   if (bytes === null) throw new MergeStoryError('USAGE', `${label}: cannot read ${path}.`);
   // The file may have grown since it was measured.
   if (bytes.length > MAX_SCREENSHOT_BYTES) throw tooLarge(bytes.length);
-  if (!detectImage(bytes)) {
+  const image = detectImage(bytes);
+  if (!image) {
     throw new MergeStoryError(
       'USAGE',
       `${label}: ${path} is not a PNG or JPEG image (up to 40 megapixels).`,
       {
         hint: 'Convert it to PNG or JPEG first. Other formats, such as WebP and GIF, are not supported.',
       },
+    );
+  }
+  if (hidden && image.orientation !== undefined) {
+    throw new MergeStoryError(
+      'USAGE',
+      `${label}: ${path} has hidden regions, but ${turnedReason(image.orientation)}.`,
     );
   }
   return absolute;
@@ -292,13 +382,23 @@ export async function buildContextInputs(
     summary: t.summary.slice(0, MAX_TEST_SUMMARY),
     source: t.source,
   }));
+  // Checked first: a mistake in what to hide stops the run before anything else is read.
+  const redactions =
+    options?.redact === undefined ? new Map<string, HiddenRegion[]>() : checkRedactions(options.redact);
+  const hiddenFor = (id: string): { hidden?: HiddenRegion[] } => {
+    const regions = (redactions.get(id) ?? []).map((region, i) =>
+      cutRegion(region, `${id}, region ${i + 1}`),
+    );
+    return regions.length > 0 ? { hidden: regions } : {};
+  };
   const screenshots = [];
   for (const [i, shot] of (options?.screenshots ?? []).slice(0, maxScreenshots).entries()) {
     screenshots.push({
       id: `SS${i + 1}`,
-      path: await checkScreenshotFile(shot.path, cwd),
+      path: await checkScreenshotFile(shot.path, cwd, undefined, redactions.has(`SS${i + 1}`)),
       caption: (shot.caption ?? '').slice(0, MAX_CAPTION),
       moment: shot.moment ?? 'other',
+      ...hiddenFor(`SS${i + 1}`),
     });
   }
   const recordings: RecordingInput[] = [];
@@ -312,7 +412,20 @@ export async function buildContextInputs(
       caption: (rec.caption ?? '').slice(0, MAX_CAPTION),
       moment: rec.moment ?? 'other',
       ...checked,
+      ...hiddenFor(`RC${i + 1}`),
     });
+  }
+  const supplied = [...screenshots, ...recordings].map((item) => item.id);
+  for (const id of redactions.keys()) {
+    if (!supplied.includes(id)) {
+      throw new MergeStoryError(
+        'USAGE',
+        `Hidden regions: ${id} is not a screenshot or recording of this run.`,
+        {
+          hint: `This run has: ${supplied.join(', ') || 'no screenshots or recordings'}. Only the first ${maxScreenshots} screenshots and the first ${maxRecordings} recordings are used.`,
+        },
+      );
+    }
   }
   return {
     task: normalizeContextText(options?.task, 'task description'),

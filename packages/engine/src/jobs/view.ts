@@ -157,5 +157,7 @@ export function maskContext(context: ContextOptions): { context: ContextOptions;
       caption: mask(r.caption, 'recording captions'),
     }));
   }
+  // The regions to hide are numbers, never text. Dropping them here would show what they hide.
+  if (context.redact !== undefined) out.redact = context.redact;
   return { context: out, masked };
 }

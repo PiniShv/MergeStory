@@ -222,8 +222,9 @@ only for behaviour that the code really has, and cite a file, hunk or symbol id 
 scene. Never show a real host name, token or personal data. A browser `url` is a path such as `/settings`,
 never an address with a host: the checker removes the host if you write one. Do not show test output or
 numbers that nobody measured. A `recording` is the opposite: it is real, and the video labels it
-"Recorded". MergeStory does not look inside a screenshot or a recording, so check a capture for secrets
-and e-mail addresses before you pass it.
+"Recorded". MergeStory does not look inside a screenshot or a recording. The caller can hide regions with
+`--redact` (a region of a recording is hidden in every frame of the clip), and a scene that shows such a capture carries the badge "Sensitive data masked"; a storyboard
+cannot ask for hiding or undo it. Check a capture for secrets and e-mail addresses before you pass it.
 
 ## Code references
 
@@ -375,8 +376,9 @@ and no second model sees the code. The reading and writing are your agent's own 
    `--repro-file` instead. The `agent` commands also read real screenshots from `screenshots/` in that folder
    (`.png`, `.jpg` or `.jpeg`, sorted by name, named by an optional `screenshots/captions.json`) and screen
    recordings from `recordings/` (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an
-   optional `recordings/captions.json`). With `analyze`, `validate` and `generate`, pass
-   `--screenshots-dir <folder>` and `--recording <path>[:<caption>[:before|after]]` instead.
+   optional `recordings/captions.json`), and the regions to hide in them from `redact.json`. With
+   `analyze`, `validate` and `generate`, pass `--screenshots-dir <folder>`,
+   `--recording <path>[:<caption>[:before|after]]` and `--redact <file>` instead.
 2. **Analyse the change.**
 
    ```bash

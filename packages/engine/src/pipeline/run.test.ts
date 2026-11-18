@@ -483,6 +483,40 @@ describe('a dry run', () => {
   });
 });
 
+describe('regions to hide', () => {
+  const regionsOptions = (redact: unknown) => {
+    return {
+      ...options({
+        withContext: false,
+        context: {
+          screenshots: [{ path: join(base, 'shot.png'), caption: 'x', moment: 'other' as const }],
+          redact,
+        },
+      }),
+      dryRun: true,
+    };
+  };
+
+  it('stops even a dry run on a mistake in them, before anything is analysed or written', async () => {
+    await writeFile(join(base, 'shot.png'), makePng(8, 8));
+    for (const [redact, message] of [
+      [{ SS2: [{ x: 0, y: 0, w: 1, h: 1 }] }, 'SS2 is not a screenshot or recording of this run'],
+      [{ SS1: [{ x: 0, y: 0, w: 1 }] }, 'SS1, region 1 needs "h" as a number'],
+    ] as const) {
+      const error = await failure(generate(regionsOptions(redact)));
+      expect(error.code).toBe('USAGE');
+      expect(error.message).toContain(message);
+      expect(existsSync(runDir())).toBe(false);
+    }
+  });
+
+  it('lets a dry run pass with a good file', async () => {
+    await writeFile(join(base, 'shot.png'), makePng(8, 8));
+    const result = await generate(regionsOptions({ SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5 }] }));
+    expect(result).toMatchObject({ dryRun: true });
+  });
+});
+
 describe('the run folder', () => {
   it('is not created when the run fails early', async () => {
     const badRef = await failure(generate(options({ base: 'no-such-branch' })));
@@ -1076,7 +1110,7 @@ describe('prepareAuthoring: AUTHORING.md', () => {
       'Give both commands the same source and the same `--base`, `--head`, `--task-file`',
     );
     expect(guide).toContain(
-      '`--repro-file`, `--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis',
+      '`--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` and `--redact` flags as the analysis',
     );
     expect(guide).toContain('They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1');
     expect(guide).toContain('Longest video: 150 seconds.');
@@ -1565,6 +1599,57 @@ describe('generate: a wide screenshot', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('stops before any speech when a region of it cannot be hidden, and shows nothing of the picture', async () => {
+    const wide = join(base, 'wide-secret.png');
+    await writeFile(wide, pngHeader(3000, 100));
+    const broken = join(base, 'ffmpeg-fails-hiding.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene = structuredClone(demo.scenes[0]!);
+    const storyboard: Storyboard = {
+      ...demo,
+      scenes: [
+        ...demo.scenes,
+        {
+          ...scene,
+          id: 'shot',
+          role: 'under-the-hood',
+          narration: [{ text: 'The page shows the failure.', evidence: ['SS1'] }],
+          visual: {
+            type: 'screenshot',
+            screenshotId: 'SS1',
+            caption: 'The page',
+            highlights: [],
+            focus: null,
+          },
+        },
+      ],
+    };
+    const narration = await import('../narration/index.ts');
+    const spy = vi.spyOn(narration, 'synthesizeNarration');
+    try {
+      const error = await failure(
+        run({
+          storyboard,
+          withContext: false,
+          context: {
+            screenshots: [{ path: wide, caption: 'Page', moment: 'before' as const }],
+            redact: { SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5 }] },
+          },
+          config: { render: { ffmpegPath: broken } },
+        }),
+      );
+      expect(error.code).toBe('USAGE');
+      expect(error.message).toContain(
+        'Screenshot SS1 (wide-secret.png) cannot be shown with its hidden regions',
+      );
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(existsSync(join(runDir(), 'render-plan.json'))).toBe(false);
   });
 });
 

@@ -373,6 +373,80 @@ describe('agent: the work folder', () => {
     });
   });
 
+  describe('redact.json', () => {
+    const regions = {
+      SS1: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4 }],
+      RC1: [{ x: 0, y: 0, w: 1, h: 0.1 }],
+    };
+    const contexts = async () => {
+      analyzeMock.mockResolvedValue(authoring);
+      validateMock.mockResolvedValue(valid);
+      generateMock.mockResolvedValue(fakeResult());
+      await writeFile(join(work(), 'storyboard.json'), JSON.stringify({ title: 'x' }));
+      expect((await run(['agent', 'analyze', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'validate', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
+      return [
+        analyzeMock.mock.calls[0]?.[0].context,
+        validateMock.mock.calls[0]?.[0].context,
+        lastGenerateOptions().context,
+      ];
+    };
+
+    it('is read in every command, and nothing is hidden without it', async () => {
+      await mkdir(work(), { recursive: true });
+      for (const context of await contexts()) expect(context?.redact).toBeUndefined();
+      analyzeMock.mockClear();
+      validateMock.mockClear();
+      generateMock.mockClear();
+      await writeFile(join(work(), 'redact.json'), JSON.stringify(regions));
+      for (const context of await contexts()) expect(context?.redact).toEqual(regions);
+    });
+
+    it('names a picture of screenshots/ by its id, in the same order as the folder', async () => {
+      await mkdir(join(work(), 'screenshots'), { recursive: true });
+      await writeFile(join(work(), 'screenshots', 'b.png'), makePng(8, 8));
+      await writeFile(join(work(), 'screenshots', 'a.png'), makePng(8, 8));
+      await writeFile(join(work(), 'redact.json'), JSON.stringify({ SS2: [{ x: 0, y: 0, w: 0.5, h: 0.5 }] }));
+      for (const context of await contexts()) {
+        const inputs = await buildContextInputs(context!, dir, testConfig());
+        // SS2 is b.png, the second of the folder in name order.
+        expect(
+          inputs.screenshots.map((s) => [s.id, s.path.endsWith('b.png'), s.hidden?.length ?? 0]),
+        ).toEqual([
+          ['SS1', false, 0],
+          ['SS2', true, 1],
+        ]);
+      }
+    });
+
+    it('is refused in every command when a region has "from" or "to"', async () => {
+      await mkdir(join(work(), 'screenshots'), { recursive: true });
+      await writeFile(join(work(), 'screenshots', 'a.png'), makePng(8, 8));
+      await writeFile(
+        join(work(), 'redact.json'),
+        JSON.stringify({ SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5, from: 1 }] }),
+      );
+      for (const context of await contexts()) {
+        await expect(buildContextInputs(context!, dir, testConfig())).rejects.toMatchObject({
+          code: 'USAGE',
+          message: expect.stringContaining(
+            'SS1, region 1 has "from": a region cannot be limited to a part of a clip.',
+          ),
+        });
+      }
+    });
+
+    it('stops the command when the file is not valid JSON', async () => {
+      await mkdir(work(), { recursive: true });
+      await writeFile(join(work(), 'redact.json'), '{');
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain('is not valid JSON');
+      expect(analyzeMock).not.toHaveBeenCalled();
+    });
+  });
+
   it('needs storyboard.json for validate', async () => {
     const { code, stderr } = await run(['agent', 'validate', '--name', 'fix-1']);
     expect(code).toBe(2);

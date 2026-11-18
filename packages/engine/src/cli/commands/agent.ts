@@ -44,6 +44,7 @@ const WORK_FILE = {
   notes: 'notes.md',
   tests: 'tests.json',
   repro: 'repro.json',
+  redact: 'redact.json',
   storyboard: 'storyboard.json',
 } as const;
 /** The folders of screenshots and of screen recordings. Each may hold a captions.json. */
@@ -169,7 +170,7 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
   return source;
 }
 
-/** The task, notes, test results, reproduction, screenshots and recordings that the agent wrote into the work folder, as context flags. */
+/** The task, notes, test results, reproduction, regions to hide, screenshots and recordings that the agent wrote into the work folder, as context flags. */
 async function contextFiles(dir: string): Promise<ContextFlags> {
   const flags: ContextFlags = {};
   const path = (name: string): string | undefined =>
@@ -185,6 +186,8 @@ async function contextFiles(dir: string): Promise<ContextFlags> {
     flags.reproFile = repro;
     flags.reproLabel = WORK_FILE.repro;
   }
+  const redact = path(WORK_FILE.redact);
+  if (redact) flags.redact = redact;
   const screenshots = await readCaptureFolder(join(dir, SCREENSHOTS_DIR), SCREENSHOT_KIND, {
     nameLabel: `${SCREENSHOTS_DIR}/`,
   });

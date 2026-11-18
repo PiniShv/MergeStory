@@ -85,8 +85,7 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   `screenshots/captions.json` as `{"page.png": {"caption": "What it shows", "side": "before"}}`.
   This needs an engine newer than 1.7.0. An older engine ignores the folder, so cite no `SS` id
   there. MergeStory masks text, not pictures: a secret or an e-mail address that shows in a screenshot
-  shows in the video. Use a capture only when you know that it shows nothing its viewers must not
-  see. When you are not sure, ask the user.
+  shows in the video, unless you hide it.
 - `recordings/`: screen recordings that were really captured; never make one up. Copy each one into
   `recordings/` in the work folder before `agent analyze` runs. A file tool cannot write a video, and
   this skill allows no copy command, so the user may have to approve the copy. The files are used in
@@ -95,8 +94,20 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   `recordings/captions.json` as `{"clip.mp4": {"caption": "What it shows", "side": "before"}}`.
   This needs engine 1.7.0 or newer. An older engine ignores the folder, so cite no `RC` id there.
   MergeStory masks text, not pictures: a secret or an e-mail address that shows in a recording shows in
-  the video. Use a capture only when you know that it shows nothing its viewers must not see. When you
-  are not sure, ask the user.
+  the video, unless you hide it.
+- `redact.json`: the parts of a screenshot or recording that must not show (names, e-mail addresses,
+  amounts, account numbers), as `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`. The four numbers
+  are fractions (0 to 1) of the whole picture, and `SS1` or `RC1` is the first file in name order of
+  `screenshots/` or `recordings/`. A region of a recording is hidden for the whole clip; do not add
+  `"from"` or `"to"`, they are an error. The engine covers each region with a solid grey block in every frame before
+  it keeps anything, and it hides only the regions you name: it finds nothing by itself. Be generous with
+  the size of a region. A mistake in the file stops the run with an error that names the id. This needs an
+  engine newer than 1.7.0. An engine of 1.7.0 or older does not read `redact.json` and gives no error, so
+  when a part of a capture must be hidden and `mergestory --version` prints 1.7.0 or older, do not pass
+  that capture at all.
+
+Use a capture only when you know what it shows. When you are not sure what may be shown, ask the user
+before you pass the capture; do not guess.
 
 These become citable evidence (TASK, NOTES, T1, REPRO.1, SS1, RC1) in the video.
 

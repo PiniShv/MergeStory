@@ -19,6 +19,11 @@ export interface ContextOptions {
   recordings?: Pick<RecordingInput, 'path' | 'caption' | 'moment'>[];
   /** Reproduction steps, as the caller wrote them. A step may name a supplied screenshot (SS1) or recording (RC1). */
   repro?: ReproFile | null;
+  /**
+   * Regions to hide, by evidence id of a screenshot or recording of this run: {"SS2": [{x, y, w, h}],
+   * "RC1": [{x, y, w, h}]}, hidden for the whole clip in a recording. Checked strictly when the context is built (see checkRedactions).
+   */
+  redact?: unknown;
 }
 
 export interface GenerateOptions {

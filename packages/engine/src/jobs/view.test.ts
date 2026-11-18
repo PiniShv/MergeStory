@@ -233,6 +233,12 @@ describe('maskContext', () => {
     expect(() => maskContext({ repro: { title: 'T', steps: [{ text: blob }] } })).toThrow(/reproduction/);
   });
 
+  it('keeps the regions to hide, which are numbers and not text', () => {
+    const redact = { SS1: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.4 }] };
+    expect(maskContext({ redact }).context.redact).toEqual(redact);
+    expect(maskContext({}).context).not.toHaveProperty('redact');
+  });
+
   it('keeps nulls and leaves absent fields absent', () => {
     expect(maskContext({})).toEqual({ context: {}, masked: 0 });
     expect(maskContext({ task: null, notes: null })).toEqual({

@@ -166,6 +166,18 @@ export interface TestEvidence {
   source: 'agent' | 'ci' | 'user';
 }
 
+/**
+ * A part of a screenshot or a recording that the video hides. x, y, w and h are fractions (0 to 1) of
+ * the whole picture as a player shows it, already cut to the picture. A region of a recording is hidden
+ * in every frame of the clip.
+ */
+export interface HiddenRegion {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /** A real screenshot supplied by the caller. Rendered with an "actual screenshot" label. */
 export interface ScreenshotInput {
   /** Evidence id, e.g. "SS1". */
@@ -173,6 +185,8 @@ export interface ScreenshotInput {
   path: string;
   caption: string;
   moment: 'before' | 'after' | 'other';
+  /** Regions that the video hides before the picture is used anywhere. Set from the context's `redact`. */
+  hidden?: HiddenRegion[];
 }
 
 /** A real screen recording supplied by the caller. Its file was checked with ffprobe. */
@@ -188,6 +202,8 @@ export interface RecordingInput {
   height: number;
   /** "h264", "vp8" or "vp9". */
   codec: string;
+  /** Regions that the video hides in every frame that it cuts. Set from the context's `redact`. */
+  hidden?: HiddenRegion[];
 }
 
 export const REPRO_RESULTS = ['expected', 'actual', 'bug', 'fixed'] as const;

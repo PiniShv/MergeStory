@@ -83,6 +83,7 @@ jobs:
             --screenshots-dir "$cap/screenshots" \
             --recording "$cap/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" \
             --recording "$cap/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after" \
+            --redact examples/bugfix-demo/redact.json \
             --tts none --quality draft --publish local --max-render-seconds 300 \
             --out "$RUNNER_TEMP/bugfix-video" --json > "$RUNNER_TEMP/bugfix-stdout.json"
           node -e '
@@ -96,7 +97,27 @@ jobs:
               console.error("unexpected result", { ok: result.ok, evidenceUsed: used });
               process.exit(1);
             }
-          ' "$RUNNER_TEMP/bugfix-video"
+            // Every scene that shows a capture says that parts of it are hidden.
+            const plan = JSON.parse(fs.readFileSync(dir + "/render-plan.json", "utf8"));
+            const shown = plan.scenes.filter((s) => s.badges.some((b) => b.text === "Recorded" || b.text === "Actual screenshot"));
+            const unmasked = shown.filter((s) => !s.badges.some((b) => b.text === "Sensitive data masked"));
+            if (shown.length === 0 || unmasked.length > 0) {
+              console.error("captures without hidden regions", unmasked.map((s) => s.id));
+              process.exit(1);
+            }
+            // The regions hold the signed-in line as the fonts of this machine draw it, with room to spare.
+            const lines = JSON.parse(fs.readFileSync(process.argv[2] + "/signed-in.json", "utf8"));
+            const regions = JSON.parse(fs.readFileSync("examples/bugfix-demo/redact.json", "utf8"));
+            const side = { SS1: "before", SS2: "after", RC1: "before", RC2: "after" };
+            for (const [id, [r]] of Object.entries(regions)) {
+              const l = lines[side[id]];
+              const room = 0.01;
+              if (r.x > l.x - room || r.y > l.y - room || r.x + r.w < l.x + l.w + room || r.y + r.h < l.y + l.h + room) {
+                console.error("region does not hold the signed-in line", id, r, l);
+                process.exit(1);
+              }
+            }
+          ' "$RUNNER_TEMP/bugfix-video" "$cap"
         env:
           MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
           MERGESTORY_HOME: ${{ runner.temp }}/mergestory-home
