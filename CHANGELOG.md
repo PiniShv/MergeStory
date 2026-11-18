@@ -2,10 +2,11 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.6.0
 
 ### Skill and plugin
 
+- The skill installs `mergestory@1.6.0`. It still asks for 1.5.0 or newer.
 - The skill no longer sends the agent to `storyboard.schema.json`. The agent follows `AUTHORING.md`
   and opens the schema only for a schema error that the message does not explain.
 
