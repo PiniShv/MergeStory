@@ -10,6 +10,7 @@ import { shellQuote, terminalSafe } from '../core/text.ts';
 import type { CostReport, EgressRecord, GenerateResult, PlanResult } from '../core/types.ts';
 import type { JobSummary, PublicJob } from '../jobs/view.ts';
 import type { AuthoringResult } from '../pipeline/index.ts';
+import { MAX_LISTED_PROBLEMS } from '../pipeline/types.ts';
 import type { ValidationResult } from '../storyboard/index.ts';
 import { formatBytes } from './files.ts';
 import type { Style } from './style.ts';
@@ -263,9 +264,14 @@ interface Issue {
   message: string;
 }
 
-/** One problem of a storyboard, in the form that `validate` prints it. */
+/**
+ * One problem of a storyboard, in the form that `validate` prints it. A line break or tab inside the
+ * text becomes a space: the text can come from the storyboard, and it must not look like other lines.
+ */
 function formatIssue(kind: 'error' | 'warn', issue: Issue, style: Style): string {
-  return `  ${kind === 'error' ? style.red('error') : style.yellow('warn ')}  ${issue.path || '(storyboard)'}  [${issue.code}]  ${issue.message}`;
+  const label = kind === 'error' ? style.red('error') : style.yellow('warn ');
+  const line = `  ${label}  ${issue.path || '(storyboard)'}  [${issue.code}]  ${issue.message}`;
+  return line.replace(/[\r\n\t]+/g, ' ');
 }
 
 /** The block printed by `validate`. */
@@ -393,8 +399,16 @@ export function formatError(raw: ErrorView, style: Style): string {
   const lines = [`${style.red(`error [${error.code}]`)}: ${error.message}`];
   // The hint of this error says to fix the listed problems, so list them, as `validate` does.
   const problems = error.code === 'GROUNDING_FAILED' ? error.details?.errors : undefined;
-  if (Array.isArray(problems))
-    lines.push(...problems.filter(isIssue).map((i) => formatIssue('error', i, style)));
+  if (Array.isArray(problems)) {
+    const listed = problems.filter(isIssue);
+    lines.push(...listed.map((i) => formatIssue('error', i, style)));
+    // The error holds no more than the limit, so a full list may have been cut.
+    if (listed.length >= MAX_LISTED_PROBLEMS) {
+      lines.push(
+        `  The list shows at most ${MAX_LISTED_PROBLEMS} problems. If there are more, fix these and run again to see them.`,
+      );
+    }
+  }
   if (error.hint) lines.push(`${style.cyan('hint')}: ${error.hint}`);
   return `${lines.join('\n')}\n`;
 }

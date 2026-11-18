@@ -12,7 +12,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatPublishResult } from '../cli/commands/publish.ts';
-import { formatCost } from '../cli/format.ts';
+import { formatCost, formatError } from '../cli/format.ts';
+import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
 import { estimateTokens } from '../core/cost.ts';
@@ -1070,5 +1071,19 @@ describe('generate: a supplied storyboard with errors', () => {
       errors: [{ path: 'scenes[0].visual.heading', code: 'schema', message: expect.any(String) }],
       warnings: [],
     });
+  });
+
+  it('holds at most 40 problems, and the text of the error says that more may follow', async () => {
+    const board = await readJson<{ scenes: Record<string, unknown>[] }>(join(DEMO, 'storyboard.json'));
+    // Five required fields are missing from each of the nine scenes: 45 schema problems.
+    for (const scene of board.scenes)
+      for (const field of ['id', 'role', 'title', 'visualDescription', 'transition']) delete scene[field];
+    const error = await failure(generate({ ...options(), storyboard: board, dryRun: true }));
+    expect(error.code).toBe('GROUNDING_FAILED');
+    expect(error.details?.errors).toHaveLength(40);
+    const lines = formatError(describeError(error), createStyle(false)).split('\n');
+    expect(lines.filter((line) => line.startsWith('  error  '))).toHaveLength(40);
+    expect(lines[41]).toContain('The list shows at most 40 problems.');
+    expect(lines[42]).toMatch(/^hint: /);
   });
 });

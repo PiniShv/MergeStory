@@ -150,7 +150,7 @@ for Google Drive.
 
 | Flag | What it does |
 |---|---|
-| `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. If it has errors, the command stops with exit code 3 and prints up to 40 of them under the message, in the form that [`validate`](#mergestory-validate) uses. `validate` prints all of them. See [storyboard.md](storyboard.md). |
+| `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. If it has errors, the command stops with exit code 3 and prints up to 40 of them under the message, in the form that [`validate`](#mergestory-validate) uses. A list of 40 ends with a line that says more problems may follow. `validate` shows every error, except that it lists at most 40 schema problems and says how many more there are. See [storyboard.md](storyboard.md). |
 | `--dry-run` | Show the plan: the scenes, the estimated length, a high estimate of the cost, and what a real run would send. It sends, renders and publishes nothing. It still reads the pull request from GitHub and writes the analysis files to the run folder. |
 | `--async` | Run in the background and print a job id. See [`status`](#mergestory-status). The settings are checked first, so a typo is reported at once. |
 | `--out <dir>` | Write the run files to this folder instead of under the MergeStory home. It must be outside the repository being explained and outside `$MERGESTORY_HOME/work`. An existing folder must not be or hold a symbolic link. |

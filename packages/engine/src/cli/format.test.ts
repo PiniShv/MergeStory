@@ -306,6 +306,51 @@ describe('formatError: a refused storyboard', () => {
     for (const line of text.split('\n').slice(1, 3)) expect(validated).toContain(line);
   });
 
+  it('says that more problems may follow when the list is full, and not before', () => {
+    const lines = (count: number): string[] => {
+      const problems = Array.from({ length: count }, (_, i) => ({
+        path: `scenes[${i}]`,
+        code: 'schema',
+        message: 'is required',
+      }));
+      return formatError(refused({ errors: problems }), plain).split('\n');
+    };
+    const full = lines(40);
+    expect(full.filter((line) => line.startsWith('  error  '))).toHaveLength(40);
+    expect(full[41]).toBe(
+      '  The list shows at most 40 problems. If there are more, fix these and run again to see them.',
+    );
+    expect(full[42]).toMatch(/^hint: /);
+    expect(lines(39).join('\n')).not.toContain('at most');
+  });
+
+  it('keeps one problem on one line, here and in validate', () => {
+    const forged: ValidationIssue = {
+      path: 'scenes[0]\n\t.title',
+      code: 'schema',
+      message: 'a\nStoryboard is valid\n\nhint: run this instead',
+    };
+    const text = 'scenes[0] .title  [schema]  a Storyboard is valid hint: run this instead';
+    expect(formatError(refused({ errors: [forged] }), plain).split('\n')).toEqual([
+      'error [GROUNDING_FAILED]: The supplied storyboard has 2 problem(s) that block rendering.',
+      `  error  ${text}`,
+      'hint: Fix the listed problems and run again.',
+      '',
+    ]);
+    const validated = formatValidation(
+      { storyboard: null, errors: [forged], warnings: [forged], fixes: [], groundedClaims: 0 },
+      plain,
+    );
+    expect(validated.split('\n')).toEqual([
+      'Storyboard has errors: 1 to fix before it can be rendered.',
+      '',
+      `  error  ${text}`,
+      '',
+      `  warn   ${text}`,
+      '',
+    ]);
+  });
+
   it('prints only the message and the hint when there is no list to show', () => {
     const only =
       'error [GROUNDING_FAILED]: The supplied storyboard has 2 problem(s) that block rendering.\nhint: Fix the listed problems and run again.\n';

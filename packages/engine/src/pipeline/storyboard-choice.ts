@@ -23,6 +23,7 @@ import {
 } from '../storyboard/index.ts';
 import { type FitResult, fitToMaxDuration } from './fit-duration.ts';
 import { type Prepared, packFor } from './prepare.ts';
+import { MAX_LISTED_PROBLEMS } from './types.ts';
 
 /** What a dry run works out about the model call that it does not make. */
 export interface PlannedLlm {
@@ -79,7 +80,10 @@ async function suppliedStoryboard(p: Prepared, supplied: unknown): Promise<Story
       `The supplied storyboard has ${validation.errors.length} problem(s) that block rendering.`,
       {
         hint: 'Fix the listed problems and run again. `mergestory validate <storyboard.json> <source>` checks without rendering.',
-        details: { errors: validation.errors.slice(0, 40), warnings: validation.warnings.slice(0, 20) },
+        details: {
+          errors: validation.errors.slice(0, MAX_LISTED_PROBLEMS),
+          warnings: validation.warnings.slice(0, 20),
+        },
       },
     );
   }
