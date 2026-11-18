@@ -188,8 +188,8 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 2156 words today. The reproduction (its shape, one bullet, the story arc and two rules) added 151 to the 2005 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2161);
+    // 2188 words today. The log visual (its shape and one bullet) added 32 to the 2156 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2193);
   });
 
   it('states every limit that the validator enforces', () => {
