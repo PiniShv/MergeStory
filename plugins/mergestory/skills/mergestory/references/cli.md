@@ -52,7 +52,7 @@ ids (TASK, NOTES, T1, SS1, RC1) match. If you pass `--duration`, `--max-duration
 | `--notes-file <file>` | Implementation notes and decisions (max 64 KB). Becomes evidence `NOTES`. |
 | `--tests-file <file>` | JSON array: `[{"command": "npm test", "passed": true, "summary": "212 passed"}]`. Only results you really ran. An optional `source` is `agent` (the default), `ci` or `user`. Become `T1`, `T2`, ... Only the first 10 are used. |
 | `--screenshot <path>[:<caption>[:before\|after]]` | A real screenshot (PNG or JPEG, max 4 MB), repeatable. Becomes `SS1`, ... Only the first 6 are used. |
-| `--recording <path>[:<caption>[:before\|after]]` | A real screen recording (MP4 H.264 or WebM VP8/VP9, with no sound or with AAC, MP3, Opus or Vorbis sound, at least 0.2 s, checked with ffprobe; max 4, each 50 MB and 60 s), repeatable. The text of a capture is masked, but not what its picture shows. Becomes `RC1`, ... Needs an engine newer than 1.6.0. The ids restart at `RC1` in every command, so pass the same recordings in the same order to `analyze`, `validate` and `generate`. |
+| `--recording <path>[:<caption>[:before\|after]]` | A real screen recording (MP4 H.264 or WebM VP8/VP9, with no sound or with AAC, MP3, Opus or Vorbis sound, at least 0.2 s, checked with ffprobe; max 4, each 50 MB and 60 s), repeatable. The text of a capture is masked, but not what its picture shows. Becomes `RC1`, ... Needs engine 1.7.0 or newer. The ids restart at `RC1` in every command, so pass the same recordings in the same order to `analyze`, `validate` and `generate`. |
 
 ## Useful generate flags
 
@@ -110,7 +110,7 @@ the engine removed or changed on its own.
 
 Failure (any command): `{ "ok": false, "error": { "code": "GROUNDING_FAILED", "message": "...", "hint": "...", "details": { ... } } }`.
 
-An engine newer than 1.6.0 also gives `scenes` (each with `id`, `role`, `title`, the type of its
+Engine 1.7.0 or newer also gives `scenes` (each with `id`, `role`, `title`, the type of its
 `visual`, `startSec` and `durationSec`) and `evidenceUsed` (every evidence id that the video cites or
 shows) in the result. Its `result.json` in the run folder holds the result, or the failure above with
 `runId` and `runDir` when the run stopped before its video was made. Share only the video, the poster,
