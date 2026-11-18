@@ -3,7 +3,7 @@ import { CONTENT_H, CONTENT_W, type ScreenshotResolved } from '../../core/render
 import { clamp01, enter, lerp, q } from '../anim.ts';
 import { css, h } from '../dom.ts';
 import { icon } from '../icons.ts';
-import type { SceneInstance, TemplateFactory } from '../types.ts';
+import type { SceneContext, SceneInstance, TemplateFactory } from '../types.ts';
 import {
   CAPTION_RESERVE,
   CAPTION_TEXT_CSS,
@@ -45,11 +45,22 @@ const SCREENSHOT_CSS = `
 }
 `;
 
-export const screenshotTemplate: TemplateFactory<ScreenshotResolved> = (visual, ctx) => {
+export interface FramedPicture {
+  width: number;
+  height: number;
+  caption: string | null;
+  /** The picture itself: an `img`, or any element that fills its parent. */
+  content: HTMLElement;
+  /** Extra work for every frame, through the style writer. */
+  onUpdate?: (t: number) => void;
+}
+
+/** A picture in a window (or a phone frame for tall ones), fitted without distortion, with its caption and entrance. */
+export function framedScene(ctx: SceneContext, picture: FramedPicture): SceneInstance {
   css('screenshot', SCREENSHOT_CSS);
   const { sw } = ctx;
-  const caption = (visual.caption ?? '').trim() || null;
-  const { image } = visual;
+  const { caption, content: img } = picture;
+  const image = picture;
   const aspect = image.width > 0 && image.height > 0 ? image.height / image.width : 0.625;
   const device = aspect > 1.25;
   const chromeW = device ? 2 * DEVICE_PAD : 0;
@@ -64,9 +75,6 @@ export const screenshotTemplate: TemplateFactory<ScreenshotResolved> = (visual, 
   const frameH = fit.height + chromeH;
   const groupH = frameH + (caption ? CAPTION_RESERVE : 0);
 
-  const img = isDataImage(image.src)
-    ? h('img', { class: 'ms-shot__img', attrs: { src: image.src, alt: caption ?? 'Screenshot' } })
-    : h('div', { class: 'ms-shot__missing' }, icon('image', { size: 64, stroke: 1.5 }), 'Image unavailable');
   const frame = device
     ? h('div', { class: 'ms-shot__device' }, h('div', { class: 'ms-shot__screen' }, img))
     : windowFrame({
@@ -112,7 +120,27 @@ export const screenshotTemplate: TemplateFactory<ScreenshotResolved> = (visual, 
       sw.opacity(wrap, clamp01(p * 2.4));
       sw.transform(wrap, `scale(${q(lerp(0.94, 1, p), 4)})`);
       captionEl?.reveal(sw, t, 0.55);
+      picture.onUpdate?.(t);
     },
   };
   return instance;
+}
+
+/** Shown where a picture cannot be drawn. */
+export function missingPicture(): HTMLElement {
+  return h(
+    'div',
+    { class: 'ms-shot__missing' },
+    icon('image', { size: 64, stroke: 1.5 }),
+    'Image unavailable',
+  );
+}
+
+export const screenshotTemplate: TemplateFactory<ScreenshotResolved> = (visual, ctx) => {
+  const caption = (visual.caption ?? '').trim() || null;
+  const { image } = visual;
+  const content = isDataImage(image.src)
+    ? h('img', { class: 'ms-shot__img', attrs: { src: image.src, alt: caption ?? 'Screenshot' } })
+    : missingPicture();
+  return framedScene(ctx, { width: image.width, height: image.height, caption, content });
 };

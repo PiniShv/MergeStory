@@ -6,6 +6,24 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** screen recordings in the video. `--recording <path>[:<caption>[:before|after]]` passes a real
+  screen recording (MP4 with H.264, or WebM with VP8 or VP9; a QuickTime or Matroska file with one of these
+  codecs works too) as context to `analyze`, `validate` and `generate`. MergeStory does not record anything
+  itself: it shows what you captured. A file is checked by content with `ffprobe` and gets the evidence id
+  `RC1`, `RC2`, and so on, listed in `evidence.md`. The `inputs` settings set the limits (4 recordings,
+  50 MB and 60 s each, by default). A recording must be at least 0.2 seconds long and at most 40 megapixels.
+  The sound may be AAC, MP3, Opus or Vorbis. A file with another kind of track is refused, with the reason.
+  A recording that a phone stored turned on its side is shown upright. The agent commands read recordings
+  from `recordings/` in the work folder. The new `recording` visual shows a clip (`trim`, `speed` and `zoom`
+  are optional), and a before-after panel can hold one. The checks are `recording-unknown`,
+  `recording-trim-out-of-range` and `recording-too-long`; a clip is cut to 20 seconds
+  (`inputs.maxClipSeconds`) and the cut is listed in `fixes`. The video labels it "Recorded". A model that
+  writes a storyboard gets about 440 more tokens in every request. The clip plays in the video at 12 frames
+  a second, without its sound, and rests on its last frame when it ends before the scene does. A recording
+  that cannot be decoded stops the run before any speech is paid for. MergeStory does not look inside a
+  recording or a screenshot, so what the capture shows is what the video shows: only captions and other text
+  are masked. See "Visuals" in `docs/storyboard.md` and the example in `examples/bugfix-demo`, which makes
+  its own captures.
 - **Added:** a run now leaves what a script or an agent needs when nobody is watching. The run folder
   has `watch.html` next to `video.mp4`: the watch page, which plays the video beside it, so the two
   can be uploaded together. The result has `scenes` (every scene with the type of its visual, its

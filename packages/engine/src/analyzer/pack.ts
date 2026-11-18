@@ -467,6 +467,18 @@ function screenshots(c: Ctx): string[] {
   ];
 }
 
+function recordings(c: Ctx): string[] {
+  if (c.inputs.recordings.length === 0) return [];
+  return [
+    '## Available recordings',
+    '',
+    ...c.inputs.recordings.map(
+      (r) =>
+        `- ${r.id} (${r.moment}, ${Math.round(r.durationSec * 10) / 10} s, ${r.width}x${r.height}): ${c.mask.text(truncate(r.caption.replace(/\s+/g, ' '), 160))}`,
+    ),
+  ];
+}
+
 const KIND_LABELS: [EvidenceKind[], string][] = [
   [['pr', 'task', 'notes', 'test', 'issue', 'commit'], 'Context'],
   [['file'], 'Files'],
@@ -475,7 +487,7 @@ const KIND_LABELS: [EvidenceKind[], string][] = [
   [['component'], 'Components'],
   [['risk'], 'Risks'],
   [['dependency'], 'Dependencies'],
-  [['screenshot', 'repo'], 'Other'],
+  [['screenshot', 'recording', 'repo'], 'Other'],
 ];
 
 function evidenceIds(c: Ctx, l: Limits): string[] {
@@ -545,7 +557,7 @@ export function buildEvidencePack(
       risksSection(c, l),
       dependenciesSection(c),
     ]),
-    tail: join([screenshots(c), evidenceIds(c, l)]),
+    tail: join([screenshots(c), recordings(c), evidenceIds(c, l)]),
   });
 
   // Use the fullest version of the fixed sections that still leaves room for code.

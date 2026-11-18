@@ -6,12 +6,20 @@
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
+import {
+  frameDirFor,
+  PANEL_CLIP_DELAY_SEC,
+  RECORDING_FPS,
+  SCENE_CLIP_START_SEC,
+  scenePanelStarts,
+} from '../core/recording-frames.ts';
 import type {
   BadgeKind,
   BeforeAfterResolved,
   ChecklistResolved,
   CodeResolved,
   FilesResolved,
+  FrameSet,
   PlannedScene,
   RenderPlan,
   ResolvedCode,
@@ -46,6 +54,7 @@ import { ENGINE_VERSION } from '../version.ts';
 import { CodeResolver, type FocusRange } from './code.ts';
 import { loadScreenshot } from './image.ts';
 import { layoutArchitecture } from './layout.ts';
+import type { ExtractedFrames } from './recording-frames.ts';
 
 export interface BuildPlanInput {
   storyboard: Storyboard;
@@ -58,6 +67,8 @@ export interface BuildPlanInput {
   config: Config;
   /** The video theme (core/theme.ts loadTheme). */
   theme: ResolvedTheme;
+  /** The extracted frames of the recordings that the storyboard shows, by folder (see extractStoryboardFrames). */
+  frames?: ReadonlyMap<string, ExtractedFrames>;
 }
 
 /** Rows shown in the changed-files visual; the rest is summarised as a count. */
@@ -130,6 +141,14 @@ interface Environment {
   inputs: ContextInputs;
   resolver: CodeResolver;
   images: Map<string, Promise<ResolvedImage>>;
+  frames: ReadonlyMap<string, ExtractedFrames>;
+}
+
+/** The scene being resolved: its frame folders are named by its place in the storyboard (from 1), and a panel appears at a time that follows its beats. */
+interface SceneRef {
+  number: number;
+  startSec: number;
+  beats: PlannedScene['beats'];
 }
 
 interface ResolvedScene {
@@ -140,6 +159,26 @@ interface ResolvedScene {
   codeLabels: string[];
   simulated: string | null;
   actual: boolean;
+  /** The scene shows a recording. */
+  recorded: boolean;
+}
+
+/** The frame set of one use of a recording, with the scene second at which the clip starts. */
+function frameSetFor(
+  env: Environment,
+  sceneNumber: number,
+  side: 'before' | 'after' | null,
+  startSec: number,
+  speed: number,
+): FrameSet {
+  const dir = frameDirFor(sceneNumber, side);
+  const made = env.frames.get(dir);
+  if (!made) {
+    throw new MergeStoryError('INTERNAL', `The frames of a recording were not extracted (${dir}).`, {
+      hint: 'Extract the frames of the storyboard before the render plan is built.',
+    });
+  }
+  return { ...made, fps: RECORDING_FPS, startSec, speed };
 }
 
 function screenshotFor(env: Environment, id: string): Promise<ResolvedImage> {
@@ -248,8 +287,10 @@ function clampFocus(focus: CodeResolved['focus'], code: CodeResolved['code']): C
 
 async function resolvePanel(
   panel: Panel,
+  side: 'before' | 'after',
   env: Environment,
   scrub: Scrubber,
+  scene: SceneRef,
 ): Promise<{ panel: ResolvedPanel; masked: boolean }> {
   const label = scrub.text(panel.label);
   switch (panel.kind) {
@@ -297,18 +338,38 @@ async function resolvePanel(
       const image = await screenshotFor(env, panel.screenshotId);
       return { panel: { label, kind: 'screenshot', image }, masked: false };
     }
+    case 'recording': {
+      if (!panel.recordingId) {
+        throw new MergeStoryError(
+          'STORYBOARD_INVALID',
+          `The "${panel.label}" panel is a recording panel without a recording id.`,
+          { hint: 'Give the panel a recordingId (for example RC1), or change its kind.' },
+        );
+      }
+      const startSec = Math.round((scenePanelStarts(scene)[side] + PANEL_CLIP_DELAY_SEC) * 1000) / 1000;
+      return {
+        panel: { label, kind: 'recording', frames: frameSetFor(env, scene.number, side, startSec, 1) },
+        masked: false,
+      };
+    }
     default:
       panel.kind satisfies never;
       throw new MergeStoryError('INTERNAL', 'A panel has an unknown kind.');
   }
 }
 
-async function resolveVisual(visual: Visual, env: Environment, scrub: Scrubber): Promise<ResolvedScene> {
+async function resolveVisual(
+  visual: Visual,
+  env: Environment,
+  scrub: Scrubber,
+  scene: SceneRef,
+): Promise<ResolvedScene> {
   const base = {
     codeMasked: false,
     codeLabels: [] as string[],
     simulated: null as string | null,
     actual: false,
+    recorded: false,
   };
   switch (visual.type) {
     case 'title':
@@ -393,8 +454,8 @@ async function resolveVisual(visual: Visual, env: Environment, scrub: Scrubber):
       };
     }
     case 'before-after': {
-      const before = await resolvePanel(visual.before, env, scrub);
-      const after = await resolvePanel(visual.after, env, scrub);
+      const before = await resolvePanel(visual.before, 'before', env, scrub, scene);
+      const after = await resolvePanel(visual.after, 'after', env, scrub, scene);
       const panels = [after, before];
       const resolved: BeforeAfterResolved = {
         type: 'before-after',
@@ -411,6 +472,7 @@ async function resolveVisual(visual: Visual, env: Environment, scrub: Scrubber):
         ),
         simulated: panels.some((p) => p.panel.kind === 'terminal') ? 'Simulated output' : null,
         actual: panels.some((p) => p.panel.kind === 'screenshot'),
+        recorded: panels.some((p) => p.panel.kind === 'recording'),
       };
     }
     case 'terminal':
@@ -485,6 +547,16 @@ async function resolveVisual(visual: Visual, env: Environment, scrub: Scrubber):
           closing: scrub.maybe(visual.closing),
         },
       };
+    case 'recording':
+      return {
+        ...base,
+        recorded: true,
+        visual: {
+          type: 'recording',
+          frames: frameSetFor(env, scene.number, null, SCENE_CLIP_START_SEC, visual.speed ?? 1),
+          caption: scrub.maybe(visual.caption),
+        },
+      };
     default:
       visual satisfies never;
       throw new MergeStoryError('INTERNAL', 'A scene has an unknown visual type.');
@@ -522,6 +594,7 @@ function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): Pl
   const badges: { kind: BadgeKind; text: string }[] = [];
   if (resolved.simulated) badges.push({ kind: 'simulated', text: resolved.simulated });
   if (resolved.actual) badges.push({ kind: 'actual', text: 'Actual screenshot' });
+  if (resolved.recorded) badges.push({ kind: 'actual', text: 'Recorded' });
   if (masked) badges.push({ kind: 'masked', text: 'Sensitive data masked' });
   if (scene.narration.some((line) => line.evidence.some((id) => /^T\d+$/.test(id)))) {
     badges.push({ kind: 'reported', text: 'Reported results' });
@@ -531,18 +604,23 @@ function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): Pl
 
 async function planScene(
   scene: Scene,
+  sceneNumber: number,
   timing: TimelineScene,
   env: Environment,
   evidence: Map<string, EvidenceItem>,
 ): Promise<PlannedScene> {
   const scrub = createScrubber(env.config.privacy.maskEmails);
-  const resolved = await resolveVisual(scene.visual, env, scrub);
   const beats = timing.beats.map((beat) => ({
     index: beat.index,
     startSec: beat.startSec,
     durationSec: beat.durationSec,
     text: scrub.text(scene.narration[beat.index]?.text ?? ''),
   }));
+  const resolved = await resolveVisual(scene.visual, env, scrub, {
+    number: sceneNumber,
+    startSec: timing.startSec,
+    beats,
+  });
   const masked = resolved.codeMasked || scrub.count() > 0;
   return {
     id: scene.id,
@@ -575,6 +653,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     inputs,
     resolver: new CodeResolver({ reader, changeSet, shiki: theme.shiki, logger: ctx.logger }),
     images: new Map(),
+    frames: input.frames ?? new Map(),
   };
   const evidence = new Map(analysis.evidence.map((item) => [item.id, item]));
   const metaScrub = createScrubber(config.privacy.maskEmails);
@@ -588,7 +667,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
         hint: 'Build the timeline from the same storyboard that is used for the plan.',
       });
     }
-    scenes.push(await planScene(scene, timing, env, evidence));
+    scenes.push(await planScene(scene, index + 1, timing, env, evidence));
   }
 
   const repoLabel = metaScrub.text(repoLabelFor(changeSet.repo));

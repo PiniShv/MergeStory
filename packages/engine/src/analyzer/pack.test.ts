@@ -79,6 +79,54 @@ describe('evidence pack structure', () => {
     expect(present).toEqual([...present].sort((a, b) => a - b));
   });
 
+  it('lists the recordings with their facts and their ids, with the caption masked', async () => {
+    const recording = { path: '/tmp/a.mp4', moment: 'before' as const, codec: 'h264' };
+    const { markdown, analysis } = await pack(
+      SAMPLE,
+      {},
+      {},
+      emptyInputs({
+        recordings: [
+          { id: 'RC1', caption: 'Slow save', durationSec: 12.44, width: 1280, height: 720, ...recording },
+          { id: 'RC2', caption: `key ${AWS_KEY}`, durationSec: 3, width: 640, height: 480, ...recording },
+        ],
+      }),
+    );
+    expect(markdown).toContain('## Available recordings');
+    expect(markdown).toContain('- RC1 (before, 12.4 s, 1280x720): Slow save');
+    expect(markdown).toContain('- RC2 (before, 3 s, 640x480): key ');
+    expect(markdown).not.toContain(AWS_KEY);
+    expect(markdown).toMatch(/- Other: .*RC1, RC2/);
+    expect(analysis.evidence.filter((e) => e.kind === 'recording').map((e) => e.id)).toEqual(['RC1', 'RC2']);
+  });
+
+  it('masks an e-mail address in the caption of a recording and of a screenshot, in the pack and in the evidence', async () => {
+    const { markdown, analysis } = await pack(
+      SAMPLE,
+      { maskEmails: true },
+      {},
+      emptyInputs({
+        recordings: [
+          {
+            id: 'RC1',
+            caption: 'Sent by jane.doe@example.com',
+            path: '/tmp/a.mp4',
+            moment: 'before',
+            codec: 'h264',
+            durationSec: 3,
+            width: 640,
+            height: 480,
+          },
+        ],
+        screenshots: [{ id: 'SS1', path: '/tmp/x.png', caption: 'Mail to bob@example.com', moment: 'after' }],
+      }),
+    );
+    expect(markdown).toContain('- RC1 (before, 3 s, 640x480): Sent by j•••@example.com');
+    expect(markdown).not.toMatch(/jane\.doe@|bob@/);
+    const labels = analysis.evidence.filter((e) => e.kind === 'recording' || e.kind === 'screenshot');
+    expect(labels.map((e) => e.label)).toEqual(['Mail to b•••@example.com', 'Sent by j•••@example.com']);
+  });
+
   it('states change, repository, short shas, stats, size, word budget, style and language', async () => {
     const { markdown } = await pack(SAMPLE, { targetDurationSec: 70, style: 'technical', language: 'de' });
     expect(markdown).toContain('- Change: Pull request #42');

@@ -77,3 +77,25 @@ describe('hunk evidence', () => {
     expect(item.label).toContain('src/a.ts:');
   });
 });
+
+describe('capture labels', () => {
+  it('masks an e-mail address in the label of a recording, whatever the privacy setting', () => {
+    const sources = sourcesFor([]);
+    sources.inputs = emptyInputs({
+      recordings: [
+        {
+          id: 'RC1',
+          path: '/x/a.mp4',
+          caption: 'Sent by jane.doe@example.com',
+          moment: 'before',
+          durationSec: 3,
+          width: 640,
+          height: 480,
+          codec: 'h264',
+        },
+      ],
+    });
+    const item = buildEvidenceIndex(sources).find((e) => e.id === 'RC1')!;
+    expect(item.label).toBe('Sent by j•••@example.com');
+  });
+});

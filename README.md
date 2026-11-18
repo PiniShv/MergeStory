@@ -39,7 +39,7 @@ about 20 cents per video if you pay per token. [See what it costs and why.](#wha
 
 ## Private by default.
 
-No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in every frame, caption and log.
+No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in all text: captions, narration, code and logs. Screenshots and recordings you supply are shown as they are.
 
 ## Works with your agent.
 
@@ -67,6 +67,8 @@ The video explains a change that adds retries with exponential backoff to a smal
 
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
 to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.
+Real captures that you supply are labelled too: "Actual screenshot" for a screenshot and "Recorded" for a
+screen recording (see [the storyboard guide](docs/storyboard.md)).
 
 ## Get started
 
@@ -233,7 +235,7 @@ default settings. See [what can still cost money](docs/cost.md#what-can-still-co
 
 MergeStory reads code that may be private, so the defaults are strict: no telemetry, no uploads
 unless configured, a one-time download of the free voice that sends nothing from the change, sensitive files (`.env`, keys, credentials) never shown or sent, secrets masked
-everywhere, private links that expire (or permanent links behind your team's sign-in), and read-only
+in all text, private links that expire (or permanent links behind your team's sign-in), and read-only
 access to your repository. Details: [SECURITY.md](SECURITY.md).
 
 ## How it works

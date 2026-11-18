@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { panelStarts } from '../../core/recording-frames.ts';
 import type { CodeLine, ResolvedCode } from '../../core/render-plan.ts';
-import { panelStarts } from './before-after.ts';
 import { focusStarts, planCodeScene } from './code.ts';
 
 describe('panelStarts', () => {

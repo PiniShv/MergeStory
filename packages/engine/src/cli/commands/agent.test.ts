@@ -160,6 +160,94 @@ describe('agent: the work folder', () => {
     expect(lastGenerateOptions().storyboard).toEqual({ title: 'x' });
   });
 
+  describe('recordings/', () => {
+    const folder = (): string => join(work(), 'recordings');
+    const contexts = async () => {
+      analyzeMock.mockResolvedValue(authoring);
+      validateMock.mockResolvedValue(valid);
+      generateMock.mockResolvedValue(fakeResult());
+      await writeFile(join(work(), 'storyboard.json'), JSON.stringify({ title: 'x' }));
+      expect((await run(['agent', 'analyze', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'validate', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
+      return [
+        analyzeMock.mock.calls[0]?.[0].context,
+        validateMock.mock.calls[0]?.[0].context,
+        lastGenerateOptions().context,
+      ];
+    };
+
+    it('uses every recording file, sorted by name, with the captions of captions.json, in every command', async () => {
+      await mkdir(folder(), { recursive: true });
+      for (const name of ['b.webm', 'a.mp4', 'c.MP4', 'd.mov', 'e.mkv', 'f.m4v', 'notes.txt', 'g.avi'])
+        await writeFile(join(folder(), name), 'x');
+      await writeFile(
+        join(folder(), 'captions.json'),
+        JSON.stringify({
+          'b.webm': { caption: 'Slow: before the fix', side: 'before' },
+          'a.mp4': { side: 'after' },
+        }),
+      );
+      for (const context of await contexts()) {
+        expect(context?.recordings).toEqual([
+          { path: join(folder(), 'a.mp4'), caption: 'a', moment: 'after' },
+          { path: join(folder(), 'b.webm'), caption: 'Slow: before the fix', moment: 'before' },
+          { path: join(folder(), 'c.MP4'), caption: 'c', moment: 'other' },
+          { path: join(folder(), 'd.mov'), caption: 'd', moment: 'other' },
+          { path: join(folder(), 'e.mkv'), caption: 'e', moment: 'other' },
+          { path: join(folder(), 'f.m4v'), caption: 'f', moment: 'other' },
+        ]);
+      }
+    });
+
+    it('works without captions.json, and without the folder', async () => {
+      await mkdir(work(), { recursive: true });
+      for (const context of await contexts()) expect(context?.recordings).toBeUndefined();
+      await mkdir(folder());
+      await writeFile(join(folder(), 'clip.mp4'), 'x');
+      analyzeMock.mockClear();
+      validateMock.mockClear();
+      generateMock.mockClear();
+      expect((await contexts())[0]?.recordings).toEqual([
+        { path: join(folder(), 'clip.mp4'), caption: 'clip', moment: 'other' },
+      ]);
+    });
+
+    it.each([
+      [
+        'a file that is not in the folder',
+        { 'gone.mp4': { caption: 'x' } },
+        'is not a recording (.mp4, .m4v, .mov, .webm, .mkv) in the recordings folder',
+      ],
+      ['an unknown field', { 'a.mp4': { caption: 'x', title: 'y' } }, 'unknown field "title"'],
+      ['a side that does not exist', { 'a.mp4': { side: 'middle' } }, 'is not "before" or "after"'],
+      ['a caption that is not text', { 'a.mp4': { caption: 5 } }, 'is not a string'],
+      ['a list', [], 'expected a JSON object'],
+    ])('refuses captions.json with %s', async (_label, content, message) => {
+      await mkdir(folder(), { recursive: true });
+      await writeFile(join(folder(), 'a.mp4'), 'x');
+      await writeFile(join(folder(), 'captions.json'), JSON.stringify(content));
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain(message);
+      expect(analyzeMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses a recording named like a credentials file', async () => {
+      await mkdir(folder(), { recursive: true });
+      await writeFile(join(folder(), '.env.mp4'), 'x');
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain('credentials file');
+    });
+
+    it('is not created by validate or render', async () => {
+      await run(['agent', 'validate', '--name', 'fix-1']);
+      await run(['agent', 'render', '--name', 'fix-1']);
+      expect(existsSync(work())).toBe(false);
+    });
+  });
+
   it('needs storyboard.json for validate', async () => {
     const { code, stderr } = await run(['agent', 'validate', '--name', 'fix-1']);
     expect(code).toBe(2);
@@ -237,6 +325,7 @@ describe('agent: refused flags', () => {
     ['--tests-file', 'tests.json'],
     ['--storyboard', 'sb.json'],
     ['--screenshot', 'a.png'],
+    ['--recording', 'a.mp4'],
     ['--music', 'music.mp3'],
     ['--llm', 'anthropic'],
     ['--model', 'm'],

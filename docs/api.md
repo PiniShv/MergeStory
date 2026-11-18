@@ -51,7 +51,7 @@ The API is safe by default:
 - **Plain HTTP.** On a network address, put a TLS proxy in front of the API. MergeStory warns you.
 - **Local repositories need `--allow-root`.** See [Local repositories](#local-repositories).
 - **The API takes no secrets.** The server uses its own environment: its model keys, its storage keys and its
-  `GITHUB_TOKEN`. A caller cannot send a key, a file path to a screenshot or an address for a model server.
+  `GITHUB_TOKEN`. A caller cannot send a key, a file path to a screenshot or a recording, or an address for a model server.
   Task, notes and test results that look like secrets are masked.
 
 ### Endpoints
@@ -249,7 +249,7 @@ if ('dryRun' in result) {
 |---|---|
 | `source` | A pull request URL, `owner/repo#123` or a path (or a `SourceInput` object). |
 | `base`, `head` | The refs of a local repository. |
-| `context` | `{task, notes, tests, screenshots}`. A test is `{command, passed, summary, source}`, with `source` set to `agent`, `ci` or `user`. A screenshot is `{path, caption, moment}`. |
+| `context` | `{task, notes, tests, screenshots, recordings}`. A test is `{command, passed, summary, source}`, with `source` set to `agent`, `ci` or `user`. A screenshot is `{path, caption, moment}`. A recording is `{path, caption, moment}` too: a library call reads the file from its path, and FFmpeg must be installed. The HTTP API still takes no file. |
 | `storyboard` | A storyboard that you wrote. It is checked like every storyboard. |
 | `config` | Settings that win over everything else. The same shape as the config file. |
 | `configPath` | The config file to use. |

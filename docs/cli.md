@@ -81,6 +81,7 @@ accurate, because the engine can quote them as evidence.
 | `--notes-file <file>` | Notes about your decisions, edge cases and what to review. At most 64 KB. It becomes evidence `NOTES`. |
 | `--tests-file <file>` | Test results you really ran, as a JSON array. At most 256 KB. See below. They become `T1`, `T2`, and so on. |
 | `--screenshot <spec>` | A real screenshot, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `SS1`, `SS2`, and so on. |
+| `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
 
 - **Test results.** Each entry has `command`, `passed` and `summary`, and may have `source` (`agent`, `ci` or
   `user`; the default is `agent`). Example: `[{"command": "npm test", "passed": true, "summary": "42 passed"}]`.
@@ -89,6 +90,19 @@ accurate, because the engine can quote them as evidence.
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
 - **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. Only
   the first 6 are used. A file the video cannot draw is refused at once, before any speech is paid for.
+  MergeStory does not look inside a picture: a secret or an e-mail address that shows in a screenshot shows
+  in the video. Check a capture before you pass it.
+- **Recordings.** MP4 (H.264) or WebM (VP8 or VP9), checked by content with `ffprobe` and not by file name.
+  A QuickTime (`.mov`) or Matroska (`.mkv`) file with one of these three codecs works too.
+  The sound may be AAC, MP3, Opus or Vorbis, and is never used. A file with another kind of track is refused.
+  A recording must be at least 0.2 seconds long, with a picture of at most 40 megapixels. The defaults are at
+  most 4 recordings, each at most 50 MB and 60 seconds; the first ones are used and a warning says so. A
+  file that cannot be read, or that is too large or too long, is refused at once, before any speech is paid
+  for. Change the limits with the `inputs` [settings](configuration.md#inputs-inputs). `analyze` and
+  `validate` need `ffprobe` only when you pass a recording; `generate` always needs FFmpeg and `ffprobe`.
+  Use only recordings that were really captured: MergeStory never makes one up. It does not look inside a
+  recording: a secret or an e-mail address that shows in it shows in the video, and in the pictures that
+  the run folder keeps in `recording-frames/`. Check a capture before you pass it.
 - **Safety.** A file that looks like a credentials file (`.env`, a key file) is refused. Text that looks like
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
@@ -112,7 +126,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--base <ref>` | Local repository: the older side of the change. | the merge base of `HEAD` and the default branch |
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
-**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file` and `--screenshot`. See
+**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` and `--recording`. See
 [Context flags](#context-flags).
 
 **Style and length.**
@@ -249,7 +263,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -272,12 +286,12 @@ mergestory validate <storyboard> [source] [flags]
 
 Checks a storyboard against a change without rendering anything, without any paid call and without writing
 files. It runs the same checks that `generate --storyboard` runs. Give it the same source, refs and context flags as `analyze`.
-Otherwise the ids `TASK`, `NOTES`, `T1` and `SS1` do not exist, and the lines that cite only them are removed.
+Otherwise the ids `TASK`, `NOTES`, `T1`, `SS1` and `RC1` do not exist, and the lines that cite only them are removed.
 
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -323,11 +337,12 @@ folder:
 | File | Written by | What it holds |
 |---|---|---|
 | `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
+| `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands.
+when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands. The agent commands never take a recording as a flag.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -335,7 +350,7 @@ only when its repository is one of the git remotes of the current repository, on
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
 **What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--storyboard`,
-`--screenshot`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--screenshot`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 
@@ -573,6 +588,7 @@ folder you give to `--out`. A run id looks like `20261104-101500-a1b2`.
 | `audio.wav` | The narration track. Not written when the video has no voice and no music. |
 | `captions.vtt`, `captions.srt` | The captions. |
 | `render-plan.json` | The plan the renderer turned into frames: the real code, tokens, layout and timing. |
+| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, and `s-<scene number>.before` and `.after` for the panels of a before-after scene). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
 | `video.mp4`, `poster.jpg` | The video and its poster image. |
 | `watch.html` | The watch page, next to the video. It is the page of `watch/`. It finds `video.mp4` and `poster.jpg` by name and carries the captions itself, so it still plays when you upload it together with those files. |
 | `watch/` | The watch page (`index.html`) with copies of the video, poster and captions. Always written. |

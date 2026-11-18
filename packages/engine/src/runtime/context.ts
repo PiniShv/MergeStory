@@ -1,19 +1,12 @@
 /** The scene context the runtime hands to every template. */
+import { BEAT_LEAD_SEC, beatAt as sceneBeatAt } from '../core/recording-frames.ts';
 import type { PlannedScene, RenderPlan } from '../core/render-plan.ts';
 import type { StyleWriter } from './anim.ts';
 import type { SceneContext } from './types.ts';
 
-/** How long before a beat's audio starts its visual element begins to appear. */
-const BEAT_LEAD_SEC = 0.15;
-
 export function makeContext(plan: RenderPlan, scene: PlannedScene, sw: StyleWriter): SceneContext {
-  const beats = scene.beats;
   /** Start of narration beat `index` in seconds since the scene started; out-of-range indexes clamp. */
-  const beatAt = (index: number) => {
-    if (beats.length === 0) return 0;
-    const beat = beats[Math.max(0, Math.min(beats.length - 1, index))]!;
-    return beat.startSec - scene.startSec;
-  };
+  const beatAt = (index: number) => sceneBeatAt(scene, index);
   return {
     plan,
     scene,

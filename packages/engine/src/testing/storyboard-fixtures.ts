@@ -315,7 +315,14 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     },
   };
 
-  const inputs: ContextInputs = { task: null, notes: null, tests: [], screenshots: [], ...spec.inputs };
+  const inputs: ContextInputs = {
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: [],
+    recordings: [],
+    ...spec.inputs,
+  };
 
   const evidence: EvidenceItem[] = [];
   if (pr)
@@ -373,6 +380,8 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     evidence.push({ id: d.id, kind: 'dependency', label: `${d.name} ${d.change}`, ref: null, url: null });
   for (const s of inputs.screenshots)
     evidence.push({ id: s.id, kind: 'screenshot', label: s.caption, ref: null, url: null });
+  for (const r of inputs.recordings)
+    evidence.push({ id: r.id, kind: 'recording', label: r.caption, ref: null, url: null });
   evidence.push({ id: 'REPO', kind: 'repo', label: 'Repository structure', ref: null, url: null });
 
   const analysis: Analysis = {

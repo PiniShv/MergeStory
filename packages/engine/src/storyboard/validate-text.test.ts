@@ -170,6 +170,26 @@ describe('names that are not in the change', () => {
       ['the notes', { inputs: { task: 'x', notes: 'purgeLegacyCache() is planned.' } }, 'NOTES'],
       ['the README', { readme: 'Planned: purgeLegacyCache() drops old entries.' }, 'REPO'],
       [
+        'a recording caption',
+        {
+          inputs: {
+            recordings: [
+              {
+                id: 'RC1',
+                path: '/x/clip.mp4',
+                caption: 'Add purgeLegacyCache() to drop old entries.',
+                moment: 'other',
+                durationSec: 2,
+                width: 320,
+                height: 240,
+                codec: 'h264',
+              },
+            ],
+          },
+        },
+        'RC1',
+      ],
+      [
         'a linked issue',
         { linkedIssues: [{ title: 'Add purgeLegacyCache', body: 'It should drop old entries.' }] },
         'IS1',
@@ -555,7 +575,8 @@ describe('robustness', () => {
   }
 
   function mutate(base: unknown, random: () => number): unknown {
-    const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]!;
+    // A copy, so that a mutation of the picked [] or {} cannot change the pool or make a loop.
+    const pick = <T>(items: T[]): T => structuredClone(items[Math.floor(random() * items.length)]!);
     const copy = structuredClone(base) as Json;
     for (let i = 0, n = 1 + Math.floor(random() * 3); i < n; i++) {
       const path = pick(allPaths(copy).filter((p) => p.length > 0));

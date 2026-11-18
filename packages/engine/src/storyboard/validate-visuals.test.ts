@@ -161,6 +161,152 @@ describe('screenshots', () => {
   });
 });
 
+describe('recordings', () => {
+  const recording = (durationSec: number) => ({
+    id: 'RC1',
+    path: '/nonexistent/flow.mp4',
+    caption: 'Checkout flow',
+    moment: 'after' as const,
+    durationSec,
+    width: 1280,
+    height: 720,
+    codec: 'h264',
+  });
+  const visual = (extra: Json = {}): Json => ({
+    type: 'recording',
+    recordingId: 'RC1',
+    caption: null,
+    trim: null,
+    speed: null,
+    zoom: null,
+    ...extra,
+  });
+  /** Validate a recording visual on a 12.5 s clip, then validate the accepted result again. */
+  async function check(extra: Json, durationSec = 12.5) {
+    const fx = retryFixture({ inputs: { recordings: [recording(durationSec)] } });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = visual(extra);
+    const result = await run(sb, fx);
+    if (result.storyboard) {
+      const again = await run(result.storyboard, fx);
+      expect(again.fixes).toEqual([]);
+      expect(again.warnings).toEqual([]);
+      expect(again.storyboard).toEqual(result.storyboard);
+    }
+    const shown = result.storyboard?.scenes[2]?.visual;
+    return { result, shown: shown?.type === 'recording' ? shown : null };
+  }
+  const panel = (kind: string, recordingId: string | null) => ({
+    label: 'After',
+    kind,
+    codeRef: null,
+    bullets: ['Requests are retried.'],
+    terminal: [],
+    screenshotId: null,
+    recordingId,
+  });
+
+  it('accepts a supplied recording as it is, with no fix', async () => {
+    const { result, shown } = await check({
+      trim: { start: 1, end: 5 },
+      speed: 2,
+      zoom: { x: 0, y: 0, w: 1, h: 1 },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.fixes).toEqual([]);
+    expect(shown?.trim).toEqual({ start: 1, end: 5 });
+  });
+
+  it('rejects an id that was not supplied, and lists the ones that were', async () => {
+    const { result } = await check({ recordingId: 'RC9' });
+    expect(result.storyboard).toBeNull();
+    const issue = result.errors.find((e) => e.code === 'recording-unknown')!;
+    expect(issue.path).toBe('scenes[2].visual.recordingId');
+    expect(issue.message).toContain('RC1');
+    const none = retryFixture();
+    const sb = baseStoryboard(none);
+    scene(sb, 2).visual = visual();
+    expect((await run(sb, none)).errors[0]?.message).toContain('no recordings were supplied');
+  });
+
+  it('turns a recording panel with an unknown id into a bullets panel', async () => {
+    const fx = retryFixture({ inputs: { recordings: [recording(12.5)] } });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = {
+      type: 'before-after',
+      before: panel('recording', 'RC9'),
+      after: panel('recording', 'RC1'),
+      caption: null,
+    };
+    const result = await run(sb, fx);
+    expect(result.errors).toEqual([]);
+    const shown = result.storyboard!.scenes[2]!.visual;
+    expect(shown.type === 'before-after' && [shown.before.kind, shown.after.kind]).toEqual([
+      'bullets',
+      'recording',
+    ]);
+    expect(codes(result.warnings)).toContain('recording-unknown');
+    const again = await run(result.storyboard, fx);
+    expect(again.fixes).toEqual([]);
+  });
+
+  it('puts a trim in order, and cuts the part that lies outside the clip', async () => {
+    const swapped = await check({ trim: { start: 8, end: 3 } });
+    expect(swapped.shown?.trim).toEqual({ start: 3, end: 8 });
+    expect(swapped.result.warnings).toEqual([]);
+    expect(swapped.result.fixes).toHaveLength(1);
+
+    const partly = await check({ trim: { start: -2, end: 20 } });
+    expect(partly.shown?.trim).toEqual({ start: 0, end: 12.5 });
+    expect(codes(partly.result.warnings)).toEqual(['recording-trim-out-of-range']);
+    expect(partly.result.fixes).toHaveLength(1);
+  });
+
+  it('refuses a trim with nothing of the clip inside it', async () => {
+    for (const trim of [
+      { start: 13, end: 20 },
+      { start: -5, end: -1 },
+      { start: 12.4, end: 30 },
+    ]) {
+      const { result } = await check({ trim });
+      expect(result.storyboard).toBeNull();
+      expect(codes(result.errors)).toEqual(['recording-trim-out-of-range']);
+      expect(result.errors[0]?.path).toBe('scenes[2].visual.trim');
+    }
+  });
+
+  it('shortens a window longer than the clip limit from its end', async () => {
+    const limit = retryFixture().config.inputs.maxClipSeconds;
+    const trimmed = await check({ trim: { start: 5, end: 50 } }, 60);
+    expect(trimmed.shown?.trim).toEqual({ start: 5, end: 5 + limit });
+    expect(codes(trimmed.result.warnings)).toEqual(['recording-too-long']);
+    expect(trimmed.result.fixes).toHaveLength(1);
+
+    // No trim at all: the whole clip is too long, so a trim from its start is written.
+    const whole = await check({}, 60);
+    expect(whole.shown?.trim).toEqual({ start: 0, end: limit });
+    expect(codes(whole.result.warnings)).toEqual(['recording-too-long']);
+
+    // A fractional start does not make the repaired window too long again.
+    const fractional = await check({ trim: { start: 0.1, end: 40 } }, 60);
+    expect(fractional.shown?.trim?.start).toBe(0.1);
+  });
+
+  it('puts speed and zoom into their ranges, with a fix and no code', async () => {
+    const { result, shown } = await check({ speed: 9, zoom: { x: 0.8, y: -1, w: 0.5, h: 0 } });
+    expect(shown?.speed).toBe(4);
+    expect(shown?.zoom).toEqual({ x: 0.5, y: 0, w: 0.5, h: 0.05 });
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toHaveLength(2);
+    expect((await check({ speed: 0.1 })).shown?.speed).toBe(0.5);
+  });
+
+  it('cleans the caption like a screenshot caption', async () => {
+    const { shown } = await check({ caption: 'See https://phish.attacker.dev/x' });
+    expect(shown?.caption).toBeNull();
+  });
+});
+
 describe('simulated visuals', () => {
   const terminal = (): Json => ({
     type: 'terminal',

@@ -67,8 +67,8 @@ export async function prepareAuthoring(
 
 /**
  * The text of AUTHORING.md. Steps 3 and 4 show `validate` and `generate` with the source and flags
- * that `analyze` ran with. Task, notes, test results and screenshots are what create the ids TASK,
- * NOTES, T1 and SS1, so a command that leaves them out would remove every line that cites them.
+ * that `analyze` ran with. Task, notes, test results, screenshots and recordings are what create the ids TASK,
+ * NOTES, T1, SS1 and RC1, so a command that leaves them out would remove every line that cites them.
  */
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
@@ -105,14 +105,19 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       ? []
       : [
           '',
-          'Give both commands the same source and the same `--base`, `--head`, `--task-file`, `--notes-file`, `--tests-file`',
-          'and `--screenshot` flags as the analysis. They create the ids TASK, NOTES, T1 and SS1. Without them those ids do not',
+          'Give both commands the same source and the same `--base`, `--head`, `--task-file`, `--notes-file`, `--tests-file`,',
+          '`--screenshot` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, SS1 and RC1. Without them those ids do not',
           'exist, and lines that cite only them are removed.',
         ]),
     '',
     'You know why the change was made. Put that in the narration, but only claim what the evidence shows.',
     `Decisions and context that are not in the diff belong in the task or notes (${agent ? '`task.md`, `notes.md` in this folder' : '`--task-file`, `--notes-file`'}),`,
     'so they become citable evidence (TASK, NOTES).',
+    ...(agent
+      ? [
+          'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
+        ]
+      : []),
     '',
     AUTHORING_GUIDE,
     AUTHORING_VALUES,

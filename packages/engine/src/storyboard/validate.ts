@@ -94,6 +94,7 @@ const MASK_SKIP_KEYS = new Set([
   'to',
   'evidence',
   'screenshotId',
+  'recordingId',
   'severity',
   'direction',
   'transition',
@@ -521,6 +522,7 @@ async function resolveSceneRefs(scene: Scene, p: string, run: Run): Promise<void
     case 'browser':
     case 'bullets':
     case 'screenshot':
+    case 'recording':
     case 'summary':
       return;
     default:

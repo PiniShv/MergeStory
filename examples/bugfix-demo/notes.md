@@ -1,0 +1,6 @@
+- The two quantity fields give their values as text, so basketCount joined "2" and "3" into "23" instead of adding them.
+- basketCount now turns both values into numbers with Number() before it adds them.
+- An empty field becomes 0, so the count still works while someone is typing.
+- The page script is a classic script, so the page also works when it is opened from a file.
+- A new test file, test/basket.test.js, covers text quantities, an empty field and the label.
+- Worth a careful review: Number() accepts values such as "1e2", which the page does not block.

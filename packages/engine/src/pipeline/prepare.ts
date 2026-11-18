@@ -91,7 +91,7 @@ export async function prepare(
     : null;
   if (publishProblem && !ctx.dryRun) throw publishProblem;
 
-  const inputs = await buildContextInputs(options.context, cwd, (message) =>
+  const inputs = await buildContextInputs(options.context, cwd, config, (message) =>
     ctx.progress({ stage: 'source', status: 'warn', message }),
   );
   ctx.progress({ stage: 'analyze', status: 'start', message: 'Analysing the change' });

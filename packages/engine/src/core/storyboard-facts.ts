@@ -45,6 +45,7 @@ export function beatHolders(visual: Visual): { beat: number }[] {
     case 'title':
     case 'files':
     case 'screenshot':
+    case 'recording':
       return [];
   }
 }

@@ -14,5 +14,10 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["./**/*.ts", "../core/render-plan.ts", "../core/storyboard-schema.ts"]
+  "include": [
+    "./**/*.ts",
+    "../core/render-plan.ts",
+    "../core/recording-frames.ts",
+    "../core/storyboard-schema.ts"
+  ]
 }

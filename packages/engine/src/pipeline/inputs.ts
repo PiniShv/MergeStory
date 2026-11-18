@@ -5,10 +5,14 @@
 import { readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { z } from 'zod';
+import { resolveFfmpeg } from '../core/binaries.ts';
+import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
+import { probeRecording, shownName } from '../core/media-probe.ts';
+import { maskPrivate, type PrivateMaskOptions } from '../core/secrets.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
-import type { ContextInputs, TestEvidence } from '../core/types.ts';
+import type { ContextInputs, RecordingInput, TestEvidence } from '../core/types.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import type { ContextOptions } from './types.ts';
 
@@ -130,14 +134,52 @@ export async function checkScreenshotFile(path: string, cwd: string, label = 'Sc
   return absolute;
 }
 
+/**
+ * Check a screen recording by its content: a regular file, within the size limit, readable by
+ * ffprobe as H.264, VP8 or VP9 video, and within the length limit. Refused at once, so no speech is
+ * paid for a clip that cannot be drawn. `path` is made absolute.
+ */
+async function checkRecording(
+  ffprobe: string,
+  path: string,
+  cwd: string,
+  limits: Config['inputs'],
+): Promise<Omit<RecordingInput, 'id' | 'caption' | 'moment'>> {
+  const absolute = resolve(cwd, path);
+  const name = shownName(absolute);
+  const refuse = (reason: string, hint?: string): MergeStoryError =>
+    new MergeStoryError('USAGE', `Recording ${name} cannot be used: ${reason}.`, hint ? { hint } : {});
+  const info = await stat(absolute).catch(() => null);
+  if (!info) throw refuse('the file was not found', 'Pass an existing MP4 or WebM file.');
+  if (!info.isFile()) throw refuse('it is not a regular file');
+  if (info.size > limits.maxRecordingMb * 1024 * 1024) {
+    throw refuse(
+      `it is ${megabytes(info.size)}, the limit is ${limits.maxRecordingMb} MB`,
+      'Cut or compress the recording first.',
+    );
+  }
+  const probed = await probeRecording(ffprobe, absolute);
+  if (probed.durationSec > limits.maxRecordingSeconds) {
+    throw refuse(
+      `it is ${Math.ceil(probed.durationSec)} s long, the limit is ${limits.maxRecordingSeconds} s`,
+      'Cut the recording to the part that matters.',
+    );
+  }
+  return { path: absolute, ...probed };
+}
+
 export async function buildContextInputs(
   options: ContextOptions | undefined,
   cwd: string,
+  config: Pick<Config, 'inputs' | 'render'>,
   warn: (message: string) => void = () => {},
 ): Promise<ContextInputs> {
   if ((options?.tests?.length ?? 0) > MAX_TESTS) warn(`Only the first ${MAX_TESTS} test results are used.`);
   if ((options?.screenshots?.length ?? 0) > MAX_SCREENSHOTS)
     warn(`Only the first ${MAX_SCREENSHOTS} screenshots are used.`);
+  const maxRecordings = config.inputs.maxRecordings;
+  if ((options?.recordings?.length ?? 0) > maxRecordings)
+    warn(`Only the first ${maxRecordings} recordings are used.`);
   const tests = checkTestResults((options?.tests ?? []).slice(0, MAX_TESTS)).map((t, i) => ({
     id: `T${i + 1}`,
     command: t.command.slice(0, MAX_TEST_COMMAND),
@@ -154,31 +196,48 @@ export async function buildContextInputs(
       moment: shot.moment ?? 'other',
     });
   }
+  const recordings: RecordingInput[] = [];
+  const wanted = (options?.recordings ?? []).slice(0, maxRecordings);
+  // FFmpeg is looked up only when a recording was supplied.
+  const ffprobe = wanted.length > 0 ? (await resolveFfmpeg(config)).ffprobe : '';
+  for (const [i, rec] of wanted.entries()) {
+    const checked = await checkRecording(ffprobe, rec.path, cwd, config.inputs);
+    recordings.push({
+      id: `RC${i + 1}`,
+      caption: (rec.caption ?? '').slice(0, MAX_CAPTION),
+      moment: rec.moment ?? 'other',
+      ...checked,
+    });
+  }
   return {
     task: normalizeContextText(options?.task, 'task description'),
     notes: normalizeContextText(options?.notes, 'implementation notes'),
     tests,
     screenshots,
+    recordings,
   };
 }
 
-/** Ids of the screenshots that a storyboard shows. */
-function shownScreenshots(storyboard: Storyboard): Set<string> {
-  const shown = new Set<string>();
+/** Ids of the screenshots and recordings that a storyboard shows. */
+export function shownMedia(storyboard: Storyboard): { screenshots: Set<string>; recordings: Set<string> } {
+  const screenshots = new Set<string>();
+  const recordings = new Set<string>();
   for (const { visual } of storyboard.scenes) {
-    if (visual.type === 'screenshot') shown.add(visual.screenshotId);
+    if (visual.type === 'screenshot') screenshots.add(visual.screenshotId);
+    if (visual.type === 'recording') recordings.add(visual.recordingId);
     if (visual.type === 'before-after') {
       for (const panel of [visual.before, visual.after]) {
-        if (panel.kind === 'screenshot' && panel.screenshotId) shown.add(panel.screenshotId);
+        if (panel.kind === 'screenshot' && panel.screenshotId) screenshots.add(panel.screenshotId);
+        if (panel.kind === 'recording' && panel.recordingId) recordings.add(panel.recordingId);
       }
     }
   }
-  return shown;
+  return { screenshots, recordings };
 }
 
 /**
  * Every evidence id that a storyboard cites or shows: the cited ids in the order of first use, then
- * the screenshots that are shown and not cited. After the checks, every id in it exists.
+ * the screenshots and recordings that are shown and not cited. After the checks, every id in it exists.
  */
 export function evidenceUsed(storyboard: Storyboard): string[] {
   const ids = new Set<string>();
@@ -193,27 +252,53 @@ export function evidenceUsed(storyboard: Storyboard): string[] {
     }
   };
   walk(storyboard);
-  for (const id of shownScreenshots(storyboard)) ids.add(id);
+  const shown = shownMedia(storyboard);
+  for (const id of [...shown.screenshots, ...shown.recordings]) ids.add(id);
   return [...ids];
 }
 
 /**
- * A warning when screenshots were supplied but the storyboard does not show them all, or null.
- * The offline storyboard never uses screenshots, which is worth saying because the person did
+ * A warning when screenshots or recordings were supplied but the storyboard does not show them all,
+ * or null. The offline storyboard never uses them, which is worth saying because the person did
  * pass them on purpose.
  */
 export function unusedScreenshotWarning(
   storyboard: Storyboard,
   inputs: ContextInputs,
   source: 'llm' | 'agent' | 'heuristic',
+  privacy: PrivateMaskOptions,
 ): string | null {
-  const shown = shownScreenshots(storyboard);
-  const unused = inputs.screenshots.filter((shot) => !shown.has(shot.id));
-  if (unused.length === 0) return null;
-  const names = unused.map((shot) => (shot.caption ? `${shot.id} ("${shot.caption}")` : shot.id)).join(', ');
-  const reason =
-    source === 'heuristic'
-      ? ' The offline storyboard never uses screenshots: write the storyboard yourself (--storyboard) or use --llm to show them.'
-      : '';
-  return `${unused.length === 1 ? 'The screenshot' : 'The screenshots'} ${names} ${unused.length === 1 ? 'is' : 'are'} not shown in the video.${reason}`;
+  const shown = shownMedia(storyboard);
+  const sentence = (
+    items: readonly { id: string; caption: string }[],
+    one: string,
+    many: string,
+    plural: string,
+  ): string | null => {
+    if (items.length === 0) return null;
+    // The warning goes into logs and into the result, so a caption is masked here as it is on screen.
+    const names = items
+      .map((item) => (item.caption ? `${item.id} ("${maskPrivate(item.caption, privacy)}")` : item.id))
+      .join(', ');
+    const reason =
+      source === 'heuristic'
+        ? ` The offline storyboard never uses ${plural}: write the storyboard yourself (--storyboard) or use --llm to show them.`
+        : '';
+    return `${items.length === 1 ? one : many} ${names} ${items.length === 1 ? 'is' : 'are'} not shown in the video.${reason}`;
+  };
+  const parts = [
+    sentence(
+      inputs.screenshots.filter((shot) => !shown.screenshots.has(shot.id)),
+      'The screenshot',
+      'The screenshots',
+      'screenshots',
+    ),
+    sentence(
+      inputs.recordings.filter((rec) => !shown.recordings.has(rec.id)),
+      'The recording',
+      'The recordings',
+      'recordings',
+    ),
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? null : parts.join(' ');
 }

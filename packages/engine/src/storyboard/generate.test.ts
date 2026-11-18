@@ -162,7 +162,8 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(1900);
+    // 1940 words today. The recording visual (its shape and one bullet) added 41 to the 1899 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(1945);
   });
 
   it('states every limit that the validator enforces', () => {

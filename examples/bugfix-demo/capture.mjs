@@ -1,0 +1,82 @@
+// Captures the basket page before and after the fix, the way a person uses it.
+// usage: node capture.mjs <output folder>
+// Writes before.png, after.png, before.mp4 and after.mp4. Needs a Chrome or Chromium
+// (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { chromium } from 'playwright-core';
+
+const out = process.argv[2];
+if (!out) {
+  console.error('usage: node capture.mjs <output folder>');
+  process.exit(1);
+}
+const browserPath = process.env.MERGESTORY_BROWSER_PATH;
+if (!browserPath) {
+  console.error('Set MERGESTORY_BROWSER_PATH to a Chrome or Chromium executable, then run this again.');
+  process.exit(1);
+}
+const ffmpeg = process.env.MERGESTORY_FFMPEG_PATH || 'ffmpeg';
+const here = fileURLToPath(new URL('.', import.meta.url));
+const outDir = resolve(out);
+mkdirSync(outDir, { recursive: true });
+
+const browser = await chromium.launch({ executablePath: browserPath, headless: true });
+// A small window, so the text stays large when the video shows it in a frame.
+const page = await browser.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
+
+for (const side of ['before', 'after']) {
+  await page.goto(pathToFileURL(join(here, side === 'before' ? 'base' : 'feature', 'index.html')).href);
+  const work = mkdtempSync(join(tmpdir(), 'bugfix-frames-'));
+  let n = 0;
+  // A recording is a screenshot after each step, repeated for as long as the step should last (10 frames a second).
+  const hold = async (frames) => {
+    const png = await page.screenshot();
+    for (let i = 0; i < frames; i++) writeFileSync(join(work, `f-${String(n++).padStart(4, '0')}.png`), png);
+  };
+  const type = async (selector, value) => {
+    await page.locator(selector).click();
+    await hold(8);
+    await page.locator(selector).fill('');
+    await hold(6);
+    await page.locator(selector).pressSequentially(value);
+    await hold(28);
+  };
+  await hold(18);
+  await type('#qty-mix', '2');
+  await type('#qty-bar', '3');
+  await hold(14);
+  await page.screenshot({ path: join(outDir, `${side}.png`) });
+  try {
+    execFileSync(
+      ffmpeg,
+      [
+        '-y',
+        '-loglevel',
+        'error',
+        '-framerate',
+        '10',
+        '-i',
+        join(work, 'f-%04d.png'),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        join(outDir, `${side}.mp4`),
+      ],
+      { stdio: 'inherit' },
+    );
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+    console.error(
+      `FFmpeg could not be started (${ffmpeg}). Set MERGESTORY_FFMPEG_PATH to an ffmpeg executable.`,
+    );
+    process.exit(1);
+  }
+  rmSync(work, { recursive: true, force: true });
+}
+await browser.close();
+console.log(`Captures written to ${outDir}`);

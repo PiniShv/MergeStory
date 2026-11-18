@@ -201,6 +201,19 @@ describe('maskContext', () => {
     expect(context.screenshots?.[0]).toMatchObject({ path: '/a.png', moment: 'after' });
   });
 
+  it('masks recording captions and keeps the rest', () => {
+    const { context, masked } = maskContext({
+      recordings: [{ path: '/a.mp4', caption: `clip ${KEY}`, moment: 'before' }],
+    });
+    expect(masked).toBe(1);
+    expect(JSON.stringify(context)).not.toContain(KEY);
+    expect(context.recordings?.[0]).toMatchObject({ path: '/a.mp4', moment: 'before' });
+    const blob = 'password.'.repeat(200);
+    expect(() => maskContext({ recordings: [{ path: '/a.mp4', caption: blob, moment: 'other' }] })).toThrow(
+      /recording captions/,
+    );
+  });
+
   it('keeps nulls and leaves absent fields absent', () => {
     expect(maskContext({})).toEqual({ context: {}, masked: 0 });
     expect(maskContext({ task: null, notes: null })).toEqual({

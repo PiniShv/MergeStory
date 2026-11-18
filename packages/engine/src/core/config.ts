@@ -203,6 +203,16 @@ export const ConfigSchema = z.strictObject({
         .default(null),
     })
     .prefault({}),
+  /** Limits for the files a caller supplies (screen recordings). */
+  inputs: z
+    .strictObject({
+      maxRecordings: z.number().int().min(0).max(8).default(4),
+      maxRecordingMb: z.number().int().min(1).max(500).default(50),
+      maxRecordingSeconds: z.number().int().min(1).max(600).default(60),
+      /** The longest part of one recording that one scene shows. */
+      maxClipSeconds: z.number().int().min(1).max(60).default(20),
+    })
+    .prefault({}),
   cache: z
     .strictObject({
       enabled: z.boolean().default(true),

@@ -2,6 +2,12 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import {
+  frameDirFor,
+  PANEL_CLIP_DELAY_SEC,
+  SCENE_CLIP_START_SEC,
+  scenePanelStarts,
+} from '../core/recording-frames.ts';
 import type { CodeLine, RenderPlan, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import type { Scene, Storyboard } from '../core/storyboard-schema.ts';
@@ -12,6 +18,7 @@ import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
 import { buildRenderPlan, changeLabelFor, MAX_FILE_ROWS, repoLabelFor } from './plan.ts';
+import type { ExtractedFrames } from './recording-frames.ts';
 import { buildTimeline } from './timeline.ts';
 
 let dir: string;
@@ -31,6 +38,7 @@ interface Options {
   files?: Record<string, string>;
   cues?: CaptionCue[];
   signal?: AbortSignal;
+  frames?: ReadonlyMap<string, ExtractedFrames>;
 }
 
 async function build(options: Options = {}): Promise<RenderPlan> {
@@ -48,6 +56,7 @@ async function build(options: Options = {}): Promise<RenderPlan> {
       reader: memoryReader(options.files ?? sampleFiles()),
       config,
       theme: await loadTheme(config.theme),
+      frames: options.frames,
     },
     testContext({ config: options.config, home: dir, runDir: dir, signal: options.signal }).ctx,
   );
@@ -399,6 +408,7 @@ describe('buildRenderPlan: other visual types', () => {
             bullets: [],
             terminal: [],
             screenshotId: 'SS1',
+            recordingId: null,
           },
           after: {
             label: 'After',
@@ -407,6 +417,7 @@ describe('buildRenderPlan: other visual types', () => {
             bullets: ['Faster'],
             terminal: [],
             screenshotId: null,
+            recordingId: null,
           },
           caption: null,
         }),
@@ -482,6 +493,111 @@ describe('buildRenderPlan: other visual types', () => {
       code: 'USAGE',
       message: expect.stringContaining('too large'),
     });
+  });
+});
+
+describe('buildRenderPlan: recordings', () => {
+  const panel = (kind: 'recording' | 'terminal', side: string) => ({
+    label: side,
+    kind,
+    codeRef: null,
+    bullets: [],
+    terminal: kind === 'terminal' ? [{ kind: 'output' as const, text: 'ok', beat: 0 }] : [],
+    screenshotId: null,
+    recordingId: kind === 'recording' ? 'RC1' : null,
+  });
+  // The scenes of the sample come first: the recording scene is the next one, and the comparison follows it.
+  const RECORDING_SCENE = sample().storyboard.scenes.length + 1;
+  const frames = (dirs: string[]): Map<string, ExtractedFrames> =>
+    new Map(dirs.map((d) => [d, { dir: d, count: 30, width: 640, height: 360 }]));
+
+  async function recordings(second: 'recording' | 'terminal') {
+    const base = sample().storyboard;
+    const make = (id: string, visual: Scene['visual']): Scene => ({
+      ...structuredClone(base.scenes[0]!),
+      id,
+      visual,
+      narration: [
+        { text: 'First, the page.', evidence: ['RC1'] },
+        { text: 'Then, the page again.', evidence: ['RC1'] },
+      ],
+    });
+    const storyboard: Storyboard = {
+      ...base,
+      scenes: [
+        ...base.scenes,
+        make('rec', {
+          type: 'recording',
+          recordingId: 'RC1',
+          caption: 'The page',
+          trim: null,
+          speed: 2,
+          zoom: null,
+        }),
+        make('cmp', {
+          type: 'before-after',
+          before: panel('recording', 'Before'),
+          after: panel(second, 'After'),
+          caption: null,
+        }),
+      ],
+    };
+    return build({
+      storyboard,
+      frames: frames([
+        frameDirFor(RECORDING_SCENE, null),
+        frameDirFor(RECORDING_SCENE + 1, 'before'),
+        frameDirFor(RECORDING_SCENE + 1, 'after'),
+      ]),
+    });
+  }
+
+  it('resolves a recording scene to a frame set, labelled "Recorded"', async () => {
+    const plan = await recordings('terminal');
+    const visual = visualOf(plan, 'rec', 'recording');
+    expect(visual.frames).toEqual({
+      dir: `recording-frames/s-${RECORDING_SCENE}`,
+      count: 30,
+      fps: 12,
+      width: 640,
+      height: 360,
+      startSec: SCENE_CLIP_START_SEC,
+      speed: 2,
+    });
+    expect(plan.scenes.find((s) => s.id === 'rec')!.badges).toEqual([{ kind: 'actual', text: 'Recorded' }]);
+  });
+
+  it('starts a recording panel when the panel appears, and keeps the badge of a simulated side', async () => {
+    const plan = await recordings('terminal');
+    const scene = plan.scenes.find((s) => s.id === 'cmp')!;
+    const compare = visualOf(plan, 'cmp', 'before-after');
+    if (compare.before.kind !== 'recording') throw new Error('expected a recording panel');
+    expect(compare.before.frames.speed).toBe(1);
+    expect(compare.before.frames.startSec).toBeCloseTo(
+      scenePanelStarts(scene).before + PANEL_CLIP_DELAY_SEC,
+      3,
+    );
+    expect(scene.badges.map((b) => b.text)).toEqual(['Simulated output', 'Recorded']);
+  });
+
+  it('keeps every frame out of the plan that is written to disk', async () => {
+    const plan = await recordings('recording');
+    expect(plan.media).toBeUndefined();
+    expect(JSON.stringify(plan)).not.toMatch(/data:image\/jpeg/);
+  });
+
+  it('stops when the frames were not extracted', async () => {
+    const storyboard = withScene(sample().storyboard, 's1', (scene) => {
+      scene.visual = {
+        type: 'recording',
+        recordingId: 'RC1',
+        caption: null,
+        trim: null,
+        speed: null,
+        zoom: null,
+      };
+    });
+    await expect(build({ storyboard })).rejects.toMatchObject({ code: 'INTERNAL' });
   });
 });
 

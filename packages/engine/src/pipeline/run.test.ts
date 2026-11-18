@@ -15,6 +15,7 @@ import { formatPublishResult } from '../cli/commands/publish.ts';
 import { formatCost, formatError, formatValidation } from '../cli/format.ts';
 import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
+import { resolveFfmpeg } from '../core/binaries.ts';
 import type { ConfigInput } from '../core/config.ts';
 import { estimateTokens } from '../core/cost.ts';
 import { abortedError, MergeStoryError } from '../core/errors.ts';
@@ -33,6 +34,8 @@ import type { GenerateResult, PlanResult, PublishResult } from '../core/types.ts
 import { ensureKokoroInstalled } from '../narration/kokoro-install.ts';
 import { createPublisher } from '../publish/index.ts';
 import { createRenderer } from '../render/index.ts';
+import { testConfig } from '../testing/context.ts';
+import { makeClip } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { checkStoryboard, generate, prepareAuthoring, publishRun } from './index.ts';
 import { EARLIER_RESULT_MISSING } from './types.ts';
@@ -1442,5 +1445,117 @@ describe('generate: the time limit of the render', () => {
     const controller = new AbortController();
     await generate({ ...options(), signal: controller.signal });
     expect(signal).toBe(controller.signal);
+  });
+});
+
+const ffmpegTools = await resolveFfmpeg(testConfig()).catch(() => null);
+
+describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
+  let clip: string;
+  let storyboard: Storyboard;
+  beforeAll(async () => {
+    clip = join(base, 'bug.mp4');
+    expect(await makeClip(ffmpegTools!.ffmpeg, clip, { seconds: 3 })).toBe(true);
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene = structuredClone(demo.scenes[0]!);
+    storyboard = {
+      ...demo,
+      scenes: [
+        ...demo.scenes,
+        {
+          ...scene,
+          id: 'rec',
+          role: 'under-the-hood',
+          narration: [{ text: 'The recording shows the failure.', evidence: ['RC1'] }],
+          visual: {
+            type: 'recording',
+            recordingId: 'RC1',
+            caption: 'Failure',
+            trim: null,
+            speed: null,
+            zoom: null,
+          },
+        },
+      ],
+    };
+  });
+  const withClip = () => ({
+    storyboard,
+    context: { recordings: [{ path: clip, caption: 'Failure', moment: 'before' as const }] },
+    withContext: false,
+  });
+  // The recording scene is appended to the scenes of the demo, so its place is the next number.
+  const frames = () => join(runDir(), 'recording-frames', `s-${storyboard.scenes.length}`);
+
+  it('cuts the frames before any speech is made', async () => {
+    const narration = await import('../narration/index.ts');
+    const original = narration.synthesizeNarration;
+    let seen: string[] | null = null;
+    const spy = vi.spyOn(narration, 'synthesizeNarration').mockImplementation(async (...args) => {
+      seen = await readdir(frames()).catch(() => null);
+      return original(...args);
+    });
+    try {
+      const result = await run(withClip());
+      expect(result.scenes?.find((s) => s.id === 'rec')?.visual).toBe('recording');
+      expect(result.evidenceUsed).toContain('RC1');
+    } finally {
+      spy.mockRestore();
+    }
+    expect(seen).not.toBeNull();
+    expect(seen!.length).toBeGreaterThan(20);
+    const plan = await readJson<{ scenes: { id: string; visual: { frames?: { count: number } } }[] }>(
+      join(runDir(), 'render-plan.json'),
+    );
+    expect(plan.scenes.find((s) => s.id === 'rec')?.visual.frames?.count).toBe(seen!.length);
+  });
+
+  it('leaves the e-mail address of an unused recording caption out of the warnings and the progress messages', async () => {
+    const messages: string[] = [];
+    const caption = 'Reported by jane.doe@example.com';
+    const result = (await generate(
+      options({ context: { ...context, recordings: [{ path: clip, caption, moment: 'before' as const }] } }),
+      { onProgress: (event) => messages.push(event.message) },
+    )) as GenerateResult;
+    // The offline storyboard never shows a recording, so the warning names it.
+    const warning = result.warnings.find((w) => w.includes('RC1'));
+    expect(warning).toContain('is not shown in the video');
+    expect(warning).toContain('j•••@example.com');
+    for (const text of [...result.warnings, ...messages]) expect(text).not.toContain('jane.doe@');
+  });
+
+  it('stops before any speech when a recording cannot be decoded', async () => {
+    const broken = join(base, 'ffmpeg-fails.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const narration = await import('../narration/index.ts');
+    const spy = vi.spyOn(narration, 'synthesizeNarration');
+    try {
+      const error = await failure(run({ ...withClip(), config: { render: { ffmpegPath: broken } } }));
+      expect(error.code).toBe('USAGE');
+      expect(error.message).toContain('Recording RC1');
+      expect(error.message).toContain('could not be decoded');
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('cuts nothing in a dry run', async () => {
+    await plan(withClip());
+    expect(existsSync(join(runDir(), 'recording-frames'))).toBe(false);
+  });
+
+  it('removes the frames of an earlier run, but only from a folder that holds one', async () => {
+    await run();
+    await mkdir(join(runDir(), 'recording-frames', 'old'), { recursive: true });
+    await writeFile(join(runDir(), 'recording-frames', 'old', 'f-00001.jpg'), 'x');
+    await run();
+    expect(existsSync(join(runDir(), 'recording-frames'))).toBe(false);
+
+    // A folder that holds no result or publish file of a run is not touched.
+    const other = join(home, 'other-folder');
+    await mkdir(join(other, 'recording-frames', 'mine'), { recursive: true });
+    await run({ outDir: other });
+    expect(existsSync(join(other, 'recording-frames', 'mine'))).toBe(true);
   });
 });

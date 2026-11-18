@@ -1,4 +1,6 @@
 /** Two panels side by side: "before" appears first, then "after" wipes in beside it. */
+
+import { scenePanelStarts } from '../../core/recording-frames.ts';
 import {
   type BeforeAfterResolved,
   CONTENT_H,
@@ -21,6 +23,7 @@ import {
   WINDOW_BAR_H,
   windowFrame,
 } from './parts.ts';
+import { createFramePlayer } from './recording.ts';
 import { createTerminalView, planTerminal } from './terminal.ts';
 
 /** Space between the panels; the arrow badge sits in it. */
@@ -37,14 +40,6 @@ interface PanelBody {
   layout?: () => void;
 }
 
-/** When the "before" and "after" panels start, in scene seconds, given when the first two beats appear. */
-export function panelStarts(beatStarts: readonly number[]): { before: number; after: number } {
-  const before = Math.max(0.1, beatStarts[0] ?? 0);
-  const second = beatStarts[1];
-  const after = second === undefined ? before + 1.4 : Math.max(second, before + 0.9);
-  return { before, after };
-}
-
 function naturalHeight(panel: ResolvedPanel, avail: number): number {
   switch (panel.kind) {
     case 'code':
@@ -56,6 +51,10 @@ function naturalHeight(panel: ResolvedPanel, avail: number): number {
     case 'screenshot':
       return (
         fitImage(panel.image.width, panel.image.height, PANEL_W, avail - WINDOW_BAR_H).height + WINDOW_BAR_H
+      );
+    case 'recording':
+      return (
+        fitImage(panel.frames.width, panel.frames.height, PANEL_W, avail - WINDOW_BAR_H).height + WINDOW_BAR_H
       );
     default:
       panel satisfies never;
@@ -160,6 +159,23 @@ function buildBody(
       });
       return { el: h('div', { class: 'ms-ba__shotbox' }, win), update: () => {} };
     }
+    case 'recording': {
+      const { frames } = panel;
+      const fit = fitImage(frames.width, frames.height, PANEL_W, o.height - WINDOW_BAR_H);
+      const player = createFramePlayer(frames, ctx, panel.label);
+      const win = windowFrame({
+        class: 'ms-ba__shot',
+        style: {
+          width: `${fit.width}px`,
+          height: `${fit.height + WINDOW_BAR_H}px`,
+          left: `${Math.round((PANEL_W - fit.width) / 2)}px`,
+          top: `${Math.round((o.height - fit.height - WINDOW_BAR_H) / 2)}px`,
+        },
+        barHeight: WINDOW_BAR_H,
+        body: h('div', { class: 'ms-window__body' }, player.el),
+      });
+      return { el: h('div', { class: 'ms-ba__shotbox' }, win), update: (t) => player.update(t) };
+    }
     default:
       panel satisfies never;
       throw new Error('A before and after panel has an unknown kind.');
@@ -233,11 +249,7 @@ export const beforeAfterTemplate: TemplateFactory<BeforeAfterResolved> = (visual
   const groupH = LABEL_H + LABEL_GAP + panelH + (caption ? CAPTION_RESERVE : 0);
   const top = Math.max(0, Math.round((CONTENT_H - groupH) / 2));
 
-  const beats = ctx.withStarts(
-    ctx.scene.beats.map((_, i) => ({ beat: i })),
-    0,
-  );
-  const start = panelStarts(beats.map((b) => b.start));
+  const start = scenePanelStarts(ctx.scene);
   // Two code panels share a font size so they read as a pair.
   const codes = [visual.before, visual.after].flatMap((p) => (p.kind === 'code' ? [p.code] : []));
   const planLines = Math.max(1, ...codes.map((code) => code.lines.length));

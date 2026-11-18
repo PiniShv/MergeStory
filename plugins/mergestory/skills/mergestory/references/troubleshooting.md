@@ -12,11 +12,12 @@ without any error.
 - **An evidence id that is not in `evidence.md` is not an error.** The engine removes it and adds a
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
-- **A removed `TASK`, `NOTES`, `T1` or `SS1` means that context is missing.** With the `agent`
+- **A removed `TASK`, `NOTES`, `T1`, `SS1` or `RC1` means that context is missing.** With the `agent`
   commands, `task.md`, `notes.md` and `tests.json` must be in the work folder before `agent analyze`
-  runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file` and
-  `--screenshot` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
-  do not exist.
+  runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`,
+  `--screenshot` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  do not exist. A removed `RC1` means that the recording was not passed to this command (or that the
+  `recordings/` folder lacks the file, or the engine is older than the one that reads recordings).
 
 These codes are errors:
 
@@ -31,6 +32,8 @@ These codes are errors:
 | `code-ref-binary` | The file is binary. | Choose a text file. |
 | `code-ref-missing` | A code panel has no `codeRef`. | Add the path, the side and the lines. |
 | `screenshot-unknown` | A screenshot visual names an id that was not supplied. | Use an `SS` id from `evidence.md`, or another visual. |
+| `recording-unknown` | A recording visual names an id that was not supplied. | Use an `RC` id from `evidence.md`, or another visual. |
+| `recording-trim-out-of-range` | A recording `trim` has less than 0.2 seconds inside the clip. | Choose a part that lies inside the clip. |
 | `simulated-unbacked` | A terminal or browser visual has narration that cites no file, hunk or symbol id. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 
@@ -47,6 +50,9 @@ wanted is gone:
 | `code-ref-unreadable` | The file could not be read at that side. For a code visual this is an error. | Use the other side or another file. If no code can be shown, use a visual without code and do not walk through that file's code in the narration. |
 | `diff-too-tall` | A diff view needs more than 18 rows, because it shows the removed lines too. This is an error. | Use the range the message names, and describe only lines that are on screen. Or set `mode` to `snippet`, which shows no removed lines, and do not describe the removed lines. |
 | `no-evidence` | A new or changed node, step or item cites no valid evidence. | Cite an `M`, `F`, `S` or `R` id. |
+| `recording-unknown` | A before and after panel names a recording that was not supplied. The panel shows its bullets instead. | Use an `RC` id from `evidence.md`. |
+| `recording-trim-out-of-range` | A recording `trim` reached outside the clip. It was cut to fit. | Check the part that is shown. |
+| `recording-too-long` | A recording scene would show more than 20 seconds. The clip was shortened from its end. | Pick the part that matters with `trim`. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
 repository.

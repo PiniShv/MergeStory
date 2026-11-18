@@ -207,6 +207,26 @@ describe('buildContext', () => {
   });
 });
 
+describe('buildContext: recordings', () => {
+  it('makes the path absolute, defaults the caption to the file name and reads the moment', async () => {
+    const context = await buildContext(
+      { recording: ['clip.mp4', 'sub/after.webm:Done: all green:after'] },
+      dir,
+    );
+    expect(context?.recordings).toEqual([
+      { path: join(dir, 'clip.mp4'), caption: 'clip', moment: 'other' },
+      { path: join(dir, 'sub/after.webm'), caption: 'Done: all green', moment: 'after' },
+    ]);
+  });
+
+  it('refuses a missing path and a credentials-like file name', async () => {
+    await expect(buildContext({ recording: [':caption'] }, dir)).rejects.toThrow(
+      /--recording: missing a file path/,
+    );
+    await expect(buildContext({ recording: ['.env'] }, dir)).rejects.toThrow(/credentials file/);
+  });
+});
+
 describe('formatBytes', () => {
   it('uses B, KB and MB', () => {
     expect(formatBytes(0)).toBe('0 B');

@@ -12,6 +12,7 @@ import {
   STORYBOARD_LIMITS as LIMITS,
   NodeKindSchema,
   PanelSchema,
+  RecordingVisualSchema,
   SceneRoleSchema,
   SceneSchema,
   SeveritySchema,
@@ -25,7 +26,7 @@ import {
 const FENCE = '```';
 
 const REF = { path: 'src/http/retry.ts', side: 'head', startLine: 18, endLine: 29 } as const;
-const NO_PANEL = { codeRef: null, bullets: [], terminal: [], screenshotId: null };
+const NO_PANEL = { codeRef: null, bullets: [], terminal: [], screenshotId: null, recordingId: null };
 
 /**
  * One small example of each visual, so a writer sees every field name without reading the schema.
@@ -113,6 +114,14 @@ export const VISUAL_SHAPES: Visual[] = [
   },
   { type: 'bullets', heading: null, items: [{ text: 'A point', beat: 0 }] },
   { type: 'screenshot', screenshotId: 'SS1', caption: null },
+  {
+    type: 'recording',
+    recordingId: 'RC1',
+    caption: null,
+    trim: { start: 2, end: 9 },
+    speed: null,
+    zoom: null,
+  },
   { type: 'summary', points: [{ text: 'A point', beat: 0 }], closing: null },
 ];
 
@@ -238,11 +247,12 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - architecture: up to ${LIMITS.maxArchitectureNodes} nodes (components) and the edges between them. Use it only when two or more components matter and the edges show how they relate. A diagram with one node says nothing: use files instead. Every edge must join two node ids that exist.
 - flow: up to ${LIMITS.maxFlowActors} actors and ${LIMITS.maxFlowSteps} steps. Use it for a request or call that the code implements.
 - code: a CodeRef to real lines, mode "diff" for changed lines or "snippet" for context, and focus ranges. The engine reads the code itself. Never paste code.
-- before-after: two panels. A panel shows code (a CodeRef), bullets, a screenshot or a terminal. For one small changed function, show its old lines (side "base") and its new lines (side "head").
+- before-after: two panels. A panel shows code (a CodeRef), bullets, a screenshot, a recording or a terminal. For one small changed function, show its old lines (side "base") and its new lines (side "head").
 - terminal, browser: simulated. See "Simulated visuals".
 - checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and an optional CodeRef. In "detail", do not repeat "title" or the file and line: "ref" has them.
 - bullets: up to ${LIMITS.maxBullets} short points.
 - screenshot: only a screenshot id that was supplied (SS1, SS2, ...).
+- recording: only a supplied recording id (RC1, ...). The scene lasts as long as its narration (about ${LIMITS.wordsPerSecond} words a second): write enough for the clip, or set "speed". A clip that ends early stays on its last frame.
 - summary: up to ${LIMITS.maxBullets} closing points.
 
 Anything that appears while a scene plays has a "beat": the 0-based index of the narration line on which it appears. A beat must be smaller than the number of lines in that scene.
@@ -346,6 +356,7 @@ These fields take one of a fixed set of values. Each list is complete.
 
 - "title" of a scene: ${rule(SceneSchema.shape.title)}
 - "chips" of a title visual: ${rule(TitleVisualSchema.shape.chips)}
+- "trim", "speed" and "zoom" of a recording visual: ${rule(RecordingVisualSchema.shape.trim)} It has "start" and "end". ${rule(RecordingVisualSchema.shape.speed)} ${rule(RecordingVisualSchema.shape.zoom)} It has "x", "y", "w" and "h".
 - "focus" of a code visual: ${rule(CodeVisualSchema.shape.focus)}
 - "text" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.text)}
 - "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}

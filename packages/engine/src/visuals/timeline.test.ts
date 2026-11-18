@@ -36,6 +36,7 @@ const VISUALS: Record<VisualType, Visual> = {
       bullets: ['a'],
       terminal: [],
       screenshotId: null,
+      recordingId: null,
     },
     after: {
       label: 'After',
@@ -44,6 +45,7 @@ const VISUALS: Record<VisualType, Visual> = {
       bullets: ['b'],
       terminal: [],
       screenshotId: null,
+      recordingId: null,
     },
     caption: null,
   },
@@ -52,6 +54,7 @@ const VISUALS: Record<VisualType, Visual> = {
   checklist: { type: 'checklist', items: [] },
   bullets: { type: 'bullets', heading: null, items: [] },
   screenshot: { type: 'screenshot', screenshotId: 'SS1', caption: null },
+  recording: { type: 'recording', recordingId: 'RC1', caption: null, trim: null, speed: null, zoom: null },
   summary: { type: 'summary', points: [], closing: null },
 };
 

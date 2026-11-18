@@ -1,4 +1,5 @@
 /** Rules that depend on the visual type: size limits, evidence ids, on-screen text and internal consistency. */
+import { MIN_CLIP_SECONDS } from '../core/recording-frames.ts';
 import { STORYBOARD_LIMITS as LIMITS, type Scene, type Visual } from '../core/storyboard-schema.ts';
 import type { Run, TextCleaner } from './run.ts';
 import type { IssueCode } from './types.ts';
@@ -88,6 +89,7 @@ export function applyVisualLimits(visual: Visual, p: string, run: Run): void {
     case 'files':
     case 'code':
     case 'screenshot':
+    case 'recording':
       break;
     default:
       exhaustive(visual);
@@ -135,6 +137,7 @@ export function filterVisualEvidence(visual: Visual, p: string, run: Run): void 
     case 'browser':
     case 'bullets':
     case 'screenshot':
+    case 'recording':
     case 'summary':
       break;
     default:
@@ -209,6 +212,7 @@ export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner)
       visual.items = cleaner.keepTexts(visual.items, `${p}.items`);
       break;
     case 'screenshot':
+    case 'recording':
       visual.caption = cleaner.optional(visual.caption, `${p}.caption`);
       break;
     case 'summary':
@@ -255,6 +259,84 @@ export function fallbackToFiles(
   scene.visual = { type: 'files', highlightPaths: showable, caption: null };
   run.warn(path, code, `${reason}; showing the changed-files overview instead`);
   run.fix(path, 'replaced the visual with the changed-files overview');
+}
+
+const clamp = (value: number, low: number, high: number): number => Math.min(Math.max(value, low), high);
+/** Least part of the clip a trim may leave, and the smallest zoom box side (a fraction of the frame). */
+const MIN_ZOOM_SIDE = 0.05;
+
+/**
+ * Put the trim, speed and zoom of a recording visual into range. Every repair lands on a value that
+ * passes the same check again, so a second validation changes nothing.
+ */
+function checkRecordingWindow(
+  visual: Extract<Visual, { type: 'recording' }>,
+  durationSec: number,
+  vp: string,
+  run: Run,
+): void {
+  const maxClip = run.config.inputs.maxClipSeconds;
+  const shown = (n: number): string => `${Math.round(n * 10) / 10}`;
+  if (visual.trim) {
+    let { start, end } = visual.trim;
+    if (start > end) {
+      [start, end] = [end, start];
+      run.fix(`${vp}.trim`, 'put start and end in order');
+    }
+    const inside = Math.min(end, durationSec) - Math.max(start, 0);
+    if (inside < Math.min(MIN_CLIP_SECONDS, durationSec)) {
+      run.error(
+        `${vp}.trim`,
+        'recording-trim-out-of-range',
+        `the trim ${shown(start)} to ${shown(end)} s is outside the recording, which lasts ${shown(durationSec)} s; choose a part inside it`,
+      );
+      return;
+    }
+    const clamped = { start: clamp(start, 0, durationSec), end: clamp(end, 0, durationSec) };
+    if (clamped.start !== start || clamped.end !== end) {
+      run.warn(
+        `${vp}.trim`,
+        'recording-trim-out-of-range',
+        `the trim ${shown(start)} to ${shown(end)} s reaches outside the recording, which lasts ${shown(durationSec)} s; it was cut to fit`,
+      );
+      run.fix(
+        `${vp}.trim`,
+        `cut the trim to ${shown(clamped.start)} to ${shown(clamped.end)} s, inside the recording`,
+      );
+    }
+    visual.trim = clamped;
+  }
+  const { start, end } = visual.trim ?? { start: 0, end: durationSec };
+  // The small margin keeps a window that was cut to the limit from failing the same test again.
+  if (end - start > maxClip + 1e-6) {
+    run.warn(
+      `${vp}.trim`,
+      'recording-too-long',
+      `a scene can show at most ${maxClip} s of a recording; the clip was shortened from ${shown(end - start)} s`,
+    );
+    run.fix(`${vp}.trim`, `shortened the clip from the end to ${maxClip} s (the limit is ${maxClip} s)`);
+    visual.trim = { start, end: start + maxClip };
+  }
+  if (visual.speed !== null) {
+    const { minRecordingSpeed: low, maxRecordingSpeed: high } = LIMITS;
+    const speed = clamp(visual.speed, low, high);
+    if (speed !== visual.speed) {
+      run.fix(
+        `${vp}.speed`,
+        `changed the speed from ${visual.speed} to ${speed} (the range is ${low} to ${high})`,
+      );
+      visual.speed = speed;
+    }
+  }
+  if (visual.zoom) {
+    const w = clamp(visual.zoom.w, MIN_ZOOM_SIDE, 1);
+    const h = clamp(visual.zoom.h, MIN_ZOOM_SIDE, 1);
+    const zoom = { x: clamp(visual.zoom.x, 0, 1 - w), y: clamp(visual.zoom.y, 0, 1 - h), w, h };
+    if (zoom.x !== visual.zoom.x || zoom.y !== visual.zoom.y || w !== visual.zoom.w || h !== visual.zoom.h) {
+      run.fix(`${vp}.zoom`, 'moved the zoom box inside the frame (x, y, w and h are fractions from 0 to 1)');
+      visual.zoom = zoom;
+    }
+  }
 }
 
 /** Internal consistency of one visual after the other steps: dangling ids, empty lists, screenshots, addresses. */
@@ -311,6 +393,20 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
       }
       break;
     }
+    case 'recording': {
+      const recording = run.recordings.get(visual.recordingId);
+      if (!recording) {
+        const known = [...run.recordings.keys()];
+        run.error(
+          `${vp}.recordingId`,
+          'recording-unknown',
+          `"${visual.recordingId}" is not a supplied recording; ${known.length ? `use one of ${known.join(', ')}` : 'no recordings were supplied, so use another visual'}`,
+        );
+        break;
+      }
+      checkRecordingWindow(visual, recording.durationSec, vp, run);
+      break;
+    }
     case 'before-after': {
       let empty = false;
       for (const name of ['before', 'after'] as const) {
@@ -328,6 +424,19 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
           run.fix(panelPath, 'changed the screenshot panel to a bullets panel');
           panel.kind = 'bullets';
           panel.screenshotId = null;
+        }
+        if (
+          panel.kind === 'recording' &&
+          (panel.recordingId === null || !run.recordings.has(panel.recordingId))
+        ) {
+          run.warn(
+            `${panelPath}.recordingId`,
+            'recording-unknown',
+            `"${panel.recordingId ?? ''}" is not a supplied recording; the panel shows its bullets instead`,
+          );
+          run.fix(panelPath, 'changed the recording panel to a bullets panel');
+          panel.kind = 'bullets';
+          panel.recordingId = null;
         }
         if (panel.kind === 'bullets' && panel.bullets.length === 0) empty = true;
         if (panel.kind === 'terminal' && panel.terminal.length === 0) empty = true;

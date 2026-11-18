@@ -165,6 +165,11 @@ export function addContextFlags(command: Command): Command {
       '--screenshot <spec>',
       'a real screenshot, PNG or JPEG up to 4 MB: <path>[:<caption>[:before|after]] (repeatable)',
       collect,
+    )
+    .option(
+      '--recording <spec>',
+      'a real screen recording, MP4 (H.264) or WebM (VP8 or VP9), checked with ffprobe: <path>[:<caption>[:before|after]] (repeatable)',
+      collect,
     );
 }
 
@@ -445,7 +450,7 @@ export async function buildCommonOptions(
 /**
  * The source and flags of an `analyze` command line as raw words, for the commands that AUTHORING.md
  * shows. Files are made absolute, so the commands work from the run folder as well. The flags are
- * the ones that decide the evidence ids (refs, task, notes, tests, screenshots).
+ * the ones that decide the evidence ids (refs, task, notes, tests, screenshots, recordings).
  */
 export function followUpFor(
   source: string,
@@ -463,6 +468,10 @@ export function followUpFor(
   for (const spec of flags.screenshot ?? []) {
     const { path } = parseScreenshotSpec(spec);
     contextArgs.push('--screenshot', `${resolve(cwd, path)}${spec.slice(path.length)}`);
+  }
+  for (const spec of flags.recording ?? []) {
+    const { path } = parseScreenshotSpec(spec);
+    contextArgs.push('--recording', `${resolve(cwd, path)}${spec.slice(path.length)}`);
   }
   return { source, args: [...refs, ...contextArgs], contextArgs };
 }

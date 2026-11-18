@@ -145,6 +145,7 @@ export type {
   ProgressEvent,
   PublishResult,
   PullRequestInfo,
+  RecordingInput,
   Relationship,
   RepoContext,
   RepoInfo,
