@@ -198,9 +198,9 @@ export const BrowserVisualSchema = z.object({
       text: z
         .string()
         .describe(
-          'heading, text, button, badge: shown as it is. input: the label of the field. list: an optional title. ' +
-            'table: the header, only when no item has "|". card: the title. toast: the first line. ' +
-            'image: an optional caption.',
+          'heading, text, button, badge: the text on the block. input: the label of the field. ' +
+            'list: an optional title. table: the header, only when no item has "|". card: the title. ' +
+            'toast: the first line. image: an optional caption.',
         ),
       items: z
         .array(z.string())

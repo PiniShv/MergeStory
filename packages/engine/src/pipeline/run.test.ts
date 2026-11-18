@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatPublishResult } from '../cli/commands/publish.ts';
-import { formatCost, formatError } from '../cli/format.ts';
+import { formatCost, formatError, formatValidation } from '../cli/format.ts';
 import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
@@ -916,11 +916,11 @@ describe('prepareAuthoring: AUTHORING.md', () => {
 
   it('says what the text of every kind of browser block shows', () => {
     const { kind, text } = BrowserVisualSchema.shape.blocks.element.shape;
-    // A kind comes before a colon or a comma, as in "heading, text: shown as it is. input: the label".
+    // A kind comes before a colon or a comma, as in "heading, text: the text on the block. input: the label".
     for (const name of kind.options) expect(text.description, name).toMatch(new RegExp(`\\b${name}[,:]`));
   });
 
-  it('states the limits for terminal lines and browser blocks, which the model prompt leaves out', async () => {
+  it('states the limits for terminal lines and browser blocks, and where validate reports a trim', async () => {
     const result = await prepareAuthoring({
       ...options({ withContext: false }),
       outDir: join(base, 'authoring-limits'),
@@ -933,6 +933,20 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     expect(rules).toContain(
       `"blocks" of a browser visual: at most ${STORYBOARD_LIMITS.maxBrowserBlocks} blocks.`,
     );
+    // A trim is a fix. The text output of validate lists fixes under a heading, and the JSON result under "fixes".
+    const heading = 'Fixed automatically when rendering';
+    expect(rules).toContain(`under "${heading}" ("fixes" in the \`--json\` result)`);
+    const printed = formatValidation(
+      {
+        storyboard: null,
+        errors: [],
+        warnings: [],
+        fixes: ['kept the first 8 of 11 blocks'],
+        groundedClaims: 0,
+      },
+      createStyle(false),
+    );
+    expect(printed).toContain(heading);
   });
 
   it('says that the word budget is a guide, and what the longest video does', async () => {

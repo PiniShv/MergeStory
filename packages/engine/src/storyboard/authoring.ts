@@ -349,5 +349,5 @@ These fields take one of a fixed set of values. Each list is complete.
 - "focus" of a code visual: ${rule(CodeVisualSchema.shape.focus)}
 - "text" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.text)}
 - "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}
-- "lines" of a terminal visual and "terminal" of a before-after panel: at most ${LIMITS.maxTerminalLines} lines. "blocks" of a browser visual: at most ${LIMITS.maxBrowserBlocks} blocks. The first ones stay. The rest is trimmed and listed in "fixes".
+- "lines" of a terminal visual and "terminal" of a before-after panel: at most ${LIMITS.maxTerminalLines} lines. "blocks" of a browser visual: at most ${LIMITS.maxBrowserBlocks} blocks. The first ones stay. The rest is trimmed, and \`validate\` reports it under "Fixed automatically when rendering" ("fixes" in the \`--json\` result).
 `;
