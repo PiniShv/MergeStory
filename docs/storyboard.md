@@ -164,7 +164,7 @@ never contains code.
 | `before-after` | Two panels. Each shows code, bullets, a screenshot or a terminal. | `before`, `after`, `caption` |
 | `terminal` | A simulated terminal session. | `title`, `lines` |
 | `browser` | A simulated app screen. | `url`, `pageTitle`, `blocks` |
-| `checklist` | Review items with a severity and an optional code reference. | `items` |
+| `checklist` | Review items with a severity and an optional code reference. The detail of an item should not repeat its title or its file and line. | `items` |
 | `bullets` | Short points. | `heading`, `items` |
 | `screenshot` | A real screenshot that you supplied. | `screenshotId`, `caption` |
 | `summary` | The closing points. | `points`, `closing` |

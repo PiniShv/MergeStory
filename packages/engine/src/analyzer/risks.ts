@@ -113,6 +113,8 @@ interface Finding {
   locs: Loc[];
   /** How many places there are, also those that `locs` does not keep. */
   total: number;
+  /** True when `what` already says how many there are, or names them. */
+  counted: boolean;
   /** Extra sentences for the detail, without a trailing period. */
   extras: string[];
   extraEvidence: string[];
@@ -176,6 +178,7 @@ function newFinding(kind: RiskKindId, options: RecordOptions = {}): Finding {
     what: typeof spec.what === 'function' ? spec.what(options.count ?? 0) : spec.what,
     locs: [],
     total: 0,
+    counted: typeof spec.what === 'function',
     extras: [],
     extraEvidence: [],
   };
@@ -392,6 +395,7 @@ function envVarFinding(envList: readonly CodeSite[], symbolAt: ReturnType<typeof
   const more = envList.length > 6 ? ` and ${envList.length - 6} more` : '';
   const finding = newFinding('env-vars');
   finding.what = `${finding.what} (${names}${more})`;
+  finding.counted = true;
   finding.total = envList.length;
   finding.locs = envList.slice(0, MAX_LOCS).map((e) => ({
     fileId: e.fileId,
@@ -619,12 +623,16 @@ function toSignal(f: Finding, index: number): RiskSignal {
   }
   for (const id of f.extraEvidence) if (!evidence.includes(id)) evidence.push(id);
   const first = f.locs[0];
+  const extras = f.extras.length > 0 ? ` ${f.extras.map((e) => e.replace(/\.$/, '')).join('; ')}.` : '';
+  // `ref` holds the first place, so the summary only says that there are others.
+  const several = f.total > 1 && !f.counted ? `, in ${f.total} places` : '';
   return {
     id: `R${index}`,
     severity: f.severity,
     category: f.category,
     title: f.title,
-    detail: `${f.verb} ${f.what}${where}.${f.extras.length > 0 ? ` ${f.extras.map((e) => e.replace(/\.$/, '')).join('; ')}.` : ''}`,
+    detail: `${f.verb} ${f.what}${where}.${extras}`,
+    summary: `${f.verb} ${f.what}${several}.${extras}`,
     evidence: evidence.slice(0, 14),
     ref: first ? { path: first.path, side: first.side, startLine: first.line, endLine: first.line } : null,
   };

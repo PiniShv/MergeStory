@@ -219,6 +219,40 @@ describe('review scene', () => {
     ]);
   });
 
+  it('writes the detail of an item without the list of places, because the item shows its reference', () => {
+    const fx = buildFixture({
+      source: 'local',
+      pr: null,
+      files: [{ path: 'src/a.ts', head: ['export const A = 1;'], component: 'app' }],
+      components: APP,
+      risks: [
+        {
+          severity: 'medium',
+          category: 'error-handling',
+          title: 'Check the new error handler that ignores the error',
+          detail: 'Adds an error handler that does nothing at src/a.ts:1, src/b.ts:7.',
+          summary: 'Adds an error handler that does nothing, in 2 places.',
+          files: ['src/a.ts'],
+          ref: { path: 'src/a.ts', side: 'head', startLine: 1, endLine: 1 },
+        },
+        {
+          severity: 'low',
+          category: 'complexity',
+          title: 'Check the new TODO notes',
+          detail: 'Adds a TODO note at src/a.ts:1.',
+          files: ['src/a.ts'],
+        },
+      ],
+    });
+    const storyboard = make(fx, 300);
+    expect(storyboard.reviewChecklist.map((item) => item.detail)).toEqual([
+      'Adds an error handler that does nothing, in 2 places.',
+      // An analysis that was built by hand may have no summary. Its detail is used as it is.
+      'Adds a TODO note at src/a.ts:1.',
+    ]);
+    expect(storyboard.reviewChecklist[0]?.ref).toMatchObject({ path: 'src/a.ts', startLine: 1 });
+  });
+
   it('drops a code reference to a hidden file but keeps one to a changed source file', () => {
     const fx = retryFixture();
     const scene = make(fx, 150).scenes.find((s) => s.role === 'review')!;

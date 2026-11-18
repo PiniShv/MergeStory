@@ -223,7 +223,7 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - code: a CodeRef to real lines, mode "diff" for changed lines or "snippet" for context, and focus ranges. The engine reads the code itself. Never paste code.
 - before-after: two panels. A panel shows code (a CodeRef), bullets, a screenshot or a terminal. For one small changed function, show its old lines (side "base") and its new lines (side "head").
 - terminal, browser: simulated. See "Simulated visuals".
-- checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and an optional CodeRef.
+- checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and an optional CodeRef. In "detail", do not repeat "title" or the file and line: "ref" has them.
 - bullets: up to ${LIMITS.maxBullets} short points.
 - screenshot: only a screenshot id that was supplied (SS1, SS2, ...).
 - summary: up to ${LIMITS.maxBullets} closing points.

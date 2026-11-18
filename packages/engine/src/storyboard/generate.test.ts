@@ -155,6 +155,7 @@ describe('authoring guide', () => {
       '150 words per minute',
       'uncertainties',
       'simulated',
+      'do not repeat "title"',
     ]) {
       expect(AUTHORING_GUIDE).toContain(phrase);
     }

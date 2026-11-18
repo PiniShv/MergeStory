@@ -97,9 +97,10 @@ GitHub's Ubuntu runners already have (`/usr/bin/google-chrome`).
 ## The comment
 
 The comment has the title, a short summary, a link ("Watch the 2-minute MergeStory"), the chapters and what
-to review. The next run for the same pull request updates it. MergeStory finds its own comment by a marker,
-and only updates a comment that the same account wrote. Text from the pull request is cleaned before it is
-written: no mentions, no HTML and no live links.
+to review. The chapters are folded, so the comment stays short: one click opens them. The next run for the
+same pull request updates it. MergeStory finds its own comment by a marker, and only updates a comment that
+the same account wrote. Text from the pull request is cleaned before it is written: no mentions, no HTML
+and no live links.
 
 A private link works for 7 days at most, and the comment says when it expires. A private link has no
 preview image, because GitHub cannot load one.

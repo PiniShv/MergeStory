@@ -114,7 +114,8 @@ export function reviewScene(b: Build): Review | null {
     const beats: number[] = [];
     const riskItems: ReviewItem[] = risks.map((risk) => ({
       title: truncateText(safeText(ctx, risk.title) ?? `Check the ${risk.category} signal`, 80),
-      detail: shortDetail(ctx, risk.detail),
+      // The card, the watch page and the comment show `ref` next to the detail, so no list of places here.
+      detail: shortDetail(ctx, risk.summary ?? risk.detail),
       severity: risk.severity,
       ref: safeRef(ctx, risk.ref),
       evidence: cite(ctx, risk.id, ...risk.evidence.slice(0, 2)),

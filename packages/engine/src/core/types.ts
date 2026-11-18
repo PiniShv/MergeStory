@@ -311,6 +311,11 @@ export interface RiskSignal {
   category: RiskCategory;
   title: string;
   detail: string;
+  /**
+   * `detail` without its list of places, for a text that shows `ref` next to it. It says "in N places"
+   * when there are several. Use `detail` when it is missing.
+   */
+  summary?: string;
   /** Evidence ids (files, hunks, symbols) that triggered the signal. */
   evidence: string[];
   ref: CodeRef | null;
