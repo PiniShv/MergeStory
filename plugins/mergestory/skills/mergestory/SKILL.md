@@ -10,7 +10,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.6.0"
+  version: "1.7.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -25,7 +25,7 @@ Do not use it for text-only summaries or code review comments. It does not recor
 ## 1. Find the engine
 
 Run `mergestory --version`. It must print 1.5.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.6.0`. Never start
+the user whether you may install it, then run `npm install -g mergestory@1.7.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -77,7 +77,7 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   name order: `.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, with H.264, VP8 or VP9 video, at least 0.2
   seconds long, with no sound or with AAC, MP3, Opus or Vorbis sound. To name them, add
   `recordings/captions.json` as `{"clip.mp4": {"caption": "What it shows", "side": "before"}}`.
-  This needs an engine newer than 1.6.0. An older engine ignores the folder, so cite no `RC` id there.
+  This needs engine 1.7.0 or newer. An older engine ignores the folder, so cite no `RC` id there.
   MergeStory masks text, not pictures: a secret or an e-mail address that shows in a recording shows in
   the video. Use a capture only when you know that it shows nothing its viewers must not see. When you
   are not sure, ask the user.

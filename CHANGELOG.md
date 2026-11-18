@@ -2,7 +2,12 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.7.0
+
+### Skill and plugin
+
+- The skill installs `mergestory@1.7.0`. It still asks for 1.5.0 or newer: recordings are used only by an
+  engine that reads them, and an older one ignores the folder.
 
 ### Engine
 

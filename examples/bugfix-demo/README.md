@@ -1,6 +1,6 @@
 # The bug-fix demo
 
-A basket page shows "23 items" when someone types 2 and 3. The fix turns the two quantities into numbers. This demo shows the bug and the fix in the video, as a screen recording and as screenshots, and it needs an engine newer than 1.6.0.
+A basket page shows "23 items" when someone types 2 and 3. The fix turns the two quantities into numbers. This demo shows the bug and the fix in the video, as a screen recording and as screenshots, and it needs engine 1.7.0 or newer.
 
 MergeStory does not record anything. `capture.mjs` opens the page in a browser, types 2 and 3, and writes the recordings and the screenshots. Nothing is committed: the captures are made each time you run it.
 
