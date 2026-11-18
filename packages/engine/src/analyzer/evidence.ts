@@ -122,6 +122,8 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
   }
   for (const s of inputs.screenshots)
     add(s.id, 'screenshot', cleanLabel(s.caption || `Screenshot (${s.moment})`, 100), null, null);
+  for (const r of inputs.recordings)
+    add(r.id, 'recording', cleanLabel(r.caption || `Recording (${r.moment})`, 100), null, null);
   add('REPO', 'repo', 'Repository structure', null, web);
   return items;
 }

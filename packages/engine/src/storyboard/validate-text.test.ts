@@ -170,6 +170,26 @@ describe('names that are not in the change', () => {
       ['the notes', { inputs: { task: 'x', notes: 'purgeLegacyCache() is planned.' } }, 'NOTES'],
       ['the README', { readme: 'Planned: purgeLegacyCache() drops old entries.' }, 'REPO'],
       [
+        'a recording caption',
+        {
+          inputs: {
+            recordings: [
+              {
+                id: 'RC1',
+                path: '/x/clip.mp4',
+                caption: 'Add purgeLegacyCache() to drop old entries.',
+                moment: 'other',
+                durationSec: 2,
+                width: 320,
+                height: 240,
+                codec: 'h264',
+              },
+            ],
+          },
+        },
+        'RC1',
+      ],
+      [
         'a linked issue',
         { linkedIssues: [{ title: 'Add purgeLegacyCache', body: 'It should drop old entries.' }] },
         'IS1',

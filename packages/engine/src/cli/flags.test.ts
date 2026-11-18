@@ -247,6 +247,21 @@ describe('analyze: the commands in AUTHORING.md', () => {
     expect(stdout).toContain(`--screenshot '${join(dir, 'after.png')}:Dashboard: done:after'`);
   });
 
+  it('are given every --recording as it was typed, with an absolute path', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    const { code, stdout } = await run([
+      'analyze',
+      'repo',
+      '--recording',
+      'clip.mp4:Slow: before the fix:before',
+    ]);
+    expect(code).toBe(0);
+    const recordingArgs = analyzeMock.mock.calls[0]?.[0].followUp?.args;
+    expect(recordingArgs).toEqual(['--recording', `${join(dir, 'clip.mp4')}:Slow: before the fix:before`]);
+    expect(stdout).toContain(`--recording '${join(dir, 'clip.mp4')}:Slow: before the fix:before'`);
+  });
+
   it('are given an inline task as it was typed, and nothing else when no flag was used', async () => {
     analyzeMock.mockResolvedValue(authoring);
     await run(['analyze', 'acme/app#42', '--task', 'Add retries']);

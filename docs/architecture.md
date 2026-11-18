@@ -90,7 +90,7 @@ learns what happened.
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
 - `presentation.ts`: the data for the watch page and the PR comment;
-- `inputs.ts`: the one contract for caller context (task, notes, test results, screenshots);
+- `inputs.ts`: the one contract for caller context (task, notes, test results, screenshots, recordings);
 - `authoring.ts`: `prepareAuthoring` and `checkStoryboard` for callers that write the storyboard;
 - `publish-run.ts`: `publishRun`, which publishes a rendered run again.
 
@@ -138,7 +138,7 @@ stage asks `isProtectedFile` or `isShowable` and never matches a pattern itself.
 
 The analyzer gives every citable fact an id: `PR`, `TASK`, `NOTES`, `T1` (test result supplied by
 the caller), `IS1` (linked issue), `CM1` (commit), `F2` (file), `F2.H1` (diff hunk), `S3` (symbol),
-`M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `REPO`.
+`M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen recording), `REPO`.
 Storyboards cite these ids. The watch page lists every claim with links to the cited code.
 
 ### Storyboard

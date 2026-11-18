@@ -1,10 +1,13 @@
-import { mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, truncate, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { resolveFfmpeg } from '../core/binaries.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs } from '../core/types.ts';
+import { testConfig } from '../testing/context.ts';
+import { makeClip } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { sampleStoryboard } from '../testing/sample-change.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
@@ -23,7 +26,7 @@ describe('buildContextInputs: screenshots', () => {
 
   it('accepts a PNG, gives it the id SS1 and an absolute path', async () => {
     await writeFile(join(dir, 'a.png'), makePng(4, 4));
-    const inputs = await buildContextInputs({ screenshots: [shot('a.png')] }, dir);
+    const inputs = await buildContextInputs({ screenshots: [shot('a.png')] }, dir, testConfig());
     expect(inputs.screenshots).toEqual([
       { id: 'SS1', path: join(dir, 'a.png'), caption: 'Dashboard', moment: 'after' },
     ]);
@@ -37,7 +40,10 @@ describe('buildContextInputs: screenshots', () => {
       ['empty.png', Buffer.alloc(0)],
     ] as const) {
       await writeFile(join(dir, name), bytes);
-      await expect(buildContextInputs({ screenshots: [shot(name)] }, dir), name).rejects.toMatchObject({
+      await expect(
+        buildContextInputs({ screenshots: [shot(name)] }, dir, testConfig()),
+        name,
+      ).rejects.toMatchObject({
         code: 'USAGE',
         message: `Screenshot: ${name} is not a PNG or JPEG image (up to 40 megapixels).`,
       });
@@ -48,11 +54,15 @@ describe('buildContextInputs: screenshots', () => {
     const big = join(dir, 'big.png');
     await writeFile(big, makePng(4, 4));
     await truncate(big, MAX_SCREENSHOT_BYTES + 1);
-    await expect(buildContextInputs({ screenshots: [shot('big.png')] }, dir)).rejects.toMatchObject({
+    await expect(
+      buildContextInputs({ screenshots: [shot('big.png')] }, dir, testConfig()),
+    ).rejects.toMatchObject({
       code: 'USAGE',
       message: 'Screenshot: big.png is 4.1 MB, the limit is 4 MB.',
     });
-    await expect(buildContextInputs({ screenshots: [shot('missing.png')] }, dir)).rejects.toMatchObject({
+    await expect(
+      buildContextInputs({ screenshots: [shot('missing.png')] }, dir, testConfig()),
+    ).rejects.toMatchObject({
       message: 'Screenshot: file not found: missing.png',
     });
   });
@@ -128,6 +138,7 @@ describe('buildContextInputs: test results', () => {
     const inputs = await buildContextInputs(
       { tests: [{ ...test(1), command: 'c'.repeat(400), summary: 's'.repeat(1500) }] },
       dir,
+      testConfig(),
     );
     expect(inputs.tests).toEqual([
       { id: 'T1', command: 'c'.repeat(300), passed: true, summary: 's'.repeat(1000), source: 'ci' },
@@ -139,6 +150,7 @@ describe('buildContextInputs: test results', () => {
     const inputs = await buildContextInputs(
       { tests: Array.from({ length: 12 }, (_, i) => test(i)) },
       dir,
+      testConfig(),
       (m) => warnings.push(m),
     );
     expect(inputs.tests).toHaveLength(10);
@@ -147,7 +159,7 @@ describe('buildContextInputs: test results', () => {
 
   it('refuses a result that is not what the types promise, instead of making up a value', async () => {
     const bad = [{ command: 'npm test', passed: 'false', summary: '3 failed' }] as never;
-    await expect(buildContextInputs({ tests: bad }, dir)).rejects.toMatchObject({
+    await expect(buildContextInputs({ tests: bad }, dir, testConfig())).rejects.toMatchObject({
       code: 'USAGE',
       message: 'tests: entry 1 needs "passed" set to true or false.',
     });
@@ -159,6 +171,7 @@ describe('unusedScreenshotWarning', () => {
     task: null,
     notes: null,
     tests: [],
+    recordings: [],
     screenshots: Array.from({ length: count }, (_, i) => ({
       id: `SS${i + 1}`,
       path: `/x/${i}.png`,
@@ -280,5 +293,115 @@ describe('evidenceUsed', () => {
     const cited = structuredClone(storyboard);
     cited.scenes[0]?.narration[0]?.evidence.unshift('SS2');
     expect(evidenceUsed(cited)).toEqual(['SS2', 'TASK', 'F1', 'S2', 'F1.H1', 'R1', 'NOTES', 'SS1']);
+  });
+});
+
+const tools = await resolveFfmpeg(testConfig()).catch(() => null);
+
+describe('buildContextInputs: recordings', () => {
+  const rec = (name: string, caption = 'Clip', moment: 'before' | 'after' | 'other' = 'other') => ({
+    path: join(dir, name),
+    caption,
+    moment,
+  });
+
+  it('does not look for ffprobe unless a recording was supplied', async () => {
+    const config = testConfig({ render: { ffprobePath: join(dir, 'no-such-ffprobe') } });
+    expect((await buildContextInputs({ task: 'x' }, dir, config)).recordings).toEqual([]);
+    await expect(buildContextInputs({ recordings: [rec('a.mp4')] }, dir, config)).rejects.toMatchObject({
+      code: 'FFMPEG_NOT_FOUND',
+    });
+  });
+
+  describe.skipIf(tools === null)('with FFmpeg', () => {
+    it('numbers the recordings RC1, RC2 and reads their facts', async () => {
+      await makeClip(tools!.ffmpeg, join(dir, 'a.mp4'), { seconds: 2 });
+      await makeClip(tools!.ffmpeg, join(dir, 'b.mp4'), { seconds: 1, size: '160x120' });
+      const inputs = await buildContextInputs(
+        { recordings: [rec('a.mp4', 'Before', 'before'), rec('b.mp4', 'x'.repeat(300))] },
+        dir,
+        testConfig(),
+      );
+      expect(inputs.recordings.map((r) => r.id)).toEqual(['RC1', 'RC2']);
+      expect(inputs.recordings[0]).toMatchObject({
+        path: join(dir, 'a.mp4'),
+        caption: 'Before',
+        moment: 'before',
+        width: 320,
+        height: 240,
+        codec: 'h264',
+      });
+      expect(inputs.recordings[1]).toMatchObject({ moment: 'other', width: 160 });
+      expect(inputs.recordings[1]?.caption).toHaveLength(200);
+    });
+
+    it('uses the first recordings and warns about the rest', async () => {
+      for (const name of ['a.mp4', 'b.mp4', 'c.mp4'])
+        await makeClip(tools!.ffmpeg, join(dir, name), { seconds: 1 });
+      const warnings: string[] = [];
+      const inputs = await buildContextInputs(
+        { recordings: ['a.mp4', 'b.mp4', 'c.mp4'].map((n) => rec(n)) },
+        dir,
+        testConfig({ inputs: { maxRecordings: 2 } }),
+        (m) => warnings.push(m),
+      );
+      expect(inputs.recordings.map((r) => r.id)).toEqual(['RC1', 'RC2']);
+      expect(warnings).toEqual(['Only the first 2 recordings are used.']);
+    });
+
+    it('refuses a clip over the length limit, naming the file', async () => {
+      await makeClip(tools!.ffmpeg, join(dir, 'long.mp4'), { seconds: 3 });
+      await expect(
+        buildContextInputs(
+          { recordings: [rec('long.mp4')] },
+          dir,
+          testConfig({ inputs: { maxRecordingSeconds: 1 } }),
+        ),
+      ).rejects.toMatchObject({
+        code: 'USAGE',
+        message: expect.stringMatching(/long\.mp4.*3 s long, the limit is 1 s/),
+      });
+    });
+
+    it('refuses a file that is not a video, whatever its name says', async () => {
+      await writeFile(join(dir, 'fake.mp4'), makePng(4, 4));
+      await expect(
+        buildContextInputs({ recordings: [rec('fake.mp4')] }, dir, testConfig()),
+      ).rejects.toMatchObject({
+        code: 'USAGE',
+        message: expect.stringContaining('fake.mp4'),
+      });
+    });
+  });
+
+  it('refuses a file over the size limit, before it is probed', async () => {
+    await writeFile(join(dir, 'big.mp4'), '');
+    await truncate(join(dir, 'big.mp4'), 2 * 1024 * 1024);
+    const config = testConfig({ inputs: { maxRecordingMb: 1 } });
+    // The size check comes first, so this needs no ffprobe unless one is found.
+    await expect(buildContextInputs({ recordings: [rec('big.mp4')] }, dir, config)).rejects.toMatchObject({
+      code: tools === null ? 'FFMPEG_NOT_FOUND' : 'USAGE',
+    });
+    if (tools !== null) {
+      await expect(buildContextInputs({ recordings: [rec('big.mp4')] }, dir, config)).rejects.toMatchObject({
+        message: 'Recording big.mp4 cannot be used: it is 2 MB, the limit is 1 MB.',
+      });
+    }
+  });
+
+  it('refuses a missing file and a folder', async () => {
+    if (tools === null) return;
+    await expect(
+      buildContextInputs({ recordings: [rec('gone.mp4')] }, dir, testConfig()),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'Recording gone.mp4 cannot be used: the file was not found.',
+    });
+    await mkdir(join(dir, 'folder.mp4'));
+    await expect(
+      buildContextInputs({ recordings: [rec('folder.mp4')] }, dir, testConfig()),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('not a regular file'),
+    });
   });
 });

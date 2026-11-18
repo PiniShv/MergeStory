@@ -13,6 +13,9 @@ export interface ContextFlags {
   notesFile?: string;
   testsFile?: string;
   screenshot?: string[];
+  recording?: string[];
+  /** Recordings that are already parsed. Only the agent commands set it, from their work folder. */
+  recordingFiles?: NonNullable<ContextOptions['recordings']>;
 }
 
 type ScreenshotSpec = Omit<ScreenshotInput, 'id'>;
@@ -50,19 +53,27 @@ export function parseScreenshotSpec(spec: string): {
   return { path, caption: caption === '' ? null : caption, moment };
 }
 
-/** Check each screenshot the way the video does (see checkScreenshotFile), and make its path absolute. */
-async function resolveScreenshots(specs: string[], cwd: string): Promise<ScreenshotSpec[]> {
+/**
+ * Parse the specs of one file flag (`--screenshot`, `--recording`), refuse a credentials-like name,
+ * and make each path absolute, so a background worker finds the file whatever its working directory is.
+ * `check` is the content check of the input; a recording is checked later, in buildContextInputs.
+ */
+async function resolveFiles(
+  specs: string[],
+  cwd: string,
+  flag: string,
+  check: (path: string) => Promise<string>,
+): Promise<ScreenshotSpec[]> {
   const out: ScreenshotSpec[] = [];
   for (const spec of specs) {
     const parsed = parseScreenshotSpec(spec);
     if (parsed.path === '') {
-      throw new MergeStoryError('USAGE', `--screenshot: missing a file path in "${spec}".`, {
-        hint: 'Use --screenshot <path>[:<caption>[:before|after]]',
+      throw new MergeStoryError('USAGE', `${flag}: missing a file path in "${spec}".`, {
+        hint: `Use ${flag} <path>[:<caption>[:before|after]]`,
       });
     }
-    assertNotSensitive(resolve(cwd, parsed.path), '--screenshot');
-    // Absolute, so a background worker finds the file whatever its working directory is.
-    const absolute = await checkScreenshotFile(parsed.path, cwd, '--screenshot');
+    assertNotSensitive(resolve(cwd, parsed.path), flag);
+    const absolute = await check(parsed.path);
     out.push({
       path: absolute,
       caption: parsed.caption ?? basename(absolute, extname(absolute)),
@@ -114,7 +125,17 @@ export async function buildContext(flags: ContextFlags, cwd: string): Promise<Co
     context.tests = checkTestResults(json, '--tests-file');
   }
   if (flags.screenshot && flags.screenshot.length > 0) {
-    context.screenshots = await resolveScreenshots(flags.screenshot, cwd);
+    context.screenshots = await resolveFiles(flags.screenshot, cwd, '--screenshot', (path) =>
+      checkScreenshotFile(path, cwd, '--screenshot'),
+    );
+  }
+  if (flags.recording && flags.recording.length > 0) {
+    context.recordings = await resolveFiles(flags.recording, cwd, '--recording', async (path) =>
+      resolve(cwd, path),
+    );
+  }
+  if (flags.recordingFiles && flags.recordingFiles.length > 0) {
+    context.recordings = [...(context.recordings ?? []), ...flags.recordingFiles];
   }
   return Object.keys(context).length > 0 ? context : undefined;
 }

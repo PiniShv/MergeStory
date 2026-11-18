@@ -3,12 +3,15 @@
  * This is the one input contract: the library, the command line and the HTTP API all end up here.
  */
 import { readFile, stat } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { z } from 'zod';
+import { resolveFfmpeg } from '../core/binaries.ts';
+import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
+import { probeRecording } from '../core/media-probe.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
-import type { ContextInputs, TestEvidence } from '../core/types.ts';
+import type { ContextInputs, RecordingInput, TestEvidence } from '../core/types.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import type { ContextOptions } from './types.ts';
 
@@ -130,14 +133,52 @@ export async function checkScreenshotFile(path: string, cwd: string, label = 'Sc
   return absolute;
 }
 
+/**
+ * Check a screen recording by its content: a regular file, within the size limit, readable by
+ * ffprobe as H.264, VP8 or VP9 video, and within the length limit. Refused at once, so no speech is
+ * paid for a clip that cannot be drawn. `path` is made absolute.
+ */
+async function checkRecording(
+  ffprobe: string,
+  path: string,
+  cwd: string,
+  limits: Config['inputs'],
+): Promise<Omit<RecordingInput, 'id' | 'caption' | 'moment'>> {
+  const absolute = resolve(cwd, path);
+  const name = basename(absolute);
+  const refuse = (reason: string, hint?: string): MergeStoryError =>
+    new MergeStoryError('USAGE', `Recording ${name} cannot be used: ${reason}.`, hint ? { hint } : {});
+  const info = await stat(absolute).catch(() => null);
+  if (!info) throw refuse('the file was not found', 'Pass an existing MP4 or WebM file.');
+  if (!info.isFile()) throw refuse('it is not a regular file');
+  if (info.size > limits.maxRecordingMb * 1024 * 1024) {
+    throw refuse(
+      `it is ${megabytes(info.size)}, the limit is ${limits.maxRecordingMb} MB`,
+      'Cut or compress the recording first.',
+    );
+  }
+  const probed = await probeRecording(ffprobe, absolute);
+  if (probed.durationSec > limits.maxRecordingSeconds) {
+    throw refuse(
+      `it is ${Math.ceil(probed.durationSec)} s long, the limit is ${limits.maxRecordingSeconds} s`,
+      'Cut the recording to the part that matters.',
+    );
+  }
+  return { path: absolute, ...probed };
+}
+
 export async function buildContextInputs(
   options: ContextOptions | undefined,
   cwd: string,
+  config: Pick<Config, 'inputs' | 'render'>,
   warn: (message: string) => void = () => {},
 ): Promise<ContextInputs> {
   if ((options?.tests?.length ?? 0) > MAX_TESTS) warn(`Only the first ${MAX_TESTS} test results are used.`);
   if ((options?.screenshots?.length ?? 0) > MAX_SCREENSHOTS)
     warn(`Only the first ${MAX_SCREENSHOTS} screenshots are used.`);
+  const maxRecordings = config.inputs.maxRecordings;
+  if ((options?.recordings?.length ?? 0) > maxRecordings)
+    warn(`Only the first ${maxRecordings} recordings are used.`);
   const tests = checkTestResults((options?.tests ?? []).slice(0, MAX_TESTS)).map((t, i) => ({
     id: `T${i + 1}`,
     command: t.command.slice(0, MAX_TEST_COMMAND),
@@ -154,11 +195,25 @@ export async function buildContextInputs(
       moment: shot.moment ?? 'other',
     });
   }
+  const recordings: RecordingInput[] = [];
+  const wanted = (options?.recordings ?? []).slice(0, maxRecordings);
+  // FFmpeg is looked up only when a recording was supplied.
+  const ffprobe = wanted.length > 0 ? (await resolveFfmpeg(config)).ffprobe : '';
+  for (const [i, rec] of wanted.entries()) {
+    const checked = await checkRecording(ffprobe, rec.path, cwd, config.inputs);
+    recordings.push({
+      id: `RC${i + 1}`,
+      caption: (rec.caption ?? '').slice(0, MAX_CAPTION),
+      moment: rec.moment ?? 'other',
+      ...checked,
+    });
+  }
   return {
     task: normalizeContextText(options?.task, 'task description'),
     notes: normalizeContextText(options?.notes, 'implementation notes'),
     tests,
     screenshots,
+    recordings,
   };
 }
 

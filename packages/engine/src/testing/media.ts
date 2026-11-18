@@ -87,3 +87,33 @@ export async function probeMedia(
     })),
   };
 }
+
+export type ClipCodec = 'h264' | 'vp8' | 'vp9' | 'hevc';
+
+const CLIP_ENCODERS: Record<ClipCodec, string[]> = {
+  h264: ['-c:v', 'libx264', '-pix_fmt', 'yuv420p'],
+  vp8: ['-c:v', 'libvpx', '-pix_fmt', 'yuv420p'],
+  vp9: ['-c:v', 'libvpx-vp9', '-pix_fmt', 'yuv420p', '-deadline', 'realtime', '-cpu-used', '8'],
+  hevc: ['-c:v', 'libx265', '-pix_fmt', 'yuv420p'],
+};
+
+/**
+ * Make a short test clip with FFmpeg's `lavfi` test source. The container follows the file name
+ * (.mp4 or .webm). Returns false when this FFmpeg cannot encode the codec, so a test can skip.
+ */
+export async function makeClip(
+  ffmpeg: string,
+  file: string,
+  options: { codec?: ClipCodec; seconds?: number; size?: string; audioOnly?: boolean } = {},
+): Promise<boolean> {
+  const seconds = options.seconds ?? 2;
+  const source = options.audioOnly
+    ? ['-f', 'lavfi', '-i', `sine=frequency=440:duration=${seconds}`]
+    : ['-f', 'lavfi', '-i', `testsrc=duration=${seconds}:size=${options.size ?? '320x240'}:rate=12`];
+  const encoder = options.audioOnly ? [] : CLIP_ENCODERS[options.codec ?? 'h264'];
+  const result = await runCommand(ffmpeg, ['-v', 'error', '-y', ...source, ...encoder, file], {
+    allowFailure: true,
+    timeoutMs: 60_000,
+  });
+  return result.code === 0;
+}

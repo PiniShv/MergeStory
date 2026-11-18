@@ -5,7 +5,7 @@
 import type { Config } from '../core/config.ts';
 import { isShowable } from '../core/path-policy.ts';
 import { truncate } from '../core/text.ts';
-import type { EvidenceItem, ScreenshotInput, TestEvidence } from '../core/types.ts';
+import type { EvidenceItem, RecordingInput, ScreenshotInput, TestEvidence } from '../core/types.ts';
 import { backingHint, CLAIM_LABELS, claimIsSupported, findClaim } from './claims.ts';
 import { createRefResolver, type RefResolver } from './coderef.ts';
 import {
@@ -94,6 +94,7 @@ function buildKnownCorpus(deps: ValidationDeps): KnownCorpus {
     prose(test.id, test.summary);
   }
   for (const shot of inputs.screenshots) prose(shot.id, shot.caption);
+  for (const rec of inputs.recordings) prose(rec.id, rec.caption);
 
   // Content of sensitive or excluded files never seeds the corpus.
   for (const file of changeSet.files) {
@@ -152,6 +153,7 @@ export class Run {
   readonly evidence: Map<string, EvidenceItem>;
   readonly tests: readonly TestEvidence[];
   readonly screenshots: Map<string, ScreenshotInput>;
+  readonly recordings: Map<string, RecordingInput>;
   readonly corpus: KnownCorpus;
   /** Hosts of web addresses that appear in visible code or in the caller's task and notes. */
   readonly codeHosts: ReadonlySet<string>;
@@ -170,6 +172,7 @@ export class Run {
     this.evidence = new Map(deps.analysis.evidence.map((item) => [item.id, item]));
     this.tests = deps.inputs.tests;
     this.screenshots = new Map(deps.inputs.screenshots.map((shot) => [shot.id, shot]));
+    this.recordings = new Map(deps.inputs.recordings.map((rec) => [rec.id, rec]));
     this.corpus = buildKnownCorpus(deps);
     this.codeHosts = collectCodeHosts(deps);
     this.codeText = codeTextOf(

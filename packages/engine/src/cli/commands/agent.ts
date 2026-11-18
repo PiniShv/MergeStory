@@ -6,7 +6,8 @@
  * general commands keep their flexible flags for people and CI.
  */
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdir } from 'node:fs/promises';
+import { basename, extname, join } from 'node:path';
 import { type Command, InvalidArgumentError, Option } from 'commander';
 import type { Config, ConfigInput } from '../../core/config.ts';
 import { MergeStoryError } from '../../core/errors.ts';
@@ -17,6 +18,7 @@ import { parsePullRequestUrl, webHostFromApiUrl } from '../../github/pr-url.ts';
 import { sourceProblem } from '../../jobs/input-rules.ts';
 import { GitRunner } from '../../sources/git.ts';
 import { parseGitHubRemote } from '../../sources/remote.ts';
+import { assertNotSensitive, LIMITS, readJsonFile } from '../files.ts';
 import type { ContextFlags } from '../inputs.ts';
 import {
   addSourceFlags,
@@ -45,6 +47,9 @@ const WORK_FILE = {
   tests: 'tests.json',
   storyboard: 'storyboard.json',
 } as const;
+/** The folder of screen recordings, and the optional file of captions in it. */
+const RECORDINGS_DIR = 'recordings';
+const CAPTIONS_FILE = 'captions.json';
 
 type AgentFlags = SourceFlags &
   Pick<
@@ -162,8 +167,66 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
   return source;
 }
 
-/** The task, notes and test results that the agent wrote into the work folder, as the matching flags. */
-function contextFiles(dir: string): ContextFlags {
+/**
+ * The recordings in `recordings/` of the work folder: every .mp4 and .webm, sorted by name, so all
+ * three commands number them the same way. `captions.json` may hold {"clip.mp4": {"caption": "...",
+ * "side": "before"}}. A caption goes in this file, not in a flag, because it may contain a colon.
+ */
+async function readRecordings(dir: string): Promise<NonNullable<ContextFlags['recordingFiles']>> {
+  const folder = join(dir, RECORDINGS_DIR);
+  const names = await readdir(folder).catch(() => null);
+  if (names === null) return [];
+  const clips = names
+    .filter((name) => ['.mp4', '.webm'].includes(extname(name).toLowerCase()))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const label = `${RECORDINGS_DIR}/${CAPTIONS_FILE}`;
+  const bad = (message: string): MergeStoryError =>
+    new MergeStoryError('USAGE', `${label}: ${message}`, {
+      hint: 'Use {"clip.mp4": {"caption": "What it shows", "side": "before"}}. "side" is before or after, or left out.',
+    });
+  const captions = new Map<string, { caption: string | null; moment: 'before' | 'after' | 'other' }>();
+  if (names.includes(CAPTIONS_FILE)) {
+    const json = await readJsonFile(join(folder, CAPTIONS_FILE), {
+      label,
+      maxBytes: LIMITS.testsBytes,
+      cwd: folder,
+    });
+    if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+      throw bad('expected a JSON object with one entry per recording file.');
+    }
+    for (const [file, entry] of Object.entries(json)) {
+      if (!clips.includes(file))
+        throw bad(`"${file}" is not an .mp4 or .webm file in the ${RECORDINGS_DIR} folder.`);
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw bad(`the entry for "${file}" is not an object.`);
+      }
+      const { caption, side, ...rest } = entry as Record<string, unknown>;
+      const unknown = Object.keys(rest)[0];
+      if (unknown !== undefined)
+        throw bad(`"${file}" has unknown field "${unknown}". Allowed: caption, side.`);
+      if (caption !== undefined && typeof caption !== 'string') {
+        throw bad(`the caption of "${file}" is not a string.`);
+      }
+      if (side !== undefined && side !== null && side !== 'before' && side !== 'after') {
+        throw bad(`the side of "${file}" is not "before" or "after".`);
+      }
+      captions.set(file, { caption: caption?.trim() || null, moment: side ?? 'other' });
+    }
+  }
+  return clips.map((file) => {
+    const path = join(folder, file);
+    assertNotSensitive(path, label);
+    const entry = captions.get(file);
+    return {
+      path,
+      caption: entry?.caption ?? basename(file, extname(file)),
+      moment: entry?.moment ?? 'other',
+    };
+  });
+}
+
+/** The task, notes, test results and recordings that the agent wrote into the work folder, as context flags. */
+async function contextFiles(dir: string): Promise<ContextFlags> {
   const flags: ContextFlags = {};
   const path = (name: string): string | undefined =>
     existsSync(join(dir, name)) ? join(dir, name) : undefined;
@@ -173,6 +236,8 @@ function contextFiles(dir: string): ContextFlags {
   if (task) flags.taskFile = task;
   if (notes) flags.notesFile = notes;
   if (tests) flags.testsFile = tests;
+  const recordings = await readRecordings(dir);
+  if (recordings.length > 0) flags.recordingFiles = recordings;
   return flags;
 }
 
@@ -185,7 +250,7 @@ async function prepareAgent(
 ) {
   const { dir, config } = await openWorkFolder(env, flags.name, create);
   const source = await agentSource(sourceArg, env, config);
-  const context = contextFiles(dir);
+  const context = await contextFiles(dir);
   return { dir, source, context };
 }
 

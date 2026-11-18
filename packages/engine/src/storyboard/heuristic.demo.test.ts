@@ -53,6 +53,7 @@ beforeAll(async () => {
       tests: JSON.parse(await readFile(join(DEMO, 'tests.json'), 'utf8')) as [],
     },
     directory,
+    ctx.config,
   );
   const analysis = await analyze(changeSet, reader, inputs, ctx);
   demo = {

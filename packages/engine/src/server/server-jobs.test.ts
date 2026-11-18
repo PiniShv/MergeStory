@@ -95,6 +95,16 @@ describe('POST /v1/jobs: input checks', () => {
     expect(JSON.stringify(res.json.error.issues)).toMatch(/screenshots/);
   });
 
+  it('does not accept recordings in v1', async () => {
+    const { base } = await start();
+    const res = await post(base, {
+      source: 'o/r#1',
+      context: { recordings: [{ path: '/etc/passwd', caption: 'x' }] },
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.json.error.issues)).toMatch(/recordings/);
+  });
+
   it('checks option values and ranges', async () => {
     const { base } = await start();
     const bad: [Record<string, unknown>, string][] = [

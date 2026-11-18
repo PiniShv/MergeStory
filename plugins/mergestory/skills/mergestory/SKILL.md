@@ -71,7 +71,11 @@ never in the repository:
   `[{"command": "npm test", "passed": true, "summary": "212 passed, 0 failed"}]`.
   Never invent or guess test results. Add `"source": "ci"` only to a result that CI reported.
 
-These become citable evidence (TASK, NOTES, T1) in the video.
+- `recordings/`: screen recordings (`.mp4` or `.webm`) in the work folder, sorted by name. Add
+  `recordings/captions.json` as `{"clip.mp4": {"caption": "What it shows", "side": "before"}}` to name them.
+  Use only recordings that were really captured; never make one up.
+
+These become citable evidence (TASK, NOTES, T1, RC1) in the video.
 
 ## 4. Write the storyboard yourself (MergeStory adds no charge; your own usage counts)
 

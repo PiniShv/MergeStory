@@ -81,6 +81,7 @@ accurate, because the engine can quote them as evidence.
 | `--notes-file <file>` | Notes about your decisions, edge cases and what to review. At most 64 KB. It becomes evidence `NOTES`. |
 | `--tests-file <file>` | Test results you really ran, as a JSON array. At most 256 KB. See below. They become `T1`, `T2`, and so on. |
 | `--screenshot <spec>` | A real screenshot, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `SS1`, `SS2`, and so on. |
+| `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
 
 - **Test results.** Each entry has `command`, `passed` and `summary`, and may have `source` (`agent`, `ci` or
   `user`; the default is `agent`). Example: `[{"command": "npm test", "passed": true, "summary": "42 passed"}]`.
@@ -89,6 +90,12 @@ accurate, because the engine can quote them as evidence.
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
 - **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. Only
   the first 6 are used. A file the video cannot draw is refused at once, before any speech is paid for.
+- **Recordings.** MP4 (H.264) or WebM (VP8 or VP9), checked by content with `ffprobe` and not by file name.
+  The sound is never used. The defaults are at most 4 recordings, each at most 50 MB and 60 seconds; the
+  first ones are used and a warning names the rest. A file that cannot be read, or that is too large or
+  too long, is refused at once, before any speech is paid for. Change the limits with the `inputs`
+  [settings](configuration.md#inputs-inputs). `ffprobe` is only needed when you pass a recording. Use only
+  recordings that were really captured: MergeStory never makes one up.
 - **Safety.** A file that looks like a credentials file (`.env`, a key file) is refused. Text that looks like
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
@@ -112,7 +119,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--base <ref>` | Local repository: the older side of the change. | the merge base of `HEAD` and the default branch |
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
-**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file` and `--screenshot`. See
+**Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` and `--recording`. See
 [Context flags](#context-flags).
 
 **Style and length.**
@@ -249,7 +256,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -277,7 +284,7 @@ Otherwise the ids `TASK`, `NOTES`, `T1` and `SS1` do not exist, and the lines th
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--screenshot`, `--recording` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -323,11 +330,12 @@ folder:
 | File | Written by | What it holds |
 |---|---|---|
 | `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
+| `recordings/` | the agent | Screen recordings: every `.mp4` and `.webm` in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands.
+when the work folder holds a symbolic link at any depth. Screenshots are not supported in the agent commands. The agent commands never take a recording as a flag.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -335,7 +343,7 @@ only when its repository is one of the git remotes of the current repository, on
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
 **What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--storyboard`,
-`--screenshot`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--screenshot`, `--recording`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 

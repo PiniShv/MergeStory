@@ -12,6 +12,7 @@
  *   S<n>      changed symbol (function, class, ...)    M<n>   component (module)
  *   R<n>      review risk signal                       D<n>   dependency change
  *   SS<n>     screenshot supplied by the caller        REPO   repository structure context
+ *   RC<n>     screen recording supplied by the caller
  */
 
 export type Side = 'base' | 'head';
@@ -173,6 +174,21 @@ export interface ScreenshotInput {
   moment: 'before' | 'after' | 'other';
 }
 
+/** A real screen recording supplied by the caller. Its file was checked with ffprobe. */
+export interface RecordingInput {
+  /** Evidence id, e.g. "RC1". */
+  id: string;
+  /** Absolute path. */
+  path: string;
+  caption: string;
+  moment: 'before' | 'after' | 'other';
+  durationSec: number;
+  width: number;
+  height: number;
+  /** "h264", "vp8" or "vp9". */
+  codec: string;
+}
+
 export interface ContextInputs {
   /** Original task description, if known. */
   task: string | null;
@@ -180,6 +196,7 @@ export interface ContextInputs {
   notes: string | null;
   tests: TestEvidence[];
   screenshots: ScreenshotInput[];
+  recordings: RecordingInput[];
 }
 
 // ---------------------------------------------------------------------------
@@ -347,6 +364,7 @@ export type EvidenceKind =
   | 'risk'
   | 'dependency'
   | 'screenshot'
+  | 'recording'
   | 'repo';
 
 /** One citable fact. Storyboards may only cite ids that exist in the evidence index. */

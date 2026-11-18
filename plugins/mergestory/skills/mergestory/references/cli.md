@@ -41,9 +41,9 @@ are included.
 
 ## Context flags (analyze, validate and generate)
 
-The `agent` commands take no context flags: they read `task.md`, `notes.md` and `tests.json` from
+The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json` and `recordings/` from
 the work folder. For the other commands, pass the same context flags to all three, so the evidence
-ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or `--language` to
+ids (TASK, NOTES, T1, SS1, RC1) match. If you pass `--duration`, `--max-duration` or `--language` to
 `generate`, pass the same to `validate`.
 
 | Flag | Meaning |
@@ -52,6 +52,7 @@ ids (TASK, NOTES, T1, SS1) match. If you pass `--duration`, `--max-duration` or 
 | `--notes-file <file>` | Implementation notes and decisions (max 64 KB). Becomes evidence `NOTES`. |
 | `--tests-file <file>` | JSON array: `[{"command": "npm test", "passed": true, "summary": "212 passed"}]`. Only results you really ran. An optional `source` is `agent` (the default), `ci` or `user`. Become `T1`, `T2`, ... Only the first 10 are used. |
 | `--screenshot <path>[:<caption>[:before\|after]]` | A real screenshot (PNG or JPEG, max 4 MB), repeatable. Becomes `SS1`, ... Only the first 6 are used. |
+| `--recording <path>[:<caption>[:before\|after]]` | A real screen recording (MP4 H.264 or WebM VP8/VP9, checked with ffprobe; max 4, each 50 MB and 60 s), repeatable. Becomes `RC1`, ... |
 
 ## Useful generate flags
 

@@ -184,6 +184,17 @@ not look for another browser. Without a setting, MergeStory looks for a browser 
 (`PLAYWRIGHT_BROWSERS_PATH` moves it), then for Chrome, Chromium or Edge on the machine. It looks for
 FFmpeg on the `PATH` and in the usual install folders.
 
+### Inputs (`inputs`)
+
+Limits for the files you pass with `--recording`. They have no flag and no environment variable.
+
+| Key | Default | What it does | Flag, environment variable |
+|---|---|---|---|
+| `inputs.maxRecordings` | `4` | The most screen recordings one video uses, from 0 to 8. More are left out, with a warning. | none, none |
+| `inputs.maxRecordingMb` | `50` | The largest recording file, in megabytes, from 1 to 500. | none, none |
+| `inputs.maxRecordingSeconds` | `60` | The longest recording, in whole seconds, from 1 to 600. | none, none |
+| `inputs.maxClipSeconds` | `20` | The longest part of one recording that one scene shows, in whole seconds, from 1 to 60. | none, none |
+
 ### Cache and prices
 
 | Key | Default | What it does | Flag, environment variable |

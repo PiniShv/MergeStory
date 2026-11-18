@@ -142,5 +142,11 @@ export function maskContext(context: ContextOptions): { context: ContextOptions;
       caption: mask(s.caption, 'screenshot captions'),
     }));
   }
+  if (context.recordings) {
+    out.recordings = context.recordings.map((r) => ({
+      ...r,
+      caption: mask(r.caption, 'recording captions'),
+    }));
+  }
   return { context: out, masked };
 }

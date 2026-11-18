@@ -141,9 +141,10 @@ same input always gives the same ids.
 | `R1`, ... | A review signal. These are questions for the reviewer found by pattern matching, not confirmed problems. |
 | `D1`, ... | A dependency change. |
 | `SS1`, ... | A screenshot you supplied with `--screenshot`. |
+| `RC1`, ... | A screen recording you supplied with `--recording`. |
 | `REPO` | The structure of the repository: a file tree and an excerpt of the README. |
 
-`TASK`, `NOTES`, `T1` and `SS1` exist only when you pass the matching flag. **Pass the same flags to
+`TASK`, `NOTES`, `T1`, `SS1` and `RC1` exist only when you pass the matching flag. **Pass the same flags to
 `analyze`, `validate` and `generate`.** Otherwise those ids do not exist in the later steps, and lines that
 cite only them are removed.
 
