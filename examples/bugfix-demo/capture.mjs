@@ -1,6 +1,7 @@
 // Captures the basket page before and after the fix, the way a person uses it.
 // usage: node capture.mjs <output folder>
-// Writes before.png, after.png, before.mp4 and after.mp4. Needs a Chrome or Chromium
+// Writes before.png, after.png, before.mp4 and after.mp4, and count.json: where the text of the item count
+// ends up in each picture, as fractions of it. Needs a Chrome or Chromium
 // (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -24,9 +25,14 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const outDir = resolve(out);
 mkdirSync(outDir, { recursive: true });
 
+const VIEWPORT = { width: 960, height: 540 };
+// Where the text of the item count is at the end, as fractions of the picture: a font that is wider or
+// taller than the one of the machine that made the storyboard shows in this file.
+const counts = {};
+
 const browser = await chromium.launch({ executablePath: browserPath, headless: true });
 // A small window, so the text stays large when the video shows it in a frame.
-const page = await browser.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
 
 for (const side of ['before', 'after']) {
   await page.goto(pathToFileURL(join(here, side === 'before' ? 'base' : 'feature', 'index.html')).href);
@@ -50,6 +56,19 @@ for (const side of ['before', 'after']) {
   await type('#qty-bar', '3');
   await hold(14);
   await page.screenshot({ path: join(outDir, `${side}.png`) });
+  // The box of the text itself: the element is as wide as the whole page.
+  const text = await page.evaluate(() => {
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('count'));
+    const { x, y, width, height } = range.getBoundingClientRect();
+    return { x, y, width, height };
+  });
+  counts[side] = {
+    x: text.x / VIEWPORT.width,
+    y: text.y / VIEWPORT.height,
+    w: text.width / VIEWPORT.width,
+    h: text.height / VIEWPORT.height,
+  };
   try {
     execFileSync(
       ffmpeg,
@@ -79,4 +98,5 @@ for (const side of ['before', 'after']) {
   rmSync(work, { recursive: true, force: true });
 }
 await browser.close();
+writeFileSync(join(outDir, 'count.json'), `${JSON.stringify(counts, null, 2)}\n`);
 console.log(`Captures written to ${outDir}`);

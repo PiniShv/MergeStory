@@ -4,7 +4,7 @@ import type { FrameSet, RecordingResolved } from '../../core/render-plan.ts';
 import { css, h } from '../dom.ts';
 import type { SceneContext, TemplateFactory } from '../types.ts';
 import { isDataImage } from './parts.ts';
-import { framedScene, missingPicture } from './screenshot.ts';
+import { framedScene, missingPicture, withMarks } from './screenshot.ts';
 
 const RECORDING_CSS = `
 .ms-rec { position: relative; width: 100%; height: 100%; }
@@ -49,7 +49,6 @@ export const recordingTemplate: TemplateFactory<RecordingResolved> = (visual, ct
     width: visual.frames.width,
     height: visual.frames.height,
     caption,
-    content: player.el,
-    onUpdate: (t) => player.update(t),
+    ...withMarks(ctx, visual, player.el, (t) => player.update(t)),
   });
 };

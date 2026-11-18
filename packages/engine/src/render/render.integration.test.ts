@@ -973,6 +973,431 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
       }, 180_000);
     });
 
+    describe('highlights and a focus', () => {
+      const W = 1280;
+      const H = 720;
+      const FPS = 12;
+      type Frame = { rgb: Buffer };
+      type Pixel = [number, number, number];
+      const REC_DIR = 'recording-frames/s-6';
+
+      /** A picture of four quarters: red top left, green top right, blue bottom left, yellow bottom right. */
+      async function quartersPng(
+        width: number,
+        height: number,
+      ): Promise<{ src: string; width: number; height: number }> {
+        const path = join(dir, `quarters-${n++}.png`);
+        const [w, h] = [width / 2, height / 2];
+        const made = await runCommand(
+          tools!.ffmpeg,
+          [
+            ...['-v', 'error', '-y', '-f', 'lavfi', '-i'],
+            `color=c=0xE02020:size=${width}x${height},drawbox=x=${w}:y=0:w=${w}:h=${h}:color=0x20C020:t=fill,drawbox=x=0:y=${h}:w=${w}:h=${h}:color=0x2040E0:t=fill,drawbox=x=${w}:y=${h}:w=${w}:h=${h}:color=0xE0D020:t=fill`,
+            ...['-frames:v', '1', path],
+          ],
+          { allowFailure: true, timeoutMs: 30_000 },
+        );
+        expect(made.code).toBe(0);
+        const bytes = await readFile(path);
+        return { src: `data:image/png;base64,${bytes.toString('base64')}`, width, height };
+      }
+
+      /** A clip of seven seconds that shows the same four quarters, with a white bar that crosses them from left to right every 3.2 s. */
+      async function barClip(): Promise<string> {
+        const path = join(dir, `bar-${n++}.mp4`);
+        const made = await runCommand(
+          tools!.ffmpeg,
+          [
+            ...['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0xE02020:size=640x360:rate=12:duration=7'],
+            ...['-f', 'lavfi', '-i', 'color=c=white:size=8x360:rate=12:duration=7'],
+            '-filter_complex',
+            "[0]drawbox=x=320:y=0:w=320:h=180:color=0x20C020:t=fill,drawbox=x=0:y=180:w=320:h=180:color=0x2040E0:t=fill,drawbox=x=320:y=180:w=320:h=180:color=0xE0D020:t=fill[bg];[bg][1]overlay=x='mod(t*200,640)':y=0,format=yuv420p",
+            ...['-c:v', 'libx264', '-pix_fmt', 'yuv420p', path],
+          ],
+          { allowFailure: true, timeoutMs: 60_000 },
+        );
+        expect(made.code).toBe(0);
+        return path;
+      }
+
+      /** One frame of the video as RGB, at second `t`. */
+      async function frameAt(video: string, t: number): Promise<Frame> {
+        const result = await runCommand(tools!.ffmpeg, [
+          ...['-hide_banner', '-loglevel', 'error', '-ss', String(t), '-i', video],
+          ...['-vf', 'scale=in_range=tv:out_range=full:flags=accurate_rnd'],
+          ...['-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+        ]);
+        return { rgb: result.stdoutBuffer };
+      }
+      const pixel = (f: Frame, x: number, y: number): Pixel => {
+        const i = (y * W + x) * 3;
+        return [f.rgb[i]!, f.rgb[i + 1]!, f.rgb[i + 2]!];
+      };
+      const QUARTER_COLORS: Pixel[] = [
+        [0xe0, 0x20, 0x20],
+        [0x20, 0xc0, 0x20],
+        [0x20, 0x40, 0xe0],
+        [0xe0, 0xd0, 0x20],
+      ];
+      const near = (a: Pixel, b: Pixel, within: number): boolean =>
+        Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) < within;
+      /** The accent of the theme (#8c7bff), which no quarter has. */
+      const isAccent = (p: Pixel): boolean => near(p, [0x8c, 0x7b, 0xff], 70);
+      const isDark = (p: Pixel): boolean => p[0] < 40 && p[1] < 40 && p[2] < 40;
+      const isWhite = (p: Pixel): boolean => p[0] > 215 && p[1] > 215 && p[2] > 215;
+      /** A few pixels where two colours of the picture meet can look like the box. A real box has hundreds. */
+      const STRAY = 12;
+
+      type Box = { x0: number; y0: number; x1: number; y1: number };
+      /** The smallest box around the pixels that have one of the four colours (the picture, whole or zoomed). */
+      function pictureBox(f: Frame, within: { x0: number; x1: number } = { x0: 0, x1: W }): Box {
+        const box: Box = { x0: W, y0: H, x1: 0, y1: 0 };
+        for (let y = 0; y < H; y += 2) {
+          for (let x = within.x0; x < within.x1; x += 2) {
+            if (!QUARTER_COLORS.some((c) => near(pixel(f, x, y), c, 40))) continue;
+            box.x0 = Math.min(box.x0, x);
+            box.y0 = Math.min(box.y0, y);
+            box.x1 = Math.max(box.x1, x);
+            box.y1 = Math.max(box.y1, y);
+          }
+        }
+        return box;
+      }
+      /** The pixels of a box that pass a test; the rim of the picture is left out, where the window's edge is. */
+      function* pixelsOf(f: Frame, box: Box, test: (p: Pixel) => boolean): Generator<[number, number]> {
+        for (let y = box.y0 + 8; y <= box.y1 - 8; y++) {
+          for (let x = box.x0 + 8; x <= box.x1 - 8; x++) if (test(pixel(f, x, y))) yield [x, y];
+        }
+      }
+      const count = (f: Frame, box: Box, test: (p: Pixel) => boolean): number =>
+        [...pixelsOf(f, box, test)].length;
+      /** Pixels of a rectangle that pass a test. */
+      const countIn = (f: Frame, rect: Box, test: (p: Pixel) => boolean): number => {
+        let found = 0;
+        for (let y = Math.round(rect.y0); y <= Math.round(rect.y1); y++) {
+          for (let x = Math.round(rect.x0); x <= Math.round(rect.x1); x++) if (test(pixel(f, x, y))) found++;
+        }
+        return found;
+      };
+      /** The accent or a dimmed accent (the "before" side steps back once "after" arrives); the green quarter has none of it. */
+      const isBluish = (p: Pixel): boolean => p[2] > 150 && p[2] - p[1] > 70 && p[2] - p[0] > 40;
+      /** The smallest box around the accent pixels of a picture: that of an unlabelled highlight is the highlight. */
+      function accentBox(f: Frame, picture: Box): Box {
+        const found: Box = { x0: W, y0: H, x1: 0, y1: 0 };
+        for (const [x, y] of pixelsOf(f, picture, isAccent)) {
+          found.x0 = Math.min(found.x0, x);
+          found.y0 = Math.min(found.y0, y);
+          found.x1 = Math.max(found.x1, x);
+          found.y1 = Math.max(found.y1, y);
+        }
+        return found;
+      }
+      /** Where the box `at` (fractions of the picture) lies in a picture that is drawn in `picture`. */
+      const placed = (picture: Box, at: { x: number; y: number; w: number; h: number }): Box => {
+        const [w, h] = [picture.x1 - picture.x0, picture.y1 - picture.y0];
+        return {
+          x0: picture.x0 + at.x * w,
+          y0: picture.y0 + at.y * h,
+          x1: picture.x0 + (at.x + at.w) * w,
+          y1: picture.y0 + (at.y + at.h) * h,
+        };
+      };
+      const expectBoxAt = (found: Box, wanted: Box, label: string): void => {
+        for (const key of ['x0', 'y0', 'x1', 'y1'] as const)
+          expect(
+            Math.abs(found[key] - wanted[key]),
+            `${label}: ${key} ${JSON.stringify({ found, wanted })}`,
+          ).toBeLessThan(9);
+      };
+
+      /**
+       * The height of the label pill in pixels: its near-black fill is the largest connected area that is
+       * about as wide as a short label and as tall as a line of text. The thin black lines of a box are
+       * either long and thin or wrap the whole box, so they are not that.
+       */
+      function pillHeight(f: Frame, picture: Box): number {
+        const [w, h] = [picture.x1 - picture.x0 + 1, picture.y1 - picture.y0 + 1];
+        const seen = new Uint8Array(w * h);
+        const dark = (x: number, y: number): boolean => isDark(pixel(f, picture.x0 + x, picture.y0 + y));
+        let best: { size: number; height: number } | null = null;
+        for (let start = 0; start < w * h; start++) {
+          if (seen[start] || !dark(start % w, Math.floor(start / w))) continue;
+          const stack = [start];
+          seen[start] = 1;
+          const found = { x0: w, y0: h, x1: 0, y1: 0, size: 0 };
+          while (stack.length > 0) {
+            const at = stack.pop()!;
+            const [x, y] = [at % w, Math.floor(at / w)];
+            found.size++;
+            found.x0 = Math.min(found.x0, x);
+            found.x1 = Math.max(found.x1, x);
+            found.y0 = Math.min(found.y0, y);
+            found.y1 = Math.max(found.y1, y);
+            for (const [nx, ny] of [
+              [x + 1, y],
+              [x - 1, y],
+              [x, y + 1],
+              [x, y - 1],
+            ] as const) {
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h || seen[ny * w + nx] || !dark(nx, ny)) continue;
+              seen[ny * w + nx] = 1;
+              stack.push(ny * w + nx);
+            }
+          }
+          const [width, height] = [found.x1 - found.x0 + 1, found.y1 - found.y0 + 1];
+          if (width < 40 || width > 200 || height < 14 || height > 60) continue;
+          if (!best || found.size > best.size) best = { size: found.size, height };
+        }
+        expect(best, 'a label pill').not.toBeNull();
+        return best!.height;
+      }
+
+      const highlight = (over: object) => ({
+        x: 0.55,
+        y: 0.15,
+        w: 0.3,
+        h: 0.3,
+        label: null,
+        beat: 1,
+        ...over,
+      });
+      const beats = (start: number, ...rel: number[]) =>
+        rel.map((r, index) => ({ index, startSec: start + r, durationSec: 1, text: `Beat ${index}.` }));
+
+      /** Scene starts, in seconds. */
+      const AT = { plain: 0, zoom: 5, compare: 14, line: 21, pill: 24, rec: 30, phone: 37 };
+
+      async function highlightsPlan(out: string): Promise<RenderPlan> {
+        const [wide, tall] = [await quartersPng(640, 360), await quartersPng(400, 800)];
+        const clip = await barClip();
+        const made = await extractFrames(tools!.ffmpeg, {
+          recording: {
+            id: 'RC1',
+            path: clip,
+            caption: '',
+            moment: 'other',
+            durationSec: 7,
+            width: 640,
+            height: 360,
+            codec: 'h264',
+          },
+          trim: { start: 0, end: 7 },
+          zoom: null,
+          box: { width: 1680, height: 624 },
+          outDir: join(out, REC_DIR),
+        });
+        const base = minimalPlan(42, W, H, FPS);
+        const scene = (id: string, startSec: number, durationSec: number, rel: number[], visual: object) => ({
+          ...base.scenes[0]!,
+          id,
+          startSec,
+          durationSec,
+          beats: beats(startSec, ...rel),
+          transitionIn: { type: 'none' as const, durationSec: 0 },
+          visual: visual as RenderPlan['scenes'][number]['visual'],
+        });
+        return {
+          ...base,
+          // No narration cues: nothing but the scene is drawn over the picture.
+          captions: { enabled: false, cues: [] },
+          scenes: [
+            scene('plain', AT.plain, 5, [0.8, 3], {
+              type: 'screenshot',
+              image: wide,
+              caption: null,
+              highlights: [highlight({ label: 'The count' })],
+            }),
+            scene('zoom', AT.zoom, 9, [2, 4], {
+              type: 'screenshot',
+              image: wide,
+              caption: null,
+              highlights: [highlight({ x: 0.6, y: 0.6, w: 0.25, h: 0.2, label: 'The count' })],
+              focus: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+            }),
+            // Three beats: the panels appear at 0.65 s and 2.35 s, the highlights on beat 1 (left) and beat 2 (right).
+            scene('compare', AT.compare, 7, [0.8, 2.5, 4.5], {
+              type: 'before-after',
+              caption: null,
+              before: {
+                label: 'Before',
+                kind: 'screenshot',
+                image: wide,
+                highlights: [highlight({ beat: 1 })],
+              },
+              after: {
+                label: 'After',
+                kind: 'screenshot',
+                image: wide,
+                highlights: [highlight({ beat: 2 })],
+              },
+            }),
+            // A box without a label: nothing is dark in the picture but the black line around the box.
+            scene('line', AT.line, 3, [0.4, 1.4], {
+              type: 'screenshot',
+              image: wide,
+              caption: null,
+              highlights: [highlight({})],
+            }),
+            // A label while the camera moves in: the label keeps its size.
+            scene('pill', AT.pill, 6, [0.4, 2], {
+              type: 'screenshot',
+              image: wide,
+              caption: null,
+              highlights: [highlight({ x: 0.6, y: 0.12, w: 0.25, h: 0.25, label: 'The count', beat: 0 })],
+              focus: { x: 0.5, y: 0, w: 0.5, h: 0.5 },
+            }),
+            scene('rec', AT.rec, 7, [0.8, 3], {
+              type: 'recording',
+              caption: null,
+              frames: { dir: REC_DIR, ...made, fps: RECORDING_FPS, startSec: 0.5, speed: 1 },
+              highlights: [highlight({ x: 0.6, y: 0.6, w: 0.25, h: 0.2 })],
+              focus: { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
+            }),
+            // A tall picture is drawn in a phone frame.
+            scene('phone', AT.phone, 4, [0.5, 1.5], {
+              type: 'screenshot',
+              image: tall,
+              caption: null,
+              highlights: [highlight({})],
+            }),
+          ],
+          outro: { ...base.outro, startSec: 41, durationSec: 1 },
+        };
+      }
+
+      it('draws a highlight on its beat, zooms the camera into the focus, and gives the same video for one browser and for three', async () => {
+        const render = async (workers: number): Promise<{ out: string; bytes: Buffer }> => {
+          const out = await outDir();
+          const plan = await highlightsPlan(out);
+          const result = await new ChromiumRenderer(config, { workers }).render(
+            { plan, audioPath: null, outDir: out, quality: 'draft' },
+            testContext({ config, home: out, runDir: out }).ctx,
+          );
+          return { out, bytes: await readFile(result.videoPath) };
+        };
+        const single = await render(1);
+        const video = join(single.out, 'video.mp4');
+        const at = (scene: keyof typeof AT, t: number): Promise<Frame> => frameAt(video, AT[scene] + t);
+
+        // A screenshot scene: the box is not there before its beat (second 3), and the box and its label are there after it.
+        const [plainBefore, plainAfter] = [await at('plain', 2.5), await at('plain', 4.5)];
+        const plainBox = pictureBox(plainBefore);
+        expect(plainBox.x1 - plainBox.x0).toBeGreaterThan(500);
+        expect(count(plainBefore, plainBox, isAccent)).toBeLessThan(STRAY);
+        expect(count(plainBefore, plainBox, isDark)).toBeLessThan(STRAY);
+        expect(count(plainAfter, plainBox, isAccent)).toBeGreaterThan(100);
+        expect(count(plainAfter, plainBox, isDark)).toBeGreaterThan(300);
+
+        // A scene with a focus on the yellow quarter: the whole picture first, then only that quarter fills the window.
+        const [zoomStart, zoomBefore, zoomEnd] = [
+          await at('zoom', 1.8),
+          await at('zoom', 3),
+          await at('zoom', 8.4),
+        ];
+        const zoomBox = pictureBox(zoomStart);
+        const quarter = (f: Frame, color: Pixel): number => count(f, zoomBox, (p) => near(p, color, 40));
+        const area = (zoomBox.x1 - zoomBox.x0 + 1) * (zoomBox.y1 - zoomBox.y0 + 1);
+        for (const color of QUARTER_COLORS) expect(quarter(zoomStart, color)).toBeGreaterThan(area * 0.15);
+        expect(count(zoomBefore, zoomBox, isAccent)).toBeLessThan(STRAY);
+        expect(quarter(zoomEnd, QUARTER_COLORS[3]!)).toBeGreaterThan(area * 0.8);
+        for (const color of QUARTER_COLORS.slice(0, 3))
+          expect(quarter(zoomEnd, color)).toBeLessThan(area * 0.01);
+        // The box that the camera got to stays on the picture, with lines that grew with it.
+        expect(count(zoomEnd, zoomBox, isAccent)).toBeGreaterThan(count(plainAfter, plainBox, isAccent) / 4);
+        expect(count(zoomEnd, zoomBox, isDark)).toBeGreaterThan(300);
+
+        // Before and after, in a scene with three beats. The panels appear at 0.65 s and 2.35 s; the left
+        // highlight is on beat 1 (from 2.35 s) and the right one on beat 2 (from 4.35 s), so each is
+        // missing while its panel is already there.
+        const [compareOne, compareTwo, compareEnd] = [
+          await at('compare', 1.5),
+          await at('compare', 3.5),
+          await at('compare', 5.8),
+        ];
+        const left = pictureBox(compareEnd, { x0: 0, x1: W / 2 });
+        const right = pictureBox(compareEnd, { x0: W / 2, x1: W });
+        expect(left.x1 - left.x0).toBeGreaterThan(200);
+        expect(right.x1 - right.x0).toBeGreaterThan(200);
+        expect(pictureBox(compareOne, { x0: 0, x1: W / 2 }).x1).toBeGreaterThan(left.x1 - 12);
+        // Around the box of each side: nothing of the accent until its beat.
+        const around = (picture: Box): Box => {
+          const box = placed(picture, highlight({}));
+          return { x0: box.x0 - 10, y0: box.y0 - 10, x1: box.x1 + 10, y1: box.y1 + 10 };
+        };
+        const [leftBox, rightBox] = [around(left), around(right)];
+        expect(pictureBox(compareTwo, { x0: W / 2, x1: W }).x1).toBeGreaterThan(right.x1 - 12);
+        expect(countIn(compareOne, leftBox, isBluish)).toBe(0);
+        expect(countIn(compareTwo, leftBox, isBluish)).toBeGreaterThan(100);
+        expect(countIn(compareTwo, rightBox, isBluish)).toBe(0);
+        expect(countIn(compareEnd, leftBox, isBluish)).toBeGreaterThan(100);
+        expect(countIn(compareEnd, rightBox, isBluish)).toBeGreaterThan(100);
+
+        // A box without a label: the black line right outside the box is what is dark, nothing else, and it is not there before the beat.
+        const [lineBefore, lineAfter] = [await at('line', 0.9), await at('line', 2.5)];
+        const linePicture = pictureBox(lineAfter);
+        const lineBox = placed(linePicture, highlight({}));
+        expect(count(lineBefore, linePicture, isDark)).toBeLessThan(STRAY);
+        expectBoxAt(accentBox(lineAfter, linePicture), lineBox, 'unlabelled box');
+        const ring = (p: Pixel): boolean => p[0] < 100 && p[1] < 100 && p[2] < 100;
+        const onRing = [...pixelsOf(lineAfter, linePicture, ring)].filter(
+          ([x, y]) =>
+            x > lineBox.x0 - 8 &&
+            x < lineBox.x1 + 8 &&
+            y > lineBox.y0 - 8 &&
+            y < lineBox.y1 + 8 &&
+            !(x > lineBox.x0 + 2 && x < lineBox.x1 - 2 && y > lineBox.y0 + 2 && y < lineBox.y1 - 2),
+        ).length;
+        expect(onRing).toBeGreaterThan(100);
+        expect(count(lineAfter, linePicture, ring)).toBe(onRing);
+
+        // The label keeps its size on the screen while the camera goes in on the box.
+        const [pillStart, pillEnd] = [await at('pill', 1.15), await at('pill', 5.3)];
+        const pillPicture = pictureBox(pillStart);
+        const [startHeight, endHeight] = [
+          pillHeight(pillStart, pillPicture),
+          pillHeight(pillEnd, pillPicture),
+        ];
+        expect(startHeight).toBeGreaterThan(18);
+        expect(Math.abs(endHeight - startHeight)).toBeLessThanOrEqual(2);
+        // The picture did get closer: the green quarter now fills the window.
+        expect(count(pillEnd, pillPicture, (p) => near(p, QUARTER_COLORS[1]!, 40))).toBeGreaterThan(
+          (pillPicture.x1 - pillPicture.x0) * (pillPicture.y1 - pillPicture.y0) * 0.6,
+        );
+
+        // A recording: the box is not there before its beat; the camera ends on the yellow quarter while the clip keeps playing.
+        const [recBefore, recEarly, recLate] = [
+          await at('rec', 2.4),
+          await at('rec', 5.6),
+          await at('rec', 6.4),
+        ];
+        const recPicture = pictureBox(recLate);
+        expect(count(recBefore, recPicture, isAccent)).toBeLessThan(STRAY);
+        expect(count(recLate, recPicture, isAccent)).toBeGreaterThan(100);
+        const recArea = (recPicture.x1 - recPicture.x0 + 1) * (recPicture.y1 - recPicture.y0 + 1);
+        expect(count(recLate, recPicture, (p) => near(p, QUARTER_COLORS[3]!, 60))).toBeGreaterThan(
+          recArea * 0.7,
+        );
+        // The white bar is at 430 and then at 540 of 640 pixels of the clip, which is the yellow half: it moves to the right of the window.
+        const barX = (f: Frame): number => {
+          const y = recPicture.y0 + 24;
+          const xs = [...pixelsOf(f, { ...recPicture, y1: y + 8, y0: y - 8 }, isWhite)].map(([x]) => x);
+          expect(xs.length, 'the bar of the clip').toBeGreaterThan(3);
+          return xs.reduce((a, b) => a + b, 0) / xs.length;
+        };
+        expect(barX(recLate) - barX(recEarly)).toBeGreaterThan(80);
+
+        // A tall picture in a phone frame: the box lies on the picture, by fractions of the picture.
+        const [phoneBefore, phoneAfter] = [await at('phone', 1), await at('phone', 3)];
+        const phonePicture = pictureBox(phoneAfter);
+        expect(phonePicture.x1 - phonePicture.x0).toBeLessThan((phonePicture.y1 - phonePicture.y0) / 1.5);
+        expect(count(phoneBefore, phonePicture, isAccent)).toBeLessThan(STRAY);
+        expectBoxAt(accentBox(phoneAfter, phonePicture), placed(phonePicture, highlight({})), 'phone');
+
+        const parallel = await render(3);
+        expect(parallel.bytes.equals(single.bytes)).toBe(true);
+      }, 300_000);
+    });
+
     it('renders still frames', async () => {
       const out = await outDir();
       const files = await renderStillFrames(

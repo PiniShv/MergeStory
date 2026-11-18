@@ -25,7 +25,10 @@ import { narrationWords } from '../core/storyboard-facts.ts';
 import {
   BrowserVisualSchema,
   CodeVisualSchema,
+  HighlightSchema,
+  PanelSchema,
   SceneSchema,
+  ScreenshotVisualSchema,
   STORYBOARD_LIMITS,
   type Storyboard,
   TitleVisualSchema,
@@ -911,6 +914,10 @@ describe('prepareAuthoring: AUTHORING.md', () => {
       CodeVisualSchema.shape.focus,
       BrowserVisualSchema.shape.blocks.element.shape.text,
       BrowserVisualSchema.shape.blocks.element.shape.items,
+      ScreenshotVisualSchema.shape.highlights,
+      ScreenshotVisualSchema.shape.focus,
+      PanelSchema.shape.highlights,
+      HighlightSchema.shape.label,
     ]) {
       expect(field.description).toBeTruthy();
       expect(guide).toContain(field.description);
@@ -1474,6 +1481,8 @@ describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
             trim: null,
             speed: null,
             zoom: null,
+            highlights: [],
+            focus: null,
           },
         },
       ],

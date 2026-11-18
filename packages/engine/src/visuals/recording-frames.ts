@@ -31,6 +31,12 @@ export interface FrameRequest {
   outDir: string;
 }
 
+/**
+ * A scene with a focus cuts its frames for a box this many times as large, so the zoomed picture stays
+ * sharp. It is not more: every frame of a page is a decoded picture in the browser's memory.
+ */
+export const FOCUS_BOX_FACTOR = 1.5;
+
 const even = (n: number): number => Math.max(2, 2 * Math.floor(n / 2));
 
 /** The crop (whole frame when there is no zoom) and the size after scaling down to the box, both with even sides. */
@@ -156,7 +162,12 @@ export async function extractStoryboardFrames(
           recording,
           trim: visual.trim ?? { start: 0, end: Math.min(recording.durationSec, maxClip) },
           zoom: visual.zoom,
-          box: RECORDING_BOX.scene,
+          box: visual.focus
+            ? {
+                width: RECORDING_BOX.scene.width * FOCUS_BOX_FACTOR,
+                height: RECORDING_BOX.scene.height * FOCUS_BOX_FACTOR,
+              }
+            : RECORDING_BOX.scene,
         },
       });
     } else if (visual.type === 'before-after') {

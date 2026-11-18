@@ -9,12 +9,14 @@ import {
   CodeRefSchema,
   CodeVisualSchema,
   FlowVisualSchema,
+  HighlightSchema,
   STORYBOARD_LIMITS as LIMITS,
   NodeKindSchema,
   PanelSchema,
   RecordingVisualSchema,
   SceneRoleSchema,
   SceneSchema,
+  ScreenshotVisualSchema,
   SeveritySchema,
   StoryboardSchema,
   TerminalLineSchema,
@@ -26,7 +28,14 @@ import {
 const FENCE = '```';
 
 const REF = { path: 'src/http/retry.ts', side: 'head', startLine: 18, endLine: 29 } as const;
-const NO_PANEL = { codeRef: null, bullets: [], terminal: [], screenshotId: null, recordingId: null };
+const NO_PANEL = {
+  codeRef: null,
+  bullets: [],
+  terminal: [],
+  screenshotId: null,
+  recordingId: null,
+  highlights: [],
+};
 
 /**
  * One small example of each visual, so a writer sees every field name without reading the schema.
@@ -113,7 +122,13 @@ export const VISUAL_SHAPES: Visual[] = [
     ],
   },
   { type: 'bullets', heading: null, items: [{ text: 'A point', beat: 0 }] },
-  { type: 'screenshot', screenshotId: 'SS1', caption: null },
+  {
+    type: 'screenshot',
+    screenshotId: 'SS1',
+    caption: null,
+    highlights: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.1, label: 'Short label', beat: 0 }],
+    focus: null,
+  },
   {
     type: 'recording',
     recordingId: 'RC1',
@@ -121,6 +136,8 @@ export const VISUAL_SHAPES: Visual[] = [
     trim: { start: 2, end: 9 },
     speed: null,
     zoom: null,
+    highlights: [],
+    focus: { x: 0, y: 0.1, w: 0.5, h: 0.4 },
   },
   { type: 'summary', points: [{ text: 'A point', beat: 0 }], closing: null },
 ];
@@ -251,8 +268,8 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - terminal, browser: simulated. See "Simulated visuals".
 - checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and an optional CodeRef. In "detail", do not repeat "title" or the file and line: "ref" has them.
 - bullets: up to ${LIMITS.maxBullets} short points.
-- screenshot: only a screenshot id that was supplied (SS1, SS2, ...).
-- recording: only a supplied recording id (RC1, ...). The scene lasts as long as its narration (about ${LIMITS.wordsPerSecond} words a second): write enough for the clip, or set "speed". A clip that ends early stays on its last frame.
+- screenshot: only a screenshot id that was supplied (SS1, SS2, ...). Point at the part that matters with "highlights": up to ${LIMITS.maxHighlights} boxes, each with a "beat" and a "label" of up to ${LIMITS.maxHighlightLabelLength} characters. When that part is small, set "focus" to zoom the camera slowly into it. Boxes are fractions of the picture, from 0 to 1. A screenshot panel in before-after takes "highlights" too.
+- recording: only a supplied recording id (RC1, ...). The scene lasts as long as its narration (about ${LIMITS.wordsPerSecond} words a second): write enough for the clip, or set "speed". A clip that ends early stays on its last frame. "highlights" and "focus" work as on a screenshot.
 - summary: up to ${LIMITS.maxBullets} closing points.
 
 Anything that appears while a scene plays has a "beat": the 0-based index of the narration line on which it appears. A beat must be smaller than the number of lines in that scene.
@@ -357,6 +374,9 @@ These fields take one of a fixed set of values. Each list is complete.
 - "title" of a scene: ${rule(SceneSchema.shape.title)}
 - "chips" of a title visual: ${rule(TitleVisualSchema.shape.chips)}
 - "trim", "speed" and "zoom" of a recording visual: ${rule(RecordingVisualSchema.shape.trim)} It has "start" and "end". ${rule(RecordingVisualSchema.shape.speed)} ${rule(RecordingVisualSchema.shape.zoom)} It has "x", "y", "w" and "h".
+- "highlights" of a screenshot or recording visual: ${rule(ScreenshotVisualSchema.shape.highlights)} It has "x", "y", "w", "h", "label" and "beat". ${rule(HighlightSchema.shape.label)} A box that reaches outside the picture is moved inside.
+- "highlights" of a before-after panel: ${rule(PanelSchema.shape.highlights)}
+- "focus" of a screenshot or recording visual: ${rule(ScreenshotVisualSchema.shape.focus)} It has "x", "y", "w" and "h", and each side is at least ${LIMITS.minFocusSide}.
 - "focus" of a code visual: ${rule(CodeVisualSchema.shape.focus)}
 - "text" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.text)}
 - "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}

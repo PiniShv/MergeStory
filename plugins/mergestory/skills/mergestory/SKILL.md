@@ -94,6 +94,9 @@ These become citable evidence (TASK, NOTES, T1, RC1) in the video.
    only if the guide sends you there, or if validate reports a schema error that its message does
    not explain. Cite evidence ids on every narration line. Point at code with line ranges; never
    paste code.
+   To show a recording, point at the part that matters with `highlights` (boxes in fractions of the
+   picture, each on a narration `beat`) and use `focus` when it is small. Both need an engine newer
+   than 1.7.0. An engine up to 1.7.0 leaves them out without a warning.
 4. `mergestory agent validate <source> --name <name> --json`. Fix every error and repeat until `ok`
    is true. Read `warnings` and `fixes` too: they show what the engine removed or changed on its own.
 5. `mergestory agent render <source> --name <name> --json`

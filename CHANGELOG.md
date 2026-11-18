@@ -2,6 +2,24 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Added:** point at the part of a picture that matters. A `screenshot` visual, a `recording` visual and a
+  `screenshot` panel in `before-after` can have `highlights`: up to 4 boxes, each `{x, y, w, h, label, beat}`
+  in fractions of the picture (for a recording with a `zoom`, of the part that the zoom keeps). A box is
+  drawn in the accent colour of the theme with a dark and a white line, so it can be seen on any picture. It
+  appears on its beat, with an optional label of up to 40 characters. A `screenshot` or `recording` visual can
+  also have a `focus` box: the camera slowly zooms into it (up to 4 times) over the scene, never faster than
+  the narration, so a small error message in a big page can be read. The checks: a box or a focus outside the
+  picture is moved inside, a label is checked like a caption, a label of more than 40 characters is shortened
+  and warned about (`highlight-label-too-long`), and more than 4 boxes are trimmed. All are listed in
+  `fixes`. A storyboard without the new fields is unchanged. A model that writes a storyboard gets about
+  940 more tokens in every request. A recording scene with a `focus` keeps its frames up to 1.5 times
+  larger, so the zoomed picture stays sharp. The bug-fix demo in `examples/bugfix-demo` uses both. The skill
+  tells an agent about them. See "Visuals" in `docs/storyboard.md`.
+
 ## 1.7.0
 
 ### Skill and plugin

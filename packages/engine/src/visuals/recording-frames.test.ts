@@ -366,6 +366,8 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
   let dir: string;
   let counter: string;
   let quarters: string;
+  let wide: string;
+  let small: string;
   const sceneVisual = (visual: object, id = 's'): Storyboard['scenes'][number] =>
     ({ id, visual }) as unknown as Storyboard['scenes'][number];
   const recordingScene = (recordingId: string, id: string, over: object = {}) =>
@@ -381,7 +383,12 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
       notes: null,
       tests: [],
       screenshots: [],
-      recordings: [await probed(counter, 'RC1'), await probed(quarters, 'RC2')],
+      recordings: [
+        await probed(counter, 'RC1'),
+        await probed(quarters, 'RC2'),
+        await probed(wide, 'RC3'),
+        await probed(small, 'RC4'),
+      ],
     };
     const runDir = await mkdtemp(join(dir, 'run-'));
     const frames = await extractStoryboardFrames(
@@ -400,9 +407,27 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
     expect(await makeClip(tools!.ffmpeg, counter, { seconds: 3 })).toBe(true);
     quarters = join(dir, 'quarters.mp4');
     expect(await ffmpegTo(tools!.ffmpeg, [...QUARTERS, quarters])).toBe(true);
+    wide = join(dir, 'wide.mp4');
+    expect(await makeClip(tools!.ffmpeg, wide, { seconds: 1, size: '4000x1500' })).toBe(true);
+    small = join(dir, 'small.mp4');
+    expect(await makeClip(tools!.ffmpeg, small, { seconds: 1, size: '640x240' })).toBe(true);
   });
   afterAll(async () => {
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it('cuts the frames of a scene with a focus for a larger box, and never larger than the recording', async () => {
+    const focus = { x: 0.2, y: 0.2, w: 0.3, h: 0.3 };
+    const { frames } = await extract([
+      recordingScene('RC3', 'plain'),
+      recordingScene('RC3', 'focused', { focus }),
+      recordingScene('RC4', 'small', { focus }),
+    ]);
+    // The box of a scene is 1680x624; with a focus it is 1.5 times as large, 2520x936. The source is larger than both.
+    expect(frames.get('recording-frames/s-1')).toMatchObject({ width: 1664, height: 624 });
+    expect(frames.get('recording-frames/s-2')).toMatchObject({ width: 2496, height: 936 });
+    // A recording that is smaller than the box is never scaled up, with a focus or not.
+    expect(frames.get('recording-frames/s-3')).toMatchObject({ width: 640, height: 240 });
   });
 
   it('names the folders by the place of the scene, and honours the trim and zoom of a scene', async () => {

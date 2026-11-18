@@ -34,7 +34,12 @@ export function beatHolders(visual: Visual): { beat: number }[] {
     case 'code':
       return visual.focus;
     case 'before-after':
-      return [...visual.before.terminal, ...visual.after.terminal];
+      return [
+        ...visual.before.terminal,
+        ...visual.after.terminal,
+        ...visual.before.highlights,
+        ...visual.after.highlights,
+      ];
     case 'terminal':
       return visual.lines;
     case 'browser':
@@ -42,10 +47,11 @@ export function beatHolders(visual: Visual): { beat: number }[] {
     case 'checklist':
     case 'bullets':
       return visual.items;
-    case 'title':
-    case 'files':
     case 'screenshot':
     case 'recording':
+      return visual.highlights;
+    case 'title':
+    case 'files':
       return [];
   }
 }

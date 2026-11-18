@@ -133,6 +133,16 @@ export interface FrameSet {
   speed: number;
 }
 
+/** A box on a picture, in fractions of it, from its beat on. The label is already masked. */
+export interface PlannedHighlight {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label: string | null;
+  beat: number;
+}
+
 export interface TitleResolved {
   type: 'title';
   kicker: string | null;
@@ -225,7 +235,7 @@ export type ResolvedPanel = { label: string } & (
   | { kind: 'code'; code: ResolvedCode }
   | { kind: 'bullets'; bullets: string[] }
   | { kind: 'terminal'; terminal: { kind: 'command' | 'output' | 'comment'; text: string; beat: number }[] }
-  | { kind: 'screenshot'; image: ResolvedImage }
+  | { kind: 'screenshot'; image: ResolvedImage; highlights?: PlannedHighlight[] }
   | { kind: 'recording'; frames: FrameSet }
 );
 
@@ -273,16 +283,22 @@ export interface BulletsResolved {
   items: TextBeat[];
 }
 
+/** `highlights` and `focus` are left out of the plan when there are none. */
 export interface ScreenshotResolved {
   type: 'screenshot';
   image: ResolvedImage;
   caption: string | null;
+  highlights?: PlannedHighlight[];
+  /** The part of the picture that the camera zooms into. */
+  focus?: { x: number; y: number; w: number; h: number };
 }
 
 export interface RecordingResolved {
   type: 'recording';
   frames: FrameSet;
   caption: string | null;
+  highlights?: PlannedHighlight[];
+  focus?: { x: number; y: number; w: number; h: number };
 }
 
 export interface SummaryResolved {

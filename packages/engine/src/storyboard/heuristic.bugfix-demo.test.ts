@@ -28,6 +28,7 @@ const browser = await locateBrowser(config).catch(() => null);
 
 describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
   let directory = '';
+  let captures = '';
   let deps: ValidationDeps;
   let targetSec = 0;
   const original = {
@@ -40,7 +41,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     process.env.GIT_CONFIG_NOSYSTEM = '1';
     directory = await mkdtemp(join(tmpdir(), 'mergestory-bugfix-demo-'));
     const repo = join(directory, 'repo');
-    const captures = join(directory, 'captures');
+    captures = join(directory, 'captures');
     execFileSync('bash', [join(DEMO, 'create-demo-repo.sh'), repo], { stdio: 'pipe' });
     execFileSync('node', [join(DEMO, 'capture.mjs'), captures], {
       stdio: 'pipe',
@@ -100,6 +101,39 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
   it('has a hand-written storyboard with nothing to report, repair or remove', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
     expect(await expectCleanStoryboard(deps, written)).toEqual([]);
+  });
+
+  it('puts every highlight and the focus on the item count, with room for a font that is 30% wider', async () => {
+    const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
+    // capture.mjs writes where the text of the count is in each picture, as fractions of it.
+    type Box = { x: number; y: number; w: number; h: number };
+    const counts = JSON.parse(await readFile(join(captures, 'count.json'), 'utf8')) as Record<string, Box>;
+    const checked: { moment: string; where: string; box: Box }[] = [];
+    for (const scene of written.scenes) {
+      const visual = scene.visual;
+      if (visual.type === 'recording') {
+        const moment = deps.inputs.recordings.find((r) => r.id === visual.recordingId)!.moment;
+        for (const box of [...visual.highlights, ...(visual.focus ? [visual.focus] : [])])
+          checked.push({ moment, where: scene.id, box });
+      } else if (visual.type === 'before-after') {
+        for (const panel of [visual.before, visual.after]) {
+          if (panel.kind !== 'screenshot') continue;
+          const moment = deps.inputs.screenshots.find((s) => s.id === panel.screenshotId)!.moment;
+          for (const box of panel.highlights) checked.push({ moment, where: scene.id, box });
+        }
+      }
+    }
+    // Two recordings with a box each, one with a focus, and two screenshot panels.
+    expect(checked).toHaveLength(5);
+    for (const { moment, where, box } of checked) {
+      const count = counts[moment]!;
+      const wider = { ...count, w: count.w * 1.3 };
+      const label = `${where} ${moment}: ${JSON.stringify(box)} must contain ${JSON.stringify(wider)}`;
+      expect(box.x, label).toBeLessThanOrEqual(wider.x);
+      expect(box.y, label).toBeLessThanOrEqual(wider.y);
+      expect(box.x + box.w, label).toBeGreaterThanOrEqual(wider.x + wider.w);
+      expect(box.y + box.h, label).toBeGreaterThanOrEqual(wider.y + wider.h);
+    }
   });
 
   it('still gets an offline storyboard, which says it does not show the recordings', async () => {

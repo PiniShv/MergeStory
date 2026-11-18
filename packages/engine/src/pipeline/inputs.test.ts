@@ -197,6 +197,7 @@ describe('unusedScreenshotWarning', () => {
             terminal: [],
             screenshotId: null,
             recordingId: null,
+            highlights: [],
           },
           after: {
             label: 'After',
@@ -206,10 +207,11 @@ describe('unusedScreenshotWarning', () => {
             terminal: [],
             screenshotId: id,
             recordingId: null,
+            highlights: [],
           },
           caption: null,
         }
-      : { type: 'screenshot', screenshotId: id, caption: null };
+      : { type: 'screenshot', screenshotId: id, caption: null, highlights: [], focus: null };
     return storyboard;
   }
 
@@ -259,13 +261,15 @@ describe('unusedScreenshotWarning for recordings', () => {
     return storyboard;
   };
   const clip = {
-    type: 'recording',
+    type: 'recording' as const,
     recordingId: 'RC1',
     caption: null,
     trim: null,
     speed: null,
     zoom: null,
-  } as const;
+    highlights: [],
+    focus: null,
+  };
 
   it('says nothing when every recording is shown', () => {
     expect(unusedScreenshotWarning(showing(clip), inputs(recording(1, '')), 'llm', PRIVACY)).toBeNull();
@@ -297,6 +301,7 @@ describe('unusedScreenshotWarning for recordings', () => {
       terminal: [],
       screenshotId: null,
       recordingId,
+      highlights: [],
     });
     const shown = showing({
       type: 'before-after',
@@ -392,7 +397,7 @@ describe('evidenceUsed', () => {
           ['TASK', 'F1'],
           ['F1', 'S2'],
         ],
-        { type: 'screenshot', screenshotId: 'SS2', caption: null },
+        { type: 'screenshot', screenshotId: 'SS2', caption: null, highlights: [], focus: null },
       ),
       scene('s2', [['F1.H1']], {
         type: 'checklist',

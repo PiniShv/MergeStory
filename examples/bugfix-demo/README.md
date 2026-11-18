@@ -10,9 +10,9 @@ MergeStory does not record anything. `capture.mjs` opens the page in a browser, 
 |---|---|
 | `create-demo-repo.sh` | Makes the demo repository, with the branches `main` (the bug) and `fix/basket-count` (the fix). |
 | `base/`, `feature/` | The files of the two branches: `index.html`, `basket.js`, and in `feature/` a test file. |
-| `capture.mjs` | Makes `before.png`, `after.png`, `before.mp4` and `after.mp4` from the two versions of the page. |
+| `capture.mjs` | Makes `before.png`, `after.png`, `before.mp4` and `after.mp4` from the two versions of the page, and `count.json`: where the text of the item count is in each picture, as fractions of it. A test checks the boxes in `storyboard.json` against it. |
 | `task.md`, `notes.md`, `tests.json` | The task, the author's notes and one reported test run (3 tests, `node --test`). |
-| `storyboard.json` | A storyboard written by hand: the bug, the code, the fix, then the two screenshots side by side. |
+| `storyboard.json` | A storyboard written by hand: the bug, the code, the fix, then the two screenshots side by side. It points at the item count with `highlights`, and the camera zooms into the count in the first recording with `focus`. |
 
 ## Make the video
 
@@ -44,4 +44,5 @@ mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-co
 
 - Use a small browser window (this demo uses 960 by 540). The video scales a clip down to fit its window, so text from a large window gets too small to read.
 - Use `zoom` in the storyboard when only a part of the page matters.
+- To draw the eye to one spot, add a box to `highlights`. Measure it on your own capture, as fractions of the picture, leave room for a font that is wider than yours, and give it the beat of the narration line that talks about it. Add a `focus` when that spot is small. Check the box in a rendered frame.
 - The scene lasts as long as its narration. Write enough words for the clip, or set `speed`.
