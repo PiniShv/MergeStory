@@ -146,8 +146,8 @@ Storyboards cite these ids. The watch page lists every claim with links to the c
 A storyboard has a title, a two-sentence summary, scenes, a review checklist and a list of
 uncertainties. Each scene has a role (mission, big picture, under the hood, before/after, review,
 conclusion), narration lines with evidence ids, one visual, a transition and an optional target
-length. There are 13 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
-`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `summary`.
+length. There are 14 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
+`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `recording`, `summary`.
 
 Visual elements carry a `beat`: the index of the narration line at which they appear. After speech
 is generated, beats get exact times, so the picture follows the voice.

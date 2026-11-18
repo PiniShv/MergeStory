@@ -399,6 +399,7 @@ describe('buildRenderPlan: other visual types', () => {
             bullets: [],
             terminal: [],
             screenshotId: 'SS1',
+            recordingId: null,
           },
           after: {
             label: 'After',
@@ -407,6 +408,7 @@ describe('buildRenderPlan: other visual types', () => {
             bullets: ['Faster'],
             terminal: [],
             screenshotId: null,
+            recordingId: null,
           },
           caption: null,
         }),

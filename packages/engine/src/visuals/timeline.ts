@@ -53,6 +53,7 @@ export const MIN_SCENE_SECONDS: Record<VisualType, number> = {
   checklist: 4.5,
   bullets: 4.5,
   screenshot: 4.5,
+  recording: 4.5,
   summary: 4.5,
 };
 

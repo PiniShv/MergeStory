@@ -217,23 +217,26 @@ export async function buildContextInputs(
   };
 }
 
-/** Ids of the screenshots that a storyboard shows. */
-function shownScreenshots(storyboard: Storyboard): Set<string> {
-  const shown = new Set<string>();
+/** Ids of the screenshots and recordings that a storyboard shows. */
+export function shownMedia(storyboard: Storyboard): { screenshots: Set<string>; recordings: Set<string> } {
+  const screenshots = new Set<string>();
+  const recordings = new Set<string>();
   for (const { visual } of storyboard.scenes) {
-    if (visual.type === 'screenshot') shown.add(visual.screenshotId);
+    if (visual.type === 'screenshot') screenshots.add(visual.screenshotId);
+    if (visual.type === 'recording') recordings.add(visual.recordingId);
     if (visual.type === 'before-after') {
       for (const panel of [visual.before, visual.after]) {
-        if (panel.kind === 'screenshot' && panel.screenshotId) shown.add(panel.screenshotId);
+        if (panel.kind === 'screenshot' && panel.screenshotId) screenshots.add(panel.screenshotId);
+        if (panel.kind === 'recording' && panel.recordingId) recordings.add(panel.recordingId);
       }
     }
   }
-  return shown;
+  return { screenshots, recordings };
 }
 
 /**
  * Every evidence id that a storyboard cites or shows: the cited ids in the order of first use, then
- * the screenshots that are shown and not cited. After the checks, every id in it exists.
+ * the screenshots and recordings that are shown and not cited. After the checks, every id in it exists.
  */
 export function evidenceUsed(storyboard: Storyboard): string[] {
   const ids = new Set<string>();
@@ -248,13 +251,14 @@ export function evidenceUsed(storyboard: Storyboard): string[] {
     }
   };
   walk(storyboard);
-  for (const id of shownScreenshots(storyboard)) ids.add(id);
+  const shown = shownMedia(storyboard);
+  for (const id of [...shown.screenshots, ...shown.recordings]) ids.add(id);
   return [...ids];
 }
 
 /**
- * A warning when screenshots were supplied but the storyboard does not show them all, or null.
- * The offline storyboard never uses screenshots, which is worth saying because the person did
+ * A warning when screenshots or recordings were supplied but the storyboard does not show them all,
+ * or null. The offline storyboard never uses them, which is worth saying because the person did
  * pass them on purpose.
  */
 export function unusedScreenshotWarning(
@@ -262,13 +266,34 @@ export function unusedScreenshotWarning(
   inputs: ContextInputs,
   source: 'llm' | 'agent' | 'heuristic',
 ): string | null {
-  const shown = shownScreenshots(storyboard);
-  const unused = inputs.screenshots.filter((shot) => !shown.has(shot.id));
-  if (unused.length === 0) return null;
-  const names = unused.map((shot) => (shot.caption ? `${shot.id} ("${shot.caption}")` : shot.id)).join(', ');
-  const reason =
-    source === 'heuristic'
-      ? ' The offline storyboard never uses screenshots: write the storyboard yourself (--storyboard) or use --llm to show them.'
-      : '';
-  return `${unused.length === 1 ? 'The screenshot' : 'The screenshots'} ${names} ${unused.length === 1 ? 'is' : 'are'} not shown in the video.${reason}`;
+  const shown = shownMedia(storyboard);
+  const sentence = (
+    items: readonly { id: string; caption: string }[],
+    one: string,
+    many: string,
+    plural: string,
+  ): string | null => {
+    if (items.length === 0) return null;
+    const names = items.map((item) => (item.caption ? `${item.id} ("${item.caption}")` : item.id)).join(', ');
+    const reason =
+      source === 'heuristic'
+        ? ` The offline storyboard never uses ${plural}: write the storyboard yourself (--storyboard) or use --llm to show them.`
+        : '';
+    return `${items.length === 1 ? one : many} ${names} ${items.length === 1 ? 'is' : 'are'} not shown in the video.${reason}`;
+  };
+  const parts = [
+    sentence(
+      inputs.screenshots.filter((shot) => !shown.screenshots.has(shot.id)),
+      'The screenshot',
+      'The screenshots',
+      'screenshots',
+    ),
+    sentence(
+      inputs.recordings.filter((rec) => !shown.recordings.has(rec.id)),
+      'The recording',
+      'The recordings',
+      'recordings',
+    ),
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? null : parts.join(' ');
 }

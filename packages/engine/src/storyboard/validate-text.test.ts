@@ -575,7 +575,8 @@ describe('robustness', () => {
   }
 
   function mutate(base: unknown, random: () => number): unknown {
-    const pick = <T>(items: T[]): T => items[Math.floor(random() * items.length)]!;
+    // A copy, so that a mutation of the picked [] or {} cannot change the pool or make a loop.
+    const pick = <T>(items: T[]): T => structuredClone(items[Math.floor(random() * items.length)]!);
     const copy = structuredClone(base) as Json;
     for (let i = 0, n = 1 + Math.floor(random() * 3); i < n; i++) {
       const path = pick(allPaths(copy).filter((p) => p.length > 0));

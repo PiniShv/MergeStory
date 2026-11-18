@@ -32,6 +32,9 @@ export type IssueCode =
   | 'no-evidence'
   | 'visual-fallback'
   | 'screenshot-unknown'
+  | 'recording-unknown'
+  | 'recording-trim-out-of-range'
+  | 'recording-too-long'
   | 'simulated-unbacked'
   | 'over-length';
 

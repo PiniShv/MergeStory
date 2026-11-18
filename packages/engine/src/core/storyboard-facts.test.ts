@@ -35,6 +35,19 @@ describe('beatHolders', () => {
     expect(beatHolders(visualOf('s6')).length).toBe(3);
   });
 
+  it('gives a recording no beats and does not call it simulated', () => {
+    const clip = {
+      type: 'recording',
+      recordingId: 'RC1',
+      caption: null,
+      trim: null,
+      speed: null,
+      zoom: null,
+    } as const;
+    expect(beatHolders(clip)).toEqual([]);
+    expect(isSimulated(clip)).toBe(false);
+  });
+
   it('returns nothing for visuals without beats', () => {
     expect(beatHolders(visualOf('s1'))).toEqual([]);
   });

@@ -114,6 +114,8 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 | Flow actors, flow steps | 5, 8. |
 | Terminal lines, browser blocks | 12, 8. |
 | Title chips, mission points | 4. |
+| Part of one recording that one scene shows | 20 seconds (`inputs.maxClipSeconds`). The end is cut. |
+| Speed of a recording | 0.5 to 4. |
 
 The offline generator and the length estimate use a speaking rate of 2.5 words a second. `--max-duration`
 (150 seconds by default) trims a storyboard before narration, least important scenes first. The mission and
@@ -164,12 +166,13 @@ never contains code.
 | `architecture` | Components and the links between them. Use it only when two or more components matter. Every edge must join two node ids that exist. | `direction` (`LR` or `TB`), `nodes`, `edges` |
 | `flow` | A request or call that the code implements, as steps between actors. | `actors`, `steps` |
 | `code` | Real lines of code, highlighted line by line. | `ref`, `mode`, `focus`, `caption` |
-| `before-after` | Two panels. Each shows code, bullets, a screenshot or a terminal. | `before`, `after`, `caption` |
+| `before-after` | Two panels. Each shows code, bullets, a screenshot, a recording or a terminal. | `before`, `after`, `caption` |
 | `terminal` | A simulated terminal session. | `title`, `lines` |
 | `browser` | A simulated app screen. | `url`, `pageTitle`, `blocks` |
 | `checklist` | Review items with a severity and an optional code reference. The detail of an item should not repeat its title or its file and line. | `items` |
 | `bullets` | Short points. | `heading`, `items` |
 | `screenshot` | A real screenshot that you supplied. | `screenshotId`, `caption` |
+| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
@@ -185,7 +188,8 @@ behaviour that the change implements, not a real run. The video always labels th
 only for behaviour that the code really has, and cite a file, hunk or symbol id in the narration of that
 scene. Never show a real host name, token or personal data. A browser `url` is a path such as `/settings`,
 never an address with a host: the checker removes the host if you write one. Do not show test output or
-numbers that nobody measured.
+numbers that nobody measured. A `recording` is the opposite: it is real, and the video labels it
+"Recorded".
 
 ## Code references
 
@@ -232,6 +236,8 @@ model writes, and the one the offline generator builds. There are three kinds of
   their limits. Duplicate scene ids are renamed.
 - Edges and steps that point at a node or actor that does not exist are dropped. Beats are moved into range.
 - A browser address is reduced to its path.
+- A recording's `trim` is put in order and cut to the clip, and cut to 20 seconds from its end. A `speed` or
+  `zoom` outside its range is moved into it.
 - **Secrets and e-mail addresses are masked** in every string, and hidden control characters are removed.
 - The language is set to the configured one.
 
@@ -273,6 +279,8 @@ Each problem has a `path` (such as `scenes[3].visual.ref`), a `code` and a `mess
 | `code-ref-binary` | The file is binary and has no lines to show. | Choose a text file. |
 | `code-ref-missing` | A code panel has no `codeRef`. | Add the path, the side and the lines. |
 | `screenshot-unknown` | A screenshot visual names an id that you did not supply. | Use an `SS` id from `evidence.md`, or another visual. |
+| `recording-unknown` | A recording visual names an id that you did not supply. | Use an `RC` id from `evidence.md`, or another visual. |
+| `recording-trim-out-of-range` | The `trim` of a recording visual has less than 0.2 seconds inside the recording. | Choose a part that lies inside the clip. |
 | `simulated-unbacked` | A simulated terminal or browser has narration that cites no file, hunk or symbol. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 | `validator-failed` | The checker stopped on an unexpected problem. | Report it as a bug. |
@@ -297,6 +305,9 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `no-evidence` | A new or changed node, step or item cites no valid evidence. |
 | `visual-fallback` | A visual had nothing to show and was replaced by the changed-files overview. |
 | `screenshot-unknown` | A before and after panel names a screenshot that you did not supply. The panel shows its bullets instead. |
+| `recording-unknown` | A before and after panel names a recording that you did not supply. The panel shows its bullets instead. |
+| `recording-trim-out-of-range` | The `trim` of a recording reached outside the clip. It was cut to fit. |
+| `recording-too-long` | A recording scene would show more than 20 seconds of the clip. The clip was shortened from its end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the

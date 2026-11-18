@@ -297,6 +297,9 @@ async function resolvePanel(
       const image = await screenshotFor(env, panel.screenshotId);
       return { panel: { label, kind: 'screenshot', image }, masked: false };
     }
+    case 'recording':
+      // Replaced in the next step of this change.
+      throw new MergeStoryError('RENDER_FAILED', 'This version cannot draw a recording yet.');
     default:
       panel.kind satisfies never;
       throw new MergeStoryError('INTERNAL', 'A panel has an unknown kind.');
@@ -485,6 +488,9 @@ async function resolveVisual(visual: Visual, env: Environment, scrub: Scrubber):
           closing: scrub.maybe(visual.closing),
         },
       };
+    case 'recording':
+      // Replaced in the next step of this change.
+      throw new MergeStoryError('RENDER_FAILED', 'This version cannot draw a recording yet.');
     default:
       visual satisfies never;
       throw new MergeStoryError('INTERNAL', 'A scene has an unknown visual type.');

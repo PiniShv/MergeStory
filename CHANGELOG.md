@@ -10,7 +10,12 @@ All notable changes to MergeStory are listed here, newest first.
   H.264, or WebM with VP8 or VP9) as context. It is checked by content with `ffprobe` and gets the
   evidence id `RC1`, `RC2`, and so on, listed in `evidence.md`. The `inputs` settings set the limits
   (4 recordings, 50 MB and 60 s each, by default). The agent commands read recordings from
-  `recordings/` in the work folder. Showing a recording in a video follows in a later change.
+  `recordings/` in the work folder. The new `recording` visual shows a clip (`trim`, `speed` and `zoom`
+  are optional), and a before-after panel can hold one. The checks are `recording-unknown`,
+  `recording-trim-out-of-range` and `recording-too-long`; a clip is cut to 20 seconds (`inputs.maxClipSeconds`)
+  and the cut is listed in `fixes`. The video labels it "Recorded". A model that writes a storyboard gets
+  about 53 more tokens in every request. Drawing the clip follows in a later change: until then,
+  rendering a storyboard with a recording stops with an error.
 - **Added:** a run now leaves what a script or an agent needs when nobody is watching. The run folder
   has `watch.html` next to `video.mp4`: the watch page, which plays the video beside it, so the two
   can be uploaded together. The result has `scenes` (every scene with the type of its visual, its

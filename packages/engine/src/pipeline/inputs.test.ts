@@ -194,6 +194,7 @@ describe('unusedScreenshotWarning', () => {
             bullets: ['a'],
             terminal: [],
             screenshotId: null,
+            recordingId: null,
           },
           after: {
             label: 'After',
@@ -202,6 +203,7 @@ describe('unusedScreenshotWarning', () => {
             bullets: [],
             terminal: [],
             screenshotId: id,
+            recordingId: null,
           },
           caption: null,
         }
@@ -228,6 +230,89 @@ describe('unusedScreenshotWarning', () => {
     expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'llm')).toBe(
       'The screenshot SS1 ("Dashboard") is not shown in the video.',
     );
+  });
+});
+
+describe('unusedScreenshotWarning for recordings', () => {
+  const recording = (n: number, caption: string) => ({
+    id: `RC${n}`,
+    path: `/x/${n}.mp4`,
+    caption,
+    moment: 'other' as const,
+    durationSec: 5,
+    width: 640,
+    height: 360,
+    codec: 'h264',
+  });
+  const inputs = (...recordings: ReturnType<typeof recording>[]): ContextInputs => ({
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: [],
+    recordings,
+  });
+  const showing = (visual: Storyboard['scenes'][number]['visual']): Storyboard => {
+    const storyboard = sampleStoryboard();
+    storyboard.scenes[2]!.visual = visual;
+    return storyboard;
+  };
+  const clip = {
+    type: 'recording',
+    recordingId: 'RC1',
+    caption: null,
+    trim: null,
+    speed: null,
+    zoom: null,
+  } as const;
+
+  it('says nothing when every recording is shown', () => {
+    expect(unusedScreenshotWarning(showing(clip), inputs(recording(1, '')), 'llm')).toBeNull();
+  });
+
+  it('names a recording that the video does not show, and says why the offline storyboard skips it', () => {
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, 'Checkout')), 'llm')).toBe(
+      'The recording RC1 ("Checkout") is not shown in the video.',
+    );
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, '')), 'heuristic')).toBe(
+      'The recording RC1 is not shown in the video. The offline storyboard never uses recordings: write the storyboard yourself (--storyboard) or use --llm to show them.',
+    );
+    expect(
+      unusedScreenshotWarning(
+        showing(clip),
+        inputs(recording(1, ''), recording(2, ''), recording(3, '')),
+        'agent',
+      ),
+    ).toBe('The recordings RC2, RC3 are not shown in the video.');
+  });
+
+  it('counts a recording panel as shown, and names screenshots and recordings together', () => {
+    const panel = (kind: 'bullets' | 'recording', recordingId: string | null) => ({
+      label: 'After',
+      kind,
+      codeRef: null,
+      bullets: ['It works'],
+      terminal: [],
+      screenshotId: null,
+      recordingId,
+    });
+    const shown = showing({
+      type: 'before-after',
+      before: panel('bullets', null),
+      after: panel('recording', 'RC1'),
+      caption: null,
+    });
+    expect(unusedScreenshotWarning(shown, inputs(recording(1, '')), 'llm')).toBeNull();
+    const both: ContextInputs = {
+      ...inputs(recording(1, '')),
+      screenshots: [{ id: 'SS1', path: '/x/a.png', caption: '', moment: 'other' }],
+    };
+    expect(unusedScreenshotWarning(sampleStoryboard(), both, 'llm')).toBe(
+      'The screenshot SS1 is not shown in the video. The recording RC1 is not shown in the video.',
+    );
+  });
+
+  it('lists a shown recording among the evidence used', () => {
+    expect(evidenceUsed(showing(clip))).toContain('RC1');
   });
 });
 

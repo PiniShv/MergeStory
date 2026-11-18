@@ -157,11 +157,13 @@ export const TerminalLineSchema = z.object({
 
 export const PanelSchema = z.object({
   label: z.string().describe('e.g. "Before" or "After".'),
-  kind: z.enum(['code', 'bullets', 'terminal', 'screenshot']),
+  kind: z.enum(['code', 'bullets', 'terminal', 'screenshot', 'recording']),
   codeRef: CodeRefSchema.nullable(),
   bullets: z.array(z.string()),
   terminal: z.array(TerminalLineSchema),
   screenshotId: z.string().nullable().describe('An SS<n> id from the evidence pack.'),
+  // The default keeps storyboards written before recordings existed valid.
+  recordingId: z.string().nullable().default(null).describe('An RC<n> id from the evidence pack.'),
 });
 
 export const BeforeAfterVisualSchema = z.object({
@@ -241,6 +243,23 @@ export const ScreenshotVisualSchema = z.object({
   caption: z.string().nullable(),
 });
 
+export const RecordingVisualSchema = z.object({
+  type: z.literal('recording'),
+  recordingId: z.string().describe('An RC<n> id from the evidence pack.'),
+  caption: z.string().nullable(),
+  trim: z
+    .object({ start: z.number(), end: z.number() })
+    .nullable()
+    .describe(
+      'The part of the recording to show, in seconds of the recording. null shows it from its start.',
+    ),
+  speed: z.number().nullable().describe('Playback speed, 0.5 to 4. null is 1.'),
+  zoom: z
+    .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
+    .nullable()
+    .describe('The part of the frame to show, as fractions from 0 to 1. null shows the whole frame.'),
+});
+
 export const SummaryVisualSchema = z.object({
   type: z.literal('summary'),
   points: z.array(textBeat),
@@ -260,6 +279,7 @@ export const VisualSchema = z.discriminatedUnion('type', [
   ChecklistVisualSchema,
   BulletsVisualSchema,
   ScreenshotVisualSchema,
+  RecordingVisualSchema,
   SummaryVisualSchema,
 ]);
 
@@ -329,6 +349,7 @@ export const VISUAL_TYPES: readonly VisualType[] = [
   'checklist',
   'bullets',
   'screenshot',
+  'recording',
   'summary',
 ];
 
@@ -408,6 +429,8 @@ export const STORYBOARD_LIMITS = {
   maxChips: 4,
   maxMissionPoints: 4,
   maxTitleLength: 60,
+  minRecordingSpeed: 0.5,
+  maxRecordingSpeed: 4,
   /** Average speaking rate used to estimate narration length before speech exists. */
   wordsPerSecond: 2.5,
 } as const;
