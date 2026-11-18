@@ -1051,3 +1051,24 @@ describe('checkStoryboard', () => {
     expect(lines.filter((line) => line.includes('Storyboard has errors'))).toEqual([]);
   });
 });
+
+describe('generate: a supplied storyboard with errors', () => {
+  it('is refused with GROUNDING_FAILED, and each problem is in the details with its path, code and message', async () => {
+    const board = await readJson<{ scenes: { visual: Record<string, unknown> }[] }>(
+      join(DEMO, 'storyboard.json'),
+    );
+    // The first scene is a title card, and the heading is a required field.
+    delete board.scenes[0]?.visual.heading;
+    const error = await failure(generate({ ...options(), storyboard: board, dryRun: true }));
+    expect(error.code).toBe('GROUNDING_FAILED');
+    expect(error.exitCode).toBe(3);
+    expect(error.message).toBe('The supplied storyboard has 1 problem(s) that block rendering.');
+    expect(error.hint).toBe(
+      'Fix the listed problems and run again. `mergestory validate <storyboard.json> <source>` checks without rendering.',
+    );
+    expect(error.details).toEqual({
+      errors: [{ path: 'scenes[0].visual.heading', code: 'schema', message: expect.any(String) }],
+      warnings: [],
+    });
+  });
+});

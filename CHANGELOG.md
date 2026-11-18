@@ -2,6 +2,16 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Fixed:** when `mergestory generate --storyboard` or `mergestory agent render` refuses a
+  storyboard, the text output now lists the blocking problems under the message (up to 40), in the
+  form that `validate` prints. Before, the hint said "Fix the listed problems" and none was shown,
+  so the author had to run `validate` to see them. The `--json` output and the exit code (3) are
+  unchanged.
+
 ## 1.6.0
 
 ### Skill and plugin

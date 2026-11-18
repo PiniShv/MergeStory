@@ -150,7 +150,7 @@ for Google Drive.
 
 | Flag | What it does |
 |---|---|
-| `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. See [storyboard.md](storyboard.md). |
+| `--storyboard <file>` | Use a storyboard you wrote instead of generating one. At most 1 MB. It goes through the same checks as every storyboard. If it has errors, the command stops with exit code 3 and prints up to 40 of them under the message, in the form that [`validate`](#mergestory-validate) uses. `validate` prints all of them. See [storyboard.md](storyboard.md). |
 | `--dry-run` | Show the plan: the scenes, the estimated length, a high estimate of the cost, and what a real run would send. It sends, renders and publishes nothing. It still reads the pull request from GitHub and writes the analysis files to the run folder. |
 | `--async` | Run in the background and print a job id. See [`status`](#mergestory-status). The settings are checked first, so a typo is reported at once. |
 | `--out <dir>` | Write the run files to this folder instead of under the MergeStory home. It must be outside the repository being explained and outside `$MERGESTORY_HOME/work`. An existing folder must not be or hold a symbolic link. |
@@ -587,8 +587,17 @@ stdout, and the exit code is not 0:
   "error": {
     "code": "GROUNDING_FAILED",
     "message": "The supplied storyboard has 1 problem(s) that block rendering.",
-    "hint": "Fix the listed problems and run again.",
-    "details": { "errors": [], "warnings": [] }
+    "hint": "Fix the listed problems and run again. `mergestory validate <storyboard.json> <source>` checks without rendering.",
+    "details": {
+      "errors": [
+        {
+          "path": "scenes[0].visual.heading",
+          "code": "schema",
+          "message": "is required (every field must be present; use null or [] when there is nothing to say)"
+        }
+      ],
+      "warnings": []
+    }
   }
 }
 ```
@@ -702,7 +711,7 @@ Scripts and coding agents can branch on the exit code. The `code` field of a JSO
 | 0 | | Success. | Report the result. |
 | 1 | `RENDER_FAILED`, `INTERNAL` | Rendering failed, or something unexpected happened. `doctor` also ends with 1 when a check fails. | Read the message. Try `--quality draft`. Add `--log-level debug` for more detail. |
 | 2 | `USAGE`, `CONFIG_INVALID`, `SOURCE_INVALID`, `SOURCE_NOT_FOUND`, `JOB_NOT_FOUND` | The command, a setting, the source or an id is wrong. Running `mergestory` with no command also ends with 2. | Fix the command, the setting, the path or the ref. |
-| 3 | `STORYBOARD_INVALID`, `GROUNDING_FAILED` | The storyboard has errors. `validate` ends with 3 when it finds errors. | Read `errors` (in `validate`) or `error.details.errors` (in `generate`). Fix the storyboard and check it again. |
+| 3 | `STORYBOARD_INVALID`, `GROUNDING_FAILED` | The storyboard has errors. `validate` ends with 3 when it finds errors. | Read `errors` (in `validate`). In `generate` and `agent render`, read the errors listed under the message, or `error.details.errors` with `--json`. Fix the storyboard and check it again. |
 | 4 | `BUDGET_EXCEEDED` | A paid call would take the run over the budget. It was not made. | Tell the person. Do not raise `--budget` on your own. |
 | 5 | `GIT_FAILED`, `GITHUB_AUTH`, `GITHUB_FAILED`, `RATE_LIMITED`, `LLM_FAILED`, `LLM_REFUSED`, `TTS_FAILED`, `PUBLISH_FAILED`, `NOTIFY_FAILED` | A service failed: git, GitHub, a model, speech or the upload. | Read the hint. Network access or credentials are the usual cause. `NOTIFY_FAILED` can come with a full result: see [`generate`](#mergestory-generate). |
 | 6 | `FFMPEG_NOT_FOUND`, `BROWSER_NOT_FOUND` | FFmpeg or a browser is missing. | Show the install hint from the error. |

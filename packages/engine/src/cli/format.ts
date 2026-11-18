@@ -5,6 +5,7 @@
  * paths can come from a pull request or a repository.
  */
 
+import { isRecord } from '../core/json.ts';
 import { shellQuote, terminalSafe } from '../core/text.ts';
 import type { CostReport, EgressRecord, GenerateResult, PlanResult } from '../core/types.ts';
 import type { JobSummary, PublicJob } from '../jobs/view.ts';
@@ -256,11 +257,20 @@ export function formatAuthoring(
   return `${lines.join('\n')}\n`;
 }
 
+interface Issue {
+  path: string;
+  code: string;
+  message: string;
+}
+
+/** One problem of a storyboard, in the form that `validate` prints it. */
+function formatIssue(kind: 'error' | 'warn', issue: Issue, style: Style): string {
+  return `  ${kind === 'error' ? style.red('error') : style.yellow('warn ')}  ${issue.path || '(storyboard)'}  [${issue.code}]  ${issue.message}`;
+}
+
 /** The block printed by `validate`. */
 export function formatValidation(raw: ValidationResult, style: Style): string {
   const result = clean(raw);
-  const issueLine = (kind: 'error' | 'warn', i: { path: string; code: string; message: string }): string =>
-    `  ${kind === 'error' ? style.red('error') : style.yellow('warn ')}  ${i.path || '(storyboard)'}  [${i.code}]  ${i.message}`;
   const lines: string[] = [];
   if (result.errors.length === 0) {
     lines.push(
@@ -271,8 +281,9 @@ export function formatValidation(raw: ValidationResult, style: Style): string {
       `${style.red('Storyboard has errors')}: ${result.errors.length} to fix before it can be rendered.`,
     );
   }
-  if (result.errors.length > 0) lines.push('', ...result.errors.map((i) => issueLine('error', i)));
-  if (result.warnings.length > 0) lines.push('', ...result.warnings.map((i) => issueLine('warn', i)));
+  if (result.errors.length > 0) lines.push('', ...result.errors.map((i) => formatIssue('error', i, style)));
+  if (result.warnings.length > 0)
+    lines.push('', ...result.warnings.map((i) => formatIssue('warn', i, style)));
   if (result.fixes.length > 0) {
     lines.push('', style.bold('Fixed automatically when rendering'), ...result.fixes.map((f) => `  - ${f}`));
   }
@@ -363,12 +374,27 @@ export interface ErrorView {
   message: string;
   hint: string | null;
   exitCode: number;
+  /** The same details as the JSON error. Only the problems of a refused storyboard are printed. */
+  details?: Record<string, unknown> | null;
 }
 
-/** "error [CODE]: message" and a hint line. */
+function isIssue(value: unknown): value is Issue {
+  return (
+    isRecord(value) &&
+    typeof value.path === 'string' &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string'
+  );
+}
+
+/** "error [CODE]: message", the problems of a refused storyboard, and a hint line. */
 export function formatError(raw: ErrorView, style: Style): string {
   const error = clean(raw);
   const lines = [`${style.red(`error [${error.code}]`)}: ${error.message}`];
+  // The hint of this error says to fix the listed problems, so list them, as `validate` does.
+  const problems = error.code === 'GROUNDING_FAILED' ? error.details?.errors : undefined;
+  if (Array.isArray(problems))
+    lines.push(...problems.filter(isIssue).map((i) => formatIssue('error', i, style)));
   if (error.hint) lines.push(`${style.cyan('hint')}: ${error.hint}`);
   return `${lines.join('\n')}\n`;
 }
