@@ -7,7 +7,12 @@ import { estimateTokens } from '../core/cost.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
 import { storyboardJsonSchema } from '../core/storyboard-schema.ts';
-import { AUTHORING_GUIDE, type ValidationResult, validateStoryboard } from '../storyboard/index.ts';
+import {
+  AUTHORING_GUIDE,
+  AUTHORING_VALUES,
+  type ValidationResult,
+  validateStoryboard,
+} from '../storyboard/index.ts';
 import { commandLine } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
 import { type Prepared, packFor, prepare } from './prepare.ts';
@@ -38,11 +43,12 @@ export async function prepareAuthoring(
   const schema = storyboardJsonSchema();
   await writeFile(files.guide, guide, { mode: 0o600 });
   await writeRunJson(files.schema, schema);
-  const readTokens = estimateTokens(pack.markdown + guide + JSON.stringify(schema, null, 2));
+  // The guide names every field and every allowed value, so the schema is not part of what an agent reads.
+  const readTokens = estimateTokens(pack.markdown + guide);
   ctx.progress({
     stage: 'analyze',
     status: 'done',
-    message: `Wrote the evidence pack (${pack.includedHunks.length} hunks). The agent reads about ${readTokens} tokens: the evidence pack, the guide and the schema.`,
+    message: `Wrote the evidence pack (${pack.includedHunks.length} hunks). The agent reads about ${readTokens} tokens: the evidence pack and the guide.`,
   });
   return {
     runId: ctx.runId,
@@ -92,7 +98,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
     `Style: ${p.config.style}. Narration language: ${p.config.language}.`,
     '',
     '1. Read `evidence.md` in this folder. It lists every fact you may use, each with an id.',
-    '2. Write `storyboard.json` that matches `storyboard.schema.json`, following the rules below.',
+    '2. Write `storyboard.json`, following the rules below. They show every field and list every allowed value, so you do not need to read `storyboard.schema.json`. Open that file only when the check reports a schema error that its message does not explain.',
     `3. Check it: \`${validate}\` (fix every error it reports).`,
     `4. Render it: \`${generate}\`.`,
     ...(followUp
@@ -109,6 +115,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
     'so they become citable evidence (TASK, NOTES).',
     '',
     AUTHORING_GUIDE,
+    AUTHORING_VALUES,
   ].join('\n');
 }
 

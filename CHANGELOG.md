@@ -4,6 +4,11 @@ All notable changes to MergeStory are listed here, newest first.
 
 ## Unreleased
 
+### Skill and plugin
+
+- The skill no longer sends the agent to `storyboard.schema.json`. The agent follows `AUTHORING.md`
+  and opens the schema only for a schema error that the message does not explain.
+
 ### Engine
 
 - **Added:** `mergestory runs delete --older-than <days>` removes every run and finished background
@@ -24,6 +29,10 @@ All notable changes to MergeStory are listed here, newest first.
   Before, the review scene, the watch page and the comment showed the file and line twice.
 - **Changed:** the authoring guide asks that the detail of a review item does not repeat its title
   or its file and line.
+- **Changed:** `AUTHORING.md` lists every allowed value of a storyboard, adds three field rules from
+  the schema, and says that the schema does not have to be read. So an agent no longer has to read
+  `storyboard.schema.json`, about 45 KB, for each video. The file is still written. The log line of
+  `analyze` counts the evidence pack and the guide.
 
 ## 1.5.1
 

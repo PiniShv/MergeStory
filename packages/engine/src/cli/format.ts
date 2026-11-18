@@ -249,7 +249,7 @@ export function formatAuthoring(
     '',
     style.bold('Next steps'),
     '  1. Read AUTHORING.md and evidence.md.',
-    `  2. Write ${storyboardPath} so that it follows storyboard.schema.json.`,
+    `  2. Write ${storyboardPath}, following AUTHORING.md. It names every field and every allowed value.`,
     `  3. Check it: mergestory validate ${shellQuote(storyboardPath)} ${source}${refs}`,
     `  4. Make the video: mergestory generate ${source}${refs} --storyboard ${shellQuote(storyboardPath)}`,
   ];

@@ -255,8 +255,8 @@ It writes four files into the output folder:
 |---|---|
 | `analysis.json` | The analysis: file roles, components, symbols, risks and the evidence index. |
 | `evidence.md` | The evidence pack: every fact a storyboard may cite, each with an id. Text from the pull request inside it is untrusted data. |
-| `AUTHORING.md` | The guide for writing a storyboard, with the exact `validate` and `generate` commands for this change. |
-| `storyboard.schema.json` | The JSON Schema of a storyboard. |
+| `AUTHORING.md` | The guide for writing a storyboard, with the exact `validate` and `generate` commands for this change. It names every field and every allowed value of a storyboard. |
+| `storyboard.schema.json` | The JSON Schema of a storyboard. The guide covers what a writer needs, so this file is for looking up a schema error. |
 
 The output ends with the next steps. If you passed context flags, it reminds you to give the same flags to
 `validate` and `generate`.

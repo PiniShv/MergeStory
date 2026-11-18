@@ -3,7 +3,24 @@
  * AUTHORING.md for anyone who writes a storyboard by hand, so it speaks to the writer directly.
  */
 
-import { STORYBOARD_LIMITS as LIMITS, type Visual } from '../core/storyboard-schema.ts';
+import {
+  ArchitectureVisualSchema,
+  BrowserVisualSchema,
+  CodeRefSchema,
+  CodeVisualSchema,
+  FlowVisualSchema,
+  STORYBOARD_LIMITS as LIMITS,
+  NodeKindSchema,
+  PanelSchema,
+  SceneRoleSchema,
+  SceneSchema,
+  SeveritySchema,
+  StoryboardSchema,
+  TerminalLineSchema,
+  TitleVisualSchema,
+  TransitionSchema,
+  type Visual,
+} from '../core/storyboard-schema.ts';
 
 const FENCE = '```';
 
@@ -294,4 +311,40 @@ The ids and paths below are examples. Use the ones from your evidence pack. Ever
 ${FENCE}json
 ${JSON.stringify(EXAMPLE_STORYBOARD, null, 2)}
 ${FENCE}
+`;
+
+const values = (schema: { options: readonly string[] }): string => schema.options.join(', ');
+const rule = (schema: { description?: string }): string => schema.description ?? '';
+
+/**
+ * Every field that takes one of a fixed set of values, with all of the values, and the rules that the
+ * guide leaves to the descriptions in the schema. With the shapes and the example of the guide,
+ * AUTHORING.md then names every field and every value, so its reader does not have to open the JSON
+ * Schema. The lists and the rules are read from the schema. A model gets the schema itself, so this is
+ * not part of its prompt.
+ */
+export const AUTHORING_VALUES = `## Allowed values
+
+These fields take one of a fixed set of values. Each list is complete.
+
+- "style": ${values(StoryboardSchema.shape.style)}.
+- "role" of a scene: ${values(SceneRoleSchema)}.
+- "transition" of a scene: ${values(TransitionSchema)}.
+- "severity" of a review item: ${values(SeveritySchema)}.
+- "side" of a CodeRef: ${values(CodeRefSchema.shape.side)}.
+- "mode" of a code visual: ${values(CodeVisualSchema.shape.mode)}.
+- "direction" of an architecture visual: ${values(ArchitectureVisualSchema.shape.direction)}.
+- "kind" of an architecture node or a flow actor: ${values(NodeKindSchema)}.
+- "status" of an architecture node: ${values(ArchitectureVisualSchema.shape.nodes.element.shape.status)}.
+- "status" of an architecture edge: ${values(ArchitectureVisualSchema.shape.edges.element.shape.status)}.
+- "kind" of a flow step: ${values(FlowVisualSchema.shape.steps.element.shape.kind)}.
+- "kind" of a before-after panel: ${values(PanelSchema.shape.kind)}.
+- "kind" of a terminal line: ${values(TerminalLineSchema.shape.kind)}.
+- "kind" of a browser block: ${values(BrowserVisualSchema.shape.blocks.element.shape.kind)}.
+
+## More field rules
+
+- "title" of a scene: ${rule(SceneSchema.shape.title)}
+- "chips" of a title visual: ${rule(TitleVisualSchema.shape.chips)}
+- "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}
 `;
