@@ -437,7 +437,8 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
     expect(code).toBe(0);
     const args = analyzeMock.mock.calls[0]?.[0].followUp?.args ?? [];
-    for (const flag of ['--repro-file', '--redact', '--screenshots-dir', '--log']) expect(args).toContain(flag);
+    for (const flag of ['--repro-file', '--redact', '--screenshots-dir', '--log'])
+      expect(args).toContain(flag);
     expect(args).toContain(join(dir, 'shots'));
     expect(args.some((a) => a.startsWith(`${join(dir, 'run.log')}:key `))).toBe(true);
     expect(args.join('\n')).not.toContain(token);

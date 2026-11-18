@@ -1110,9 +1110,9 @@ describe('prepareAuthoring: AUTHORING.md', () => {
       'Give both commands the same source and the same `--base`, `--head`, `--task-file`',
     );
     expect(guide).toContain(
-      '`--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` and `--redact` flags as the analysis',
+      '`--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` and `--log` flags as the analysis',
     );
-    expect(guide).toContain('They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1');
+    expect(guide).toContain('They create the ids TASK, NOTES, T1, REPRO, SS1, RC1 and L1');
     expect(guide).toContain('Longest video: 150 seconds.');
   });
 });
