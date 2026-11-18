@@ -1474,7 +1474,13 @@ describe('generate: a wide screenshot', () => {
           id: 'shot',
           role: 'under-the-hood',
           narration: [{ text: 'The page shows the failure.', evidence: ['SS1'] }],
-          visual: { type: 'screenshot', screenshotId: 'SS1', caption: 'The page' },
+          visual: {
+            type: 'screenshot',
+            screenshotId: 'SS1',
+            caption: 'The page',
+            highlights: [],
+            focus: null,
+          },
         },
       ],
     };

@@ -599,6 +599,9 @@ describe('buildRenderPlan: other visual types', () => {
       if (compare.before.kind !== 'screenshot') throw new Error('expected a screenshot panel');
       expect(Object.keys(compare.before).sort()).toEqual(['image', 'kind', 'label']);
       expect(JSON.stringify(plan)).not.toContain('highlights');
+    });
+  });
+
   it('gets a wide picture 2560 wide, and an error from making it smaller names the screenshot', async (ctx) => {
     const tools = await resolveFfmpeg(testConfig()).catch(() => null);
     const file = join(dir, 'wide-made.png');
