@@ -120,7 +120,7 @@ export interface ResolvedImage {
 
 /** The frames of one use of a recording, as JPEG files in a folder of the run folder (f-00001.jpg ...). */
 export interface FrameSet {
-  /** Folder relative to the run folder, e.g. "recording-frames/s-s3". Also the key in `RenderPlan.media`. */
+  /** Folder relative to the run folder, e.g. "recording-frames/s-3". Also the key in `RenderPlan.media`. */
   dir: string;
   count: number;
   /** Frames per second of the recording. */

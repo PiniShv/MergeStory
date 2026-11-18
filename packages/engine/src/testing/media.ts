@@ -104,16 +104,37 @@ const CLIP_ENCODERS: Record<ClipCodec, string[]> = {
 export async function makeClip(
   ffmpeg: string,
   file: string,
-  options: { codec?: ClipCodec; seconds?: number; size?: string; audioOnly?: boolean } = {},
+  options: { codec?: ClipCodec; seconds?: number; size?: string; audioOnly?: boolean; frames?: number } = {},
 ): Promise<boolean> {
   const seconds = options.seconds ?? 2;
   const source = options.audioOnly
     ? ['-f', 'lavfi', '-i', `sine=frequency=440:duration=${seconds}`]
     : ['-f', 'lavfi', '-i', `testsrc=duration=${seconds}:size=${options.size ?? '320x240'}:rate=12`];
   const encoder = options.audioOnly ? [] : CLIP_ENCODERS[options.codec ?? 'h264'];
-  const result = await runCommand(ffmpeg, ['-v', 'error', '-y', ...source, ...encoder, file], {
+  const limit = options.frames ? ['-frames:v', String(options.frames)] : [];
+  const result = await runCommand(ffmpeg, ['-v', 'error', '-y', ...source, ...encoder, ...limit, file], {
     allowFailure: true,
     timeoutMs: 60_000,
   });
   return result.code === 0;
+}
+
+/** Run FFmpeg with these arguments. Returns false when it fails, for example when an encoder is missing. */
+export async function ffmpegTo(ffmpeg: string, args: string[]): Promise<boolean> {
+  const result = await runCommand(ffmpeg, ['-v', 'error', '-y', ...args], {
+    allowFailure: true,
+    timeoutMs: 60_000,
+  });
+  return result.code === 0;
+}
+
+/** The average colour of an image file, as [red, green, blue], decoded by FFmpeg. */
+export async function averageColor(ffmpeg: string, file: string): Promise<[number, number, number]> {
+  const result = await runCommand(
+    ffmpeg,
+    ['-v', 'error', '-i', file, '-vf', 'scale=1:1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+    { timeoutMs: 60_000 },
+  );
+  const [red = 0, green = 0, blue = 0] = result.stdoutBuffer;
+  return [red, green, blue];
 }

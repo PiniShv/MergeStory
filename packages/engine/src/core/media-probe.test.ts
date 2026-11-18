@@ -1,12 +1,12 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, type TestContext } from 'vitest';
 import { testConfig } from '../testing/context.ts';
-import { makeClip } from '../testing/media.ts';
+import { ffmpegTo, makeClip } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { resolveFfmpeg } from './binaries.ts';
-import { DECODE_WHITELIST_ARGS, INPUT_WHITELIST_ARGS, probeRecording } from './media-probe.ts';
+import { DECODER_ARGS, INPUT_WHITELIST_ARGS, probeRecording } from './media-probe.ts';
 import { runCommand } from './process.ts';
 
 const tools = await resolveFfmpeg(testConfig()).catch(() => null);
@@ -19,7 +19,14 @@ describe('whitelists', () => {
       '-format_whitelist',
       'mov,matroska',
     ]);
-    expect(DECODE_WHITELIST_ARGS).toEqual(['-codec_whitelist', 'h264,vp8,vp9']);
+    expect(DECODER_ARGS).toEqual([
+      '-codec_whitelist',
+      'h264,vp8,vp9',
+      '-max_pixels',
+      '40000000',
+      '-threads',
+      '4',
+    ]);
   });
 });
 
@@ -30,7 +37,7 @@ describe.skipIf(tools === null)('probeRecording', () => {
     expect(probeRecording(tools!.ffprobe, at(name))).rejects.toMatchObject({
       code: 'USAGE',
       message: expect.stringContaining(name),
-      hint: expect.stringContaining('MP4 (H.264) or WebM'),
+      hint: expect.stringContaining('Its only other track may be sound in AAC, MP3, Opus or Vorbis'),
     });
 
   beforeAll(async () => {
@@ -48,8 +55,8 @@ describe.skipIf(tools === null)('probeRecording', () => {
     expect(probed.sizeBytes).toBeGreaterThan(0);
   });
 
-  it('accepts a VP9 WebM', async () => {
-    if (!(await makeClip(tools!.ffmpeg, at('a.webm'), { codec: 'vp9' }))) return;
+  it('accepts a VP9 WebM', async (ctx) => {
+    if (!(await makeClip(tools!.ffmpeg, at('a.webm'), { codec: 'vp9' }))) ctx.skip();
     expect(await probeRecording(tools!.ffprobe, at('a.webm'))).toMatchObject({ codec: 'vp9' });
   });
 
@@ -73,14 +80,68 @@ describe.skipIf(tools === null)('probeRecording', () => {
     });
   });
 
-  it('refuses HEVC video', async () => {
-    if (!(await makeClip(tools!.ffmpeg, at('h265.mp4'), { codec: 'hevc' }))) return;
+  it('refuses HEVC video, naming the track', async (ctx) => {
+    if (!(await makeClip(tools!.ffmpeg, at('h265.mp4'), { codec: 'hevc' }))) ctx.skip();
     await expect(probeRecording(tools!.ffprobe, at('h265.mp4'))).rejects.toMatchObject({
-      message: expect.stringContaining('hevc'),
+      message: expect.stringContaining('one of its tracks is hevc, which is not supported'),
     });
   });
 
-  it('measures a WebM that does not say how long it is, as a recording from a browser often does not', async () => {
+  it('refuses a concat script that names a file next to it: the container list is really passed', async () => {
+    // Without -format_whitelist, FFmpeg reads the real.mp4 that this script names, and the file is accepted.
+    expect(await makeClip(tools!.ffmpeg, at('real.mp4'), { seconds: 1 })).toBe(true);
+    await writeFile(at('c.mp4'), 'ffconcat version 1.0\nfile real.mp4\n');
+    await refused('c.mp4');
+  });
+
+  /** A clip with H.264 or VP8 video and one sound track. */
+  async function withSound(ctx: TestContext, name: string, args: string[]): Promise<void> {
+    const sound = ['-f', 'lavfi', '-i', 'sine=duration=1'];
+    const picture = ['-f', 'lavfi', '-i', 'testsrc=duration=1:size=320x240:rate=12'];
+    if (!(await ffmpegTo(tools!.ffmpeg, [...picture, ...sound, ...args, at(name)]))) ctx.skip();
+  }
+
+  it('masks an e-mail address in the name of a file that it refuses', async () => {
+    await writeFile(at('jane.doe@example.com.mp4'), 'not a video');
+    const error = await probeRecording(tools!.ffprobe, at('jane.doe@example.com.mp4')).catch(
+      (err: unknown) => err,
+    );
+    expect(error).toMatchObject({ code: 'USAGE', message: expect.stringContaining('j•••@example.com.mp4') });
+    expect(String((error as Error).message)).not.toContain('jane.doe');
+  });
+
+  it('refuses a track that is not allowed, naming it', async (ctx) => {
+    await withSound(ctx, 'flac.mkv', ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'flac']);
+    await expect(probeRecording(tools!.ffprobe, at('flac.mkv'))).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('one of its tracks is flac, which is not supported'),
+    });
+  });
+
+  it.for([
+    { name: 'aac.mp4', codec: 'h264', args: ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'aac'] },
+    {
+      name: 'mp3.mp4',
+      codec: 'h264',
+      args: ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-c:a', 'libmp3lame'],
+    },
+    { name: 'opus.webm', codec: 'vp8', args: ['-c:v', 'libvpx', '-c:a', 'libopus'] },
+  ])('accepts a recording with sound: $name', async ({ name, codec, args }, ctx) => {
+    await withSound(ctx, name, args);
+    expect(await probeRecording(tools!.ffprobe, at(name))).toMatchObject({ codec, width: 320, height: 240 });
+  });
+
+  it('refuses a clip shorter than 0.2 seconds, and accepts one of three frames', async () => {
+    expect(await makeClip(tools!.ffmpeg, at('one.mp4'), { frames: 1 })).toBe(true);
+    await expect(probeRecording(tools!.ffprobe, at('one.mp4'))).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('it is shorter than 0.2 seconds'),
+    });
+    expect(await makeClip(tools!.ffmpeg, at('three.mp4'), { frames: 3 })).toBe(true);
+    expect((await probeRecording(tools!.ffprobe, at('three.mp4'))).durationSec).toBeGreaterThanOrEqual(0.2);
+  });
+
+  it('measures a WebM that does not say how long it is, as a recording from a browser often does not', async (ctx) => {
     // Written to a pipe, FFmpeg cannot go back and put the length into the header.
     const piped = await runCommand(
       tools!.ffmpeg,
@@ -90,7 +151,7 @@ describe.skipIf(tools === null)('probeRecording', () => {
       ],
       { allowFailure: true, timeoutMs: 60_000 },
     );
-    if (piped.code !== 0) return;
+    if (piped.code !== 0) ctx.skip();
     await writeFile(at('browser.webm'), piped.stdoutBuffer);
     const probed = await probeRecording(tools!.ffprobe, at('browser.webm'));
     expect(probed).toMatchObject({ codec: 'vp8', width: 320, height: 240 });
@@ -109,14 +170,14 @@ describe.skipIf(process.platform === 'win32')('probeRecording, with answers that
     await rm(dir, { recursive: true, force: true });
   });
 
-  /** A program that prints `header` when it is asked for the streams and `packets` when asked for the packets. */
+  /** A program that prints `header` when it is asked for the streams and `packets` when asked for the packets. It logs its arguments, one call per line, in `<path>.log`. */
   async function fakeProbe(name: string, header: object, packets: string): Promise<string> {
     const path = join(dir, name);
     await writeFile(join(dir, `${name}.json`), JSON.stringify(header));
     await writeFile(join(dir, `${name}.csv`), packets);
     await writeFile(
       path,
-      `#!/bin/sh\ncase "$*" in *packet=*) cat '${path}.csv' ;; *) cat '${path}.json' ;; esac\n`,
+      `#!/bin/sh\necho "$*" >> '${path}.log'\ncase "$*" in *packet=*) cat '${path}.csv' ;; *) cat '${path}.json' ;; esac\n`,
       { mode: 0o755 },
     );
     return path;
@@ -150,6 +211,51 @@ describe.skipIf(process.platform === 'win32')('probeRecording, with answers that
     await expect(probeRecording(huge, '/clips/a.webm')).rejects.toMatchObject({
       code: 'USAGE',
       message: expect.stringContaining('40 megapixels'),
+    });
+  });
+
+  it('passes the container, codec and picture limits to both ffprobe calls, before the file', async () => {
+    const probe = await fakeProbe('args', video(640, 360), '0.000000,0.040000\n1.960000,0.040000\n');
+    await probeRecording(probe, '/clips/a.mp4');
+    const calls = (await readFile(`${probe}.log`, 'utf8')).trim().split('\n');
+    expect(calls).toHaveLength(2);
+    for (const call of calls) {
+      expect(call).toMatch(
+        /^-v error -protocol_whitelist file -format_whitelist mov,matroska -codec_whitelist h264,vp8,vp9,aac,mp3,mp3float,opus,vorbis -max_pixels 40000000 -select_streams v:0 .* -i \/clips\/a\.mp4$/,
+      );
+    }
+  });
+
+  it.each([
+    [90, true],
+    [-90, true],
+    [270, true],
+    [180, false],
+    [null, false],
+  ])('reports the size of the upright picture for a rotation of %s degrees', async (rotation, swapped) => {
+    const header = {
+      streams: [
+        {
+          codec_name: 'h264',
+          width: 640,
+          height: 360,
+          ...(rotation === null ? {} : { side_data_list: [{ rotation }] }),
+        },
+      ],
+      format: { duration: '3' },
+    };
+    const probe = await fakeProbe(`rotation${rotation}`, header, '');
+    expect(await probeRecording(probe, '/clips/a.mp4')).toMatchObject(
+      swapped ? { width: 360, height: 640 } : { width: 640, height: 360 },
+    );
+  });
+
+  it('says "too long" when the list of packets does not fit, not that the file is damaged', async () => {
+    // More than 16 MB of packet lines, for a file that gives no length.
+    const probe = await fakeProbe('endless', video(640, 360), '0.000000,0.040000\n'.repeat(1_000_000));
+    await expect(probeRecording(probe, '/clips/a.mp4')).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('it is too long'),
     });
   });
 });

@@ -15,7 +15,12 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { toMergeStoryError } from '../core/errors.ts';
 import { runCommand } from '../core/process.ts';
-import { RECORDING_FPS } from '../core/recording-frames.ts';
+import {
+  frameDirFor,
+  PANEL_CLIP_DELAY_SEC,
+  RECORDING_FPS,
+  scenePanelStarts,
+} from '../core/recording-frames.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
 import { loadTheme } from '../core/theme.ts';
 import type { ProgressEvent } from '../core/types.ts';
@@ -705,7 +710,7 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
         const out = await outDir();
         const clip = join(dir, `clip-${n}.mp4`);
         expect(await makeClip(tools!.ffmpeg, clip, { seconds: 6, size: '640x360' })).toBe(true);
-        const dirName = 'recording-frames/s1';
+        const dirName = 'recording-frames/s-1';
         const made = await extractFrames(tools!.ffmpeg, {
           recording: {
             id: 'RC1',
@@ -814,12 +819,158 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
 
       it('names a frame file that is missing', async () => {
         const { out, plan } = await recordingRun();
-        await rm(join(out, 'recording-frames/s1/f-00001.jpg'));
+        await rm(join(out, 'recording-frames/s-1/f-00001.jpg'));
         await expect(renderWith(plan, out, 1)).rejects.toMatchObject({
           code: 'RENDER_FAILED',
-          message: expect.stringContaining('recording-frames/s1/f-00001.jpg'),
+          message: expect.stringContaining('recording-frames/s-1/f-00001.jpg'),
         });
       }, 60_000);
+    });
+
+    describe('recordings in a later scene', () => {
+      const FPS = 12;
+      const W = 640;
+      const H = 360;
+      const clipOf = async (name: string, luma: string): Promise<string> => {
+        const path = join(dir, `${name}-${n++}.mp4`);
+        const made = await runCommand(
+          tools!.ffmpeg,
+          [
+            ...['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:size=320x240:rate=12:duration=6'],
+            ...['-vf', `format=yuv420p,geq=lum='${luma}':cb=128:cr=128`],
+            ...['-c:v', 'libx264', '-pix_fmt', 'yuv420p', path],
+          ],
+          { allowFailure: true, timeoutMs: 60_000 },
+        );
+        return made.code === 0 ? path : '';
+      };
+      const cut = async (
+        path: string,
+        out: string,
+        dirName: string,
+        box: { width: number; height: number },
+      ) => ({
+        dir: dirName,
+        ...(await extractFrames(tools!.ffmpeg, {
+          recording: {
+            id: 'RC1',
+            path,
+            caption: '',
+            moment: 'other',
+            durationSec: 6,
+            width: 320,
+            height: 240,
+            codec: 'h264',
+          },
+          trim: { start: 0, end: 6 },
+          zoom: null,
+          box,
+          outDir: join(out, dirName),
+        })),
+      });
+
+      it('plays each clip from its own start, on scene time, in a scene that is not the first', async () => {
+        // The brightness of a clip rises with its time (up) or falls with it (down), so the picture tells the clip time.
+        const up = await clipOf('up', '16+36*T');
+        const down = await clipOf('down', '220-36*T');
+        expect(up).not.toBe('');
+        expect(down).not.toBe('');
+        const out = await outDir();
+        const base = minimalPlan(13, W, H, FPS);
+        const title = { ...base.scenes[0]!, durationSec: 2 };
+        const beats = [
+          { index: 0, startSec: 6.8, durationSec: 1, text: 'Before.' },
+          { index: 1, startSec: 8.4, durationSec: 1, text: 'After.' },
+        ];
+        const compare = {
+          ...title,
+          id: 's3',
+          role: 'under-the-hood' as const,
+          startSec: 6,
+          durationSec: 6,
+          beats,
+          transitionIn: { type: 'none' as const, durationSec: 0 },
+        };
+        const starts = scenePanelStarts(compare);
+        const panelFrames = async (side: 'before' | 'after', clip: string, startSec: number) => ({
+          ...(await cut(clip, out, frameDirFor(3, side), { width: 280, height: 200 })),
+          fps: RECORDING_FPS,
+          startSec,
+          speed: 1,
+        });
+        const plan: RenderPlan = {
+          ...base,
+          scenes: [
+            title,
+            {
+              ...title,
+              id: 's2',
+              role: 'under-the-hood',
+              startSec: 2,
+              durationSec: 4,
+              beats: [],
+              visual: {
+                type: 'recording',
+                caption: null,
+                frames: {
+                  ...(await cut(up, out, frameDirFor(2, null), { width: 640, height: 300 })),
+                  fps: RECORDING_FPS,
+                  startSec: 0.5,
+                  speed: 1,
+                },
+              },
+            },
+            {
+              ...compare,
+              visual: {
+                type: 'before-after',
+                caption: null,
+                before: {
+                  label: 'Before',
+                  kind: 'recording',
+                  frames: await panelFrames('before', up, starts.before + PANEL_CLIP_DELAY_SEC),
+                },
+                after: {
+                  label: 'After',
+                  kind: 'recording',
+                  frames: await panelFrames('after', down, starts.after + PANEL_CLIP_DELAY_SEC),
+                },
+              },
+            },
+          ],
+          outro: { ...base.outro, startSec: 12, durationSec: 1 },
+        };
+        const video = (
+          await new ChromiumRenderer(config, { workers: 1 }).render(
+            { plan, audioPath: null, outDir: out, quality: 'draft' },
+            testContext({ config, home: out, runDir: out }).ctx,
+          )
+        ).videoPath;
+        const frames = await grayFrames(video, W, H);
+        const gray = (t: number, x: number, y: number): number => frames[Math.round(t * FPS)]![y * W + x]!;
+        // The brightness is about 42 levels per second of clip, so a level tells the second of the clip.
+        const LEVELS_PER_SEC = 42;
+        // The recording scene starts at 2 s and its clip at 0.5 s into the scene: video second 3.5 is clip second 1.
+        // Video time instead of scene time would show clip second 3.
+        for (const [t, clipSec] of [
+          [3.5, 1],
+          [5, 2.5],
+        ] as const) {
+          expect(Math.abs(gray(t, 320, 175) - clipSec * LEVELS_PER_SEC), `video second ${t}`).toBeLessThan(
+            14,
+          );
+        }
+        // Each panel plays its own clip from its own start: the left one rises, the right one falls, and
+        // neither shows the "Image unavailable" picture, which never changes.
+        const before = [9, 10, 11].map((t) => gray(t, 170, 185));
+        const after = [9, 10, 11].map((t) => gray(t, 470, 185));
+        expect(before[1]!).toBeGreaterThan(before[0]! + 15);
+        expect(before[2]!).toBeGreaterThan(before[1]! + 15);
+        expect(after[1]!).toBeLessThan(after[0]! - 15);
+        expect(after[2]!).toBeLessThan(after[1]! - 15);
+        // The left clip has only run for about 0.75 s at video second 8: it is still dark, not at its end.
+        expect(gray(8, 170, 185)).toBeLessThan(70);
+      }, 180_000);
     });
 
     it('renders still frames', async () => {

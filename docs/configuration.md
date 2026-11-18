@@ -283,7 +283,8 @@ These settings change what else is hidden:
   - Case is ignored, because this is a privacy control and it errs on the side of hiding more.
   - `\` counts as `/`. A leading `./` and spaces around a pattern are ignored. A pattern that is blank or
     only `/` hides nothing.
-- `privacy.maskEmails` keeps e-mail addresses out of everything people see. It is on by default.
+- `privacy.maskEmails` keeps e-mail addresses out of captions, narration, code and logs. It is on by default.
+  Screenshots and recordings are shown as they are.
 - `privacy.llmContext` set to `minimal` keeps code away from a model. The model then gets only metadata,
   paths and symbol names, and writes a storyboard without code scenes.
 

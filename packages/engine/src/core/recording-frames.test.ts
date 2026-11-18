@@ -28,6 +28,28 @@ describe('frameIndexAt', () => {
     expect(frameIndexAt({ ...set, speed: 0.5 }, 3)).toBe(12);
   });
 
+  it('gives the frame itself for a time that lies exactly on the frame grid', () => {
+    const half = { startSec: 0.5, speed: 1, fps: 12, count: 240 };
+    // 0.5 + n / 12 is often a hair below the exact value, which plain Math.floor turns into n - 1.
+    for (let n = 0; n < 240; n++) expect(frameIndexAt(half, 0.5 + n / 12)).toBe(n);
+    expect(frameIndexAt(half, 0.6666666666666666)).toBe(2);
+    expect(frameIndexAt(set, 1.04)).toBe(0);
+    expect(frameIndexAt(set, 1 + 1 / 12)).toBe(1);
+  });
+
+  it('still rounds down between two frames', () => {
+    // Math.round would give 1 here.
+    expect(frameIndexAt(set, 1 + 0.9 / 12)).toBe(0);
+    expect(frameIndexAt(set, 1 + 1.9 / 12)).toBe(1);
+  });
+
+  it('keeps frames on the grid at other speeds', () => {
+    for (const speed of [0.5, 4]) {
+      const fast = { startSec: 0.5, speed, fps: 12, count: 2000 };
+      for (let n = 0; n < 240; n++) expect(frameIndexAt(fast, 0.5 + n / (12 * speed))).toBe(n);
+    }
+  });
+
   it('does not fail on a time that is not a number', () => {
     expect(frameIndexAt(set, Number.NaN)).toBe(0);
   });
@@ -61,24 +83,20 @@ describe('nearestFrame', () => {
 });
 
 describe('names', () => {
-  it('numbers files from 1 and keeps folder names plain', () => {
+  it('numbers files from 1 and names a folder by the scene place and the side', () => {
     expect(frameFileName(0)).toBe('f-00001.jpg');
-    expect(frameDirFor('s3', null)).toBe('recording-frames/s-s3');
-    expect(frameDirFor('s3', 'after')).toBe('recording-frames/s-s3.after');
-    expect(frameDirFor('../x/y', null)).toBe('recording-frames/s-_2e__2e__2f_x_2f_y');
-    // Two ids, or an id and a side, never share a folder.
-    const dirs = [
-      frameDirFor('a b', null),
-      frameDirFor('a_b', null),
-      frameDirFor('a.b', null),
-      frameDirFor('a', 'before'),
-      frameDirFor('a-before', null),
-      frameDirFor('a.before', null),
-      frameDirFor('', null),
-      frameDirFor('s', null),
-    ];
+    expect(frameDirFor(3, null)).toBe('recording-frames/s-3');
+    expect(frameDirFor(12, 'after')).toBe('recording-frames/s-12.after');
+    expect(frameDirFor(1, 'before')).toBe('recording-frames/s-1.before');
+  });
+
+  it('never gives two uses the same folder', () => {
+    const dirs = [1, 2, 10, 11].flatMap((n) => [
+      frameDirFor(n, null),
+      frameDirFor(n, 'before'),
+      frameDirFor(n, 'after'),
+    ]);
     expect(new Set(dirs).size).toBe(dirs.length);
-    for (const dir of dirs) expect(dir).toMatch(/^recording-frames\/s-[A-Za-z0-9_.-]*$/);
   });
 });
 

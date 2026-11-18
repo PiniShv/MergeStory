@@ -1,7 +1,7 @@
 // Captures the basket page before and after the fix, the way a person uses it.
 // usage: node capture.mjs <output folder>
 // Writes before.png, after.png, before.mp4 and after.mp4. Needs a Chrome or Chromium
-// (MERGESTORY_BROWSER_PATH) and FFmpeg on the PATH. Nothing is written inside the repository.
+// (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,6 +19,7 @@ if (!browserPath) {
   console.error('Set MERGESTORY_BROWSER_PATH to a Chrome or Chromium executable, then run this again.');
   process.exit(1);
 }
+const ffmpeg = process.env.MERGESTORY_FFMPEG_PATH || 'ffmpeg';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const outDir = resolve(out);
 mkdirSync(outDir, { recursive: true });
@@ -49,24 +50,32 @@ for (const side of ['before', 'after']) {
   await type('#qty-bar', '3');
   await hold(14);
   await page.screenshot({ path: join(outDir, `${side}.png`) });
-  execFileSync(
-    'ffmpeg',
-    [
-      '-y',
-      '-loglevel',
-      'error',
-      '-framerate',
-      '10',
-      '-i',
-      join(work, 'f-%04d.png'),
-      '-c:v',
-      'libx264',
-      '-pix_fmt',
-      'yuv420p',
-      join(outDir, `${side}.mp4`),
-    ],
-    { stdio: 'inherit' },
-  );
+  try {
+    execFileSync(
+      ffmpeg,
+      [
+        '-y',
+        '-loglevel',
+        'error',
+        '-framerate',
+        '10',
+        '-i',
+        join(work, 'f-%04d.png'),
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        join(outDir, `${side}.mp4`),
+      ],
+      { stdio: 'inherit' },
+    );
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+    console.error(
+      `FFmpeg could not be started (${ffmpeg}). Set MERGESTORY_FFMPEG_PATH to an ffmpeg executable.`,
+    );
+    process.exit(1);
+  }
   rmSync(work, { recursive: true, force: true });
 }
 await browser.close();

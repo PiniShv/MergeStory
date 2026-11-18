@@ -49,6 +49,8 @@ const WORK_FILE = {
 } as const;
 /** The folder of screen recordings, and the optional file of captions in it. */
 const RECORDINGS_DIR = 'recordings';
+/** File names of the two kinds of file that the probe reads: MP4 or QuickTime, and WebM or Matroska. */
+const RECORDING_EXTENSIONS = ['.mp4', '.m4v', '.mov', '.webm', '.mkv'];
 const CAPTIONS_FILE = 'captions.json';
 
 type AgentFlags = SourceFlags &
@@ -168,16 +170,17 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
 }
 
 /**
- * The recordings in `recordings/` of the work folder: every .mp4 and .webm, sorted by name, so all
- * three commands number them the same way. `captions.json` may hold {"clip.mp4": {"caption": "...",
- * "side": "before"}}. A caption goes in this file, not in a flag, because it may contain a colon.
+ * The recordings in `recordings/` of the work folder: every file with a name from RECORDING_EXTENSIONS,
+ * sorted by name, so all three commands number them the same way. The probe checks what each file
+ * holds. `captions.json` may hold {"clip.mp4": {"caption": "...", "side": "before"}}. A caption goes in
+ * this file, not in a flag, because it may contain a colon.
  */
 async function readRecordings(dir: string): Promise<NonNullable<ContextFlags['recordingFiles']>> {
   const folder = join(dir, RECORDINGS_DIR);
   const names = await readdir(folder).catch(() => null);
   if (names === null) return [];
   const clips = names
-    .filter((name) => ['.mp4', '.webm'].includes(extname(name).toLowerCase()))
+    .filter((name) => RECORDING_EXTENSIONS.includes(extname(name).toLowerCase()))
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   const label = `${RECORDINGS_DIR}/${CAPTIONS_FILE}`;
   const bad = (message: string): MergeStoryError =>
@@ -196,7 +199,9 @@ async function readRecordings(dir: string): Promise<NonNullable<ContextFlags['re
     }
     for (const [file, entry] of Object.entries(json)) {
       if (!clips.includes(file))
-        throw bad(`"${file}" is not an .mp4 or .webm file in the ${RECORDINGS_DIR} folder.`);
+        throw bad(
+          `"${file}" is not a recording (${RECORDING_EXTENSIONS.join(', ')}) in the ${RECORDINGS_DIR} folder.`,
+        );
       if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
         throw bad(`the entry for "${file}" is not an object.`);
       }

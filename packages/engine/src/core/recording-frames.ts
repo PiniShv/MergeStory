@@ -11,6 +11,9 @@ export const FRAMES_DIR = 'recording-frames';
 /** Frames kept per second of the recording. */
 export const RECORDING_FPS = 12;
 
+/** The shortest clip, and the shortest part of one, that can be shown: it still gives two frames. */
+export const MIN_CLIP_SECONDS = 0.2;
+
 /** How long before a beat's audio starts its visual element begins to appear. */
 export const BEAT_LEAD_SEC = 0.15;
 
@@ -46,7 +49,8 @@ export function scenePanelStarts(scene: Pick<PlannedScene, 'startSec' | 'beats'>
 
 /** The index of the frame that shows at scene time `t`: the clip plays from `startSec` at `speed`, and rests on its first and last frame. */
 export function frameIndexAt(set: Pick<FrameSet, 'startSec' | 'speed' | 'fps' | 'count'>, t: number): number {
-  const raw = Math.floor((t - set.startSec) * set.speed * set.fps);
+  // The small step keeps a time that lies exactly on a frame on that frame, whatever the rounding of the product.
+  const raw = Math.floor((t - set.startSec) * set.speed * set.fps + 1e-9);
   return Math.max(0, Math.min(set.count - 1, Number.isFinite(raw) ? raw : 0));
 }
 
@@ -77,10 +81,10 @@ export function frameFileName(index: number): string {
 
 /**
  * Folder of the frames of one use of a recording, relative to the run folder: the scene's own, or one
- * side of a before-after scene. Two different uses never share a folder: a character that is not a
- * letter, a digit or "-" is written as its code between two "_", and the side follows a ".".
+ * side of a before-after scene. It is named by the scene's place in the storyboard (the first scene
+ * is 1) and never by its id: an id can be long, and two ids can differ only by upper and lower case,
+ * which many disks treat as one name.
  */
-export function frameDirFor(sceneId: string, side: 'before' | 'after' | null): string {
-  const safe = sceneId.replace(/[^A-Za-z0-9-]/g, (char) => `_${char.codePointAt(0)?.toString(16)}_`);
-  return `${FRAMES_DIR}/s-${safe}${side ? `.${side}` : ''}`;
+export function frameDirFor(sceneNumber: number, side: 'before' | 'after' | null): string {
+  return `${FRAMES_DIR}/s-${sceneNumber}${side ? `.${side}` : ''}`;
 }

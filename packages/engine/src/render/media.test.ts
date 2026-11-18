@@ -32,19 +32,19 @@ const panel = (label: string, set: FrameSet) => ({ label, kind: 'recording' as c
 const plan = (): RenderPlan =>
   ({
     scenes: [
-      scene('a', 10, { type: 'recording', caption: null, frames: frames('a', 0) }),
+      scene('a', 10, { type: 'recording', caption: null, frames: frames('s-1', 0) }),
       scene('b', 20, {
         type: 'before-after',
         caption: null,
-        before: panel('Before', frames('b-before', 0)),
-        after: panel('After', frames('b-after', 1)),
+        before: panel('Before', frames('s-2.before', 0)),
+        after: panel('After', frames('s-2.after', 1)),
       }),
     ],
   }) as unknown as RenderPlan;
 
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'mergestory-media-'));
-  for (const name of ['a', 'b-before', 'b-after']) {
+  for (const name of ['s-1', 's-2.before', 's-2.after']) {
     await mkdir(join(dir, 'recording-frames', name), { recursive: true });
     for (let i = 0; i < 36; i++)
       await writeFile(join(dir, 'recording-frames', name, frameFileName(i)), `frame ${i}`);
@@ -62,10 +62,10 @@ describe('planWithMedia', () => {
     const original = plan();
     // Video seconds 11 to 12 are 1 to 2 seconds into scene "a": frames 12 to 24 of its clip.
     const copy = await planWithMedia(original, dir, 11, 12);
-    expect(Object.keys(copy.media!['recording-frames/a']!).map(Number)).toEqual(
+    expect(Object.keys(copy.media!['recording-frames/s-1']!).map(Number)).toEqual(
       Array.from({ length: 13 }, (_, i) => 12 + i),
     );
-    expect(copy.media!['recording-frames/a']![12]).toBe(
+    expect(copy.media!['recording-frames/s-1']![12]).toBe(
       `data:image/jpeg;base64,${Buffer.from('frame 12').toString('base64')}`,
     );
     expect(original.media).toBeUndefined();
@@ -73,14 +73,14 @@ describe('planWithMedia', () => {
 
   it('gives a window before or after a scene one frame of it', async () => {
     expect(sizes((await planWithMedia(plan(), dir, 0, 3)).media)).toEqual({
-      'recording-frames/a': 1,
-      'recording-frames/b-before': 1,
-      'recording-frames/b-after': 1,
+      'recording-frames/s-1': 1,
+      'recording-frames/s-2.before': 1,
+      'recording-frames/s-2.after': 1,
     });
     expect(sizes((await planWithMedia(plan(), dir, 40, 44)).media)).toEqual({
-      'recording-frames/a': 1,
-      'recording-frames/b-before': 1,
-      'recording-frames/b-after': 1,
+      'recording-frames/s-1': 1,
+      'recording-frames/s-2.before': 1,
+      'recording-frames/s-2.after': 1,
     });
   });
 
@@ -90,10 +90,10 @@ describe('planWithMedia', () => {
   });
 
   it('names a missing frame file', async () => {
-    await rm(join(dir, 'recording-frames', 'a', frameFileName(0)));
+    await rm(join(dir, 'recording-frames', 's-1', frameFileName(0)));
     await expect(planWithMedia(plan(), dir, 0, 1)).rejects.toMatchObject({
       code: 'RENDER_FAILED',
-      message: expect.stringContaining('recording-frames/a/f-00001.jpg'),
+      message: expect.stringContaining('recording-frames/s-1/f-00001.jpg'),
     });
   });
 

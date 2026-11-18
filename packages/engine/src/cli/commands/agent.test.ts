@@ -177,9 +177,9 @@ describe('agent: the work folder', () => {
       ];
     };
 
-    it('uses every .mp4 and .webm, sorted by name, with the captions of captions.json, in every command', async () => {
+    it('uses every recording file, sorted by name, with the captions of captions.json, in every command', async () => {
       await mkdir(folder(), { recursive: true });
-      for (const name of ['b.webm', 'a.mp4', 'c.MP4', 'notes.txt'])
+      for (const name of ['b.webm', 'a.mp4', 'c.MP4', 'd.mov', 'e.mkv', 'f.m4v', 'notes.txt', 'g.avi'])
         await writeFile(join(folder(), name), 'x');
       await writeFile(
         join(folder(), 'captions.json'),
@@ -193,6 +193,9 @@ describe('agent: the work folder', () => {
           { path: join(folder(), 'a.mp4'), caption: 'a', moment: 'after' },
           { path: join(folder(), 'b.webm'), caption: 'Slow: before the fix', moment: 'before' },
           { path: join(folder(), 'c.MP4'), caption: 'c', moment: 'other' },
+          { path: join(folder(), 'd.mov'), caption: 'd', moment: 'other' },
+          { path: join(folder(), 'e.mkv'), caption: 'e', moment: 'other' },
+          { path: join(folder(), 'f.m4v'), caption: 'f', moment: 'other' },
         ]);
       }
     });
@@ -211,7 +214,11 @@ describe('agent: the work folder', () => {
     });
 
     it.each([
-      ['a file that is not in the folder', { 'gone.mp4': { caption: 'x' } }, 'is not an .mp4 or .webm file'],
+      [
+        'a file that is not in the folder',
+        { 'gone.mp4': { caption: 'x' } },
+        'is not a recording (.mp4, .m4v, .mov, .webm, .mkv) in the recordings folder',
+      ],
       ['an unknown field', { 'a.mp4': { caption: 'x', title: 'y' } }, 'unknown field "title"'],
       ['a side that does not exist', { 'a.mp4': { side: 'middle' } }, 'is not "before" or "after"'],
       ['a caption that is not text', { 'a.mp4': { caption: 5 } }, 'is not a string'],

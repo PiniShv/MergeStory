@@ -90,12 +90,19 @@ accurate, because the engine can quote them as evidence.
   so. A result with `source` set to `ci` is what lets a line say "CI is green".
 - **Screenshots.** PNG or JPEG, checked by content and not by file name. At most 4 MB and 40 megapixels. Only
   the first 6 are used. A file the video cannot draw is refused at once, before any speech is paid for.
+  MergeStory does not look inside a picture: a secret or an e-mail address that shows in a screenshot shows
+  in the video. Check a capture before you pass it.
 - **Recordings.** MP4 (H.264) or WebM (VP8 or VP9), checked by content with `ffprobe` and not by file name.
-  The sound is never used. The defaults are at most 4 recordings, each at most 50 MB and 60 seconds; the
-  first ones are used and a warning names the rest. A file that cannot be read, or that is too large or
-  too long, is refused at once, before any speech is paid for. Change the limits with the `inputs`
-  [settings](configuration.md#inputs-inputs). `ffprobe` is only needed when you pass a recording. Use only
-  recordings that were really captured: MergeStory never makes one up.
+  A QuickTime (`.mov`) or Matroska (`.mkv`) file with one of these three codecs works too.
+  The sound may be AAC, MP3, Opus or Vorbis, and is never used. A file with another kind of track is refused.
+  A recording must be at least 0.2 seconds long, with a picture of at most 40 megapixels. The defaults are at
+  most 4 recordings, each at most 50 MB and 60 seconds; the first ones are used and a warning says so. A
+  file that cannot be read, or that is too large or too long, is refused at once, before any speech is paid
+  for. Change the limits with the `inputs` [settings](configuration.md#inputs-inputs). `analyze` and
+  `validate` need `ffprobe` only when you pass a recording; `generate` always needs FFmpeg and `ffprobe`.
+  Use only recordings that were really captured: MergeStory never makes one up. It does not look inside a
+  recording: a secret or an e-mail address that shows in it shows in the video, and in the pictures that
+  the run folder keeps in `recording-frames/`. Check a capture before you pass it.
 - **Safety.** A file that looks like a credentials file (`.env`, a key file) is refused. Text that looks like
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
@@ -279,7 +286,7 @@ mergestory validate <storyboard> [source] [flags]
 
 Checks a storyboard against a change without rendering anything, without any paid call and without writing
 files. It runs the same checks that `generate --storyboard` runs. Give it the same source, refs and context flags as `analyze`.
-Otherwise the ids `TASK`, `NOTES`, `T1` and `SS1` do not exist, and the lines that cite only them are removed.
+Otherwise the ids `TASK`, `NOTES`, `T1`, `SS1` and `RC1` do not exist, and the lines that cite only them are removed.
 
 | Flag | What it does | Default |
 |---|---|---|
@@ -330,7 +337,7 @@ folder:
 | File | Written by | What it holds |
 |---|---|---|
 | `task.md`, `notes.md`, `tests.json` | the agent | The task, the notes and the test results. Same limits and masking as `--task-file`, `--notes-file` and `--tests-file`. Every agent command reads them, so the evidence ids match. |
-| `recordings/` | the agent | Screen recordings: every `.mp4` and `.webm` in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
+| `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
@@ -581,7 +588,7 @@ folder you give to `--out`. A run id looks like `20261104-101500-a1b2`.
 | `audio.wav` | The narration track. Not written when the video has no voice and no music. |
 | `captions.vtt`, `captions.srt` | The captions. |
 | `render-plan.json` | The plan the renderer turned into frames: the real code, tokens, layout and timing. |
-| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use. Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
+| `recording-frames/` | The pictures of the recordings that the video shows, as JPEG files, one folder for each use (`s-<scene number>`, and `s-<scene number>.before` and `.after` for the panels of a before-after scene). Only when the video shows a recording. A run that takes over this folder removes the pictures of the earlier run. |
 | `video.mp4`, `poster.jpg` | The video and its poster image. |
 | `watch.html` | The watch page, next to the video. It is the page of `watch/`. It finds `video.mp4` and `poster.jpg` by name and carries the captions itself, so it still plays when you upload it together with those files. |
 | `watch/` | The watch page (`index.html`) with copies of the video, poster and captions. Always written. |

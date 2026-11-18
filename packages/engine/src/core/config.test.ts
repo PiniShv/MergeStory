@@ -177,6 +177,30 @@ describe('resolveConfig: length settings', () => {
   });
 });
 
+describe('resolveConfig: inputs', () => {
+  const resolve = (inputs: Record<string, unknown>) =>
+    resolveConfig({ skipFile: true, env: {}, overrides: { inputs } as ConfigInput }).inputs;
+
+  it('has the documented defaults', () => {
+    expect(resolve({})).toEqual({
+      maxRecordings: 4,
+      maxRecordingMb: 50,
+      maxRecordingSeconds: 60,
+      maxClipSeconds: 20,
+    });
+  });
+
+  it('allows no recordings, and refuses a value out of range or a key that does not exist', () => {
+    expect(resolve({ maxRecordings: 0 }).maxRecordings).toBe(0);
+    expect(resolve({ maxRecordings: 8 }).maxRecordings).toBe(8);
+    expect(() => resolve({ maxRecordings: 9 })).toThrow(/maxRecordings/);
+    expect(() => resolve({ maxRecordings: -1 })).toThrow(/maxRecordings/);
+    expect(() => resolve({ maxRecordingMb: 0 })).toThrow(/maxRecordingMb/);
+    expect(() => resolve({ maxClipSeconds: 61 })).toThrow(/maxClipSeconds/);
+    expect(() => resolve({ maxRecordingsCount: 2 })).toThrow(/maxRecordingsCount/);
+  });
+});
+
 describe('resolveConfig: theme', () => {
   const theme = (overrides: Record<string, unknown>, env: Record<string, string> = {}) =>
     resolveConfig({ skipFile: true, env, overrides }).theme;

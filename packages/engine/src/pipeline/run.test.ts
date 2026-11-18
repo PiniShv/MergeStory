@@ -1484,7 +1484,8 @@ describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
     context: { recordings: [{ path: clip, caption: 'Failure', moment: 'before' as const }] },
     withContext: false,
   });
-  const frames = () => join(runDir(), 'recording-frames', 's-rec');
+  // The recording scene is appended to the scenes of the demo, so its place is the next number.
+  const frames = () => join(runDir(), 'recording-frames', `s-${storyboard.scenes.length}`);
 
   it('cuts the frames before any speech is made', async () => {
     const narration = await import('../narration/index.ts');
@@ -1507,6 +1508,20 @@ describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
       join(runDir(), 'render-plan.json'),
     );
     expect(plan.scenes.find((s) => s.id === 'rec')?.visual.frames?.count).toBe(seen!.length);
+  });
+
+  it('leaves the e-mail address of an unused recording caption out of the warnings and the progress messages', async () => {
+    const messages: string[] = [];
+    const caption = 'Reported by jane.doe@example.com';
+    const result = (await generate(
+      options({ context: { ...context, recordings: [{ path: clip, caption, moment: 'before' as const }] } }),
+      { onProgress: (event) => messages.push(event.message) },
+    )) as GenerateResult;
+    // The offline storyboard never shows a recording, so the warning names it.
+    const warning = result.warnings.find((w) => w.includes('RC1'));
+    expect(warning).toContain('is not shown in the video');
+    expect(warning).toContain('j•••@example.com');
+    for (const text of [...result.warnings, ...messages]) expect(text).not.toContain('jane.doe@');
   });
 
   it('stops before any speech when a recording cannot be decoded', async () => {

@@ -44,7 +44,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     execFileSync('bash', [join(DEMO, 'create-demo-repo.sh'), repo], { stdio: 'pipe' });
     execFileSync('node', [join(DEMO, 'capture.mjs'), captures], {
       stdio: 'pipe',
-      env: { ...process.env, MERGESTORY_BROWSER_PATH: browser!.path },
+      env: { ...process.env, MERGESTORY_BROWSER_PATH: browser!.path, MERGESTORY_FFMPEG_PATH: ffmpeg!.ffmpeg },
       timeout: 120_000,
     });
     const ctx = testContext().ctx;
@@ -106,6 +106,8 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     const board = heuristicStoryboard(deps.changeSet, deps.analysis, deps.inputs, deps.config, targetSec);
     expect(board.scenes.some((s) => s.visual.type === 'recording')).toBe(false);
     expect(await expectCleanStoryboard(deps, board)).toEqual([]);
-    expect(unusedScreenshotWarning(board, deps.inputs, 'heuristic')).toContain('The recordings RC1');
+    expect(unusedScreenshotWarning(board, deps.inputs, 'heuristic', { maskEmails: true })).toContain(
+      'The recordings RC1',
+    );
   });
 });

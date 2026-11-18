@@ -166,13 +166,13 @@ never contains code.
 | `architecture` | Components and the links between them. Use it only when two or more components matter. Every edge must join two node ids that exist. | `direction` (`LR` or `TB`), `nodes`, `edges` |
 | `flow` | A request or call that the code implements, as steps between actors. | `actors`, `steps` |
 | `code` | Real lines of code, highlighted line by line. | `ref`, `mode`, `focus`, `caption` |
-| `before-after` | Two panels. Each shows code, bullets, a screenshot, a recording or a terminal. | `before`, `after`, `caption` |
+| `before-after` | Two panels. Each shows code, bullets, a screenshot, a recording or a terminal. A panel has a `kind`, and a `recording` panel names its clip in `recordingId`. | `before`, `after`, `caption` |
 | `terminal` | A simulated terminal session. | `title`, `lines` |
 | `browser` | A simulated app screen. | `url`, `pageTitle`, `blocks` |
 | `checklist` | Review items with a severity and an optional code reference. The detail of an item should not repeat its title or its file and line. | `items` |
 | `bullets` | Short points. | `heading`, `items` |
 | `screenshot` | A real screenshot that you supplied. | `screenshotId`, `caption` |
-| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
+| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1, for at most `inputs.maxClipSeconds` seconds. The two panels start one after the other, so they are not in step. A `trim` with less than 0.2 seconds inside the clip is an error. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
@@ -189,7 +189,8 @@ only for behaviour that the code really has, and cite a file, hunk or symbol id 
 scene. Never show a real host name, token or personal data. A browser `url` is a path such as `/settings`,
 never an address with a host: the checker removes the host if you write one. Do not show test output or
 numbers that nobody measured. A `recording` is the opposite: it is real, and the video labels it
-"Recorded".
+"Recorded". MergeStory does not look inside a screenshot or a recording, so check a capture for secrets
+and e-mail addresses before you pass it.
 
 ## Code references
 
@@ -323,8 +324,9 @@ and no second model sees the code. The reading and writing are your agent's own 
 1. **Write down what only you know**, in a folder outside the repository: `task.md` (the task), `notes.md`
    (your decisions, edge cases and what deserves extra review) and `tests.json` (only tests you really ran).
    Never invent a result. The `agent` commands also read screen recordings from `recordings/` in that folder
-   (`.mp4` or `.webm`, sorted by name, named by an optional `recordings/captions.json`). With `analyze`,
-   `validate` and `generate`, pass `--recording <path>[:<caption>[:before|after]]` instead.
+   (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an optional
+   `recordings/captions.json`). With `analyze`, `validate` and `generate`, pass
+   `--recording <path>[:<caption>[:before|after]]` instead.
 2. **Analyse the change.**
 
    ```bash

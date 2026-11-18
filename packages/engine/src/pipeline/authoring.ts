@@ -115,7 +115,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
     'so they become citable evidence (TASK, NOTES).',
     ...(agent
       ? [
-          'Screen recordings (MP4 or WebM) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
+          'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
         ]
       : []),
     '',

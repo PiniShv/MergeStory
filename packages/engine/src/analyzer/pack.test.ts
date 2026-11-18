@@ -100,6 +100,33 @@ describe('evidence pack structure', () => {
     expect(analysis.evidence.filter((e) => e.kind === 'recording').map((e) => e.id)).toEqual(['RC1', 'RC2']);
   });
 
+  it('masks an e-mail address in the caption of a recording and of a screenshot, in the pack and in the evidence', async () => {
+    const { markdown, analysis } = await pack(
+      SAMPLE,
+      { maskEmails: true },
+      {},
+      emptyInputs({
+        recordings: [
+          {
+            id: 'RC1',
+            caption: 'Sent by jane.doe@example.com',
+            path: '/tmp/a.mp4',
+            moment: 'before',
+            codec: 'h264',
+            durationSec: 3,
+            width: 640,
+            height: 480,
+          },
+        ],
+        screenshots: [{ id: 'SS1', path: '/tmp/x.png', caption: 'Mail to bob@example.com', moment: 'after' }],
+      }),
+    );
+    expect(markdown).toContain('- RC1 (before, 3 s, 640x480): Sent by j•••@example.com');
+    expect(markdown).not.toMatch(/jane\.doe@|bob@/);
+    const labels = analysis.evidence.filter((e) => e.kind === 'recording' || e.kind === 'screenshot');
+    expect(labels.map((e) => e.label)).toEqual(['Mail to b•••@example.com', 'Sent by j•••@example.com']);
+  });
+
   it('states change, repository, short shas, stats, size, word budget, style and language', async () => {
     const { markdown } = await pack(SAMPLE, { targetDurationSec: 70, style: 'technical', language: 'de' });
     expect(markdown).toContain('- Change: Pull request #42');

@@ -1,4 +1,5 @@
 /** Rules that depend on the visual type: size limits, evidence ids, on-screen text and internal consistency. */
+import { MIN_CLIP_SECONDS } from '../core/recording-frames.ts';
 import { STORYBOARD_LIMITS as LIMITS, type Scene, type Visual } from '../core/storyboard-schema.ts';
 import type { Run, TextCleaner } from './run.ts';
 import type { IssueCode } from './types.ts';
@@ -262,7 +263,6 @@ export function fallbackToFiles(
 
 const clamp = (value: number, low: number, high: number): number => Math.min(Math.max(value, low), high);
 /** Least part of the clip a trim may leave, and the smallest zoom box side (a fraction of the frame). */
-const MIN_WINDOW_SEC = 0.2;
 const MIN_ZOOM_SIDE = 0.05;
 
 /**
@@ -284,7 +284,7 @@ function checkRecordingWindow(
       run.fix(`${vp}.trim`, 'put start and end in order');
     }
     const inside = Math.min(end, durationSec) - Math.max(start, 0);
-    if (inside < Math.min(MIN_WINDOW_SEC, durationSec)) {
+    if (inside < Math.min(MIN_CLIP_SECONDS, durationSec)) {
       run.error(
         `${vp}.trim`,
         'recording-trim-out-of-range',

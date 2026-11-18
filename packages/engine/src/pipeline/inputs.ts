@@ -3,13 +3,14 @@
  * This is the one input contract: the library, the command line and the HTTP API all end up here.
  */
 import { readFile, stat } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
-import { probeRecording } from '../core/media-probe.ts';
+import { probeRecording, shownName } from '../core/media-probe.ts';
+import { maskPrivate, type PrivateMaskOptions } from '../core/secrets.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs, RecordingInput, TestEvidence } from '../core/types.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
@@ -145,7 +146,7 @@ async function checkRecording(
   limits: Config['inputs'],
 ): Promise<Omit<RecordingInput, 'id' | 'caption' | 'moment'>> {
   const absolute = resolve(cwd, path);
-  const name = basename(absolute);
+  const name = shownName(absolute);
   const refuse = (reason: string, hint?: string): MergeStoryError =>
     new MergeStoryError('USAGE', `Recording ${name} cannot be used: ${reason}.`, hint ? { hint } : {});
   const info = await stat(absolute).catch(() => null);
@@ -265,6 +266,7 @@ export function unusedScreenshotWarning(
   storyboard: Storyboard,
   inputs: ContextInputs,
   source: 'llm' | 'agent' | 'heuristic',
+  privacy: PrivateMaskOptions,
 ): string | null {
   const shown = shownMedia(storyboard);
   const sentence = (
@@ -274,7 +276,10 @@ export function unusedScreenshotWarning(
     plural: string,
   ): string | null => {
     if (items.length === 0) return null;
-    const names = items.map((item) => (item.caption ? `${item.id} ("${item.caption}")` : item.id)).join(', ');
+    // The warning goes into logs and into the result, so a caption is masked here as it is on screen.
+    const names = items
+      .map((item) => (item.caption ? `${item.id} ("${maskPrivate(item.caption, privacy)}")` : item.id))
+      .join(', ');
     const reason =
       source === 'heuristic'
         ? ` The offline storyboard never uses ${plural}: write the storyboard yourself (--storyboard) or use --llm to show them.`

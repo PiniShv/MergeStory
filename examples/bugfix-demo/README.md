@@ -16,7 +16,7 @@ MergeStory does not record anything. `capture.mjs` opens the page in a browser, 
 
 ## Make the video
 
-You need Node, FFmpeg on the `PATH`, and a Chrome or Chromium browser. Set `MERGESTORY_BROWSER_PATH` to its program. Run the commands from the root of this repository. If you work from a clone, use `node packages/engine/src/cli/main.ts` in place of `mergestory`.
+You need Node, FFmpeg, and a Chrome or Chromium browser. Set `MERGESTORY_BROWSER_PATH` to the browser's program. `capture.mjs` runs `ffmpeg` from the `PATH`, or the program that `MERGESTORY_FFMPEG_PATH` names. Run the commands from the root of this repository. If you work from a clone, use `node packages/engine/src/cli/main.ts` in place of `mergestory`.
 
 Create the repository outside this one, and the captures in a folder of your own:
 
@@ -42,6 +42,6 @@ mergestory generate /tmp/mergestory-bugfix-demo --base main --head fix/basket-co
 
 ## Tips for your own captures
 
-- Use a small browser window (this demo uses 960 by 540). The video shows a clip in a window about 620 pixels wide, so text from a large window gets too small to read.
+- Use a small browser window (this demo uses 960 by 540). The video scales a clip down to fit its window, so text from a large window gets too small to read.
 - Use `zoom` in the storyboard when only a part of the page matters.
 - The scene lasts as long as its narration. Write enough words for the clip, or set `speed`.

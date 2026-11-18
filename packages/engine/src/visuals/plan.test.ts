@@ -2,7 +2,12 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PANEL_CLIP_DELAY_SEC, SCENE_CLIP_START_SEC, scenePanelStarts } from '../core/recording-frames.ts';
+import {
+  frameDirFor,
+  PANEL_CLIP_DELAY_SEC,
+  SCENE_CLIP_START_SEC,
+  scenePanelStarts,
+} from '../core/recording-frames.ts';
 import type { CodeLine, RenderPlan, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import type { Scene, Storyboard } from '../core/storyboard-schema.ts';
@@ -501,6 +506,8 @@ describe('buildRenderPlan: recordings', () => {
     screenshotId: null,
     recordingId: kind === 'recording' ? 'RC1' : null,
   });
+  // The scenes of the sample come first: the recording scene is the next one, and the comparison follows it.
+  const RECORDING_SCENE = sample().storyboard.scenes.length + 1;
   const frames = (dirs: string[]): Map<string, ExtractedFrames> =>
     new Map(dirs.map((d) => [d, { dir: d, count: 30, width: 640, height: 360 }]));
 
@@ -538,9 +545,9 @@ describe('buildRenderPlan: recordings', () => {
     return build({
       storyboard,
       frames: frames([
-        'recording-frames/s-rec',
-        'recording-frames/s-cmp.before',
-        'recording-frames/s-cmp.after',
+        frameDirFor(RECORDING_SCENE, null),
+        frameDirFor(RECORDING_SCENE + 1, 'before'),
+        frameDirFor(RECORDING_SCENE + 1, 'after'),
       ]),
     });
   }
@@ -549,7 +556,7 @@ describe('buildRenderPlan: recordings', () => {
     const plan = await recordings('terminal');
     const visual = visualOf(plan, 'rec', 'recording');
     expect(visual.frames).toEqual({
-      dir: 'recording-frames/s-rec',
+      dir: `recording-frames/s-${RECORDING_SCENE}`,
       count: 30,
       fps: 12,
       width: 640,

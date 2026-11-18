@@ -166,6 +166,8 @@ describe('buildContextInputs: test results', () => {
   });
 });
 
+const PRIVACY = { maskEmails: true };
+
 describe('unusedScreenshotWarning', () => {
   const inputs = (count: number): ContextInputs => ({
     task: null,
@@ -212,22 +214,22 @@ describe('unusedScreenshotWarning', () => {
   }
 
   it('says nothing when no screenshot was supplied, or all of them are shown', () => {
-    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(0), 'heuristic')).toBeNull();
-    expect(unusedScreenshotWarning(withScreenshot('SS1'), inputs(1), 'llm')).toBeNull();
-    expect(unusedScreenshotWarning(withScreenshot('SS1', true), inputs(1), 'agent')).toBeNull();
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(0), 'heuristic', PRIVACY)).toBeNull();
+    expect(unusedScreenshotWarning(withScreenshot('SS1'), inputs(1), 'llm', PRIVACY)).toBeNull();
+    expect(unusedScreenshotWarning(withScreenshot('SS1', true), inputs(1), 'agent', PRIVACY)).toBeNull();
   });
 
   it('explains that the offline storyboard never shows screenshots', () => {
-    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'heuristic')).toBe(
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'heuristic', PRIVACY)).toBe(
       'The screenshot SS1 ("Dashboard") is not shown in the video. The offline storyboard never uses screenshots: write the storyboard yourself (--storyboard) or use --llm to show them.',
     );
   });
 
   it('names the screenshots that a written or model storyboard left out', () => {
-    expect(unusedScreenshotWarning(withScreenshot('SS1'), inputs(3), 'agent')).toBe(
+    expect(unusedScreenshotWarning(withScreenshot('SS1'), inputs(3), 'agent', PRIVACY)).toBe(
       'The screenshots SS2, SS3 are not shown in the video.',
     );
-    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'llm')).toBe(
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(1), 'llm', PRIVACY)).toBe(
       'The screenshot SS1 ("Dashboard") is not shown in the video.',
     );
   });
@@ -266,14 +268,14 @@ describe('unusedScreenshotWarning for recordings', () => {
   } as const;
 
   it('says nothing when every recording is shown', () => {
-    expect(unusedScreenshotWarning(showing(clip), inputs(recording(1, '')), 'llm')).toBeNull();
+    expect(unusedScreenshotWarning(showing(clip), inputs(recording(1, '')), 'llm', PRIVACY)).toBeNull();
   });
 
   it('names a recording that the video does not show, and says why the offline storyboard skips it', () => {
-    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, 'Checkout')), 'llm')).toBe(
-      'The recording RC1 ("Checkout") is not shown in the video.',
-    );
-    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, '')), 'heuristic')).toBe(
+    expect(
+      unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, 'Checkout')), 'llm', PRIVACY),
+    ).toBe('The recording RC1 ("Checkout") is not shown in the video.');
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(recording(1, '')), 'heuristic', PRIVACY)).toBe(
       'The recording RC1 is not shown in the video. The offline storyboard never uses recordings: write the storyboard yourself (--storyboard) or use --llm to show them.',
     );
     expect(
@@ -281,6 +283,7 @@ describe('unusedScreenshotWarning for recordings', () => {
         showing(clip),
         inputs(recording(1, ''), recording(2, ''), recording(3, '')),
         'agent',
+        PRIVACY,
       ),
     ).toBe('The recordings RC2, RC3 are not shown in the video.');
   });
@@ -301,18 +304,59 @@ describe('unusedScreenshotWarning for recordings', () => {
       after: panel('recording', 'RC1'),
       caption: null,
     });
-    expect(unusedScreenshotWarning(shown, inputs(recording(1, '')), 'llm')).toBeNull();
+    expect(unusedScreenshotWarning(shown, inputs(recording(1, '')), 'llm', PRIVACY)).toBeNull();
     const both: ContextInputs = {
       ...inputs(recording(1, '')),
       screenshots: [{ id: 'SS1', path: '/x/a.png', caption: '', moment: 'other' }],
     };
-    expect(unusedScreenshotWarning(sampleStoryboard(), both, 'llm')).toBe(
+    expect(unusedScreenshotWarning(sampleStoryboard(), both, 'llm', PRIVACY)).toBe(
       'The screenshot SS1 is not shown in the video. The recording RC1 is not shown in the video.',
     );
   });
 
   it('lists a shown recording among the evidence used', () => {
     expect(evidenceUsed(showing(clip))).toContain('RC1');
+  });
+});
+
+describe('unusedScreenshotWarning masks captions', () => {
+  const key = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
+  const caption = `Sent to jane.doe@example.com with ${key}`;
+  const base = { task: null, notes: null, tests: [] };
+  const screenshots = [{ id: 'SS1', path: '/x/a.png', caption, moment: 'other' as const }];
+  const recordings = [
+    {
+      id: 'RC1',
+      path: '/x/a.mp4',
+      caption,
+      moment: 'other' as const,
+      durationSec: 5,
+      width: 640,
+      height: 360,
+      codec: 'h264',
+    },
+  ];
+
+  it('masks an e-mail address and a secret in the caption of an unused capture', () => {
+    for (const kind of ['screenshots', 'recordings'] as const) {
+      const inputs: ContextInputs = {
+        ...base,
+        screenshots: [],
+        recordings: [],
+        [kind]: kind === 'screenshots' ? screenshots : recordings,
+      };
+      const warning = unusedScreenshotWarning(sampleStoryboard(), inputs, 'llm', { maskEmails: true }) ?? '';
+      expect(warning).toContain('is not shown in the video');
+      expect(warning).not.toContain('jane.doe@');
+      expect(warning).not.toContain(key);
+    }
+  });
+
+  it('keeps the e-mail address when e-mail masking is off, and still masks the secret', () => {
+    const inputs: ContextInputs = { ...base, screenshots, recordings };
+    const warning = unusedScreenshotWarning(sampleStoryboard(), inputs, 'llm', { maskEmails: false }) ?? '';
+    expect(warning.split('jane.doe@example.com')).toHaveLength(3);
+    expect(warning).not.toContain(key);
   });
 });
 
@@ -399,9 +443,12 @@ describe('buildContextInputs: recordings', () => {
   });
 
   describe.skipIf(tools === null)('with FFmpeg', () => {
-    it('numbers the recordings RC1, RC2 and reads their facts', async () => {
-      await makeClip(tools!.ffmpeg, join(dir, 'a.mp4'), { seconds: 2 });
-      await makeClip(tools!.ffmpeg, join(dir, 'b.mp4'), { seconds: 1, size: '160x120' });
+    it('numbers the recordings RC1, RC2 and reads their facts', async (ctx) => {
+      const made = [
+        await makeClip(tools!.ffmpeg, join(dir, 'a.mp4'), { seconds: 2 }),
+        await makeClip(tools!.ffmpeg, join(dir, 'b.mp4'), { seconds: 1, size: '160x120' }),
+      ];
+      if (made.includes(false)) return ctx.skip('this FFmpeg cannot encode H.264');
       const inputs = await buildContextInputs(
         { recordings: [rec('a.mp4', 'Before', 'before'), rec('b.mp4', 'x'.repeat(300))] },
         dir,
@@ -420,9 +467,10 @@ describe('buildContextInputs: recordings', () => {
       expect(inputs.recordings[1]?.caption).toHaveLength(200);
     });
 
-    it('uses the first recordings and warns about the rest', async () => {
+    it('uses the first recordings and warns about the rest', async (ctx) => {
       for (const name of ['a.mp4', 'b.mp4', 'c.mp4'])
-        await makeClip(tools!.ffmpeg, join(dir, name), { seconds: 1 });
+        if (!(await makeClip(tools!.ffmpeg, join(dir, name), { seconds: 1 })))
+          return ctx.skip('this FFmpeg cannot encode H.264');
       const warnings: string[] = [];
       const inputs = await buildContextInputs(
         { recordings: ['a.mp4', 'b.mp4', 'c.mp4'].map((n) => rec(n)) },
@@ -434,8 +482,9 @@ describe('buildContextInputs: recordings', () => {
       expect(warnings).toEqual(['Only the first 2 recordings are used.']);
     });
 
-    it('refuses a clip over the length limit, naming the file', async () => {
-      await makeClip(tools!.ffmpeg, join(dir, 'long.mp4'), { seconds: 3 });
+    it('refuses a clip over the length limit, naming the file', async (ctx) => {
+      if (!(await makeClip(tools!.ffmpeg, join(dir, 'long.mp4'), { seconds: 3 })))
+        return ctx.skip('this FFmpeg cannot encode H.264');
       await expect(
         buildContextInputs(
           { recordings: [rec('long.mp4')] },
@@ -474,8 +523,7 @@ describe('buildContextInputs: recordings', () => {
     }
   });
 
-  it('refuses a missing file and a folder', async () => {
-    if (tools === null) return;
+  it.skipIf(tools === null)('refuses a missing file and a folder', async () => {
     await expect(
       buildContextInputs({ recordings: [rec('gone.mp4')] }, dir, testConfig()),
     ).rejects.toMatchObject({

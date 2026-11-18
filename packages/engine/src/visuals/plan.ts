@@ -144,9 +144,9 @@ interface Environment {
   frames: ReadonlyMap<string, ExtractedFrames>;
 }
 
-/** The scene being resolved: its frame folders are named by its id, and a panel appears at a time that follows its beats. */
+/** The scene being resolved: its frame folders are named by its place in the storyboard (from 1), and a panel appears at a time that follows its beats. */
 interface SceneRef {
-  id: string;
+  number: number;
   startSec: number;
   beats: PlannedScene['beats'];
 }
@@ -166,12 +166,12 @@ interface ResolvedScene {
 /** The frame set of one use of a recording, with the scene second at which the clip starts. */
 function frameSetFor(
   env: Environment,
-  sceneId: string,
+  sceneNumber: number,
   side: 'before' | 'after' | null,
   startSec: number,
   speed: number,
 ): FrameSet {
-  const dir = frameDirFor(sceneId, side);
+  const dir = frameDirFor(sceneNumber, side);
   const made = env.frames.get(dir);
   if (!made) {
     throw new MergeStoryError('INTERNAL', `The frames of a recording were not extracted (${dir}).`, {
@@ -348,7 +348,7 @@ async function resolvePanel(
       }
       const startSec = Math.round((scenePanelStarts(scene)[side] + PANEL_CLIP_DELAY_SEC) * 1000) / 1000;
       return {
-        panel: { label, kind: 'recording', frames: frameSetFor(env, scene.id, side, startSec, 1) },
+        panel: { label, kind: 'recording', frames: frameSetFor(env, scene.number, side, startSec, 1) },
         masked: false,
       };
     }
@@ -553,7 +553,7 @@ async function resolveVisual(
         recorded: true,
         visual: {
           type: 'recording',
-          frames: frameSetFor(env, scene.id, null, SCENE_CLIP_START_SEC, visual.speed ?? 1),
+          frames: frameSetFor(env, scene.number, null, SCENE_CLIP_START_SEC, visual.speed ?? 1),
           caption: scrub.maybe(visual.caption),
         },
       };
@@ -604,6 +604,7 @@ function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): Pl
 
 async function planScene(
   scene: Scene,
+  sceneNumber: number,
   timing: TimelineScene,
   env: Environment,
   evidence: Map<string, EvidenceItem>,
@@ -616,7 +617,7 @@ async function planScene(
     text: scrub.text(scene.narration[beat.index]?.text ?? ''),
   }));
   const resolved = await resolveVisual(scene.visual, env, scrub, {
-    id: scene.id,
+    number: sceneNumber,
     startSec: timing.startSec,
     beats,
   });
@@ -666,7 +667,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
         hint: 'Build the timeline from the same storyboard that is used for the plan.',
       });
     }
-    scenes.push(await planScene(scene, timing, env, evidence));
+    scenes.push(await planScene(scene, index + 1, timing, env, evidence));
   }
 
   const repoLabel = metaScrub.text(repoLabelFor(changeSet.repo));

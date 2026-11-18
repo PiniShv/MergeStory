@@ -3,11 +3,11 @@
  * render never has to decode a video: it only picks one image for each moment.
  */
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Config } from '../core/config.ts';
 import { abortedError, MergeStoryError } from '../core/errors.ts';
-import { DECODE_WHITELIST_ARGS, INPUT_WHITELIST_ARGS } from '../core/media-probe.ts';
+import { DECODER_ARGS, INPUT_WHITELIST_ARGS, shownName } from '../core/media-probe.ts';
 import { runCommand } from '../core/process.ts';
 import { frameDirFor, RECORDING_BOX, RECORDING_FPS } from '../core/recording-frames.ts';
 import type { FrameSet } from '../core/render-plan.ts';
@@ -59,15 +59,24 @@ export async function extractFrames(
   const refuse = (reason: string, cause?: unknown): MergeStoryError =>
     new MergeStoryError(
       'USAGE',
-      `Recording ${recording.id} (${basename(recording.path)}) could not be decoded: ${reason}.`,
+      `Recording ${recording.id} (${shownName(recording.path)}) could not be decoded: ${reason}.`,
       { hint: 'Record it again, or leave it out of the video.', cause },
     );
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true, mode: 0o700 });
+  // FFmpeg reads a number such as 1e-7 as an error, so every time is written with three decimals.
+  const seconds = (value: number): string => value.toFixed(3);
   const filter = [
+    // The rate comes first. A screen recording has no frames while nothing moves, and this step fills
+    // those gaps (and a late start) with the picture that was on screen, so the cut that follows
+    // shows the right moment. The last picture is held to the end of the part.
+    `fps=${RECORDING_FPS}:start_time=0`,
+    `tpad=stop_mode=clone:stop_duration=${seconds(trim.end)}`,
+    `trim=start=${seconds(trim.start)}:end=${seconds(trim.end)}`,
+    'setpts=PTS-STARTPTS',
     ...(zoom ? [`crop=${crop.w}:${crop.h}:${crop.x}:${crop.y}`] : []),
-    `scale=${geometry.width}:${geometry.height}`,
-    `fps=${RECORDING_FPS}`,
+    // A JPEG is read as BT.601 with the full range. Without these two, the colours of a BT.709 recording shift.
+    `scale=${geometry.width}:${geometry.height}:out_color_matrix=bt601:out_range=pc`,
   ].join(',');
   const result = await runCommand(
     ffmpeg,
@@ -77,13 +86,12 @@ export async function extractFrames(
       'error',
       '-y',
       ...INPUT_WHITELIST_ARGS,
-      ...DECODE_WHITELIST_ARGS,
-      '-ss',
-      String(trim.start),
-      '-t',
-      String(trim.end - trim.start),
+      ...DECODER_ARGS,
       '-i',
       recording.path,
+      // The video track that the probe checked, whichever track the file marks as its default.
+      '-map',
+      '0:v:0',
       '-an',
       '-sn',
       '-dn',
@@ -95,9 +103,16 @@ export async function extractFrames(
       '3',
       '-start_number',
       '1',
-      join(outDir, 'f-%05d.jpg'),
+      // FFmpeg reads "%" anywhere in this path as part of the pattern.
+      join(outDir.replaceAll('%', '%%'), 'f-%05d.jpg'),
     ],
-    { timeoutMs: EXTRACT_TIMEOUT_MS, allowFailure: true, signal, maxOutputBytes: 1024 * 1024 },
+    // FFmpeg decodes the clip from its start to the end of the part, so a later part gets more time.
+    {
+      timeoutMs: EXTRACT_TIMEOUT_MS + Math.ceil(trim.end) * 1000,
+      allowFailure: true,
+      signal,
+      maxOutputBytes: 1024 * 1024,
+    },
   ).catch((err: unknown) => {
     if (signal?.aborted) throw abortedError(err);
     if (err instanceof Error && err.name === 'TimedOutError') throw refuse('it took too long', err);
@@ -112,9 +127,10 @@ export async function extractFrames(
 }
 
 /**
- * Cut the frames of every recording that the storyboard shows, into `recording-frames/s-<scene>[.side]`
- * in the run folder. Returns them by folder name. A scene's own use honours its trim and zoom; a panel
- * shows the clip from its start, at most `inputs.maxClipSeconds` of it.
+ * Cut the frames of every recording that the storyboard shows, into `recording-frames/s-<number>[.side]`
+ * in the run folder, where the number is the scene's place in the storyboard. Returns them by folder
+ * name. A scene's own use honours its trim and zoom; a panel shows the clip from its start, at most
+ * `inputs.maxClipSeconds` of it.
  */
 export async function extractStoryboardFrames(
   storyboard: Storyboard,
@@ -130,12 +146,12 @@ export async function extractStoryboardFrames(
     return recording;
   };
   const maxClip = config.inputs.maxClipSeconds;
-  for (const scene of storyboard.scenes) {
+  for (const [index, scene] of storyboard.scenes.entries()) {
     const { visual } = scene;
     if (visual.type === 'recording') {
       const recording = recordingFor(visual.recordingId);
       uses.push({
-        dir: frameDirFor(scene.id, null),
+        dir: frameDirFor(index + 1, null),
         request: {
           recording,
           trim: visual.trim ?? { start: 0, end: Math.min(recording.durationSec, maxClip) },
@@ -149,7 +165,7 @@ export async function extractStoryboardFrames(
         if (panel.kind !== 'recording' || !panel.recordingId) continue;
         const recording = recordingFor(panel.recordingId);
         uses.push({
-          dir: frameDirFor(scene.id, side),
+          dir: frameDirFor(index + 1, side),
           request: {
             recording,
             trim: { start: 0, end: Math.min(recording.durationSec, maxClip) },

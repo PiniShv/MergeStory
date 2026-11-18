@@ -212,7 +212,9 @@ async function produce(
   warnings.push(...groundingWarnings);
   const notices = [
     ...describeFit(fit, config.maxDurationSec),
-    ...[unusedScreenshotWarning(storyboard, p.inputs, choice.source)].filter((w): w is string => w !== null),
+    ...[
+      unusedScreenshotWarning(storyboard, p.inputs, choice.source, { maskEmails: config.privacy.maskEmails }),
+    ].filter((w): w is string => w !== null),
   ];
   for (const message of notices) ctx.progress({ stage: 'validate', status: 'warn', message });
   warnings.push(...notices);
