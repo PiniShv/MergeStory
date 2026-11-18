@@ -61,11 +61,14 @@ export interface ContextFlags {
   screenshot?: string[];
   recording?: string[];
   redact?: string;
+  log?: string[];
   /** A folder of screenshots (`--screenshots-dir`). */
   screenshotsDir?: string;
   /** Screenshots and recordings that are already parsed. Only the agent commands set them, from their work folder. */
   screenshotFiles?: NonNullable<ContextOptions['screenshots']>;
   recordingFiles?: NonNullable<ContextOptions['recordings']>;
+  /** Logs that are already parsed. Only the agent commands set it, from their work folder. */
+  logFiles?: NonNullable<ContextOptions['logs']>;
 }
 
 type ScreenshotSpec = Omit<ScreenshotInput, 'id'>;
@@ -101,6 +104,21 @@ export function parseScreenshotSpec(spec: string): {
   }
   const caption = rest.trim();
   return { path, caption: caption === '' ? null : caption, moment };
+}
+
+/** Parse `<file>[:<caption>]`. The caption may contain colons, and a Windows drive letter is not a separator. */
+export function parseLogSpec(spec: string): {
+  path: string;
+  caption: string | null;
+} {
+  const drive = /^[A-Za-z]:[\\/]/.test(spec) ? 2 : 0;
+  const colon = spec.indexOf(':', drive);
+  if (colon === -1) return { path: spec, caption: null };
+  const caption = spec.slice(colon + 1).trim();
+  return {
+    path: spec.slice(0, colon),
+    caption: caption === '' ? null : caption,
+  };
 }
 
 /**
@@ -139,6 +157,8 @@ export interface CaptureKind {
   endings: readonly string[];
   /** A file name for the example in the hint. */
   example: string;
+  /** A kind with no before or after side (a log): "side" is an unknown field in its captions.json. */
+  noSide?: boolean;
 }
 export const SCREENSHOT_KIND: CaptureKind = {
   noun: 'screenshot',
@@ -150,6 +170,12 @@ export const RECORDING_KIND: CaptureKind = {
   // The two kinds of file that the probe reads: MP4 or QuickTime, and WebM or Matroska.
   endings: ['.mp4', '.m4v', '.mov', '.webm', '.mkv'],
   example: 'clip.mp4',
+};
+export const LOG_KIND: CaptureKind = {
+  noun: 'log',
+  endings: ['.log', '.txt'],
+  example: 'run.log',
+  noSide: true,
 };
 const CAPTIONS_FILE = 'captions.json';
 
@@ -200,7 +226,9 @@ export async function readCaptureFolder(
   const label = `${basename(folder)}/${CAPTIONS_FILE}`;
   const bad = (message: string): MergeStoryError =>
     new MergeStoryError('USAGE', `${label}: ${message}`, {
-      hint: `Use {"${kind.example}": {"caption": "What it shows", "side": "before"}}. "side" is before or after, or left out.`,
+      hint: kind.noSide
+        ? `Use {"${kind.example}": {"caption": "What it shows"}}.`
+        : `Use {"${kind.example}": {"caption": "What it shows", "side": "before"}}. "side" is before or after, or left out.`,
     });
   const captions = new Map<string, { caption: string | null; moment: 'before' | 'after' | 'other' }>();
   if (names.includes(CAPTIONS_FILE)) {
@@ -220,10 +248,12 @@ export async function readCaptureFolder(
       if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
         throw bad(`the entry for "${file}" is not an object.`);
       }
-      const { caption, side, ...rest } = entry as Record<string, unknown>;
-      const unknown = Object.keys(rest)[0];
+      const { caption, side } = entry as Record<string, unknown>;
+      const unknown = Object.keys(entry).find((key) => key !== 'caption' && (kind.noSide || key !== 'side'));
       if (unknown !== undefined)
-        throw bad(`"${file}" has unknown field "${unknown}". Allowed: caption, side.`);
+        throw bad(
+          `"${file}" has unknown field "${unknown}". Allowed: ${kind.noSide ? 'caption' : 'caption, side'}.`,
+        );
       if (caption !== undefined && typeof caption !== 'string') {
         throw bad(`the caption of "${file}" is not a string.`);
       }
@@ -333,6 +363,21 @@ export async function buildContext(flags: ContextFlags, cwd: string): Promise<Co
     const text = await readTextFile(flags.redact, { label: '--redact', maxBytes: LIMITS.textBytes, cwd });
     context.redact = parseRedactFile(text, flags.redact);
   }
+  if (flags.log && flags.log.length > 0) {
+    context.logs = flags.log.map((spec) => {
+      const { path, caption } = parseLogSpec(spec);
+      if (path === '') {
+        throw new MergeStoryError('USAGE', `--log: missing a file path in "${spec}".`, {
+          hint: 'Use --log <file>[:<caption>]',
+        });
+      }
+      const absolute = resolve(cwd, path);
+      assertNotSensitive(absolute, '--log');
+      return { path: absolute, caption: caption ?? basename(absolute) };
+    });
+  }
+  if (flags.logFiles && flags.logFiles.length > 0)
+    context.logs = [...(context.logs ?? []), ...flags.logFiles];
   if (flags.recordingFiles && flags.recordingFiles.length > 0) {
     context.recordings = [...(context.recordings ?? []), ...flags.recordingFiles];
   }

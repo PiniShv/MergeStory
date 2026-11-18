@@ -447,6 +447,84 @@ describe('agent: the work folder', () => {
     });
   });
 
+  describe('logs/', () => {
+    const folder = (): string => join(work(), 'logs');
+    const contexts = async () => {
+      analyzeMock.mockResolvedValue(authoring);
+      validateMock.mockResolvedValue(valid);
+      generateMock.mockResolvedValue(fakeResult());
+      await writeFile(join(work(), 'storyboard.json'), JSON.stringify({ title: 'x' }));
+      expect((await run(['agent', 'analyze', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'validate', '--name', 'fix-1'])).code).toBe(0);
+      expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
+      return [
+        analyzeMock.mock.calls[0]?.[0].context,
+        validateMock.mock.calls[0]?.[0].context,
+        lastGenerateOptions().context,
+      ];
+    };
+
+    it('uses every .log and .txt file, sorted by name, with the captions of captions.json, in every command', async () => {
+      await mkdir(folder(), { recursive: true });
+      for (const name of ['b.log', 'a.txt', 'c.LOG', 'notes.md', 'd.mp4', 'e.json'])
+        await writeFile(join(folder(), name), 'x');
+      await writeFile(
+        join(folder(), 'captions.json'),
+        JSON.stringify({
+          'b.log': { caption: 'Tests: all green' },
+          'a.txt': {},
+        }),
+      );
+      for (const context of await contexts()) {
+        expect(context?.logs).toEqual([
+          { path: join(folder(), 'a.txt'), caption: 'a' },
+          { path: join(folder(), 'b.log'), caption: 'Tests: all green' },
+          { path: join(folder(), 'c.LOG'), caption: 'c' },
+        ]);
+        expect(context?.recordings).toBeUndefined();
+      }
+    });
+
+    it('works without captions.json, and without the folder', async () => {
+      await mkdir(work(), { recursive: true });
+      for (const context of await contexts()) expect(context?.logs).toBeUndefined();
+    });
+
+    it.each([
+      [
+        'a file that is not in the folder',
+        { 'gone.log': { caption: 'x' } },
+        'is not a log (.log, .txt) in the logs folder',
+      ],
+      ['a side, which only a recording has', { 'a.log': { side: 'before' } }, 'unknown field "side"'],
+      ['an unknown field', { 'a.log': { caption: 'x', title: 'y' } }, 'unknown field "title"'],
+      ['a caption that is not text', { 'a.log': { caption: 5 } }, 'is not a string'],
+      ['a list', [], 'expected a JSON object with one entry per log file'],
+    ])('refuses captions.json with %s', async (_label, content, message) => {
+      await mkdir(folder(), { recursive: true });
+      await writeFile(join(folder(), 'a.log'), 'x');
+      await writeFile(join(folder(), 'captions.json'), JSON.stringify(content));
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain(message);
+      expect(analyzeMock).not.toHaveBeenCalled();
+    });
+
+    it('refuses a log named like a credentials file', async () => {
+      await mkdir(folder(), { recursive: true });
+      await writeFile(join(folder(), '.env.log'), 'x');
+      const { code, stderr } = await run(['agent', 'analyze', '--name', 'fix-1']);
+      expect(code).toBe(2);
+      expect(stderr).toContain('credentials file');
+    });
+
+    it('is not created by validate or render', async () => {
+      await run(['agent', 'validate', '--name', 'fix-1']);
+      await run(['agent', 'render', '--name', 'fix-1']);
+      expect(existsSync(work())).toBe(false);
+    });
+  });
+
   it('needs storyboard.json for validate', async () => {
     const { code, stderr } = await run(['agent', 'validate', '--name', 'fix-1']);
     expect(code).toBe(2);
@@ -527,6 +605,7 @@ describe('agent: refused flags', () => {
     ['--screenshot', 'a.png'],
     ['--screenshots-dir', 'shots'],
     ['--recording', 'a.mp4'],
+    ['--log', 'a.log'],
     ['--music', 'music.mp3'],
     ['--llm', 'anthropic'],
     ['--model', 'm'],

@@ -105,6 +105,26 @@ describe('POST /v1/jobs: input checks', () => {
     expect(JSON.stringify(res.json.error.issues)).toMatch(/recordings/);
   });
 
+  it('does not accept logs in v1', async () => {
+    const { base } = await start();
+    const res = await post(base, {
+      source: 'o/r#1',
+      context: { logs: [{ path: '/etc/passwd', caption: 'x' }] },
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.json.error.issues)).toMatch(/logs/);
+  });
+
+  it('refuses a "log" in a test result at once, with a 400', async () => {
+    const { base } = await start();
+    const res = await post(base, {
+      source: 'o/r#1',
+      context: { tests: [{ command: 'npm test', passed: true, summary: 'ok', log: 'L1.1-2' }] },
+    });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.json.error.issues)).toMatch(/log/);
+  });
+
   it('checks option values and ranges', async () => {
     const { base } = await start();
     const bad: [Record<string, unknown>, string][] = [

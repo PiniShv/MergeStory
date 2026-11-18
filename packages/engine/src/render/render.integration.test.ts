@@ -1414,6 +1414,94 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
       });
     }, 60_000);
 
+    describe('a log', () => {
+      const logLines = [
+        'first line of output',
+        'second line',
+        'third line ok',
+        'PASS count is 3',
+        'another',
+        'last',
+      ];
+      const logPlan = (): RenderPlan => {
+        const base = minimalPlan(10, 1280, 720, 24);
+        return {
+          ...base,
+          scenes: [
+            {
+              ...base.scenes[0]!,
+              durationSec: 9.5,
+              beats: [{ index: 0, startSec: 4, durationSec: 3, text: 'The count is three.' }],
+              visual: {
+                type: 'log',
+                caption: null,
+                focus: [{ startLine: 4, endLine: 4, note: null, beat: 0 }],
+                code: {
+                  path: 'run.log',
+                  language: 'log',
+                  side: 'head',
+                  masked: false,
+                  truncated: false,
+                  lines: logLines.map((t, i) => ({
+                    kind: 'ctx' as const,
+                    oldNumber: null,
+                    newNumber: i + 1,
+                    tokens: [{ t, c: null, s: 0 }],
+                  })),
+                },
+              },
+              badges: [{ kind: 'actual', text: 'Real output' }],
+            },
+          ],
+        };
+      };
+
+      /** Mean grey level of a box of a PNG still. */
+      async function meanGrey(
+        file: string,
+        box: { x: number; y: number; w: number; h: number },
+      ): Promise<number> {
+        const out = await runCommand(tools!.ffmpeg, [
+          ...['-hide_banner', '-loglevel', 'error', '-i', file],
+          ...['-vf', `crop=${box.w}:${box.h}:${box.x}:${box.y},format=gray`],
+          ...['-f', 'rawvideo', 'pipe:1'],
+        ]);
+        const bytes = out.stdoutBuffer;
+        return bytes.reduce((sum, v) => sum + v, 0) / bytes.length;
+      }
+
+      it('dims the other lines and marks the cited line from its beat on', async () => {
+        const out = await outDir();
+        const [before, after] = await renderStillFrames(
+          logPlan(),
+          [3, 7],
+          out,
+          testContext({ config, home: out, runDir: out }).ctx,
+        );
+        // Lines 1 to 3, and the row of line 4 where the highlight is drawn.
+        const others = { x: 405, y: 268, w: 200, h: 76 };
+        const edge = { x: 395, y: 351, w: 490, h: 26 };
+        expect(await meanGrey(after!, others)).toBeLessThan((await meanGrey(before!, others)) - 3);
+        expect(await meanGrey(after!, edge)).toBeGreaterThan((await meanGrey(before!, edge)) + 5);
+      }, 90_000);
+
+      it('gives the same video for one browser and for three', async () => {
+        const out = await outDir();
+        const plan: RenderPlan = { ...logPlan(), width: 640, height: 360, fps: 12 };
+        const render = async (workers: number) =>
+          readFile(
+            (
+              await new ChromiumRenderer(config, { workers }).render(
+                { plan, audioPath: null, outDir: out, quality: 'draft' },
+                testContext({ config, home: out, runDir: out }).ctx,
+              )
+            ).videoPath,
+          );
+        const single = await render(1);
+        expect((await render(3)).equals(single)).toBe(true);
+      }, 120_000);
+    });
+
     it('renders the first two seconds of a plan fixture, if there is one', async () => {
       const fixtures = join(import.meta.dirname, '..', '..', 'test', 'fixtures', 'plans');
       const names = (await readdir(fixtures).catch(() => [])).filter((name) => name.endsWith('.json')).sort();

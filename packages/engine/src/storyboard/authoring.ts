@@ -11,6 +11,7 @@ import {
   FlowVisualSchema,
   HighlightSchema,
   STORYBOARD_LIMITS as LIMITS,
+  LogVisualSchema,
   NodeKindSchema,
   PanelSchema,
   RecordingVisualSchema,
@@ -140,6 +141,14 @@ export const VISUAL_SHAPES: Visual[] = [
     focus: { x: 0, y: 0.1, w: 0.5, h: 0.4 },
   },
   { type: 'repro', steps: [{ step: 1, beat: 0 }] },
+  {
+    type: 'log',
+    logId: 'L1',
+    startLine: 118,
+    endLine: 130,
+    focus: [{ startLine: 124, endLine: 126, note: 'A short note', beat: 0 }],
+    caption: null,
+  },
   { type: 'summary', points: [{ text: 'A point', beat: 0 }], closing: null },
 ];
 
@@ -276,6 +285,7 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - screenshot: only a screenshot id that was supplied (SS1, SS2, ...). Point at the part that matters with "highlights": up to ${LIMITS.maxHighlights} boxes, each with a "beat" and a "label" of up to ${LIMITS.maxHighlightLabelLength} characters. When that part is small, set "focus" to zoom the camera slowly into it. Boxes are fractions of the picture, from 0 to 1. A screenshot panel in before-after takes "highlights" too.
 - recording: only a supplied recording id (RC1, ...). The scene lasts as long as its narration (about ${LIMITS.wordsPerSecond} words a second): write enough for the clip, or set "speed". A clip that ends early stays on its last frame. "highlights" and "focus" work as on a screenshot.
 - repro: steps of the supplied reproduction, by number, each on a beat. The text, result and capture of a step come from the reproduction. At most ${LIMITS.maxReproSteps} steps in a scene: show a longer reproduction in two scenes.
+- log: up to ${LIMITS.maxLogLines} lines of a supplied log (L1, ...), shown as "Real output". Never invent output. Cite the lines you discuss as L1.<first>-<last>, and put them in "focus".
 - summary: up to ${LIMITS.maxBullets} closing points.
 
 Anything that appears while a scene plays has a "beat": the 0-based index of the narration line on which it appears. A beat must be smaller than the number of lines in that scene.
@@ -385,6 +395,7 @@ These fields take one of a fixed set of values. Each list is complete.
 - "highlights" of a before-after panel: ${rule(PanelSchema.shape.highlights)}
 - "focus" of a screenshot or recording visual: ${rule(ScreenshotVisualSchema.shape.focus)} It has "x", "y", "w" and "h", and each side is at least ${LIMITS.minFocusSide}.
 - "focus" of a code visual: ${rule(CodeVisualSchema.shape.focus)}
+- "focus" of a log visual: ${rule(LogVisualSchema.shape.focus)}
 - "text" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.text)}
 - "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}
 - "lines" of a terminal visual and "terminal" of a before-after panel: at most ${LIMITS.maxTerminalLines} lines. "blocks" of a browser visual: at most ${LIMITS.maxBrowserBlocks} blocks. The first ones stay. The rest is trimmed, and \`validate\` reports it under "Fixed automatically when rendering" ("fixes" in the \`--json\` result).

@@ -17,6 +17,7 @@ import {
   checkRepro,
   checkTestResults,
   evidenceUsed,
+  MAX_LOG_BYTES,
   unusedScreenshotWarning,
 } from './inputs.ts';
 
@@ -111,7 +112,13 @@ describe('buildContextInputs: screenshots', () => {
 describe('checkTestResults', () => {
   it('fills in the source and keeps what was reported', () => {
     expect(checkTestResults([{ command: 'npm test', passed: false, summary: '3 failed' }])).toEqual([
-      { command: 'npm test', passed: false, summary: '3 failed', source: 'agent' },
+      {
+        command: 'npm test',
+        passed: false,
+        summary: '3 failed',
+        source: 'agent',
+        log: null,
+      },
     ]);
     expect(checkTestResults([{ command: 'make', passed: true, summary: '', source: 'ci' }])[0]?.source).toBe(
       'ci',
@@ -154,7 +161,7 @@ describe('checkTestResults', () => {
       '--tests-file: entry 1 needs "passed" set to true or false.',
     );
     expect(message([{ command: 'x', pass: true, summary: '' }])).toBe(
-      '--tests-file: entry 1 has unknown field "pass". Allowed: command, passed, summary, source.',
+      '--tests-file: entry 1 has unknown field "pass". Allowed: command, passed, summary, source, log.',
     );
     expect(message([{ command: 'x', passed: true, summary: '', source: 'robot' }])).toBe(
       '--tests-file: entry 1 has source "robot". Use one of: agent, ci, user.',
@@ -181,7 +188,14 @@ describe('buildContextInputs: test results', () => {
       testConfig(),
     );
     expect(inputs.tests).toEqual([
-      { id: 'T1', command: 'c'.repeat(300), passed: true, summary: 's'.repeat(1000), source: 'ci' },
+      {
+        id: 'T1',
+        command: 'c'.repeat(300),
+        passed: true,
+        summary: 's'.repeat(1000),
+        source: 'ci',
+        log: null,
+      },
     ]);
   });
 
@@ -215,6 +229,7 @@ describe('unusedScreenshotWarning', () => {
     tests: [],
     recordings: [],
     repro: null,
+    logs: [],
     screenshots: Array.from({ length: count }, (_, i) => ({
       id: `SS${i + 1}`,
       path: `/x/${i}.png`,
@@ -296,6 +311,7 @@ describe('unusedScreenshotWarning for recordings', () => {
     screenshots: [],
     recordings,
     repro: null,
+    logs: [],
   });
   const showing = (visual: Storyboard['scenes'][number]['visual']): Storyboard => {
     const storyboard = sampleStoryboard();
@@ -369,7 +385,7 @@ describe('unusedScreenshotWarning for recordings', () => {
 describe('unusedScreenshotWarning masks captions', () => {
   const key = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
   const caption = `Sent to jane.doe@example.com with ${key}`;
-  const base = { task: null, notes: null, tests: [], repro: null };
+  const base = { task: null, notes: null, tests: [], repro: null, logs: [] };
   const screenshots = [{ id: 'SS1', path: '/x/a.png', caption, moment: 'other' as const }];
   const recordings = [
     {
@@ -785,6 +801,7 @@ describe('the captures of a shown reproduction', () => {
       },
     ],
     repro,
+    logs: [],
   };
 
   it('count as shown, and only the captures of the shown steps', () => {
@@ -826,6 +843,7 @@ describe('the warning about captures that the offline storyboard leaves out, wit
           ],
         }
       : null,
+    logs: [],
   });
   const showing = (): Storyboard => {
     const storyboard = sampleStoryboard();
@@ -1085,5 +1103,222 @@ describe('buildContextInputs: regions to hide', () => {
       expect(Object.keys(second!)).toEqual(['x', 'y', 'w', 'h']);
       expect(second!.w).toBeCloseTo(0.1);
     });
+  });
+});
+
+describe('buildContextInputs: logs', () => {
+  const log = (path: string, caption = path) => ({ path, caption });
+  const read = (path: string, extra: Parameters<typeof buildContextInputs>[0] = {}) =>
+    buildContextInputs({ logs: [log(path)], ...extra }, dir, testConfig());
+
+  it('numbers the logs, makes their paths absolute and splits them into lines', async () => {
+    await writeFile(join(dir, 'a.log'), 'one\ntwo\nthree\n');
+    await writeFile(join(dir, 'b.log'), 'only');
+    const inputs = await buildContextInputs(
+      { logs: [log('a.log', 'The run'), log('b.log', '')] },
+      dir,
+      testConfig(),
+    );
+    expect(inputs.logs).toEqual([
+      {
+        id: 'L1',
+        path: join(dir, 'a.log'),
+        caption: 'The run',
+        lines: ['one', 'two', 'three'],
+      },
+      { id: 'L2', path: join(dir, 'b.log'), caption: '', lines: ['only'] },
+    ]);
+  });
+
+  it('turns line ends into one kind and removes terminal colour and cursor codes', async () => {
+    const esc = '\u001b';
+    await writeFile(
+      join(dir, 'term.log'),
+      `﻿${esc}[32mok${esc}[0m first\r\nsecond\rthird ${esc}[2K${esc}]0;title\u0007end\n\nlast`,
+    );
+    const { logs } = await read('term.log');
+    expect(logs[0]?.lines).toEqual(['ok first', 'second', 'third end', '', 'last']);
+  });
+
+  it('removes character-set and keypad escapes, and hidden and control characters', async () => {
+    const esc = '\u001b';
+    await writeFile(
+      join(dir, 'odd.log'),
+      `${esc}(B${esc}[m tput reset${esc}=${esc}>\nbidi \u202e evil\u200b\u0007\u0008 end\ttab\n`,
+    );
+    const { logs } = await read('odd.log');
+    expect(logs[0]?.lines).toEqual([' tput reset', 'bidi  evil end\ttab']);
+  });
+
+  it('refuses a log with nothing to read, like an empty file', async () => {
+    await writeFile(join(dir, 'blank.log'), '\n\n\n');
+    await writeFile(join(dir, 'codes.log'), '\u001b[0m\n');
+    for (const name of ['blank.log', 'codes.log']) {
+      await expect(read(name), name).rejects.toThrow(`Log ${name} cannot be used: it is empty.`);
+    }
+  });
+
+  it('keeps a line as it was read: it is masked where it is shown, not here', async () => {
+    const key = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
+    await writeFile(join(dir, 'k.log'), `key ${key} for jane.doe@example.com\n`);
+    expect((await read('k.log')).logs[0]?.lines).toEqual([`key ${key} for jane.doe@example.com`]);
+  });
+
+  it('refuses a log over 256 KB, from its size and before reading it, with the limit', async () => {
+    const big = join(dir, 'big.log');
+    await writeFile(big, 'x\n');
+    await truncate(big, MAX_LOG_BYTES + 1);
+    await expect(read('big.log')).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'Log big.log cannot be used: it is 257 KB, the limit is 256 KB.',
+    });
+    await truncate(big, MAX_LOG_BYTES);
+    await expect(read('big.log')).rejects.toThrow(/not a text file/);
+    // A file far over the limit is refused from its size: reading it is never tried.
+    await truncate(big, 3 * 1024 ** 3);
+    await expect(read('big.log')).rejects.toThrow(`it is ${3 * 1024 * 1024} KB, the limit is 256 KB`);
+  });
+
+  it('refuses a file that is not UTF-8 text, a missing file and an empty one', async () => {
+    await writeFile(join(dir, 'nul.log'), Buffer.from('a\0b'));
+    await writeFile(join(dir, 'latin.log'), Buffer.from([0x63, 0x61, 0x66, 0xe9]));
+    await writeFile(join(dir, 'empty.log'), '');
+    for (const name of ['nul.log', 'latin.log']) {
+      await expect(read(name), name).rejects.toMatchObject({
+        code: 'USAGE',
+        message: `Log ${name} cannot be used: it is not a text file.`,
+      });
+    }
+    await expect(read('empty.log')).rejects.toThrow('it is empty');
+    await expect(read('missing.log')).rejects.toThrow('the file was not found');
+    await expect(read('.')).rejects.toThrow('it is not a regular file');
+  });
+
+  it('refuses a line with one very long unbroken string, and names the line', async () => {
+    await writeFile(join(dir, 'long.log'), `fine\n${'a'.repeat(1001)}\n`);
+    await expect(read('long.log')).rejects.toThrow(
+      'Log long.log cannot be used: line 2 has an unbroken string of more than 1000 characters.',
+    );
+    await writeFile(join(dir, 'ok.log'), `${'a'.repeat(1000)}\n${'a '.repeat(2000)}\n`);
+    await expect(read('ok.log')).resolves.toBeDefined();
+  });
+
+  it('uses the first 4 logs and warns about the rest', async () => {
+    for (const n of [1, 2, 3, 4, 5]) await writeFile(join(dir, `${n}.log`), `line ${n}\n`);
+    const warnings: string[] = [];
+    const inputs = await buildContextInputs(
+      { logs: [1, 2, 3, 4, 5].map((n) => log(`${n}.log`)) },
+      dir,
+      testConfig(),
+      (m) => warnings.push(m),
+    );
+    expect(inputs.logs.map((l) => l.id)).toEqual(['L1', 'L2', 'L3', 'L4']);
+    expect(warnings).toEqual(['Only the first 4 logs are used.']);
+  });
+});
+
+describe('a test result that points at a log', () => {
+  const lines = (n: number) => Array.from({ length: n }, (_, i) => `line ${i + 1}`).join('\n');
+  const test = (log?: string | null) => ({
+    command: 'npm test',
+    passed: true,
+    summary: 'ok',
+    source: 'agent' as const,
+    ...(log === undefined ? {} : { log }),
+  });
+  const run = (log: string | null | undefined, withLog = true) =>
+    buildContextInputs(
+      {
+        tests: [test(log)],
+        ...(withLog ? { logs: [{ path: join(dir, 'a.log'), caption: 'a' }] } : {}),
+      },
+      dir,
+      testConfig(),
+    );
+
+  it('keeps a log id that exists, as a range or as the whole log', async () => {
+    await writeFile(join(dir, 'a.log'), lines(300));
+    expect((await run('L1.120-140')).tests[0]?.log).toBe('L1.120-140');
+    expect((await run('L1.7')).tests[0]?.log).toBe('L1.7');
+    expect((await run('L1')).tests[0]?.log).toBe('L1');
+    expect((await run(null)).tests[0]?.log).toBeNull();
+    expect((await run(undefined)).tests[0]?.log).toBeNull();
+  });
+
+  it('refuses an id that is not a log of this command, naming the result and the id', async () => {
+    await writeFile(join(dir, 'a.log'), lines(300));
+    for (const id of ['L2', 'T1', 'F1']) {
+      await expect(run(id), id).rejects.toMatchObject({
+        code: 'USAGE',
+        message: `Test result 1 points at the log "${id}", which is not a log of this command.`,
+      });
+    }
+    for (const id of ['L1.0-3', 'L1.5-4', 'L1.290-301', 'L1.1-201', 'L1.x']) {
+      await expect(run(id), id).rejects.toMatchObject({
+        code: 'USAGE',
+        message: `Test result 1 points at the log "${id}", which is not a valid range of a log of this command.`,
+      });
+    }
+    await expect(run('L1.1-200')).resolves.toBeDefined();
+    await expect(run('L1.5-4')).rejects.toMatchObject({
+      hint: expect.stringContaining('L1 (300 lines)'),
+    });
+    await expect(run('L1.1-2', false)).rejects.toMatchObject({
+      hint: expect.stringContaining('No log was passed.'),
+    });
+  });
+
+  it('accepts a "log" in a list of test results only as a string or null', () => {
+    expect(checkTestResults([{ command: 'x', passed: true, summary: '', log: 'L1.2-3' }])[0]?.log).toBe(
+      'L1.2-3',
+    );
+    expect(checkTestResults([{ command: 'x', passed: true, summary: '' }])[0]?.log).toBeNull();
+    expect(() => checkTestResults([{ command: 'x', passed: true, summary: '', log: 5 }])).toThrow(
+      'tests: entry 1 needs "log" to be a log id such as "L1.120-140".',
+    );
+  });
+});
+
+describe('logs in the checks after a run', () => {
+  const logs = [{ id: 'L1', path: '/x/run.log', caption: 'Run: "ok"', lines: ['a'] }];
+  const inputs = (): ContextInputs => ({
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: [],
+    recordings: [],
+    repro: null,
+    logs,
+  });
+  const shown = (logId: string) =>
+    ({
+      ...sampleStoryboard(),
+      scenes: [
+        {
+          ...sampleStoryboard().scenes[0],
+          visual: {
+            type: 'log',
+            logId,
+            startLine: 1,
+            endLine: 1,
+            focus: [],
+            caption: null,
+          },
+        },
+      ],
+    }) as unknown as Storyboard;
+
+  it('warns about a log that no scene shows, and says why the offline storyboard skips it', () => {
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(), 'llm', PRIVACY)).toBe(
+      'The log L1 ("Run: "ok"") is not shown in the video.',
+    );
+    expect(unusedScreenshotWarning(sampleStoryboard(), inputs(), 'heuristic', PRIVACY)).toContain(
+      'The offline storyboard never uses logs',
+    );
+    expect(unusedScreenshotWarning(shown('L1'), inputs(), 'llm', PRIVACY)).toBeNull();
+  });
+
+  it('lists a shown log among the evidence used', () => {
+    expect(evidenceUsed(shown('L1'))).toContain('L1');
   });
 });

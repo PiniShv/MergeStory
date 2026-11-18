@@ -139,6 +139,7 @@ export type {
   GroundingSummary,
   KeyHunk,
   LinkedIssue,
+  LogInput,
   NarrationClip,
   NarrationResult,
   PlanResult,

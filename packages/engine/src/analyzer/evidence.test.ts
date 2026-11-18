@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildChange, emptyInputs, type FixtureFile } from '../testing/change.ts';
-import { buildEvidenceIndex, type EvidenceSources } from './evidence.ts';
+import { buildEvidenceIndex, type EvidenceSources, findEvidence } from './evidence.ts';
 
 function sourcesFor(files: FixtureFile[]): EvidenceSources {
   const { changeSet } = buildChange(files);
@@ -123,5 +123,56 @@ describe('capture labels', () => {
     });
     const item = buildEvidenceIndex(sources).find((e) => e.id === 'RC1')!;
     expect(item.label).toBe('Sent by j•••@example.com');
+  });
+});
+
+describe('logs in the evidence index', () => {
+  const index = () => {
+    const sources = sourcesFor([]);
+    sources.inputs = emptyInputs({
+      logs: [
+        {
+          id: 'L1',
+          path: '/x/run.log',
+          caption: 'Run of jane.doe@example.com',
+          lines: ['a', 'b', 'c', 'd'],
+        },
+      ],
+    });
+    return new Map(buildEvidenceIndex(sources).map((item) => [item.id, item]));
+  };
+
+  it('gives a log an item with its line count and a masked label', () => {
+    expect(index().get('L1')).toEqual({
+      id: 'L1',
+      kind: 'log',
+      label: 'Log: Run of j•••@example.com',
+      ref: null,
+      url: null,
+      lines: 4,
+    });
+  });
+
+  it('finds a range inside the log, and labels it with the lines', () => {
+    expect(findEvidence(index(), 'L1.2-3')).toMatchObject({
+      id: 'L1.2-3',
+      kind: 'log',
+      label: 'Log: Run of j•••@example.com, lines 2 to 3',
+    });
+    expect(findEvidence(index(), 'L1.4')?.label).toMatch(/, line 4$/);
+    expect(findEvidence(index(), 'L1')?.id).toBe('L1');
+  });
+
+  it('finds no range outside the log, of a log that is not there, or of another kind of id', () => {
+    for (const id of ['L1.3-5', 'L1.0-2', 'L2.1', 'F1.H1-H2', 'REPO.1-2']) {
+      expect(findEvidence(index(), id), id).toBeNull();
+    }
+  });
+
+  it('matches every other id exactly', () => {
+    const items = index();
+    expect(findEvidence(items, 'REPO')?.kind).toBe('repo');
+    expect(findEvidence(items, 'repo')).toBeNull();
+    expect(findEvidence(items, 'REPO ')).toBeNull();
   });
 });

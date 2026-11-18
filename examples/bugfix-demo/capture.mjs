@@ -1,7 +1,8 @@
 // Captures the basket page before and after the fix, the way a person uses it.
 // usage: node capture.mjs <output folder>
 // Writes before.png, after.png, before.mp4 and after.mp4, a folder screenshots/ with the same two
-// pictures and a captions.json (for --screenshots-dir), and count.json: where the text of the item
+// pictures and a captions.json (for --screenshots-dir), check.log (the real output of
+// feature/check.js), and count.json: where the text of the item
 // count ends up in each picture, as fractions of it, and signed-in.json: the same for the "Signed in as"
 // line that redact.json hides (the union over the whole clip, if it moves). Needs a Chrome or Chromium
 // (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
@@ -34,6 +35,12 @@ const VIEWPORT = { width: 960, height: 540 };
 // taller than the one of the machine that made the storyboard shows in this file.
 const counts = {};
 const signedIn = {};
+
+// The real output of the fixed code, for the video's log scene.
+writeFileSync(
+  join(outDir, 'check.log'),
+  execFileSync(process.execPath, [join(here, 'feature', 'check.js')], { encoding: 'utf8' }),
+);
 
 const browser = await chromium.launch({ executablePath: browserPath, headless: true });
 // A small window, so the text stays large when the video shows it in a frame.

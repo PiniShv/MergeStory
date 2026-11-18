@@ -9,6 +9,7 @@ import { resolveFfmpeg } from '../core/binaries.ts';
 import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
+import { resolveLogId } from '../core/log-id.ts';
 import { probeRecording, shownName } from '../core/media-probe.ts';
 import { maskPrivate, type PrivateMaskOptions } from '../core/secrets.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
@@ -16,18 +17,23 @@ import { stripInvisible } from '../core/text.ts';
 import {
   type ContextInputs,
   type HiddenRegion,
+  type LogInput,
   REPRO_RESULTS,
   type RecordingInput,
   type ReproFile,
   type ReproInput,
   type TestEvidence,
 } from '../core/types.ts';
+import { longestRun, MAX_UNBROKEN_RUN } from '../jobs/input-rules.ts';
 import { turnedReason } from '../visuals/hide-regions.ts';
 import { detectImage, MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import type { ContextOptions } from './types.ts';
 
 /** Limits of the context. Longer lists and texts are cut or refused here, so every caller sees the same ones. */
 export const MAX_TEXT = 64 * 1024;
+/** Logs that reach the evidence, and the size of one. More logs are cut, with a warning. */
+export const MAX_LOGS = 4;
+export const MAX_LOG_BYTES = 256 * 1024;
 /** Test results that reach the evidence. A longer list is cut, with a warning. */
 export const MAX_TESTS = 10;
 /** Most entries accepted in a list of test results at all. */
@@ -37,7 +43,7 @@ const MAX_TEST_SUMMARY = 1000;
 const MAX_CAPTION = 200;
 
 export const TEST_SOURCES = ['agent', 'ci', 'user'] as const;
-const TEST_KEYS = ['command', 'passed', 'summary', 'source'];
+const TEST_KEYS = ['command', 'passed', 'summary', 'source', 'log'];
 
 /**
  * One test result the caller reports. Strict on purpose: a typo such as "pass" for "passed", or the
@@ -56,6 +62,8 @@ export const TestResultSchema = z.strictObject(
         error: (issue) => `has source "${String(issue.input)}". Use one of: ${TEST_SOURCES.join(', ')}.`,
       })
       .default('agent'),
+    // Whether the id exists is checked where the logs are read (see buildContextInputs).
+    log: z.string({ error: 'needs "log" to be a log id such as "L1.120-140".' }).nullable().default(null),
   },
   {
     error: (issue) =>
@@ -325,6 +333,58 @@ export async function checkScreenshotFile(
   return absolute;
 }
 
+// The sequences that a terminal reads as colour, cursor or title commands.
+const TERMINAL_CODES =
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: the escape character is what these match
+  /\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[@-Z\\-_]|\x1b[()*+][0-~]|\x1b[=>]/g;
+
+/**
+ * Read a log: a regular file of at most MAX_LOG_BYTES (checked before it is read) that holds UTF-8
+ * text. Line ends become "\n" and terminal colour codes are removed. A line with a very long unbroken
+ * run is refused, as it is in the task and the notes: scanning it for secrets would take too long.
+ */
+async function readLog(path: string, cwd: string): Promise<string[]> {
+  const absolute = resolve(cwd, path);
+  const name = shownName(absolute);
+  const refuse = (reason: string, hint?: string): MergeStoryError =>
+    new MergeStoryError('USAGE', `Log ${name} cannot be used: ${reason}.`, hint ? { hint } : {});
+  const info = await stat(absolute).catch(() => null);
+  if (!info) throw refuse('the file was not found', 'Pass an existing text file.');
+  if (!info.isFile()) throw refuse('it is not a regular file');
+  const tooLarge = (size: number): MergeStoryError =>
+    refuse(
+      `it is ${Math.ceil(size / 1024)} KB, the limit is ${MAX_LOG_BYTES / 1024} KB`,
+      'Keep only the part of the log that matters.',
+    );
+  if (info.size > MAX_LOG_BYTES) throw tooLarge(info.size);
+  const bytes = await readFile(absolute).catch(() => null);
+  if (bytes === null) throw refuse('it cannot be read');
+  // The file may have grown since it was measured.
+  if (bytes.length > MAX_LOG_BYTES) throw tooLarge(bytes.length);
+  let text: string;
+  try {
+    if (bytes.includes(0)) throw new Error('NUL byte');
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    throw refuse('it is not a text file', 'A log must be UTF-8 text.');
+  }
+  const lines = text
+    .replace(TERMINAL_CODES, '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => stripInvisible(line, 'tab-newline'));
+  if (lines[lines.length - 1] === '') lines.pop();
+  if (lines.every((line) => line.trim() === '')) throw refuse('it is empty');
+  const long = lines.findIndex((line) => longestRun(line) > MAX_UNBROKEN_RUN);
+  if (long !== -1) {
+    throw refuse(
+      `line ${long + 1} has an unbroken string of more than ${MAX_UNBROKEN_RUN} characters`,
+      'Remove it or keep only the relevant part. Very long strings are refused because scanning them for secrets takes too long.',
+    );
+  }
+  return lines;
+}
+
 /**
  * Check a screen recording by its content: a regular file, within the size limit, readable by
  * ffprobe as H.264, VP8 or VP9 video, and within the length limit. Refused at once, so no speech is
@@ -375,13 +435,6 @@ export async function buildContextInputs(
   const maxRecordings = config.inputs.maxRecordings;
   if ((options?.recordings?.length ?? 0) > maxRecordings)
     warn(`Only the first ${maxRecordings} recordings are used.`);
-  const tests = checkTestResults((options?.tests ?? []).slice(0, MAX_TESTS)).map((t, i) => ({
-    id: `T${i + 1}`,
-    command: t.command.slice(0, MAX_TEST_COMMAND),
-    passed: t.passed,
-    summary: t.summary.slice(0, MAX_TEST_SUMMARY),
-    source: t.source,
-  }));
   // Checked first: a mistake in what to hide stops the run before anything else is read.
   const redactions =
     options?.redact === undefined ? new Map<string, HiddenRegion[]>() : checkRedactions(options.redact);
@@ -391,6 +444,38 @@ export async function buildContextInputs(
     );
     return regions.length > 0 ? { hidden: regions } : {};
   };
+  if ((options?.logs?.length ?? 0) > MAX_LOGS) warn(`Only the first ${MAX_LOGS} logs are used.`);
+  const logs: LogInput[] = [];
+  for (const [i, log] of (options?.logs ?? []).slice(0, MAX_LOGS).entries()) {
+    const lines = await readLog(log.path, cwd);
+    logs.push({
+      id: `L${i + 1}`,
+      path: resolve(cwd, log.path),
+      caption: (log.caption ?? '').slice(0, MAX_CAPTION),
+      lines,
+    });
+  }
+  const lineCounts = new Map(logs.map((log) => [log.id, log.lines.length]));
+  const tests = checkTestResults((options?.tests ?? []).slice(0, MAX_TESTS)).map((t, i) => {
+    if (t.log !== null && !resolveLogId(t.log, lineCounts)) {
+      const rangeOfKnownLog = lineCounts.has(/^(L[1-9]\d*)\./.exec(t.log)?.[1] ?? '');
+      throw new MergeStoryError(
+        'USAGE',
+        `Test result ${i + 1} points at the log "${t.log.slice(0, 40)}", which is not ${rangeOfKnownLog ? 'a valid range of a log' : 'a log'} of this command.`,
+        {
+          hint: `Pass the file with --log, or for the agent commands put it in logs/ of the work folder. ${logs.length > 0 ? `The logs are: ${logs.map((log) => `${log.id} (${log.lines.length} lines)`).join(', ')}.` : 'No log was passed.'} A range is "L1.120-140", inside the log, at most 200 lines.`,
+        },
+      );
+    }
+    return {
+      id: `T${i + 1}`,
+      command: t.command.slice(0, MAX_TEST_COMMAND),
+      passed: t.passed,
+      summary: t.summary.slice(0, MAX_TEST_SUMMARY),
+      source: t.source,
+      log: t.log,
+    };
+  });
   const screenshots = [];
   for (const [i, shot] of (options?.screenshots ?? []).slice(0, maxScreenshots).entries()) {
     screenshots.push({
@@ -434,16 +519,18 @@ export async function buildContextInputs(
     screenshots,
     recordings,
     repro: options?.repro ? reproInput(options.repro, screenshots, recordings) : null,
+    logs,
   };
 }
 
-/** Ids of the screenshots and recordings that a storyboard shows. */
+/** Ids of the screenshots, recordings and logs that a storyboard shows. */
 export function shownMedia(
   storyboard: Storyboard,
   repro: ReproInput | null = null,
-): { screenshots: Set<string>; recordings: Set<string> } {
+): { screenshots: Set<string>; recordings: Set<string>; logs: Set<string> } {
   const screenshots = new Set<string>();
   const recordings = new Set<string>();
+  const logs = new Set<string>();
   for (const { visual } of storyboard.scenes) {
     if (visual.type === 'repro') {
       for (const { step } of visual.steps) {
@@ -454,6 +541,7 @@ export function shownMedia(
     }
     if (visual.type === 'screenshot') screenshots.add(visual.screenshotId);
     if (visual.type === 'recording') recordings.add(visual.recordingId);
+    if (visual.type === 'log') logs.add(visual.logId);
     if (visual.type === 'before-after') {
       for (const panel of [visual.before, visual.after]) {
         if (panel.kind === 'screenshot' && panel.screenshotId) screenshots.add(panel.screenshotId);
@@ -461,12 +549,12 @@ export function shownMedia(
       }
     }
   }
-  return { screenshots, recordings };
+  return { screenshots, recordings, logs };
 }
 
 /**
  * Every evidence id that a storyboard cites or shows: the cited ids in the order of first use, then
- * the screenshots and recordings that are shown and not cited. After the checks, every id in it exists.
+ * the screenshots, recordings and logs that are shown and not cited. After the checks, every id in it exists.
  */
 export function evidenceUsed(storyboard: Storyboard, repro: ReproInput | null = null): string[] {
   const ids = new Set<string>();
@@ -482,12 +570,12 @@ export function evidenceUsed(storyboard: Storyboard, repro: ReproInput | null = 
   };
   walk(storyboard);
   const shown = shownMedia(storyboard, repro);
-  for (const id of [...shown.screenshots, ...shown.recordings]) ids.add(id);
+  for (const id of [...shown.screenshots, ...shown.recordings, ...shown.logs]) ids.add(id);
   return [...ids];
 }
 
 /**
- * A warning when screenshots or recordings were supplied but the storyboard does not show them all,
+ * A warning when screenshots, recordings or logs were supplied but the storyboard does not show them all,
  * or null. The offline storyboard never uses them, which is worth saying because the person did
  * pass them on purpose.
  */
@@ -529,6 +617,12 @@ export function unusedScreenshotWarning(
       'The recording',
       'The recordings',
       'recordings',
+    ),
+    sentence(
+      inputs.logs.filter((log) => !shown.logs.has(log.id)),
+      'The log',
+      'The logs',
+      'logs',
     ),
   ].filter((part): part is string => part !== null);
   return parts.length === 0 ? null : parts.join(' ');

@@ -3,6 +3,7 @@
  * self-contained RenderPlan. Code is read from the repository here, never taken from the storyboard,
  * and every string that reaches the screen is masked first.
  */
+import { findEvidence } from '../analyzer/evidence.ts';
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
@@ -58,7 +59,7 @@ import type {
   TimelineScene,
 } from '../core/types.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import { CodeResolver, type FocusRange } from './code.ts';
+import { CodeResolver, type FocusRange, type MaskedLines, maskLines } from './code.ts';
 import { loadScreenshot, type ScreenshotHiding } from './image.ts';
 import { layoutArchitecture } from './layout.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
@@ -152,6 +153,8 @@ interface Environment {
   images: Map<string, Promise<ResolvedImage>>;
   frames: ReadonlyMap<string, ExtractedFrames>;
   signal: AbortSignal;
+  /** Each log with its secrets masked, once. */
+  logs: Map<string, MaskedLines>;
 }
 
 /** The scene being resolved: its frame folders are named by its place in the storyboard (from 1), and a panel appears at a time that follows its beats. */
@@ -173,6 +176,8 @@ interface ResolvedScene {
   recorded: boolean;
   /** The scene shows steps that their author reported (a reproduction). */
   reported?: boolean;
+  /** The scene shows real lines of a supplied log. */
+  realOutput: boolean;
 }
 
 /** The frame set of one use of a recording, with the scene second at which the clip starts. */
@@ -291,6 +296,45 @@ export async function loadStoryboardScreenshots(
     }
   }
   return out;
+}
+
+/** A log line is cut to this many characters (with "…"), so that it never wraps in the code window. */
+const LOG_LINE_COLS = 110;
+
+/** The lines of a `log` visual as a code view holds them: masked, tabs as spaces, long lines cut. */
+function shownLog(
+  visual: Extract<Visual, { type: 'log' }>,
+  env: Environment,
+  scrub: Scrubber,
+): { code: ResolvedCode; masked: boolean } {
+  const log = env.inputs.logs.find((l) => l.id === visual.logId);
+  const last = Math.min(visual.endLine, log?.lines.length ?? 0);
+  if (!log || visual.startLine < 1 || visual.startLine > last) {
+    throw new MergeStoryError(
+      'STORYBOARD_INVALID',
+      `The storyboard shows lines that are not in the log ${visual.logId}.`,
+      {
+        hint: 'Show a range of a log that was passed with the run context; ids look like L1.',
+      },
+    );
+  }
+  let masks = env.logs.get(log.id);
+  if (!masks) {
+    masks = maskLines(log.lines);
+    env.logs.set(log.id, masks);
+  }
+  const lines: ResolvedCode['lines'] = [];
+  for (let n = visual.startLine; n <= last; n++) {
+    const text = scrub.text((masks.lines[n - 1] ?? '').replace(/\t/g, '    '));
+    const chars = [...text];
+    const cut = chars.length > LOG_LINE_COLS ? `${chars.slice(0, LOG_LINE_COLS - 1).join('')}…` : text;
+    lines.push({ kind: 'ctx', oldNumber: null, newNumber: n, tokens: [{ t: cut, c: null, s: 0 }] });
+  }
+  const masked = masks.flags.slice(visual.startLine - 1, last).some(Boolean);
+  return {
+    code: { path: scrub.text(log.caption), language: 'log', side: 'head', lines, masked, truncated: false },
+    masked,
+  };
 }
 
 type FilesVisual = Extract<Visual, { type: 'files' }>;
@@ -522,6 +566,7 @@ async function resolveVisual(
     simulated: null as string | null,
     actual: false,
     recorded: false,
+    realOutput: false,
   };
   switch (visual.type) {
     case 'title':
@@ -728,6 +773,28 @@ async function resolveVisual(
         recorded: thumbs.includes('recording'),
       };
     }
+    case 'log': {
+      const shown = shownLog(visual, env, scrub);
+      return {
+        ...base,
+        codeMasked: shown.masked,
+        realOutput: true,
+        visual: {
+          type: 'log',
+          code: shown.code,
+          focus: clampFocus(
+            visual.focus.map((f) => ({
+              startLine: f.startLine,
+              endLine: f.endLine,
+              note: scrub.maybe(f.note),
+              beat: beatIndex(f.beat),
+            })),
+            shown.code,
+          ),
+          caption: scrub.maybe(visual.caption),
+        },
+      };
+    }
     default:
       visual satisfies never;
       throw new MergeStoryError('INTERNAL', 'A scene has an unknown visual type.');
@@ -755,8 +822,9 @@ function sceneRefs(scene: Scene, codeLabels: string[], evidence: Map<string, Evi
   };
   for (const label of codeLabels) add(label);
   for (const id of citedEvidence(scene)) {
-    const item = evidence.get(id);
-    if (item && BACKING_EVIDENCE_KINDS.includes(item.kind)) add(collapseLineRange(item.label));
+    const item = findEvidence(evidence, id);
+    if (item && (BACKING_EVIDENCE_KINDS.includes(item.kind) || item.kind === 'log'))
+      add(collapseLineRange(item.label));
   }
   return refs;
 }
@@ -767,6 +835,7 @@ function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): Pl
   if (resolved.actual) badges.push({ kind: 'actual', text: 'Actual screenshot' });
   if (resolved.recorded) badges.push({ kind: 'actual', text: 'Recorded' });
   if (resolved.reported) badges.push({ kind: 'reported', text: 'Reported steps' });
+  if (resolved.realOutput) badges.push({ kind: 'actual', text: 'Real output' });
   if (masked) badges.push({ kind: 'masked', text: 'Sensitive data masked' });
   if (scene.narration.some((line) => line.evidence.some((id) => /^T\d+$/.test(id)))) {
     badges.push({ kind: 'reported', text: 'Reported results' });
@@ -827,6 +896,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     images: new Map([...(input.images ?? [])].map(([id, image]) => [id, Promise.resolve(image)])),
     frames: input.frames ?? new Map(),
     signal: ctx.signal,
+    logs: new Map(),
   };
   const evidence = new Map(analysis.evidence.map((item) => [item.id, item]));
   const metaScrub = createScrubber(config.privacy.maskEmails);

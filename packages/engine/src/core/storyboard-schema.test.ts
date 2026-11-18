@@ -66,6 +66,36 @@ describe('the repro visual and the roles of the reproduction', () => {
   });
 });
 
+describe('the log visual', () => {
+  const log = {
+    type: 'log',
+    logId: 'L1',
+    startLine: 118,
+    endLine: 130,
+    focus: [{ startLine: 124, endLine: 126, note: 'The count', beat: 0 }],
+    caption: 'The run',
+  };
+
+  it('parses with every field, and the nullable ones can be null', () => {
+    expect(VisualSchema.parse(log)).toEqual(log);
+    const plain = {
+      ...log,
+      caption: null,
+      focus: [{ ...log.focus[0], note: null }],
+    };
+    expect(VisualSchema.parse(plain)).toEqual(plain);
+  });
+
+  it('needs every field, and is listed in VISUAL_TYPES', () => {
+    for (const key of ['logId', 'startLine', 'endLine', 'focus', 'caption']) {
+      const { [key]: _gone, ...rest } = log as Record<string, unknown>;
+      expect(VisualSchema.safeParse(rest).success, key).toBe(false);
+    }
+    expect(VISUAL_TYPES).toContain('log');
+    expect(STORYBOARD_LIMITS.maxLogLines).toBe(18);
+  });
+});
+
 describe('the recording panel', () => {
   const panel = {
     label: 'After',

@@ -38,6 +38,9 @@ export type IssueCode =
   | 'highlight-label-too-long'
   | 'repro-unknown'
   | 'repro-step-unknown'
+  | 'log-unknown'
+  | 'log-range-out-of-range'
+  | 'log-too-long'
   | 'simulated-unbacked'
   | 'over-length';
 

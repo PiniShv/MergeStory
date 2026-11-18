@@ -375,6 +375,68 @@ describe('analyze: the commands in AUTHORING.md', () => {
     expect(analyzeMock).not.toHaveBeenCalled();
   });
 
+  it('are given every --log as it was typed, with an absolute path', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    const { code, stdout } = await run(['analyze', 'repo', '--log', 'run.log:Checks: all green']);
+    expect(code).toBe(0);
+    const args = analyzeMock.mock.calls[0]?.[0].followUp?.args;
+    expect(args).toEqual(['--log', `${join(dir, 'run.log')}:Checks: all green`]);
+    expect(stdout).toContain(`--log '${join(dir, 'run.log')}:Checks: all green'`);
+  });
+
+  it('mask a secret in the caption of --log and --screenshot, and keep the file name', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    await writeFile(join(dir, 'after.png'), makePng(8, 8));
+    const token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789AB';
+    const { stdout } = await run([
+      'analyze',
+      'repo',
+      '--log',
+      `run.log:key ${token}`,
+      '--screenshot',
+      `after.png:key ${token}:after`,
+    ]);
+    const args = analyzeMock.mock.calls[0]?.[0].followUp?.args ?? [];
+    expect(args.join('\n')).not.toContain(token);
+    expect(stdout).not.toContain(token);
+    expect(args.some((a) => a.startsWith(`${join(dir, 'run.log')}:key `))).toBe(true);
+    expect(args.some((a) => a.startsWith(`${join(dir, 'after.png')}:key `) && a.endsWith(':after'))).toBe(
+      true,
+    );
+  });
+
+  it('keep --repro-file, --redact, --screenshots-dir and --log together, with the captions masked', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    await mkdir(join(dir, 'shots'));
+    await writeFile(join(dir, 'repro.json'), JSON.stringify({ title: 'Bug', steps: [{ text: 'Open it' }] }));
+    await writeFile(join(dir, 'redact.json'), '{}');
+    const token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789AB';
+    const { code, stdout } = await run([
+      'analyze',
+      'repo',
+      '--screenshots-dir',
+      'shots',
+      '--log',
+      `run.log:key ${token}`,
+      '--redact',
+      'redact.json',
+      '--repro-file',
+      'repro.json',
+    ]);
+    expect(code).toBe(0);
+    const args = analyzeMock.mock.calls[0]?.[0].followUp?.args ?? [];
+    for (const flag of ['--repro-file', '--redact', '--screenshots-dir', '--log']) expect(args).toContain(flag);
+    expect(args).toContain(join(dir, 'shots'));
+    expect(args.some((a) => a.startsWith(`${join(dir, 'run.log')}:key `))).toBe(true);
+    expect(args.join('\n')).not.toContain(token);
+    expect(stdout).toContain(`--screenshots-dir ${join(dir, 'shots')}`);
+    expect(stdout).toContain(`--redact ${join(dir, 'redact.json')}`);
+    expect(stdout).not.toContain(token);
+  });
+
   it('are given an inline task as it was typed, and nothing else when no flag was used', async () => {
     analyzeMock.mockResolvedValue(authoring);
     await run(['analyze', 'acme/app#42', '--task', 'Add retries']);

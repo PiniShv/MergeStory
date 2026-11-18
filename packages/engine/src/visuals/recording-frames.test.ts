@@ -397,6 +397,7 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
         await probed(small, 'RC4'),
       ],
       repro: null,
+      logs: [],
     };
     const runDir = await mkdtemp(join(dir, 'run-'));
     const frames = await extractStoryboardFrames(
@@ -507,6 +508,7 @@ describe.skipIf(tools === null)('extractStoryboardFrames', () => {
         screenshots: [],
         recordings: [await probed(lateBlue, 'RC1')],
         repro: reproInput,
+        logs: [],
       };
       const runDir = await mkdtemp(join(dir, 'run-'));
       const frames = await extractStoryboardFrames(
@@ -795,6 +797,7 @@ describe.skipIf(tools === null)('hidden regions in the frames of a recording', (
       screenshots: [],
       recordings: [{ ...(await probed(stripes, 'RC1')), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] }],
       repro: null,
+      logs: [],
     };
     const runDir = await mkdtemp(join(dir, 'run-'));
     const frames = await extractStoryboardFrames(
@@ -829,6 +832,7 @@ describe.skipIf(tools === null)('hidden regions in the frames of a recording', (
           environment: null,
           steps: [{ text: 'A step', screenshotId: null, recordingId: 'RC1', result: null }],
         },
+        logs: [],
       };
       const runDir = await mkdtemp(join(dir, 'run-'));
       await extractStoryboardFrames(
@@ -874,6 +878,7 @@ describe.skipIf(tools === null)('hidden regions in the frames of a recording', (
       screenshots: [],
       recordings: [{ ...(await probed(big, 'RC1')), hidden: [hidden(0.25, 0.25, 0.5, 0.5)] }],
       repro: null,
+      logs: [],
     };
     const visual = {
       type: 'recording',

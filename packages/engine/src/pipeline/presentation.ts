@@ -1,5 +1,6 @@
 /** Builds the data for the watch page and the PR comment from a validated storyboard. */
 
+import { findEvidence } from '../analyzer/evidence.ts';
 import { isSimulated } from '../core/storyboard-facts.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { collapseLineRange } from '../core/text.ts';
@@ -35,7 +36,7 @@ function evidenceLinks(ids: string[], analysis: Analysis): EvidenceLink[] {
   const byId = new Map(analysis.evidence.map((e) => [e.id, e]));
   const links: EvidenceLink[] = [];
   for (const id of ids) {
-    const item = byId.get(id);
+    const item = findEvidence(byId, id);
     if (item) links.push({ label: collapseLineRange(item.label), url: item.url });
   }
   return links;

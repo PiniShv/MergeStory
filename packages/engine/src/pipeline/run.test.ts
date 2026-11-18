@@ -1764,3 +1764,131 @@ describe.skipIf(ffmpegTools === null)('generate: recordings', () => {
     expect(existsSync(join(other, 'recording-frames', 'mine'))).toBe(true);
   });
 });
+
+describe('logs', () => {
+  let logFile: string;
+  let withLog: (overrides?: Record<string, unknown>) => ReturnType<typeof options>;
+  beforeAll(async () => {
+    logFile = join(base, 'check.log');
+    const lines = Array.from({ length: 40 }, (_, i) => `step ${i + 1} ok`);
+    lines[19] = 'basket count is 5';
+    await writeFile(logFile, `${lines.join('\n')}\n`);
+    withLog = (overrides = {}) =>
+      options({
+        context: {
+          ...context,
+          logs: [{ path: logFile, caption: 'Run of the check' }],
+        },
+        ...overrides,
+      });
+  });
+
+  const withLogScene = async (visual: Record<string, unknown>, evidence: string[]) => {
+    const demo = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    const scene = structuredClone(demo.scenes[0]!);
+    return {
+      ...demo,
+      scenes: [
+        ...demo.scenes,
+        {
+          ...scene,
+          id: 'real-output',
+          role: 'under-the-hood',
+          narration: [{ text: 'The run printed the count.', evidence }],
+          visual,
+        },
+      ],
+    } as Storyboard;
+  };
+  const logVisual = (extra: Record<string, unknown> = {}) => ({
+    type: 'log',
+    logId: 'L1',
+    startLine: 15,
+    endLine: 25,
+    focus: [{ startLine: 20, endLine: 20, note: null, beat: 0 }],
+    caption: null,
+    ...extra,
+  });
+
+  it('accepts a storyboard that shows a log and cites a range of it', async () => {
+    const board = await withLogScene(logVisual(), ['L1.20']);
+    const result = await checkStoryboard({ ...withLog(), storyboard: board });
+    expect(result.errors).toEqual([]);
+    expect(result.fixes).toEqual([]);
+  });
+
+  it('removes a cited range that is outside the log, as it removes any unknown id', async () => {
+    const board = await withLogScene(logVisual(), ['L1.20', 'L1.38-90']);
+    const result = await checkStoryboard({ ...withLog(), storyboard: board });
+    expect(result.errors).toEqual([]);
+    expect(result.fixes).toEqual([
+      `scenes[${board.scenes.length - 1}].narration[0].evidence: removed unknown evidence id "L1.38-90"`,
+    ]);
+  });
+
+  it('names a log id that was not supplied, and the ones that were', async () => {
+    const board = await withLogScene(logVisual({ logId: 'L2' }), ['L1.20']);
+    const result = await checkStoryboard({ ...withLog(), storyboard: board });
+    expect(result.errors.map((e) => e.code)).toEqual(['log-unknown']);
+    expect(result.errors[0]?.message).toBe('"L2" is not a supplied log; use one of L1');
+  });
+
+  it('warns that the offline storyboard does not show a log, and leaves the e-mail address of the caption out', async () => {
+    const messages: string[] = [];
+    const caption = 'Run for jane.doe@example.com';
+    const result = (await generate(options({ context: { ...context, logs: [{ path: logFile, caption }] } }), {
+      onProgress: (event) => messages.push(event.message),
+    })) as GenerateResult;
+    const warning = result.warnings.find((w) => w.includes('L1'));
+    expect(warning).toContain('The log L1 ("Run for j•••@example.com") is not shown in the video.');
+    expect(warning).toContain('The offline storyboard never uses logs');
+    for (const text of [...result.warnings, ...messages]) expect(text).not.toContain('jane.doe@');
+  });
+
+  it('writes the logs section into evidence.md, and tells an agent where the whole files are', async () => {
+    const out = join(base, 'authoring-logs');
+    const result = await prepareAuthoring({
+      ...withLog(),
+      outDir: out,
+      followUp: { source: repo, args: ['--name', 'x'], agent: true },
+    });
+    const evidence = await readFile(result.files.evidence, 'utf8');
+    expect(evidence).toContain('- L1 (40 lines): Run of the check');
+    expect(evidence).toContain('basket count is 5');
+    const guide = await readFile(result.files.guide, 'utf8');
+    expect(guide).toContain('Logs (UTF-8 text) go in the `logs/` folder here');
+    expect(guide).toContain('the full files are in `logs/`');
+  });
+
+  it('does not tell a caller of the plain commands about the logs/ folder', async () => {
+    const result = await prepareAuthoring({
+      ...withLog(),
+      outDir: join(base, 'authoring-logs-plain'),
+      followUp: { source: repo, args: ['--log', logFile] },
+    });
+    expect(await readFile(result.files.guide, 'utf8')).not.toContain('`logs/`');
+  });
+
+  it('refuses a test result that points at a log that was not passed, before anything is made', async () => {
+    const tests = [
+      {
+        command: 'npm test',
+        passed: true,
+        summary: 'ok',
+        source: 'ci' as const,
+        log: 'L1.2-3',
+      },
+    ];
+    const error = await failure(plan({ context: { ...context, tests } }));
+    expect(error.code).toBe('USAGE');
+    expect(error.message).toBe(
+      'Test result 1 points at the log "L1.2-3", which is not a log of this command.',
+    );
+    const ok = await plan(
+      withLog({
+        context: { ...context, tests, logs: [{ path: logFile, caption: 'x' }] },
+      }),
+    );
+    expect(ok.warnings.join(' ')).not.toContain('points at the log');
+  });
+});

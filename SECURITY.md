@@ -166,6 +166,9 @@ See [docs/api.md](docs/api.md#safety-rules).
   files that go to a publish target are the video, its poster, its captions and the watch page, and a
   publisher refuses any other file. Model and speech providers get text only. The pull request comment
   holds text and a link.
+- A log is text, and its lines are masked like code. With a model provider, an excerpt of each log is sent
+  as code is, unless `privacy.llmContext` is `minimal`, which leaves the excerpt out. A log shows in the
+  video as real output, so check it for anything that masking does not know.
 - MergeStory never runs your tests or your code. Test results in a video are the ones you reported, and
   the video says who reported them.
 - A model server on this machine or on a private network counts as $0 in the budget check when no price is

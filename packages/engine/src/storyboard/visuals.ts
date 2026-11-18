@@ -112,6 +112,7 @@ export function applyVisualLimits(visual: Visual, p: string, run: Run): void {
     case 'files':
     case 'code':
     case 'repro':
+    case 'log':
       break;
     default:
       exhaustive(visual);
@@ -161,6 +162,7 @@ export function filterVisualEvidence(visual: Visual, p: string, run: Run): void 
     case 'screenshot':
     case 'recording':
     case 'repro':
+    case 'log':
     case 'summary':
       break;
     default:
@@ -205,6 +207,7 @@ export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner)
       visual.steps = cleaner.keepTitled(visual.steps, 'label', `${p}.steps`, 'optional');
       break;
     case 'code':
+    case 'log':
       visual.focus = visual.focus.map((focus, i) => ({
         ...focus,
         note: cleaner.optional(focus.note, `${p}.focus[${i}].note`),
@@ -635,6 +638,7 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
     case 'title':
     case 'mission':
     case 'code':
+    case 'log':
       break;
     default:
       exhaustive(visual);

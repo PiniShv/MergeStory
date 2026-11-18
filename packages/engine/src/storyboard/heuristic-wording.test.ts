@@ -371,7 +371,16 @@ describe('conclusion scene', () => {
     const fx = retryFixture({
       inputs: {
         task: 'x',
-        tests: [{ id: 'T1', command: 'npm test', passed: false, summary: '2 failed', source: 'ci' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: false,
+            summary: '2 failed',
+            source: 'ci',
+            log: null,
+          },
+        ],
       },
     });
     const last = make(fx, 150).scenes.at(-1)!;
@@ -407,6 +416,7 @@ describe('reported runs', () => {
     passed,
     summary: passed ? 'ok' : '1 failed',
     source,
+    log: null,
   });
   const withRuns = (...runs: ReturnType<typeof run>[]): Fixture =>
     retryFixture({ inputs: { task: 'x', tests: runs.map((r, i) => ({ id: `T${i + 1}`, ...r })) } });

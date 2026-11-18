@@ -11,7 +11,7 @@ export interface Masker {
   /** Mask one line of code. */
   code(value: string): string;
   /** Mask the lines of one hunk, including multi-line private keys. */
-  hunk(lines: readonly DiffLine[]): string[];
+  hunk(lines: readonly Pick<DiffLine, 'text'>[]): string[];
 }
 
 const MASK = MASK_CHAR.repeat(8);

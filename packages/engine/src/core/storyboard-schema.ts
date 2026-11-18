@@ -300,6 +300,24 @@ export const ReproVisualSchema = z.object({
     ),
 });
 
+export const LogVisualSchema = z.object({
+  type: z.literal('log'),
+  logId: z.string().describe('An L<n> id from the evidence pack.'),
+  startLine: z.number().int().describe('First line to show (1-based).'),
+  endLine: z.number().int().describe('Last line, inclusive. At most 18 lines.'),
+  focus: z
+    .array(
+      z.object({
+        startLine: z.number().int(),
+        endLine: z.number().int(),
+        note: z.string().nullable().describe('Short callout shown next to the highlighted lines.'),
+        beat,
+      }),
+    )
+    .describe('The lines that the narration talks about. A range outside the shown lines is dropped or cut.'),
+  caption: z.string().nullable(),
+});
+
 export const SummaryVisualSchema = z.object({
   type: z.literal('summary'),
   points: z.array(textBeat),
@@ -321,6 +339,7 @@ export const VisualSchema = z.discriminatedUnion('type', [
   ScreenshotVisualSchema,
   RecordingVisualSchema,
   ReproVisualSchema,
+  LogVisualSchema,
   SummaryVisualSchema,
 ]);
 
@@ -394,6 +413,7 @@ export const VISUAL_TYPES: readonly VisualType[] = [
   'screenshot',
   'recording',
   'repro',
+  'log',
   'summary',
 ];
 
@@ -463,6 +483,7 @@ export const STORYBOARD_LIMITS = {
   maxNarrationLinesPerScene: 6,
   maxWordsPerNarrationLine: 40,
   maxCodeLines: 18,
+  maxLogLines: 18,
   maxArchitectureNodes: 9,
   maxFlowActors: 5,
   maxFlowSteps: 8,

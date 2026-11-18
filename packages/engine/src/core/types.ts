@@ -14,6 +14,7 @@
  *   SS<n>     screenshot supplied by the caller        REPO   repository structure context
  *   RC<n>     screen recording supplied by the caller
  *   REPRO     reproduction steps from the caller        REPRO.<n>  step n of the reproduction
+ *   L<n>      log file supplied by the caller; L<n>.<a>-<b> is lines a to b of it
  */
 
 export type Side = 'base' | 'head';
@@ -164,6 +165,8 @@ export interface TestEvidence {
   passed: boolean;
   summary: string;
   source: 'agent' | 'ci' | 'user';
+  /** A log id ("L1" or "L1.120-140") that holds the output of this run, or null. */
+  log: string | null;
 }
 
 /**
@@ -231,6 +234,17 @@ export interface ReproInput {
   steps: ReproStep[];
 }
 
+/** A real log file supplied by the caller: text, with terminal colour codes removed and line ends turned into "\n". */
+export interface LogInput {
+  /** Evidence id, e.g. "L1". */
+  id: string;
+  /** Absolute path. */
+  path: string;
+  caption: string;
+  /** The lines as read. Masking happens where a line is shown or written. */
+  lines: string[];
+}
+
 export interface ContextInputs {
   /** Original task description, if known. */
   task: string | null;
@@ -240,6 +254,7 @@ export interface ContextInputs {
   screenshots: ScreenshotInput[];
   recordings: RecordingInput[];
   repro: ReproInput | null;
+  logs: LogInput[];
 }
 
 // ---------------------------------------------------------------------------
@@ -409,6 +424,7 @@ export type EvidenceKind =
   | 'screenshot'
   | 'recording'
   | 'repro'
+  | 'log'
   | 'repo';
 
 /** One citable fact. Storyboards may only cite ids that exist in the evidence index. */
@@ -420,6 +436,8 @@ export interface EvidenceItem {
   ref: CodeRef | null;
   /** Web link (file at commit with line anchors), when known. */
   url: string | null;
+  /** Logs only: how many lines the log has. A range such as "L1.3-9" is valid inside it. */
+  lines?: number;
 }
 
 export type ChangeSize = 'xs' | 's' | 'm' | 'l' | 'xl';

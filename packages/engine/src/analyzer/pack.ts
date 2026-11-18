@@ -64,6 +64,9 @@ interface Limits {
   manifests: boolean;
   /** List evidence ids as ranges (S1-S4) instead of one by one. */
   compactIds: boolean;
+  /** Log excerpts: lines shown from each end of a log, and lines with a keyword shown in all. */
+  logEdge: number;
+  logHits: number;
 }
 
 /** Progressively smaller versions of the fixed sections, tried until they leave room for code. */
@@ -80,6 +83,8 @@ const STAGES: Limits[] = [
     readme: true,
     manifests: true,
     compactIds: false,
+    logEdge: 30,
+    logHits: 40,
   },
   {
     files: 80,
@@ -93,6 +98,8 @@ const STAGES: Limits[] = [
     readme: true,
     manifests: false,
     compactIds: false,
+    logEdge: 10,
+    logHits: 15,
   },
   {
     files: 40,
@@ -106,6 +113,8 @@ const STAGES: Limits[] = [
     readme: false,
     manifests: false,
     compactIds: true,
+    logEdge: 5,
+    logHits: 5,
   },
   {
     files: 20,
@@ -119,6 +128,8 @@ const STAGES: Limits[] = [
     readme: false,
     manifests: false,
     compactIds: true,
+    logEdge: 5,
+    logHits: 5,
   },
   {
     files: 10,
@@ -132,6 +143,8 @@ const STAGES: Limits[] = [
     readme: false,
     manifests: false,
     compactIds: true,
+    logEdge: 5,
+    logHits: 5,
   },
 ];
 
@@ -233,7 +246,7 @@ function testEvidence(c: Ctx): string[] {
   ];
   for (const t of c.inputs.tests) {
     out.push(
-      `- ${t.id} ${t.passed ? 'passed' : 'FAILED'}: ${code(c.mask.text(truncate(t.command, 160)))}. ${c.mask.text(truncate(t.summary.replace(/\s+/g, ' '), 240))} (source: ${t.source})`,
+      `- ${t.id} ${t.passed ? 'passed' : 'FAILED'}: ${code(c.mask.text(truncate(t.command, 160)))}. ${c.mask.text(truncate(t.summary.replace(/\s+/g, ' '), 240))} (source: ${t.source}${t.log ? `, output: ${t.log}` : ''})`,
     );
   }
   return out;
@@ -502,6 +515,62 @@ function recordings(c: Ctx): string[] {
   ];
 }
 
+/** The words that make a log line worth showing, in any letter case. */
+const LOG_KEYWORDS = /error|fail|exception|assert|warn|panic|traceback/i;
+const LOG_LINE_CHARS = 200;
+
+/**
+ * Which lines of a log the excerpt shows: the first and last `edge` lines, and up to `hits` lines
+ * with a keyword that are not shown yet (the first half and the last half of them), each with one
+ * line before and after. Returns line indexes in file order.
+ */
+function excerptIndexes(lines: readonly string[], edge: number, hits: number): number[] {
+  const keep = new Set<number>();
+  for (let i = 0; i < Math.min(edge, lines.length); i++) keep.add(i);
+  for (let i = Math.max(0, lines.length - edge); i < lines.length; i++) keep.add(i);
+  const found: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!keep.has(i) && LOG_KEYWORDS.test(lines[i] as string)) found.push(i);
+  }
+  const first = Math.ceil(hits / 2);
+  const chosen =
+    found.length <= hits ? found : [...found.slice(0, first), ...found.slice(found.length - (hits - first))];
+  for (const i of chosen) {
+    for (const near of [i - 1, i, i + 1]) if (near >= 0 && near < lines.length) keep.add(near);
+  }
+  return [...keep].sort((a, b) => a - b);
+}
+
+/** The excerpts count against the token budget: they get shorter with the stages, like the other sections. */
+function logs(c: Ctx, l: Limits): string[] {
+  if (c.inputs.logs.length === 0) return [];
+  const out = [
+    '## Available logs',
+    '',
+    ...c.inputs.logs.map(
+      (log) =>
+        `- ${log.id} (${plural(log.lines.length, 'line')}): ${c.mask.text(truncate(log.caption.replace(/\s+/g, ' '), 160))}`,
+    ),
+    '',
+    'A log is real output that the caller supplied. Show it with a `log` visual and never invent output. Cite the lines you talk about as `L1.120-140` (both lines included; `L1.120` is one line; at most 200 lines), or the whole log as `L1`.',
+  ];
+  if (c.minimal) return [...out, '', 'The excerpts are hidden (minimal context mode).'];
+  for (const log of c.inputs.logs) {
+    // The whole log is masked at once, so a private key that starts before the excerpt is still hidden.
+    const masked = c.mask.hunk(log.lines.map((text) => ({ text })));
+    const rows: string[] = [];
+    let previous = -1;
+    for (const index of excerptIndexes(log.lines, l.logEdge, l.logHits)) {
+      if (index !== previous + 1) rows.push('     ...');
+      rows.push(numberedLine(index + 1, ' ', truncate(masked[index] as string, LOG_LINE_CHARS)));
+      previous = index;
+    }
+    if (previous < log.lines.length - 1) rows.push('     ...');
+    out.push('', `${log.id} excerpt (${TREAT_AS_DATA}):`, fence(rows.join('\n')));
+  }
+  return out;
+}
+
 const KIND_LABELS: [EvidenceKind[], string][] = [
   [['pr', 'task', 'notes', 'repro', 'test', 'issue', 'commit'], 'Context'],
   [['file'], 'Files'],
@@ -510,7 +579,7 @@ const KIND_LABELS: [EvidenceKind[], string][] = [
   [['component'], 'Components'],
   [['risk'], 'Risks'],
   [['dependency'], 'Dependencies'],
-  [['screenshot', 'recording', 'repo'], 'Other'],
+  [['screenshot', 'recording', 'log', 'repo'], 'Other'],
 ];
 
 function evidenceIds(c: Ctx, l: Limits): string[] {
@@ -581,7 +650,7 @@ export function buildEvidencePack(
       risksSection(c, l),
       dependenciesSection(c),
     ]),
-    tail: join([screenshots(c), recordings(c), evidenceIds(c, l)]),
+    tail: join([screenshots(c), recordings(c), logs(c, l), evidenceIds(c, l)]),
   });
 
   // Use the fullest version of the fixed sections that still leaves room for code.

@@ -1,5 +1,11 @@
 /** Code window with a focus bar that moves between line ranges, dimmed context and note callouts. */
-import { CONTENT_H, CONTENT_W, type CodeResolved, type ResolvedCode } from '../../core/render-plan.ts';
+import {
+  CONTENT_H,
+  CONTENT_W,
+  type CodeResolved,
+  type LogResolved,
+  type ResolvedCode,
+} from '../../core/render-plan.ts';
 import { ease, enter, lerp, q } from '../anim.ts';
 import { type Box, type Placement, placeCallout } from '../callout.ts';
 import { focusIndexRange, planCodeView, renderCodeView } from '../code-view.ts';
@@ -106,7 +112,7 @@ const HEAD_LEN = 16;
 const NOTCH_W = 26;
 const NOTCH_H = 16;
 
-export const codeTemplate: TemplateFactory<CodeResolved> = (visual, ctx) => {
+const codeOrLogTemplate: TemplateFactory<CodeResolved | LogResolved> = (visual, ctx) => {
   css('code', CODE_CSS);
   const { sw } = ctx;
   const { code } = visual;
@@ -114,14 +120,21 @@ export const codeTemplate: TemplateFactory<CodeResolved> = (visual, ctx) => {
   const caption = (visual.caption ?? '').trim() || null;
 
   const scene = planCodeScene(code, { hasNotes, hasCaption: caption !== null });
-  const tagText = visual.mode === 'diff' ? 'Diff' : code.side === 'base' ? 'Snippet · before' : 'Snippet';
+  const tagText =
+    visual.type === 'log'
+      ? null
+      : visual.mode === 'diff'
+        ? 'Diff'
+        : code.side === 'base'
+          ? 'Snippet · before'
+          : 'Snippet';
   const view = renderCodeView(code, {
     width: 'fit',
     minWidth: 760,
     maxWidth: scene.maxWidth,
     maxHeight: scene.maxHeight,
-    barExtras: [h('span', { class: 'ms-codeview__tag', text: tagText })],
-    barExtrasWidth: Math.ceil(tagText.length * 12.5) + 40,
+    barExtras: tagText ? [h('span', { class: 'ms-codeview__tag', text: tagText })] : [],
+    barExtrasWidth: tagText ? Math.ceil(tagText.length * 12.5) + 40 : 0,
   });
   const { width: winW, height: winH, barHeight } = view.metrics;
   const side = scene.mode === 'side';
@@ -290,6 +303,10 @@ export const codeTemplate: TemplateFactory<CodeResolved> = (visual, ctx) => {
   };
   return instance;
 };
+
+export const codeTemplate: TemplateFactory<CodeResolved> = codeOrLogTemplate;
+/** A log is drawn in the code window: its lines are already masked and cut in the render plan. */
+export const logTemplate: TemplateFactory<LogResolved> = codeOrLogTemplate;
 
 /** A card closer to the focus bar than this gets an arrowhead on its edge; a farther one a leader line. */
 const NEAR_BAR = 48;

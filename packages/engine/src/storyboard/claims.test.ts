@@ -9,7 +9,7 @@ const result = (
   command: string,
   passed: boolean,
   source: TestEvidence['source'] = 'agent',
-): TestEvidence => ({ id, command, passed, summary: '', source });
+): TestEvidence => ({ id, command, passed, summary: '', source, log: null });
 
 describe('findClaim: passing tests', () => {
   it.each([

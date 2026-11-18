@@ -269,7 +269,16 @@ function makeChange(seed: number): Made {
         : null,
       notes,
       tests: chance(random, 0.3)
-        ? [{ id: 'T1', command: 'npm test', passed: true, summary: '3 passed', source: 'agent' }]
+        ? [
+            {
+              id: 'T1',
+              command: 'npm test',
+              passed: true,
+              summary: '3 passed',
+              source: 'agent',
+              log: null,
+            },
+          ]
         : [],
     },
   });

@@ -32,6 +32,7 @@ export function beatHolders(visual: Visual): { beat: number }[] {
     case 'flow':
       return visual.steps;
     case 'code':
+    case 'log':
       return visual.focus;
     case 'before-after':
       return [

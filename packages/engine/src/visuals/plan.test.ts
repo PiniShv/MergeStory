@@ -414,7 +414,15 @@ describe('buildRenderPlan: other visual types', () => {
           type: 'browser',
           url: '/settings',
           pageTitle: 'Settings',
-          blocks: [{ kind: 'heading', text: 'Forecast', items: ['a', 'b'], emphasis: true, beat: 0 }],
+          blocks: [
+            {
+              kind: 'heading',
+              text: 'Forecast',
+              items: ['a', 'b'],
+              emphasis: true,
+              beat: 0,
+            },
+          ],
         }),
         make('shot', {
           type: 'screenshot',
@@ -862,7 +870,102 @@ describe('buildRenderPlan: recordings', () => {
         focus: null,
       };
     });
-    await expect(build({ storyboard })).rejects.toMatchObject({ code: 'INTERNAL' });
+    await expect(build({ storyboard })).rejects.toMatchObject({
+      code: 'INTERNAL',
+    });
+  });
+});
+
+describe('buildRenderPlan: logs', () => {
+  const secret = `ghp_${'a1B2c3D4e5'.repeat(4)}`;
+  const long = `${'x'.repeat(130)}`;
+  const lines = [
+    'start',
+    `token = ${secret}`,
+    '\tindented\tline',
+    'mail me at jane.doe@example.com',
+    long,
+    'PASS count is 3',
+  ];
+
+  function logRun(config?: Options['config']) {
+    const base = sample();
+    const inputs: ContextInputs = {
+      ...base.inputs,
+      logs: [{ id: 'L1', path: '/not/shown/run.log', caption: 'run.log', lines }],
+    };
+    const storyboard = withScene(base.storyboard, 's5', (scene) => {
+      scene.visual = {
+        type: 'log',
+        logId: 'L1',
+        startLine: 1,
+        endLine: 9,
+        focus: [
+          { startLine: 6, endLine: 6, note: 'The proof.', beat: 0 },
+          { startLine: 9, endLine: 12, note: null, beat: 0 },
+        ],
+        caption: 'Real run',
+      };
+    });
+    return build({ storyboard, inputs, config });
+  }
+
+  it('shows the real lines of the log, cut and with tabs as spaces, and labels them "Real output"', async () => {
+    const plan = await logRun();
+    const visual = visualOf(plan, 's5', 'log');
+    const { code } = visual;
+    // The range is cut to the log, the log's own numbers are used, and the caption is the title of the window.
+    expect(code.lines.map((l) => l.newNumber)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(code.path).toBe('run.log');
+    expect(code.side).toBe('head');
+    expect(code.language).toBe('log');
+    const texts = code.lines.map(lineText);
+    expect(texts[2]).toBe('    indented    line');
+    expect(texts[4]).toBe(`${'x'.repeat(109)}…`);
+    expect(texts[5]).toBe('PASS count is 3');
+    expect(code.lines.every((l) => l.tokens.every((t) => t.c === null))).toBe(true);
+    // A focus range outside the shown lines is dropped, the others are kept.
+    expect(visual.focus).toEqual([{ startLine: 6, endLine: 6, note: 'The proof.', beat: 0 }]);
+    expect(visual.caption).toBe('Real run');
+    const scene = plan.scenes.find((s) => s.id === 's5')!;
+    expect(scene.badges.filter((b) => b.kind === 'actual')).toEqual([
+      { kind: 'actual', text: 'Real output' },
+    ]);
+    expect(JSON.stringify(plan)).not.toContain('/not/shown');
+  });
+
+  it('masks a secret and an e-mail address, and says so with a badge', async () => {
+    const plan = await logRun();
+    const { code } = visualOf(plan, 's5', 'log');
+    const text = code.lines.map(lineText).join('\n');
+    expect(JSON.stringify(plan)).not.toContain(secret);
+    expect(JSON.stringify(plan)).not.toContain('jane.doe');
+    expect(text).toContain(`token = ${MASK_CHAR.repeat(8)}`);
+    expect(code.masked).toBe(true);
+    expect(plan.scenes.find((s) => s.id === 's5')!.badges).toContainEqual({
+      kind: 'masked',
+      text: 'Sensitive data masked',
+    });
+  });
+
+  it('keeps an e-mail address when privacy.maskEmails is off, and masks secrets all the same', async () => {
+    const plan = await logRun({ privacy: { maskEmails: false } });
+    const text = visualOf(plan, 's5', 'log').code.lines.map(lineText).join('\n');
+    expect(text).toContain('jane.doe@example.com');
+    expect(text).not.toContain(secret);
+  });
+
+  it('stops when the log or its lines are not there', async () => {
+    const base = sample();
+    const show = (logId: string, startLine: number) =>
+      build({
+        storyboard: withScene(base.storyboard, 's5', (scene) => {
+          scene.visual = { type: 'log', logId, startLine, endLine: startLine + 1, focus: [], caption: null };
+        }),
+        inputs: { ...base.inputs, logs: [{ id: 'L1', path: '/x/run.log', caption: 'run.log', lines }] },
+      });
+    await expect(show('L2', 1)).rejects.toMatchObject({ code: 'STORYBOARD_INVALID' });
+    await expect(show('L1', 7)).rejects.toMatchObject({ code: 'STORYBOARD_INVALID' });
   });
 });
 
@@ -1113,6 +1216,34 @@ describe('buildRenderPlan: refs and badges', () => {
       'src/client.ts',
       'src/client.ts:8-16',
     ]);
+  });
+
+  it('lists a cited range of a log under the scene, with the lines in its label', async () => {
+    const base = sample();
+    const analysis = {
+      ...base.analysis,
+      evidence: [
+        ...base.analysis.evidence,
+        {
+          id: 'L1',
+          kind: 'log' as const,
+          label: 'Log: run.log',
+          ref: null,
+          url: null,
+          lines: 10,
+        },
+      ],
+    };
+    const storyboard = withScene(base.storyboard, 's3', (scene) => {
+      scene.narration = [
+        {
+          text: 'The run says so.',
+          evidence: ['L1.2-4', 'L1.5', 'L1.9-12', 'F2'],
+        },
+      ];
+    });
+    const refs = (await build({ storyboard, analysis })).scenes.find((s) => s.id === 's3')!.refs;
+    expect(refs).toEqual(['Log: run.log, lines 2 to 4', 'Log: run.log, line 5', 'src/client.ts']);
   });
 
   it('marks simulated visuals and reported test results', async () => {

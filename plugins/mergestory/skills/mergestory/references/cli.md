@@ -41,9 +41,9 @@ are included.
 
 ## Context flags (analyze, validate and generate)
 
-The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json`, `repro.json`, `redact.json`, `screenshots/` and `recordings/` from
-the work folder. For the other commands, pass the same context flags to all three, so the evidence
-ids (TASK, NOTES, T1, REPRO.1, SS1, RC1) match. If you pass `--duration`, `--max-duration` or `--language` to
+The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json`, `repro.json`, `redact.json`, `screenshots/`, `recordings/`
+and `logs/` (an engine newer than 1.7.0) from the work folder. For the other commands, pass the same context flags to all three, so the evidence
+ids (TASK, NOTES, T1, REPRO.1, SS1, RC1, L1) match. If you pass `--duration`, `--max-duration` or `--language` to
 `generate`, pass the same to `validate`.
 
 | Flag | Meaning |
@@ -56,6 +56,7 @@ ids (TASK, NOTES, T1, REPRO.1, SS1, RC1) match. If you pass `--duration`, `--max
 | `--screenshots-dir <folder>` | A folder of real screenshots (`.png`, `.jpg`, `.jpeg`, used in name order, after any `--screenshot`), with an optional `captions.json` as `{"page.png": {"caption": "...", "side": "before"}}`. Needs an engine newer than 1.7.0. Pass it to `analyze`, `validate` and `generate` alike. |
 | `--recording <path>[:<caption>[:before\|after]]` | A real screen recording (MP4 H.264 or WebM VP8/VP9, with no sound or with AAC, MP3, Opus or Vorbis sound, at least 0.2 s, checked with ffprobe; max 4, each 50 MB and 60 s), repeatable. The text of a capture is masked, but not what its picture shows. Becomes `RC1`, ... Needs engine 1.7.0 or newer. The ids restart at `RC1` in every command, so pass the same recordings in the same order to `analyze`, `validate` and `generate`. |
 | `--redact <file>` | A JSON file (max 64 KB, given once) of regions to cover with a solid block in screenshots and recordings: `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`. The numbers are fractions of the whole picture; a region of a recording is hidden in every frame of the clip. It hides only the regions you name. Needs an engine newer than 1.7.0: with 1.7.0 or older, do not pass a capture that has a part to hide. Pass the same file to `analyze`, `validate` and `generate`. |
+| `--log <file>[:<caption>]` | A real log: the output of a run, a test or a command (UTF-8 text, max 4 files, each 256 KB), repeatable. Becomes `L1`, ...; cite lines as `L1.120-140`. A test result can point at it with `"log": "L1.120-140"`; add `"log"` only when `mergestory --version` prints a version newer than 1.7.0, because version 1.7.0 and older refuse a `tests.json` with a `log` field. Needs an engine newer than 1.7.0. Pass the same logs in the same order to `analyze`, `validate` and `generate`. |
 
 ## Useful generate flags
 
