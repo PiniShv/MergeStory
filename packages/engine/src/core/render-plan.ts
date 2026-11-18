@@ -34,6 +34,11 @@ export interface RenderPlan {
   scenes: PlannedScene[];
   /** Branded end card appended after the last scene. */
   outro: { startSec: number; durationSec: number; tagline: string; lines: string[] };
+  /**
+   * Frames of recordings as data URLs, by frame set folder and frame index. Only the renderer fills it,
+   * with the frames that one page can show. It is never part of the plan that is written to disk.
+   */
+  media?: Record<string, Record<number, string>>;
 }
 
 export interface PlanMeta {
@@ -111,6 +116,21 @@ export interface ResolvedImage {
   src: string;
   width: number;
   height: number;
+}
+
+/** The frames of one use of a recording, as JPEG files in a folder of the run folder (f-00001.jpg ...). */
+export interface FrameSet {
+  /** Folder relative to the run folder, e.g. "recording-frames/s-s3". Also the key in `RenderPlan.media`. */
+  dir: string;
+  count: number;
+  /** Frames per second of the recording. */
+  fps: number;
+  width: number;
+  height: number;
+  /** Scene seconds at which the clip starts. */
+  startSec: number;
+  /** Playback speed. */
+  speed: number;
 }
 
 export interface TitleResolved {
@@ -206,6 +226,7 @@ export type ResolvedPanel = { label: string } & (
   | { kind: 'bullets'; bullets: string[] }
   | { kind: 'terminal'; terminal: { kind: 'command' | 'output' | 'comment'; text: string; beat: number }[] }
   | { kind: 'screenshot'; image: ResolvedImage }
+  | { kind: 'recording'; frames: FrameSet }
 );
 
 export interface BeforeAfterResolved {
@@ -258,6 +279,12 @@ export interface ScreenshotResolved {
   caption: string | null;
 }
 
+export interface RecordingResolved {
+  type: 'recording';
+  frames: FrameSet;
+  caption: string | null;
+}
+
 export interface SummaryResolved {
   type: 'summary';
   points: TextBeat[];
@@ -277,6 +304,7 @@ export type ResolvedVisual =
   | ChecklistResolved
   | BulletsResolved
   | ScreenshotResolved
+  | RecordingResolved
   | SummaryResolved;
 
 // ---------------------------------------------------------------------------

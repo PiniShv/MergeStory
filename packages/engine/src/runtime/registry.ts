@@ -9,6 +9,7 @@ import { codeTemplate } from './templates/code.ts';
 import { filesTemplate } from './templates/files.ts';
 import { flowTemplate } from './templates/flow.ts';
 import { missionTemplate } from './templates/mission.ts';
+import { recordingTemplate } from './templates/recording.ts';
 import { screenshotTemplate } from './templates/screenshot.ts';
 import { summaryTemplate } from './templates/summary.ts';
 import { terminalTemplate } from './templates/terminal.ts';
@@ -30,6 +31,7 @@ export const TEMPLATES: Registry = {
   checklist: checklistTemplate,
   bullets: bulletsTemplate,
   screenshot: screenshotTemplate,
+  recording: recordingTemplate,
   summary: summaryTemplate,
 };
 

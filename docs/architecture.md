@@ -193,7 +193,9 @@ page through Playwright. The runtime builds the whole video as HTML, CSS and SVG
    narration track (AAC) with metadata stripped.
 
 Fonts (Inter, JetBrains Mono, both under the SIL Open Font License) are embedded, and the page has
-no network access, so output does not depend on the machine.
+no network access, so output does not depend on the machine. A recording is cut into JPEG frames
+with FFmpeg before narration starts, and each page receives only the frames that its part of the video
+can show, as images inside the page. The runtime shows one frame for each moment.
 
 Why not an existing framework: Remotion's license requires a paid company license for larger
 companies, which would pass a cost on to every user of an open-source tool. Motion Canvas and Revideo are

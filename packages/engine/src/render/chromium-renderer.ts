@@ -29,6 +29,7 @@ import { detectImage } from '../visuals/image.ts';
 import { locateBrowser, SHORT_FRAME_HINT } from './browser.ts';
 import { concatAndMux, concatListText, probeDuration, SegmentEncoder, segmentEncodeArgs } from './ffmpeg.ts';
 import { fontFacesCss } from './fonts.ts';
+import { planWithMedia } from './media.ts';
 import { buildPageHtml, type CaptureFormat, fitWindow, PlanPage } from './page.ts';
 import { loadPlaywright } from './playwright.ts';
 import { loadRuntimeBundle } from './runtime-bundle.ts';
@@ -130,6 +131,8 @@ interface RunSetup {
   executablePath: string;
   html: string;
   segments: Segment[];
+  /** The run folder: where the frames of recordings are. */
+  outDir: string;
   segmentPath: (segment: Segment) => string;
   workers: number;
   crf: number;
@@ -247,9 +250,16 @@ class RenderRun {
   }
 
   /** A new page in a new browser context, so no earlier frame can influence what it draws. */
-  private async openPage(browser: Browser, workerId: number): Promise<PlanPage> {
-    const { plan, html, ctx } = this.setup;
-    return PlanPage.open(browser, plan, html, ctx.logger.child({ worker: workerId }));
+  private async openPage(
+    browser: Browser,
+    workerId: number,
+    fromSec: number,
+    toSec: number,
+  ): Promise<PlanPage> {
+    const { plan, html, ctx, outDir } = this.setup;
+    // The page gets only the frames of recordings that its window of the video can show.
+    const paged = await planWithMedia(plan, outDir, fromSec, toSec);
+    return PlanPage.open(browser, paged, html, ctx.logger.child({ worker: workerId }));
   }
 
   private async closePage(page: PlanPage): Promise<void> {
@@ -283,7 +293,12 @@ class RenderRun {
         for (let attempt = 1; ; attempt++) {
           try {
             browser ??= await this.launchBrowser();
-            const page = await this.openPage(browser, id);
+            const page = await this.openPage(
+              browser,
+              id,
+              segment.start / this.setup.plan.fps,
+              (segment.end - 1) / this.setup.plan.fps,
+            );
             try {
               finishing.push((await this.captureSegment(page, segment)).finished);
             } finally {
@@ -309,9 +324,10 @@ class RenderRun {
       if (browser && !this.posterClaimed) {
         this.posterClaimed = true;
         try {
-          const page = await this.openPage(browser, id);
+          const posterAt = posterTimeFor(this.setup.plan, this.frames);
+          const page = await this.openPage(browser, id, posterAt, posterAt);
           try {
-            await page.seek(posterTimeFor(this.setup.plan, this.frames));
+            await page.seek(posterAt);
             this.posterJpeg = await page.capture({
               format: 'jpeg',
               quality: POSTER_QUALITY,
@@ -448,6 +464,8 @@ export interface ChromiumRendererOptions {
   workers?: number;
   /** Replaces the browser launcher. Used by tests. */
   launch?: BrowserLauncher;
+  /** Stills only: the folder that holds `recording-frames`. It is the stills folder when omitted. */
+  mediaDir?: string;
 }
 
 /** Starts a browser. The logger is for notes about how it was started. */
@@ -582,6 +600,7 @@ export class ChromiumRenderer implements Renderer {
           executablePath: browser.path,
           html,
           segments,
+          outDir,
           segmentPath: segmentFile,
           workers,
           crf: preset.crf,
@@ -670,14 +689,22 @@ export async function renderStillFrames(
     throw browserStartError(err);
   }
   try {
-    const page = await PlanPage.open(browser, plan, html, ctx.logger);
+    const clamped = timesSec.map((time) => Math.min(time, plan.durationSec));
+    // One page draws every time, so it gets the frames of the whole range. Frames are read from `mediaDir`, else from `outDir`.
+    const paged = await planWithMedia(
+      plan,
+      options.mediaDir ?? target,
+      Math.min(...clamped),
+      Math.max(...clamped),
+    );
+    const page = await PlanPage.open(browser, paged, html, ctx.logger);
     const written: string[] = [];
     for (const time of timesSec) {
       assertNotAborted(ctx.signal);
-      const clamped = Math.min(time, plan.durationSec);
-      await page.seek(clamped);
+      const at = Math.min(time, plan.durationSec);
+      await page.seek(at);
       const png = await page.capture({ format: 'png', optimizeForSpeed: false });
-      const file = join(target, stillName(clamped));
+      const file = join(target, stillName(at));
       await writeFile(file, png, { mode: 0o600 });
       written.push(file);
     }

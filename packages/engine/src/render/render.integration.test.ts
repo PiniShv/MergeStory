@@ -11,18 +11,20 @@ import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Browser, chromium } from 'playwright-core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { toMergeStoryError } from '../core/errors.ts';
 import { runCommand } from '../core/process.ts';
+import { RECORDING_FPS } from '../core/recording-frames.ts';
 import type { RenderPlan } from '../core/render-plan.ts';
 import { loadTheme } from '../core/theme.ts';
 import type { ProgressEvent } from '../core/types.ts';
 import { testConfig, testContext } from '../testing/context.ts';
-import { probeMedia } from '../testing/media.ts';
+import { makeClip, probeMedia } from '../testing/media.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { detectImage } from '../visuals/image.ts';
 import { buildRenderPlan, buildTimeline } from '../visuals/index.ts';
+import { extractFrames } from '../visuals/recording-frames.ts';
 import { locateBrowser } from './browser.ts';
 import {
   BROWSER_ARGS,
@@ -694,6 +696,131 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
       const parallel = await render(3);
       expect(parallel.equals(single)).toBe(true);
     }, 120_000);
+
+    describe('a recording', () => {
+      const FPS = 12;
+      const SECONDS = 10;
+      /** A clip of six seconds whose picture changes all the time, cut into frames, and a plan that shows it from 0.5 s. */
+      async function recordingRun() {
+        const out = await outDir();
+        const clip = join(dir, `clip-${n}.mp4`);
+        expect(await makeClip(tools!.ffmpeg, clip, { seconds: 6, size: '640x360' })).toBe(true);
+        const dirName = 'recording-frames/s1';
+        const made = await extractFrames(tools!.ffmpeg, {
+          recording: {
+            id: 'RC1',
+            path: clip,
+            caption: '',
+            moment: 'other',
+            durationSec: 6,
+            width: 640,
+            height: 360,
+            codec: 'h264',
+          },
+          trim: { start: 0, end: 6 },
+          zoom: null,
+          box: { width: 640, height: 300 },
+          outDir: join(out, dirName),
+        });
+        const base = minimalPlan(SECONDS, 640, 360, FPS);
+        const plan: RenderPlan = {
+          ...base,
+          scenes: [
+            {
+              ...base.scenes[0]!,
+              durationSec: SECONDS - 0.5,
+              visual: {
+                type: 'recording',
+                caption: null,
+                frames: { dir: dirName, ...made, fps: RECORDING_FPS, startSec: 0.5, speed: 1 },
+              },
+            },
+          ],
+        };
+        return { out, plan, made };
+      }
+
+      const renderWith = async (plan: RenderPlan, out: string, workers: number) =>
+        readFile(
+          (
+            await new ChromiumRenderer(config, { workers }).render(
+              { plan, audioPath: null, outDir: out, quality: 'draft' },
+              testContext({ config, home: out, runDir: out }).ctx,
+            )
+          ).videoPath,
+        );
+
+      it('shows different pictures of the clip over time, and sends each page only the frames it can show', async () => {
+        const { out, plan, made } = await recordingRun();
+        expect(made.count).toBeGreaterThan(60);
+        const opened: { media: number; page: PlanPage }[] = [];
+        const original = PlanPage.open.bind(PlanPage);
+        const spy = vi.spyOn(PlanPage, 'open').mockImplementation(async (b, p, html, logger) => {
+          const page = await original(b, p, html, logger);
+          opened.push({
+            media: Object.values(p.media ?? {}).reduce((sum, set) => sum + Object.keys(set).length, 0),
+            page,
+          });
+          return page;
+        });
+        let video: string;
+        try {
+          video = (
+            await new ChromiumRenderer(config, { workers: 1 }).render(
+              { plan, audioPath: null, outDir: out, quality: 'draft' },
+              testContext({ config, home: out, runDir: out }).ctx,
+            )
+          ).videoPath;
+        } finally {
+          spy.mockRestore();
+        }
+        const frames = await grayFrames(video, 640, 360);
+        // The middle of the picture, where the clip is: the progress bar and the clock around it change anyway.
+        const at = (t: number): Buffer =>
+          Buffer.concat(
+            Array.from({ length: 140 }, (_, row) => {
+              const start = (110 + row) * 640 + 160;
+              return frames[Math.round(t * FPS)]!.subarray(start, start + 320);
+            }),
+          );
+        // Mean difference per pixel: the encoder is lossy, so a picture that rests is close, not equal.
+        const apart = (a: number, b: number): number => {
+          const [x, y] = [at(a), at(b)];
+          return x.reduce((sum, value, i) => sum + Math.abs(value - y[i]!), 0) / x.length;
+        };
+        expect(apart(1.5, 3)).toBeGreaterThan(5);
+        expect(apart(3, 5)).toBeGreaterThan(5);
+        // After the clip the scene rests on its last picture.
+        expect(apart(8.5, 9.5)).toBeLessThan(1.5);
+
+        // Three segments and a poster. The first two get the part of the clip that plays in them; the last and the poster, one frame.
+        const counts = opened.map((o) => o.media);
+        expect(counts).toHaveLength(4);
+        expect(counts.filter((c) => c === 1)).toHaveLength(2);
+        expect(Math.max(...counts)).toBeLessThan(made.count);
+        // Every frame goes to about one page, not to all four.
+        expect(counts.reduce((a, b) => a + b, 0)).toBeLessThan(made.count + 8);
+        // Nothing was requested over the network.
+        expect(opened.map((o) => o.page.blockedRequests)).toEqual(counts.map(() => 0));
+        expect(opened.flatMap((o) => o.page.pageErrors)).toEqual([]);
+      }, 120_000);
+
+      it('gives the same video for one browser and for three', async () => {
+        const { out, plan } = await recordingRun();
+        const single = await renderWith(plan, out, 1);
+        const parallel = await renderWith(plan, out, 3);
+        expect(parallel.equals(single)).toBe(true);
+      }, 120_000);
+
+      it('names a frame file that is missing', async () => {
+        const { out, plan } = await recordingRun();
+        await rm(join(out, 'recording-frames/s1/f-00001.jpg'));
+        await expect(renderWith(plan, out, 1)).rejects.toMatchObject({
+          code: 'RENDER_FAILED',
+          message: expect.stringContaining('recording-frames/s1/f-00001.jpg'),
+        });
+      }, 60_000);
+    });
 
     it('renders still frames', async () => {
       const out = await outDir();

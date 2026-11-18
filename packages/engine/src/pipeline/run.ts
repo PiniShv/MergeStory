@@ -6,6 +6,7 @@ import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError, toMergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
 import type { Renderer, RenderInput, RenderOutput, TtsProvider } from '../core/providers.ts';
+import { FRAMES_DIR } from '../core/recording-frames.ts';
 import {
   RUN_DIR,
   RUN_FILE,
@@ -30,6 +31,7 @@ import {
 import { buildWatchPage, classifyBundle, writeWatchFolder } from '../publish/index.ts';
 import { createRenderer } from '../render/index.ts';
 import { buildRenderPlan, buildTimeline } from '../visuals/index.ts';
+import { extractStoryboardFrames } from '../visuals/recording-frames.ts';
 import { publishCommand } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
 import { evidenceUsed, unusedScreenshotWarning } from './inputs.ts';
@@ -160,6 +162,8 @@ export async function generate(
   // uploads or publishes from it must never be the video of another change.
   if (await holdsEarlierRun(p.ctx.runDir)) {
     for (const left of leftByEarlierRun(p.ctx.runDir)) await rm(left, { force: true });
+    // The one folder removed whole: its name is MergeStory's own, so it only ever holds frames of recordings.
+    await rm(join(p.ctx.runDir, FRAMES_DIR), { recursive: true, force: true });
   }
   try {
     return await produce(p, options, startedAt, progress);
@@ -221,6 +225,9 @@ async function produce(
 
   if (ctx.dryRun || tts === null) return planResult(p, choice, storyboard, warnings, publishProblem);
 
+  // Before any speech is paid for: a recording that cannot be decoded stops the run here.
+  const frames = await extractStoryboardFrames(storyboard, p.inputs, config, ctx.runDir, ctx.signal);
+
   // Narration and timing
   ctx.progress({ stage: 'narrate', status: 'start', message: `Narrating with ${tts.id}` });
   const narration = await synthesizeNarration(storyboard, tts, ctx);
@@ -265,6 +272,7 @@ async function produce(
       reader: p.reader,
       config,
       theme,
+      frames,
     },
     ctx,
   );

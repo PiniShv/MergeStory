@@ -14,8 +14,9 @@ All notable changes to MergeStory are listed here, newest first.
   are optional), and a before-after panel can hold one. The checks are `recording-unknown`,
   `recording-trim-out-of-range` and `recording-too-long`; a clip is cut to 20 seconds (`inputs.maxClipSeconds`)
   and the cut is listed in `fixes`. The video labels it "Recorded". A model that writes a storyboard gets
-  about 53 more tokens in every request. Drawing the clip follows in a later change: until then,
-  rendering a storyboard with a recording stops with an error.
+  about 53 more tokens in every request. The clip plays in the video at 12 frames a second, without its
+  sound, and rests on its last frame when it ends before the scene does. A recording that cannot be decoded
+  stops the run before any speech is paid for.
 - **Added:** a run now leaves what a script or an agent needs when nobody is watching. The run folder
   has `watch.html` next to `video.mp4`: the watch page, which plays the video beside it, so the two
   can be uploaded together. The result has `scenes` (every scene with the type of its visual, its

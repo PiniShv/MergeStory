@@ -172,7 +172,7 @@ never contains code.
 | `checklist` | Review items with a severity and an optional code reference. The detail of an item should not repeat its title or its file and line. | `items` |
 | `bullets` | Short points. | `heading`, `items` |
 | `screenshot` | A real screenshot that you supplied. | `screenshotId`, `caption` |
-| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
+| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
