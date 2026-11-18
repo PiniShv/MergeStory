@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { MergeStoryError } from '../core/errors.ts';
+import { buildContextInputs } from '../pipeline/inputs.ts';
+import { testConfig } from '../testing/context.ts';
 import { makePng } from '../testing/png.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import { formatBytes, readJsonFile, readTextFile } from './files.ts';
@@ -283,6 +285,33 @@ describe('buildContext: --screenshots-dir', () => {
     // The same file given twice is used twice.
     const twice = await buildContext({ screenshot: [join(folder(), 'a.png')], screenshotsDir: 'shots' }, dir);
     expect(twice?.screenshots).toHaveLength(2);
+  });
+
+  it('lets a step of --repro-file name a picture of the folder by its id, after the pictures of --screenshot', async () => {
+    await png('a.png');
+    await png('b.png');
+    await writeFile(join(dir, 'z.png'), makePng(4, 4));
+    await writeFile(
+      join(dir, 'repro.json'),
+      JSON.stringify({
+        title: 'The bug',
+        steps: [
+          { text: 'Open', screenshot: 'SS1' },
+          { text: 'Look', screenshot: 'SS3', result: 'bug' },
+        ],
+      }),
+    );
+    const context = await buildContext(
+      { screenshot: ['z.png'], screenshotsDir: 'shots', reproFile: 'repro.json' },
+      dir,
+    );
+    const inputs = await buildContextInputs(context ?? {}, dir, testConfig());
+    expect(inputs.screenshots.map((s) => [s.id, s.path])).toEqual([
+      ['SS1', join(dir, 'z.png')],
+      ['SS2', join(folder(), 'a.png')],
+      ['SS3', join(folder(), 'b.png')],
+    ]);
+    expect(inputs.repro?.steps.map((step) => step.screenshotId)).toEqual(['SS1', 'SS3']);
   });
 
   it('is fine with an empty folder', async () => {

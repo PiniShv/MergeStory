@@ -78,7 +78,10 @@ jobs:
           cap="$RUNNER_TEMP/bugfix-captures"
           node packages/engine/dist/cli/main.js generate "$RUNNER_TEMP/bugfix-demo" --base main --head fix/basket-count \
             --task-file examples/bugfix-demo/task.md --notes-file examples/bugfix-demo/notes.md \
-            --tests-file examples/bugfix-demo/tests.json --repro-file examples/bugfix-demo/repro.json \n            --storyboard examples/bugfix-demo/storyboard.json \n            --screenshots-dir "$cap/screenshots" \n            --recording "$cap/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" \
+            --tests-file examples/bugfix-demo/tests.json --repro-file examples/bugfix-demo/repro.json \
+            --storyboard examples/bugfix-demo/storyboard.json \
+            --screenshots-dir "$cap/screenshots" \
+            --recording "$cap/before.mp4:The basket page before the fix: typing 2 and 3 shows 23 items:before" \
             --recording "$cap/after.mp4:The basket page after the fix: typing 2 and 3 shows 5 items:after" \
             --tts none --quality draft --publish local --max-render-seconds 300 \
             --out "$RUNNER_TEMP/bugfix-video" --json > "$RUNNER_TEMP/bugfix-stdout.json"

@@ -722,13 +722,14 @@ describe('buildContextInputs: reproduction', () => {
       code: 'USAGE',
       message:
         'The reproduction step 2 uses screenshot SS2, which was not supplied to this command (supplied: SS1).',
+      hint: expect.stringMatching(/--screenshots-dir.*screenshots\/ folder of the work folder/),
     });
     await expect(
       buildContextInputs({ repro: file([{ text: 'Look', recording: 'RC1' }]) }, dir, testConfig()),
     ).rejects.toMatchObject({
       code: 'USAGE',
       message: 'The reproduction step 1 uses recording RC1, which was not supplied to this command.',
-      hint: expect.stringContaining('for the agent commands, the file in the work folder'),
+      hint: expect.stringContaining('recordings/ folder of the work folder'),
     });
   });
 

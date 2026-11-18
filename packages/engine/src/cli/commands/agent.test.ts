@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '../../core/config.ts';
 import type { AuthoringResult } from '../../pipeline/index.ts';
+import { buildContextInputs } from '../../pipeline/inputs.ts';
 import {
   analyzeMock,
   dir,
@@ -15,6 +16,8 @@ import {
   run,
   validateMock,
 } from '../../testing/cli.ts';
+import { testConfig } from '../../testing/context.ts';
+import { makePng } from '../../testing/png.ts';
 import { localOnlyOverrides } from './agent.ts';
 
 vi.mock('../../pipeline/index.ts', () => ({
@@ -273,6 +276,24 @@ describe('agent: the work folder', () => {
         expect(context?.recordings).toEqual([
           { path: join(folder(), 'clip.mp4'), caption: 'clip', moment: 'other' },
         ]);
+      }
+    });
+
+    it('lets a step of repro.json name a picture of screenshots/ by its id, in every command', async () => {
+      await mkdir(shots(), { recursive: true });
+      await writeFile(join(shots(), '1-before.png'), makePng(4, 4));
+      await writeFile(join(shots(), '2-after.png'), makePng(4, 4));
+      await writeFile(
+        join(work(), 'repro.json'),
+        JSON.stringify({
+          title: 'The bug',
+          steps: [{ text: 'Open' }, { text: 'Look', screenshot: 'SS2', result: 'bug' }],
+        }),
+      );
+      for (const context of await contexts()) {
+        const inputs = await buildContextInputs(context ?? {}, work(), testConfig());
+        expect(inputs.screenshots.map((s) => s.id)).toEqual(['SS1', 'SS2']);
+        expect(inputs.repro?.steps.map((step) => step.screenshotId)).toEqual([null, 'SS2']);
       }
     });
 

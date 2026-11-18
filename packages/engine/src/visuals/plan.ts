@@ -247,7 +247,13 @@ export async function loadStoryboardScreenshots(
   const ids = new Set<string>();
   for (const { visual } of storyboard.scenes) {
     if (visual.type === 'screenshot') ids.add(visual.screenshotId);
-    else if (visual.type === 'before-after') {
+    else if (visual.type === 'repro') {
+      // The picture of a shown step comes from the supplied reproduction, never from the storyboard.
+      for (const { step } of visual.steps) {
+        const id = inputs.repro?.steps[step - 1]?.screenshotId;
+        if (id) ids.add(id);
+      }
+    } else if (visual.type === 'before-after') {
       // Only a screenshot panel draws its picture; another kind of panel may still carry an old id.
       for (const panel of [visual.before, visual.after]) {
         if (panel.kind === 'screenshot' && panel.screenshotId) ids.add(panel.screenshotId);

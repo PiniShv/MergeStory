@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -10,7 +10,7 @@ import {
   SCENE_CLIP_START_SEC,
   scenePanelStarts,
 } from '../core/recording-frames.ts';
-import type { CodeLine, RenderPlan, ResolvedVisual } from '../core/render-plan.ts';
+import type { CodeLine, RenderPlan, ResolvedImage, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import type { Highlight, Scene, Storyboard } from '../core/storyboard-schema.ts';
 import { loadTheme } from '../core/theme.ts';
@@ -21,7 +21,13 @@ import { ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import { buildRenderPlan, changeLabelFor, MAX_FILE_ROWS, repoLabelFor } from './plan.ts';
+import {
+  buildRenderPlan,
+  changeLabelFor,
+  loadStoryboardScreenshots,
+  MAX_FILE_ROWS,
+  repoLabelFor,
+} from './plan.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
 import { buildTimeline } from './timeline.ts';
 
@@ -43,6 +49,7 @@ interface Options {
   cues?: CaptionCue[];
   signal?: AbortSignal;
   frames?: ReadonlyMap<string, ExtractedFrames>;
+  images?: ReadonlyMap<string, ResolvedImage>;
 }
 
 async function build(options: Options = {}): Promise<RenderPlan> {
@@ -61,6 +68,7 @@ async function build(options: Options = {}): Promise<RenderPlan> {
       config,
       theme: await loadTheme(config.theme),
       frames: options.frames,
+      images: options.images,
     },
     testContext({ config: options.config, home: dir, runDir: dir, signal: options.signal }).ctx,
   );
@@ -1083,6 +1091,99 @@ describe('buildRenderPlan: privacy', () => {
     expect(plan.scenes.find((s) => s.id === 's5')!.badges).toContainEqual({
       kind: 'masked',
       text: 'Sensitive data masked',
+    });
+  });
+});
+
+describe('loadStoryboardScreenshots: a reproduction', () => {
+  const wideShot = async (name: string): Promise<{ path: string; ffmpeg: string } | null> => {
+    const tools = await resolveFfmpeg(testConfig()).catch(() => null);
+    const path = join(dir, name);
+    const made =
+      tools !== null &&
+      (await ffmpegTo(tools.ffmpeg, [
+        '-f',
+        'lavfi',
+        '-i',
+        'testsrc=size=3000x1500:rate=1:duration=1',
+        '-frames:v',
+        '1',
+        path,
+      ]));
+    return made && tools ? { path, ffmpeg: tools.ffmpeg } : null;
+  };
+  const withSteps = async (shots: { id: string; path: string }[]) => {
+    const base = sample();
+    const scene: Scene = {
+      ...structuredClone(base.storyboard.scenes[0]!),
+      id: 'rp',
+      role: 'reproduction',
+      // Steps 1 and 2 are shown. Step 3 names another screenshot that the storyboard does not show.
+      visual: {
+        type: 'repro',
+        steps: [
+          { step: 1, beat: 0 },
+          { step: 2, beat: 1 },
+        ],
+      },
+      narration: [
+        { text: 'In the reproduction, the page opens.', evidence: ['REPRO.1'] },
+        { text: 'Then the page looks wrong.', evidence: ['REPRO.2'] },
+      ],
+    };
+    const storyboard: Storyboard = { ...base.storyboard, scenes: [...base.storyboard.scenes, scene] };
+    const inputs: ContextInputs = {
+      ...base.inputs,
+      screenshots: shots.map(({ id, path }) => ({ id, path, caption: id, moment: 'before' as const })),
+      repro: {
+        title: 'The bug',
+        environment: null,
+        steps: [
+          { text: 'Open', screenshotId: 'SS1', recordingId: null, result: null },
+          { text: 'Look', screenshotId: 'SS1', recordingId: null, result: 'bug' },
+          { text: 'Later', screenshotId: 'SS2', recordingId: null, result: null },
+        ],
+      },
+    };
+    return { storyboard, inputs };
+  };
+
+  it('loads the picture of a shown step once, 2560 wide, and not the picture of a step that is not shown', async (ctx) => {
+    const wide = await wideShot('wide-step.png');
+    if (wide === null) return ctx.skip();
+    const other = join(dir, 'other-step.png');
+    await writeFile(other, makePng(4, 2));
+    const log = join(dir, 'ffmpeg-calls.log');
+    const counting = join(dir, 'ffmpeg-counts.sh');
+    await writeFile(counting, `#!/bin/sh\necho call >> "${log}"\nexec "${wide.ffmpeg}" "$@"\n`, {
+      mode: 0o755,
+    });
+    const { storyboard, inputs } = await withSteps([
+      { id: 'SS1', path: wide.path },
+      { id: 'SS2', path: other },
+    ]);
+    const config = testConfig({ render: { ffmpegPath: counting } });
+    const images = await loadStoryboardScreenshots(storyboard, inputs, config);
+    expect([...images.keys()]).toEqual(['SS1']);
+    expect(images.get('SS1')).toMatchObject({ width: 2560, height: 1280 });
+    // The plan takes the loaded picture and makes no second one.
+    const plan = await build({ storyboard, inputs, config: { render: { ffmpegPath: counting } }, images });
+    const steps = visualOf(plan, 'rp', 'repro').steps;
+    expect(steps.map((s) => s.thumb?.kind === 'screenshot' && s.thumb.image.width)).toEqual([2560, 2560]);
+    expect((await readFile(log, 'utf8')).trim().split('\n')).toHaveLength(1);
+  });
+
+  it('stops with the name of a wide picture that cannot be made smaller', async (ctx) => {
+    const wide = await wideShot('wide-step-broken.png');
+    if (wide === null) return ctx.skip();
+    const broken = join(dir, 'ffmpeg-fails-step.sh');
+    await writeFile(broken, '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const { storyboard, inputs } = await withSteps([{ id: 'SS1', path: wide.path }]);
+    await expect(
+      loadStoryboardScreenshots(storyboard, inputs, testConfig({ render: { ffmpegPath: broken } })),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('Screenshot SS1 (wide-step-broken.png)'),
     });
   });
 });

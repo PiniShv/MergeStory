@@ -153,11 +153,15 @@ function reproInput(
     if (id === undefined) return null;
     if (known.some((item) => item.id === id)) return id;
     const have = known.map((item) => item.id).join(', ');
+    const how =
+      kind === 'screenshot'
+        ? '--screenshot or --screenshots-dir; for the agent commands, put the file in the screenshots/ folder of the work folder'
+        : '--recording; for the agent commands, put the file in the recordings/ folder of the work folder';
     throw new MergeStoryError(
       'USAGE',
       `The reproduction ${at} uses ${kind} ${id}, which was not supplied to this command${have ? ` (supplied: ${have})` : ''}.`,
       {
-        hint: `Pass the ${kind} to this command first (--${kind}; for the agent commands, the file in the work folder), or take the capture off the step.`,
+        hint: `Pass the ${kind} to this command first (${how}), or take the capture off the step.`,
       },
     );
   };
