@@ -15,7 +15,8 @@ set up.
 4. The link is also written to the summary of the workflow run.
 
 Nothing runs for every push. That keeps cost and noise down: only the pull requests that deserve a video get
-one.
+one. To make videos for many pull requests in one go, see
+[A backfill in GitHub Actions](batch.md#a-backfill-in-github-actions).
 
 ## Set it up
 

@@ -34,6 +34,11 @@ All notable changes to MergeStory are listed here, newest first.
   `storyboard.schema.json`, about 45 KB, for each video. The file is still written. The log line of
   `analyze` counts the evidence pack and the guide.
 
+### Docs
+
+- New page: [Videos for many pull requests](docs/batch.md). It shows a loop in a shell and a backfill
+  in GitHub Actions, and says what a batch costs, which limits it can hit and how to clean up.
+
 ## 1.5.1
 
 ### Skill and plugin

@@ -262,6 +262,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 - [What it costs](docs/cost.md)
 - [Storyboard format](docs/storyboard.md)
 - [GitHub Actions](docs/github-actions.md)
+- [Videos for many pull requests](docs/batch.md)
 - [HTTP API and library](docs/api.md)
 - [Hosting your videos](docs/hosting.md)
 - [Publishing to YouTube](docs/youtube.md)
