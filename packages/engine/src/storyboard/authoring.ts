@@ -320,8 +320,8 @@ const rule = (schema: { description?: string }): string => schema.description ??
  * Every field that takes one of a fixed set of values, with all of the values, and the rules that the
  * guide leaves to the descriptions in the schema. With the shapes and the example of the guide,
  * AUTHORING.md then names every field and every value, so its reader does not have to open the JSON
- * Schema. The lists and the rules are read from the schema. A model gets the schema itself, so this is
- * not part of its prompt.
+ * Schema. The lists and the rules are read from the schema, and the limits that the guide leaves out
+ * from STORYBOARD_LIMITS. A model gets the schema itself, so this is not part of its prompt.
  */
 export const AUTHORING_VALUES = `## Allowed values
 
@@ -346,5 +346,8 @@ These fields take one of a fixed set of values. Each list is complete.
 
 - "title" of a scene: ${rule(SceneSchema.shape.title)}
 - "chips" of a title visual: ${rule(TitleVisualSchema.shape.chips)}
+- "focus" of a code visual: ${rule(CodeVisualSchema.shape.focus)}
+- "text" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.text)}
 - "items" of a browser block, by its "kind". ${rule(BrowserVisualSchema.shape.blocks.element.shape.items)}
+- "lines" of a terminal visual and "terminal" of a before-after panel: at most ${LIMITS.maxTerminalLines} lines. "blocks" of a browser visual: at most ${LIMITS.maxBrowserBlocks} blocks. The first ones stay. The rest is trimmed, and \`validate\` reports it under "Fixed automatically when rendering" ("fixes" in the \`--json\` result).
 `;

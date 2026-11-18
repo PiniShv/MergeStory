@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatPublishResult } from '../cli/commands/publish.ts';
-import { formatCost, formatError } from '../cli/format.ts';
+import { formatCost, formatError, formatValidation } from '../cli/format.ts';
 import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
@@ -20,7 +20,15 @@ import { estimateTokens } from '../core/cost.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { createLogger } from '../core/logger.ts';
 import type { PublishBundle, Publisher, Renderer } from '../core/providers.ts';
-import { BrowserVisualSchema, SceneSchema, TitleVisualSchema } from '../core/storyboard-schema.ts';
+import { narrationWords } from '../core/storyboard-facts.ts';
+import {
+  BrowserVisualSchema,
+  CodeVisualSchema,
+  SceneSchema,
+  STORYBOARD_LIMITS,
+  type Storyboard,
+  TitleVisualSchema,
+} from '../core/storyboard-schema.ts';
 import type { GenerateResult, PlanResult, PublishResult } from '../core/types.ts';
 import { ensureKokoroInstalled } from '../narration/kokoro-install.ts';
 import { createPublisher } from '../publish/index.ts';
@@ -897,11 +905,69 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     for (const field of [
       SceneSchema.shape.title,
       TitleVisualSchema.shape.chips,
+      CodeVisualSchema.shape.focus,
+      BrowserVisualSchema.shape.blocks.element.shape.text,
       BrowserVisualSchema.shape.blocks.element.shape.items,
     ]) {
       expect(field.description).toBeTruthy();
       expect(guide).toContain(field.description);
     }
+  });
+
+  it('says what the text of every kind of browser block shows', () => {
+    const { kind, text } = BrowserVisualSchema.shape.blocks.element.shape;
+    // A kind comes before a colon or a comma, as in "heading, text: the text on the block. input: the label".
+    for (const name of kind.options) expect(text.description, name).toMatch(new RegExp(`\\b${name}[,:]`));
+  });
+
+  it('states the limits for terminal lines and browser blocks, and where validate reports a trim', async () => {
+    const result = await prepareAuthoring({
+      ...options({ withContext: false }),
+      outDir: join(base, 'authoring-limits'),
+    });
+    const guide = await readFile(result.files.guide, 'utf8');
+    const rules = guide.slice(guide.indexOf('## More field rules'));
+    expect(rules).toContain(
+      `"terminal" of a before-after panel: at most ${STORYBOARD_LIMITS.maxTerminalLines} lines.`,
+    );
+    expect(rules).toContain(
+      `"blocks" of a browser visual: at most ${STORYBOARD_LIMITS.maxBrowserBlocks} blocks.`,
+    );
+    // A trim is a fix. The text output of validate lists fixes under a heading, and the JSON result under "fixes".
+    const heading = 'Fixed automatically when rendering';
+    expect(rules).toContain(`under "${heading}" ("fixes" in the \`--json\` result)`);
+    const printed = formatValidation(
+      {
+        storyboard: null,
+        errors: [],
+        warnings: [],
+        fixes: ['kept the first 8 of 11 blocks'],
+        groundedClaims: 0,
+      },
+      createStyle(false),
+    );
+    expect(printed).toContain(heading);
+  });
+
+  it('says that the word budget is a guide, and what the longest video does', async () => {
+    const result = await prepareAuthoring({
+      ...options({ withContext: false }),
+      outDir: join(base, 'authoring-budget'),
+    });
+    const guide = await readFile(result.files.guide, 'utf8');
+    expect(guide).toContain('This is a guide, not a limit: narration over it is kept as it is.');
+    expect(guide).toContain(
+      '`validate` warns (over-length) and `generate` leaves out the least important scenes and lines',
+    );
+    // The demo storyboard is over the budget that this guide gives. Nothing reports it and nothing is left out.
+    const budget = Number(/about (\d+) words of narration in total/.exec(guide)?.[1]);
+    const board = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
+    expect(narrationWords(board)).toBeGreaterThan(budget);
+    const checked = await checkStoryboard({ ...options(), storyboard: board });
+    expect(checked.warnings.filter((w) => w.code === 'over-length')).toEqual([]);
+    const planned = await plan({ storyboard: board });
+    expect(planned.scenes).toHaveLength(board.scenes.length);
+    expect(planned.warnings.filter((w) => w.includes('--max-duration'))).toEqual([]);
   });
 
   it('shows validate and generate with the source and the flags of the analysis', async () => {
