@@ -322,7 +322,9 @@ and no second model sees the code. The reading and writing are your agent's own 
 
 1. **Write down what only you know**, in a folder outside the repository: `task.md` (the task), `notes.md`
    (your decisions, edge cases and what deserves extra review) and `tests.json` (only tests you really ran).
-   Never invent a result.
+   Never invent a result. The `agent` commands also read screen recordings from `recordings/` in that folder
+   (`.mp4` or `.webm`, sorted by name, named by an optional `recordings/captions.json`). With `analyze`,
+   `validate` and `generate`, pass `--recording <path>[:<caption>[:before|after]]` instead.
 2. **Analyse the change.**
 
    ```bash
@@ -376,6 +378,9 @@ mergestory validate examples/demo/storyboard.json /tmp/mergestory-demo --base ma
 ```bash
 mergestory generate /tmp/mergestory-demo --base main --head feature/retry --task-file examples/demo/task.md --notes-file examples/demo/notes.md --tests-file examples/demo/tests.json --storyboard examples/demo/storyboard.json
 ```
+
+[`examples/bugfix-demo/`](../examples/bugfix-demo/README.md) is a second example, with real screenshots and
+screen recordings of a bug and its fix. Its README has the commands.
 
 ## The schema
 

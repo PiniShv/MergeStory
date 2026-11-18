@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Trail Snacks: your basket</title>
+  <style>
+    body { margin: 0; background: #f6f4ee; color: #1d2433; font: 26px/1.4 system-ui, sans-serif; }
+    main { margin: 40px auto; max-width: 820px; padding: 28px 40px; background: #fff; border-radius: 14px; }
+    h1 { margin: 0 0 16px; font-size: 40px; }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e7e3d8; }
+    input { width: 90px; padding: 6px 10px; font: inherit; border: 2px solid #b9b3a3; border-radius: 8px; }
+    .count { margin-top: 22px; font-size: 46px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Your basket</h1>
+    <div class="row"><label for="qty-mix">Trail mix</label><input id="qty-mix" type="number" min="0" value="1"></div>
+    <div class="row"><label for="qty-bar">Oat bars</label><input id="qty-bar" type="number" min="0" value="1"></div>
+    <div class="count" id="count">2 items</div>
+  </main>
+  <script src="basket.js"></script>
+</body>
+</html>

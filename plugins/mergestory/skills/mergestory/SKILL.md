@@ -20,7 +20,7 @@ MergeStory is a separate command-line engine. This skill only gathers context, c
 engine, and reports the result. The engine never changes code, and it never touches the pull
 request unless you pass `--comment` or `--update-description`.
 
-Do not use it for text-only summaries, code review comments, or screen recordings of an app.
+Do not use it for text-only summaries or code review comments. It does not record an app. It can show screenshots and recordings that were really captured.
 
 ## 1. Find the engine
 
@@ -73,7 +73,8 @@ never in the repository:
 
 - `recordings/`: screen recordings (`.mp4` or `.webm`) in the work folder, sorted by name. Add
   `recordings/captions.json` as `{"clip.mp4": {"caption": "What it shows", "side": "before"}}` to name them.
-  Use only recordings that were really captured; never make one up.
+  Use only recordings that were really captured; never make one up. This needs an engine newer than
+  1.6.0. An older engine ignores the folder, so cite no `RC` id there.
 
 These become citable evidence (TASK, NOTES, T1, RC1) in the video.
 

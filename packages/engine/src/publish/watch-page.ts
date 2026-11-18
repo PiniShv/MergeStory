@@ -370,7 +370,7 @@ function renderTrust(claims: WatchPageData['claims']): string {
     '<section class="card" aria-labelledby="h-trust"><h2 id="h-trust">Why you can trust this video</h2>' +
     `<p class="stat"><strong>${grounded} of ${all.length}</strong> narration ${single ? 'line cites' : 'lines cite'} evidence from the change.</p>` +
     `<progress class="meter" max="${all.length}" value="${grounded}" aria-hidden="true"></progress>` +
-    '<p class="muted">Each line points at files, hunks, symbols, commits or tests of this change, and MergeStory checks every reference before it renders the video. Open a chapter to see what its lines rely on.</p>' +
+    '<p class="muted">Each line points at files, hunks, symbols, commits, tests, or screenshots and recordings that were supplied with it, and MergeStory checks every reference before it renders the video. Open a chapter to see what its lines rely on.</p>' +
     `${details}${hidden > 0 ? `<p class="muted">${hidden} more lines are not shown.</p>` : ''}</section>`
   );
 }
@@ -497,7 +497,7 @@ export function buildWatchPage(data: WatchPageData, urls: AssetUrls): string {
     renderTrust(data.claims),
     renderUncertainties(data.uncertainties),
     data.hasSimulatedVisuals
-      ? '<div class="note" role="note"><strong>Some visuals are simulated.</strong> They are labelled as such on screen. They illustrate how parts of the change fit together and are not recordings of the running application.</div>'
+      ? '<div class="note" role="note"><strong>Some visuals are simulated.</strong> They are labelled as such on screen. They illustrate how parts of the change fit together and are not captures of the running application. Scenes labelled Recorded are real captures.</div>'
       : '',
     renderMade(data),
     '</main>',

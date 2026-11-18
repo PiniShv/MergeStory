@@ -66,7 +66,7 @@ The video explains a change that adds retries with exponential backoff to a smal
 6. **Conclusion:** a short, review-oriented summary.
 
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
-to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.
+to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled "simulated". Screenshots and screen recordings that you supply are shown as real and labelled "Recorded" (see [the storyboard guide](docs/storyboard.md)).
 
 ## Get started
 

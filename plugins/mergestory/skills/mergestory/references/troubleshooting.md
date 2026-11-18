@@ -12,11 +12,12 @@ without any error.
 - **An evidence id that is not in `evidence.md` is not an error.** The engine removes it and adds a
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
-- **A removed `TASK`, `NOTES`, `T1` or `SS1` means that context is missing.** With the `agent`
+- **A removed `TASK`, `NOTES`, `T1`, `SS1` or `RC1` means that context is missing.** With the `agent`
   commands, `task.md`, `notes.md` and `tests.json` must be in the work folder before `agent analyze`
   runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file` and
-  `--screenshot` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
-  do not exist.
+  `--screenshot` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  do not exist. A removed `RC1` means that the recording was not passed to this command (or that the
+  `recordings/` folder lacks the file, or the engine is older than the one that reads recordings).
 
 These codes are errors:
 

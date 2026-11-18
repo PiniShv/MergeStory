@@ -1,0 +1,211 @@
+{
+  "version": 1,
+  "title": "Count the basket items as numbers",
+  "summary": "The basket page joined its two quantities as text, so 2 and 3 showed as 23 items. basketCount now turns both values into numbers before it adds them.",
+  "style": "hybrid",
+  "language": "en",
+  "scenes": [
+    {
+      "id": "s1",
+      "role": "mission",
+      "title": "The mission",
+      "narration": [
+        {
+          "text": "The basket page counted its items wrongly. This change fixes the count.",
+          "evidence": ["CM1", "TASK"]
+        }
+      ],
+      "visual": {
+        "type": "title",
+        "kicker": "fix/basket-count",
+        "heading": "Count the basket items as numbers",
+        "subheading": "basketCount",
+        "chips": ["basketCount", "Number"]
+      },
+      "visualDescription": "Title card with the name of the fix.",
+      "transition": "fade",
+      "targetSeconds": null
+    },
+    {
+      "id": "s2",
+      "role": "mission",
+      "title": "The bug on the page",
+      "narration": [
+        {
+          "text": "This is the bug, on the basket page. Someone types 2 trail mix and 3 oat bars.",
+          "evidence": ["TASK", "RC1"]
+        },
+        {
+          "text": "The page then says 23 items, not 5.",
+          "evidence": ["TASK", "RC1"]
+        }
+      ],
+      "visual": {
+        "type": "recording",
+        "recordingId": "RC1",
+        "caption": null,
+        "trim": null,
+        "speed": null,
+        "zoom": null
+      },
+      "visualDescription": "The recorded basket page before the fix: the count reads 23 items.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s3",
+      "role": "under-the-hood",
+      "title": "The cause in basketCount",
+      "narration": [
+        {
+          "text": "The cause is in basketCount. The quantity fields give text, so the plus sign joined the two values.",
+          "evidence": ["S1", "F1.H1", "NOTES"]
+        },
+        {
+          "text": "The fix turns both values into numbers with Number, before it adds them.",
+          "evidence": ["S1", "F1.H1", "NOTES"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": { "path": "basket.js", "side": "head", "startLine": 1, "endLine": 6 },
+        "mode": "diff",
+        "focus": [
+          { "startLine": 2, "endLine": 2, "note": "basketCount adds two quantities", "beat": 0 },
+          { "startLine": 3, "endLine": 3, "note": "Number turns text into a number", "beat": 1 }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The changed line of basketCount, with the old and the new return.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s4",
+      "role": "before-after",
+      "title": "The page after the fix",
+      "narration": [
+        {
+          "text": "After the fix, the same steps give the right answer.",
+          "evidence": ["RC2"]
+        },
+        {
+          "text": "The trail mix is 2 and the oat bars are 3, and the basket now says 5 items.",
+          "evidence": ["TASK", "RC2"]
+        }
+      ],
+      "visual": {
+        "type": "recording",
+        "recordingId": "RC2",
+        "caption": null,
+        "trim": null,
+        "speed": null,
+        "zoom": null
+      },
+      "visualDescription": "The recorded basket page after the fix: the count reads 5 items.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s5",
+      "role": "before-after",
+      "title": "Before and after",
+      "narration": [
+        {
+          "text": "Side by side, the same two quantities. Before the fix the count reads 23 items. After it, the count reads 5 items.",
+          "evidence": ["TASK", "SS1", "SS2"]
+        }
+      ],
+      "visual": {
+        "type": "before-after",
+        "before": {
+          "codeRef": null,
+          "bullets": [],
+          "terminal": [],
+          "screenshotId": "SS1",
+          "recordingId": null,
+          "label": "Before",
+          "kind": "screenshot"
+        },
+        "after": {
+          "codeRef": null,
+          "bullets": [],
+          "terminal": [],
+          "screenshotId": "SS2",
+          "recordingId": null,
+          "label": "After",
+          "kind": "screenshot"
+        },
+        "caption": null
+      },
+      "visualDescription": "Two screenshots of the basket page: the count before and after the fix.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s6",
+      "role": "review",
+      "title": "What to check",
+      "narration": [
+        {
+          "text": "The notes ask for one check. Number also accepts values such as 1e2, and the page does not block them.",
+          "evidence": ["NOTES", "F1.H1"]
+        },
+        {
+          "text": "The coding agent reported that npm test passed.",
+          "evidence": ["T1"]
+        }
+      ],
+      "visual": {
+        "type": "checklist",
+        "items": [
+          {
+            "title": "Values such as 1e2",
+            "detail": "Number accepts them and the page does not block them.",
+            "severity": "low",
+            "ref": { "path": "basket.js", "side": "head", "startLine": 3, "endLine": 3 },
+            "beat": 0,
+            "evidence": ["NOTES", "F1.H1"]
+          }
+        ]
+      },
+      "visualDescription": "One review point about the values that Number accepts.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s7",
+      "role": "conclusion",
+      "title": "Wrap up",
+      "narration": [
+        {
+          "text": "In short, basketCount now adds numbers, not text. Two and three give five.",
+          "evidence": ["S1", "F1.H1"]
+        }
+      ],
+      "visual": {
+        "type": "summary",
+        "points": [
+          { "text": "basketCount turns both quantities into numbers", "beat": 0 },
+          { "text": "A new test file covers text quantities", "beat": 0 }
+        ],
+        "closing": null
+      },
+      "visualDescription": "A short list of what changed.",
+      "transition": "fade",
+      "targetSeconds": null
+    }
+  ],
+  "reviewChecklist": [
+    {
+      "title": "Values such as 1e2",
+      "detail": "Number accepts them and the page does not block them.",
+      "severity": "low",
+      "ref": { "path": "basket.js", "side": "head", "startLine": 3, "endLine": 3 },
+      "evidence": ["NOTES", "F1.H1"]
+    }
+  ],
+  "uncertainties": [
+    "The captures show the page in one browser window. The change does not show other browsers."
+  ]
+}
