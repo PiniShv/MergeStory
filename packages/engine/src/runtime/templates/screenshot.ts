@@ -1,7 +1,23 @@
 /** A screenshot framed in a neutral window (or a phone frame for tall images), fitted without distortion. */
-import { CONTENT_H, CONTENT_W, type ScreenshotResolved } from '../../core/render-plan.ts';
+
+import {
+  cameraMove,
+  FULL_VIEW,
+  focusView,
+  type PictureRect,
+  scaleOf,
+  viewAt,
+} from '../../core/picture-view.ts';
+import { beatAt } from '../../core/recording-frames.ts';
+import {
+  CONTENT_H,
+  CONTENT_W,
+  type PlannedHighlight,
+  type ScreenshotResolved,
+} from '../../core/render-plan.ts';
 import { clamp01, enter, lerp, q } from '../anim.ts';
 import { css, h } from '../dom.ts';
+import { createHighlights } from '../highlights.ts';
 import { icon } from '../icons.ts';
 import type { SceneContext, SceneInstance, TemplateFactory } from '../types.ts';
 import {
@@ -53,6 +69,56 @@ export interface FramedPicture {
   content: HTMLElement;
   /** Extra work for every frame, through the style writer. */
   onUpdate?: (t: number) => void;
+  /** Called once, when the scene is laid out with its final fonts. */
+  onLayout?: () => void;
+}
+
+/** What a picture may be marked with: boxes on it, and the part that the camera zooms into. */
+export interface PictureMarks {
+  highlights?: PlannedHighlight[];
+  focus?: PictureRect;
+}
+
+const CAMERA_CSS = `
+.ms-cam-clip { position: relative; width: 100%; height: 100%; overflow: hidden; }
+.ms-cam { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
+`;
+
+/**
+ * Put highlights on a picture and let a camera move over it. The picture and its highlights sit in one
+ * element that the window clips. Without marks the picture is returned as it is.
+ */
+export function withMarks(
+  ctx: SceneContext,
+  marks: PictureMarks,
+  content: HTMLElement,
+  update?: (t: number) => void,
+): Pick<FramedPicture, 'content' | 'onUpdate' | 'onLayout'> {
+  const layer = createHighlights(ctx, marks.highlights ?? []);
+  if (!layer.el && !marks.focus) return { content, onUpdate: update };
+  css('camera', CAMERA_CSS);
+  const { sw } = ctx;
+  const camera = h('div', { class: 'ms-cam' }, content, layer.el);
+  // The window clips its whole body, the bar too: the camera needs a clip of its own.
+  const clip = h('div', { class: 'ms-cam-clip' }, camera);
+  const focus = marks.focus ?? null;
+  const rest = focus ? focusView(focus) : FULL_VIEW;
+  const move = cameraMove(ctx.duration, beatAt(ctx.scene, 0));
+  return {
+    content: clip,
+    onLayout: () => layer.layout(rest),
+    onUpdate(t) {
+      update?.(t);
+      const view = viewAt(focus, move, t);
+      const [scale, x, y] = [q(scaleOf(view), 4), q(view.x * 100, 4), q(view.y * 100, 4)];
+      // A camera that has not moved has no transform at all.
+      sw.transform(
+        camera,
+        scale === 1 && x === 0 && y === 0 ? 'none' : `scale(${scale}) translate(${-x}%, ${-y}%)`,
+      );
+      layer.update(t, scale);
+    },
+  };
 }
 
 /** A picture in a window (or a phone frame for tall ones), fitted without distortion, with its caption and entrance. */
@@ -113,6 +179,7 @@ export function framedScene(ctx: SceneContext, picture: FramedPicture): SceneIns
     root,
     layout() {
       captionEl?.fit();
+      picture.onLayout?.();
     },
     update(t) {
       // One gentle zoom-in over the first 1.2 s, then the frame rests.
@@ -139,8 +206,15 @@ export function missingPicture(): HTMLElement {
 export const screenshotTemplate: TemplateFactory<ScreenshotResolved> = (visual, ctx) => {
   const caption = (visual.caption ?? '').trim() || null;
   const { image } = visual;
-  const content = isDataImage(image.src)
+  const shown = isDataImage(image.src);
+  const content = shown
     ? h('img', { class: 'ms-shot__img', attrs: { src: image.src, alt: caption ?? 'Screenshot' } })
     : missingPicture();
-  return framedScene(ctx, { width: image.width, height: image.height, caption, content });
+  // A placeholder gets no boxes and no camera, like a before-after panel.
+  return framedScene(ctx, {
+    width: image.width,
+    height: image.height,
+    caption,
+    ...(shown ? withMarks(ctx, visual, content) : { content }),
+  });
 };

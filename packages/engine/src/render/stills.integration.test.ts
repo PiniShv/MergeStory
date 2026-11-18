@@ -35,8 +35,15 @@ const PLANS = fileURLToPath(new URL('../../assets/preview/', import.meta.url));
 const GOLDENS = fileURLToPath(new URL('../../test/fixtures/stills/', import.meta.url));
 const UPDATE = process.env.MERGESTORY_UPDATE_STILLS === '1';
 
-/** Frames that show the glows, the gradients, the cards, the badges and the end card. */
-const FRAMES = { core: [4, 25.5, 39.5], templates: [4.5, 27, 41.5] } as const;
+/**
+ * Frames that show the glows, the gradients, the cards, the badges and the end card. In the templates
+ * plan, 31.5 s is the before-after scene with a screenshot panel and 36 s the screenshot scene, both
+ * with no highlights and no focus: they are drawn as they were before those existed.
+ */
+const FRAMES = {
+  core: [4, 25.5, 39.5],
+  templates: [4.5, 27, 31.5, 36, 41.5],
+} as const;
 /** Stills are drawn at 640x360 and compared at 160x90, where a pixel is the mean of 4x4. */
 const DRAWN = { width: 640, height: 360 };
 const COMPARED = { width: 160, height: 90 };
@@ -47,9 +54,19 @@ const FLAT_RANGE = 6;
 async function samplePlan(name: keyof typeof FRAMES, themeName: string): Promise<RenderPlan> {
   const plan = JSON.parse(await readFile(join(PLANS, `${name}-sample.json`), 'utf8')) as RenderPlan;
   const theme = await loadTheme(themeName);
-  Object.assign(plan, { theme: theme.base, colors: theme.colors, logo: theme.logo, ...DRAWN });
-  // All four badges on the first scene, so their colours are drawn too.
+  Object.assign(plan, {
+    theme: theme.base,
+    colors: theme.colors,
+    logo: theme.logo,
+    ...DRAWN,
+  });
   if (name === 'templates') {
+    // A screenshot panel in the before-after scene, with the picture of the screenshot scene.
+    const [compare, shot] = [plan.scenes[5]!.visual, plan.scenes[6]!.visual];
+    if (compare.type !== 'before-after' || shot.type !== 'screenshot')
+      throw new Error('The sample plan changed.');
+    compare.before = { label: 'Before', kind: 'screenshot', image: shot.image };
+    // All four badges on the first scene, so their colours are drawn too.
     plan.scenes[0]!.badges = (['simulated', 'actual', 'masked', 'reported'] as const).map((kind) => ({
       kind,
       text: '',
@@ -71,7 +88,12 @@ async function pixels(file: string): Promise<Buffer> {
 /** Where the pure magenta of the test logo shows in a still, in compared pixels. */
 async function magenta(file: string): Promise<{ count: number; left: number; right: number; top: number }> {
   const rgb = await pixels(file);
-  const found = { count: 0, left: COMPARED.width, right: -1, top: COMPARED.height };
+  const found = {
+    count: 0,
+    left: COMPARED.width,
+    right: -1,
+    top: COMPARED.height,
+  };
   for (let i = 0; i < rgb.length / 3; i++) {
     if (rgb[i * 3]! < 200 || rgb[i * 3 + 1]! > 80 || rgb[i * 3 + 2]! < 200) continue;
     const [x, y] = [i % COMPARED.width, Math.floor(i / COMPARED.width)];
@@ -81,6 +103,32 @@ async function magenta(file: string): Promise<{ count: number; left: number; rig
     found.top = Math.min(found.top, y);
   }
   return found;
+}
+
+/** The box around the pure magenta pixels of a still of `size`, between the columns `from` (inclusive) and `to`. */
+async function magentaBox(
+  file: string,
+  size: { width: number; height: number },
+  [from, to]: [number, number],
+): Promise<{ left: number; top: number; right: number; bottom: number }> {
+  const raw = (
+    await runCommand(tools!.ffmpeg, [
+      ...['-hide_banner', '-loglevel', 'error', '-i', file],
+      ...['-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'],
+    ])
+  ).stdoutBuffer;
+  const box = { left: size.width, top: size.height, right: -1, bottom: -1 };
+  for (let y = 0; y < size.height; y++) {
+    for (let x = from; x < to; x++) {
+      const i = (y * size.width + x) * 3;
+      if (raw[i]! < 200 || raw[i + 1]! > 80 || raw[i + 2]! < 200) continue;
+      box.left = Math.min(box.left, x);
+      box.top = Math.min(box.top, y);
+      box.right = Math.max(box.right, x);
+      box.bottom = Math.max(box.bottom, y);
+    }
+  }
+  return box;
 }
 
 /** Channel differences on the pixels that are flat in the golden and have only flat neighbours. */
@@ -129,7 +177,12 @@ describe.skipIf(!available)('golden stills', () => {
     dir = await mkdtemp(join(tmpdir(), 'mergestory-stills-'));
     logoTheme = join(dir, 'logo-theme');
     await mkdir(logoTheme);
-    const theme = { schema: 1, name: 'logo', extends: 'terminal', logo: 'logo.png' };
+    const theme = {
+      schema: 1,
+      name: 'logo',
+      extends: 'terminal',
+      logo: 'logo.png',
+    };
     await writeFile(join(logoTheme, 'theme.json'), JSON.stringify(theme));
     await writeFile(join(logoTheme, 'logo.png'), makePng(200, 100, [255, 0, 255]));
   });
@@ -185,6 +238,63 @@ describe.skipIf(!available)('golden stills', () => {
     expect(card.top, JSON.stringify(card)).toBeGreaterThan(COMPARED.height / 8);
   }, 60_000);
 
+  it('puts a picture that has no highlights and no focus where it always was', async () => {
+    const out = join(dir, 'geometry');
+    const size = { width: 1920, height: 1080 };
+    // Pure magenta pictures, so that the place of each one in the frame can be measured to the pixel.
+    const picture = (width: number, height: number) => ({
+      src: `data:image/png;base64,${makePng(width, height, [255, 0, 255]).toString('base64')}`,
+      width,
+      height,
+    });
+    // The boxes as drawn before highlights existed: left and right panel at 31.5 s, the scene at 36 s.
+    // [left, top, right, bottom] of each.
+    const cases = [
+      {
+        image: picture(960, 600),
+        want: [
+          [123, 260, 896, 743],
+          [1023, 260, 1796, 743],
+          [541, 208, 1378, 731],
+        ],
+      },
+      {
+        image: picture(400, 800),
+        want: [
+          [389, 260, 630, 743],
+          [1289, 260, 1530, 743],
+          [822, 166, 1097, 717],
+        ],
+      },
+    ];
+    for (const [n, { image, want }] of cases.entries()) {
+      const plan = Object.assign(await samplePlan('templates', 'dark'), size);
+      const [compare, shot] = [plan.scenes[5]!.visual, plan.scenes[6]!.visual];
+      if (compare.type !== 'before-after' || shot.type !== 'screenshot')
+        throw new Error('Not the sample plan.');
+      compare.before = { label: 'Before', kind: 'screenshot', image };
+      compare.after = { label: 'After', kind: 'screenshot', image };
+      shot.image = image;
+      const { ctx } = testContext({
+        home: join(out, String(n)),
+        runDir: join(out, String(n)),
+      });
+      const [panels, scene] = await renderStillFrames(plan, [31.5, 36], join(out, String(n)), ctx);
+      const found = [
+        await magentaBox(panels!, size, [0, size.width / 2]),
+        await magentaBox(panels!, size, [size.width / 2, size.width]),
+        await magentaBox(scene!, size, [0, size.width]),
+      ].map((b) => [b.left, b.top, b.right, b.bottom]);
+      // Layout is in whole pixels: a picture that moved, or got a wrapper that changes its size, is off by more than the blur of an edge.
+      found.flat().forEach((value, i) => {
+        expect(
+          Math.abs(value - want.flat()[i]!),
+          `picture ${n}: ${JSON.stringify(found)}`,
+        ).toBeLessThanOrEqual(1);
+      });
+    }
+  }, 60_000);
+
   it('draws a theme and its logo without a single request: the page stays offline', async () => {
     const instance = await chromium.launch({
       executablePath: browser!.path,
@@ -192,7 +302,10 @@ describe.skipIf(!available)('golden stills', () => {
       args: BROWSER_ARGS,
     });
     try {
-      const html = buildPageHtml({ runtimeJs: await loadRuntimeBundle(), fontsCss: await fontFacesCss() });
+      const html = buildPageHtml({
+        runtimeJs: await loadRuntimeBundle(),
+        fontsCss: await fontFacesCss(),
+      });
       const page = await PlanPage.open(instance, await samplePlan('templates', logoTheme), html);
       for (const time of FRAMES.templates) await page.seek(time);
       expect(page.blockedRequests).toBe(0);

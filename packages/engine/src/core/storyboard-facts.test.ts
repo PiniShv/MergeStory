@@ -35,15 +35,42 @@ describe('beatHolders', () => {
     expect(beatHolders(visualOf('s6')).length).toBe(3);
   });
 
+  it('gives the boxes of a screenshot, a recording and both panels of a before-after a beat', () => {
+    const box = (beat: number) => ({ x: 0, y: 0, w: 0.5, h: 0.5, label: null, beat });
+    const picture = { caption: null, highlights: [box(0), box(1)], focus: null };
+    expect(beatHolders({ type: 'screenshot', screenshotId: 'SS1', ...picture })).toEqual([box(0), box(1)]);
+    expect(
+      beatHolders({
+        type: 'recording',
+        recordingId: 'RC1',
+        trim: null,
+        speed: null,
+        zoom: null,
+        ...picture,
+      }),
+    ).toEqual([box(0), box(1)]);
+    const base = visualOf('s6');
+    if (base.type !== 'before-after') throw new Error('fixture changed');
+    const both = {
+      ...base,
+      before: { ...base.before, highlights: [box(2)] },
+      after: { ...base.after, highlights: [box(3), box(4)] },
+    };
+    // The three terminal lines of the fixture come first, then the boxes of the before and the after panel.
+    expect(beatHolders(both).map((h) => h.beat)).toEqual([0, 0, 0, 2, 3, 4]);
+  });
+
   it('gives a recording no beats and does not call it simulated', () => {
     const clip = {
-      type: 'recording',
+      type: 'recording' as const,
       recordingId: 'RC1',
       caption: null,
       trim: null,
       speed: null,
       zoom: null,
-    } as const;
+      highlights: [],
+      focus: null,
+    };
     expect(beatHolders(clip)).toEqual([]);
     expect(isSimulated(clip)).toBe(false);
   });

@@ -307,6 +307,368 @@ describe('recordings', () => {
   });
 });
 
+describe('highlights and focus', () => {
+  const box = (extra: Json = {}): Json => ({
+    x: 0.1,
+    y: 0.2,
+    w: 0.3,
+    h: 0.2,
+    label: null,
+    beat: 0,
+    ...extra,
+  });
+  const recording = {
+    id: 'RC1',
+    path: '/nonexistent/flow.mp4',
+    caption: 'Checkout flow',
+    moment: 'after' as const,
+    durationSec: 10,
+    width: 1280,
+    height: 720,
+    codec: 'h264',
+  };
+  const panel = (kind: string, extra: Json = {}): Json => ({
+    label: 'After',
+    kind,
+    codeRef: null,
+    bullets: ['Requests are retried.'],
+    terminal: [],
+    screenshotId: kind === 'screenshot' ? 'SS1' : null,
+    recordingId: null,
+    ...extra,
+  });
+
+  /** Validate a visual in scene 2, then the accepted result again: a repair must not need a second repair. */
+  async function check(visual: Json, config: Json = {}) {
+    const fx = retryFixture({
+      config,
+      inputs: {
+        recordings: [recording],
+        screenshots: [{ id: 'SS1', path: '/nonexistent/page.png', caption: 'The page', moment: 'after' }],
+      },
+    });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = visual;
+    const result = await run(sb, fx);
+    if (result.storyboard) {
+      const again = await run(result.storyboard, fx);
+      expect(again.fixes).toEqual([]);
+      expect(again.warnings).toEqual([]);
+      expect(again.storyboard).toEqual(result.storyboard);
+    }
+    return { result, shown: result.storyboard?.scenes[2]?.visual as Json | undefined };
+  }
+  const screenshot = (extra: Json = {}): Json => ({
+    type: 'screenshot',
+    screenshotId: 'SS1',
+    caption: null,
+    ...extra,
+  });
+  const beforeAfter = (before: Json, after: Json): Json => ({
+    type: 'before-after',
+    before,
+    after,
+    caption: null,
+  });
+
+  it('accepts boxes and a focus that lie inside the picture, with no fix', async () => {
+    const { result, shown } = await check(
+      screenshot({
+        highlights: [box({ label: 'The count', beat: 1 }), box({ x: 0.7, w: 0.3 })],
+        focus: { x: 0, y: 0.5, w: 0.5, h: 0.5 },
+      }),
+    );
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toEqual([]);
+    expect(shown?.highlights).toHaveLength(2);
+    expect(shown?.highlights[0].label).toBe('The count');
+  });
+
+  it('keeps the first four boxes of a screenshot and of a recording, and says so', async () => {
+    const five = Array.from({ length: 5 }, (_, i) => box({ x: i / 10, label: `Box ${i}` }));
+    for (const visual of [
+      screenshot({ highlights: five }),
+      {
+        type: 'recording',
+        recordingId: 'RC1',
+        caption: null,
+        trim: null,
+        speed: null,
+        zoom: null,
+        highlights: five,
+      },
+    ]) {
+      const { result, shown } = await check(visual);
+      expect(shown?.highlights.map((h: Json) => h.label)).toEqual(['Box 0', 'Box 1', 'Box 2', 'Box 3']);
+      expect(result.fixes).toEqual([
+        'scenes[2].visual.highlights: kept the first 4 of 5 highlights (the limit is 4)',
+      ]);
+      expect(result.warnings).toEqual([]);
+    }
+  });
+
+  it('moves a box inside the picture: sides first, then the corner', async () => {
+    const { result, shown } = await check(
+      screenshot({
+        highlights: [
+          box({ x: 0.9, y: 0.95, w: 0.3, h: 0.2 }),
+          box({ x: -0.5, y: -1, w: 0, h: -3 }),
+          box({ x: 0, y: 0, w: 4, h: 1 }),
+        ],
+      }),
+    );
+    expect(shown?.highlights.map(({ x, y, w, h }: Json) => ({ x, y, w, h }))).toEqual([
+      { x: 0.7, y: 0.8, w: 0.3, h: 0.2 },
+      { x: 0, y: 0, w: 0.02, h: 0.02 },
+      { x: 0, y: 0, w: 1, h: 1 },
+    ]);
+    const moved = 'moved the highlight inside the picture (x, y, w and h are fractions from 0 to 1)';
+    expect(result.fixes).toEqual([
+      `scenes[2].visual.highlights[0]: ${moved}`,
+      `scenes[2].visual.highlights[1]: ${moved} and made it at least 0.02 of the picture wide and high`,
+      `scenes[2].visual.highlights[2]: ${moved}`,
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('moves a focus inside the picture and makes it at least a fifth of each side', async () => {
+    const { result, shown } = await check(screenshot({ focus: { x: 0.9, y: -2, w: 0.5, h: 0.01 } }));
+    expect(shown?.focus).toEqual({ x: 0.5, y: 0, w: 0.5, h: 0.2 });
+    expect(result.fixes).toEqual([
+      'scenes[2].visual.focus: moved the focus inside the picture (x, y, w and h are fractions from 0 to 1) and made it at least 0.2 of the picture wide and high',
+    ]);
+    expect(result.warnings).toEqual([]);
+    const recorded = await check({
+      type: 'recording',
+      recordingId: 'RC1',
+      caption: null,
+      trim: null,
+      speed: null,
+      zoom: null,
+      focus: { x: 0.5, y: 0.5, w: 0.75, h: 0.75 },
+    });
+    expect(recorded.shown?.focus).toEqual({ x: 0.25, y: 0.25, w: 0.75, h: 0.75 });
+  });
+
+  it('leaves a box or a focus that ends exactly on the right or bottom edge as it is, with no fix', async () => {
+    // 1 - 0.8 is not exactly 0.2 in floating point: a rounding error is not a move.
+    const edge = { x: 0.2, y: 0.1, w: 0.8, h: 0.9 };
+    const { result, shown } = await check(
+      screenshot({ highlights: [box(edge), box({ x: 0.1, y: 0.07, w: 0.9, h: 0.93 })], focus: edge }),
+    );
+    expect(result.fixes).toEqual([]);
+    expect(shown?.highlights[0]).toMatchObject(edge);
+    expect(shown?.highlights[1]).toMatchObject({ x: 0.1, y: 0.07, w: 0.9, h: 0.93 });
+    expect(shown?.focus).toEqual(edge);
+    // A box that is really outside is still moved.
+    const outside = await check(screenshot({ focus: { x: 0.3, y: 0.1, w: 0.8, h: 0.9 } }));
+    expect(outside.shown?.focus.x).toBeCloseTo(0.2);
+    expect(outside.result.fixes).toHaveLength(1);
+  });
+
+  it('says that a side was raised when nothing moved and nothing was outside', async () => {
+    const { result, shown } = await check(
+      screenshot({
+        highlights: [box({ x: 0.1, y: 0.1, w: 0.01, h: 0.01 })],
+        focus: { x: 0.1, y: 0.1, w: 0.1, h: 0.1 },
+      }),
+    );
+    expect(shown?.highlights[0]).toMatchObject({ x: 0.1, y: 0.1, w: 0.02, h: 0.02 });
+    expect(result.fixes).toEqual([
+      'scenes[2].visual.highlights[0]: made the highlight at least 0.02 of the picture wide and high',
+      'scenes[2].visual.focus: made the focus at least 0.2 of the picture wide and high',
+    ]);
+  });
+
+  it('cuts a label by whole characters, so no emoji is cut in half and the limit counts characters', async () => {
+    const letters = 'a'.repeat(38);
+    const emoji = '\u{1F600}'.repeat(3);
+    const cut = await check(screenshot({ highlights: [box({ label: `${letters}${emoji}` })] }));
+    const label = cut.shown?.highlights[0].label as string;
+    expect(label).toBe(`${letters}\u{1F600}…`);
+    expect(label).not.toMatch(/[\ud800-\udbff](?![\udc00-\udfff])/);
+    // 25 emoji are 25 characters: no warning, no cut.
+    const many = '\u{1F600}'.repeat(25);
+    const kept = await check(screenshot({ highlights: [box({ label: many })] }));
+    expect(kept.shown?.highlights[0].label).toBe(many);
+    expect(kept.result.warnings).toEqual([]);
+  });
+
+  it('never shortens a label to just the ellipsis', async () => {
+    for (const label of [`   ${'x'.repeat(60)}`, `a ${'x'.repeat(60)}`]) {
+      const { shown } = await check(screenshot({ highlights: [box({ label })] }));
+      const result = shown?.highlights[0].label as string;
+      expect(result.length).toBeGreaterThan(2);
+      expect(result.endsWith('…')).toBe(true);
+    }
+  });
+
+  it('cleans a label like a caption: a web address goes, and a label with nothing left is null', async () => {
+    const { shown } = await check(
+      screenshot({
+        highlights: [
+          box({ label: 'See https://phish.attacker.dev/x' }),
+          box({ label: '   ' }),
+          box({ label: 'The count' }),
+        ],
+      }),
+    );
+    expect(shown?.highlights.map((h: Json) => h.label)).toEqual([null, null, 'The count']);
+  });
+
+  it('shortens a label of more than 40 characters at a word, with a warning and a fix', async () => {
+    const label = 'The item count is wrong after the second removal';
+    const { result, shown } = await check(screenshot({ highlights: [box({ label })] }));
+    const shortened = shown?.highlights[0].label as string;
+    expect(shortened).toBe('The item count is wrong after the…');
+    expect(shortened.length).toBeLessThanOrEqual(40);
+    expect(codes(result.warnings)).toEqual(['highlight-label-too-long']);
+    expect(result.warnings[0]?.path).toBe('scenes[2].visual.highlights[0].label');
+    expect(result.fixes).toHaveLength(1);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('cuts a long label on the 40th character when it has no space to cut at, and keeps a 40 character label', async () => {
+    const word = 'x'.repeat(60);
+    const cut = await check(screenshot({ highlights: [box({ label: word })] }));
+    expect(cut.shown?.highlights[0].label).toBe(`${'x'.repeat(39)}…`);
+    const exact = 'a'.repeat(39) + 'b';
+    const kept = await check(screenshot({ highlights: [box({ label: exact })] }));
+    expect(kept.shown?.highlights[0].label).toBe(exact);
+    expect(kept.result.warnings).toEqual([]);
+    // A space right after the 39th character: the cut falls there and keeps the whole last word.
+    const edge = `${'a'.repeat(10)} ${'b'.repeat(28)} ccc`;
+    const edged = await check(screenshot({ highlights: [box({ label: edge })] }));
+    expect(edged.shown?.highlights[0].label).toBe(`${'a'.repeat(10)} ${'b'.repeat(28)}…`);
+  });
+
+  it('puts the beat of a box into the narration of its scene', async () => {
+    const { result, shown } = await check(screenshot({ highlights: [box({ beat: 7 })] }));
+    expect(shown?.highlights[0].beat).toBe(1);
+    expect(result.fixes).toEqual([
+      'scenes[2].visual: 1 beat index pointed outside the 2 narration lines and was clamped',
+    ]);
+  });
+
+  it('draws the boxes of a screenshot panel and moves them inside', async () => {
+    const { result, shown } = await check(
+      beforeAfter(
+        panel('screenshot', { highlights: [box({ x: 0.95 })] }),
+        panel('screenshot', { highlights: [box({ label: 'The count' })] }),
+      ),
+    );
+    expect(shown?.before.highlights[0].x).toBe(0.7);
+    expect(shown?.after.highlights[0].label).toBe('The count');
+    expect(result.fixes).toHaveLength(1);
+    expect(result.fixes[0]).toContain('scenes[2].visual.before.highlights[0]');
+  });
+
+  it('removes the boxes of a panel that does not show a screenshot', async () => {
+    const { result, shown } = await check(
+      beforeAfter(panel('bullets', { highlights: [box()] }), panel('screenshot', { highlights: [box()] })),
+    );
+    expect(shown?.before.highlights).toEqual([]);
+    expect(shown?.after.highlights).toHaveLength(1);
+    expect(result.fixes).toEqual([
+      'scenes[2].visual.before: removed the highlights of a panel that does not show a screenshot',
+    ]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('removes the boxes of a screenshot panel that turns into a bullets panel', async () => {
+    const { result, shown } = await check(
+      beforeAfter(
+        panel('screenshot', { screenshotId: 'SS9', highlights: [box()] }),
+        panel('screenshot', { highlights: [box()] }),
+      ),
+    );
+    expect(shown?.before.kind).toBe('bullets');
+    expect(shown?.before.highlights).toEqual([]);
+    expect(codes(result.warnings)).toEqual(['screenshot-unknown']);
+  });
+
+  it('keeps the first four boxes of a panel', async () => {
+    const five = Array.from({ length: 5 }, (_, i) => box({ x: i / 10 }));
+    const { result, shown } = await check(
+      beforeAfter(panel('screenshot', { highlights: five }), panel('screenshot')),
+    );
+    expect(shown?.before.highlights).toHaveLength(4);
+    expect(result.fixes).toEqual([
+      'scenes[2].visual.before.highlights: kept the first 4 of 5 highlights (the limit is 4)',
+    ]);
+  });
+
+  it('repairs a box and a long label of a recording', async () => {
+    const { result, shown } = await check({
+      type: 'recording',
+      recordingId: 'RC1',
+      caption: null,
+      trim: null,
+      speed: null,
+      zoom: null,
+      highlights: [box({ x: 1.5, label: 'The item count is wrong after the second removal' })],
+    });
+    expect(shown?.highlights[0].x).toBe(0.7);
+    expect(shown?.highlights[0].label).toBe('The item count is wrong after the…');
+    expect(codes(result.warnings)).toEqual(['highlight-label-too-long']);
+    expect(result.fixes).toHaveLength(2);
+  });
+
+  it('cleans the label of a screenshot panel and shortens a long one', async () => {
+    const { result, shown } = await check(
+      beforeAfter(
+        panel('screenshot', { highlights: [box({ label: 'See https://phish.attacker.dev/x' })] }),
+        panel('screenshot', {
+          highlights: [box({ label: 'The item count is wrong after the second removal' })],
+        }),
+      ),
+    );
+    expect(shown?.before.highlights[0].label).toBeNull();
+    expect(shown?.after.highlights[0].label).toBe('The item count is wrong after the…');
+    expect(result.warnings.map((w) => w.path)).toContain('scenes[2].visual.after.highlights[0].label');
+    expect(codes(result.warnings)).toContain('highlight-label-too-long');
+  });
+
+  it('removes the boxes of a recording, terminal and code panel', async () => {
+    for (const kind of ['recording', 'terminal', 'code']) {
+      const { result, shown } = await check(
+        beforeAfter(
+          panel(kind, {
+            highlights: [box()],
+            recordingId: kind === 'recording' ? 'RC1' : null,
+            terminal: kind === 'terminal' ? [{ kind: 'output', text: 'Retrying after 200 ms', beat: 0 }] : [],
+            codeRef:
+              kind === 'code' ? { path: 'src/http/retry.ts', side: 'head', startLine: 1, endLine: 5 } : null,
+          }),
+          panel('screenshot'),
+        ),
+      );
+      expect(result.errors).toEqual([]);
+      expect(shown?.before.highlights).toEqual([]);
+      expect(result.fixes).toContain(
+        'scenes[2].visual.before: removed the highlights of a panel that does not show a screenshot',
+      );
+    }
+  });
+
+  it('masks a secret and an e-mail address in a label, and keeps the address when masking it is off', async () => {
+    const secret = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
+    const visual = (): Json =>
+      screenshot({
+        highlights: [box({ label: `Key ${secret}` }), box({ x: 0.5, label: 'Mail jane.doe@example.com' })],
+      });
+    const masked = await check(visual());
+    const [key, mail] = masked.shown?.highlights.map((h: Json) => h.label as string) ?? [];
+    expect(key).not.toContain(secret);
+    expect(mail).not.toContain('jane.doe');
+    const open = await check(visual(), { privacy: { maskEmails: false } });
+    const [openKey, openMail] = open.shown?.highlights.map((h: Json) => h.label as string) ?? [];
+    expect(openKey).not.toContain(secret);
+    expect(openMail).toContain('jane.doe@example.com');
+  });
+});
+
 describe('simulated visuals', () => {
   const terminal = (): Json => ({
     type: 'terminal',

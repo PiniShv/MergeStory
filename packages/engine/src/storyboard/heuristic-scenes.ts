@@ -411,6 +411,7 @@ function beforeAfterScene(b: Build, ba: BeforeAfter): Scene {
     terminal: [],
     screenshotId: null,
     recordingId: null,
+    highlights: [],
   });
   return scene(
     'before-after',

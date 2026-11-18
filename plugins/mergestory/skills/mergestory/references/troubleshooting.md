@@ -53,6 +53,7 @@ wanted is gone:
 | `recording-unknown` | A before and after panel names a recording that was not supplied. The panel shows its bullets instead. | Use an `RC` id from `evidence.md`. |
 | `recording-trim-out-of-range` | A recording `trim` reached outside the clip. It was cut to fit. | Check the part that is shown. |
 | `recording-too-long` | A recording scene would show more than 20 seconds. The clip was shortened from its end. | Pick the part that matters with `trim`. |
+| `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". | Write a shorter label. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
 repository.

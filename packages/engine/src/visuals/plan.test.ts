@@ -10,7 +10,7 @@ import {
 } from '../core/recording-frames.ts';
 import type { CodeLine, RenderPlan, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
-import type { Scene, Storyboard } from '../core/storyboard-schema.ts';
+import type { Highlight, Scene, Storyboard } from '../core/storyboard-schema.ts';
 import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
 import { testConfig, testContext } from '../testing/context.ts';
@@ -398,7 +398,13 @@ describe('buildRenderPlan: other visual types', () => {
           pageTitle: 'Settings',
           blocks: [{ kind: 'heading', text: 'Forecast', items: ['a', 'b'], emphasis: true, beat: 0 }],
         }),
-        make('shot', { type: 'screenshot', screenshotId: 'SS1', caption: 'The page' }),
+        make('shot', {
+          type: 'screenshot',
+          screenshotId: 'SS1',
+          caption: 'The page',
+          highlights: [],
+          focus: null,
+        }),
         make('compare', {
           type: 'before-after',
           before: {
@@ -409,6 +415,7 @@ describe('buildRenderPlan: other visual types', () => {
             terminal: [],
             screenshotId: 'SS1',
             recordingId: null,
+            highlights: [],
           },
           after: {
             label: 'After',
@@ -418,6 +425,7 @@ describe('buildRenderPlan: other visual types', () => {
             terminal: [],
             screenshotId: null,
             recordingId: null,
+            highlights: [],
           },
           caption: null,
         }),
@@ -494,6 +502,100 @@ describe('buildRenderPlan: other visual types', () => {
       message: expect.stringContaining('too large'),
     });
   });
+
+  describe('highlights and focus', () => {
+    const HIGHLIGHT = { x: 0.1, y: 0.2, w: 0.3, h: 0.4, label: 'The count', beat: 1 };
+    const FOCUS = { x: 0.05, y: 0.1, w: 0.5, h: 0.5 };
+
+    async function marked(over: { highlights?: Highlight[]; focus?: unknown; label?: string | null }) {
+      const inputs = await withShot(makePng(4, 2));
+      const base = sample().storyboard;
+      const make = (id: string, visual: Scene['visual']): Scene => ({
+        ...structuredClone(base.scenes[0]!),
+        id,
+        visual,
+      });
+      const highlights = over.highlights ?? [{ ...HIGHLIGHT, label: over.label ?? HIGHLIGHT.label }];
+      const storyboard: Storyboard = {
+        ...base,
+        scenes: [
+          ...base.scenes,
+          make('shot', {
+            type: 'screenshot',
+            screenshotId: 'SS1',
+            caption: null,
+            highlights,
+            focus: over.focus ?? null,
+          } as Scene['visual']),
+          make('compare', {
+            type: 'before-after',
+            before: {
+              label: 'Before',
+              kind: 'screenshot',
+              codeRef: null,
+              bullets: [],
+              terminal: [],
+              screenshotId: 'SS1',
+              recordingId: null,
+              highlights,
+            },
+            after: {
+              label: 'After',
+              kind: 'screenshot',
+              codeRef: null,
+              bullets: [],
+              terminal: [],
+              screenshotId: 'SS1',
+              recordingId: null,
+              highlights: [],
+            },
+            caption: null,
+          }),
+        ],
+      };
+      return build({ storyboard, inputs });
+    }
+
+    it('puts the highlights and the focus of a screenshot scene into the plan', async () => {
+      const shot = visualOf(await marked({ focus: FOCUS }), 'shot', 'screenshot');
+      expect(shot.highlights).toEqual([HIGHLIGHT]);
+      expect(shot.focus).toEqual(FOCUS);
+    });
+
+    it('puts the highlights of a screenshot panel into the plan, and none for a panel without any', async () => {
+      const compare = visualOf(await marked({}), 'compare', 'before-after');
+      if (compare.before.kind !== 'screenshot' || compare.after.kind !== 'screenshot') {
+        throw new Error('expected screenshot panels');
+      }
+      expect(compare.before.highlights).toEqual([HIGHLIGHT]);
+      expect('highlights' in compare.after).toBe(false);
+    });
+
+    it('masks a secret in a label on its own, when the storyboard was not checked first, and adds a badge', async () => {
+      const plan = await marked({ label: 'key sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789' });
+      const [highlight] = visualOf(plan, 'shot', 'screenshot').highlights ?? [];
+      expect(highlight?.label).not.toContain('abcdefghijklmnop');
+      expect(highlight?.label).toContain(MASK_CHAR);
+      expect(plan.scenes.find((s) => s.id === 'shot')!.badges.map((b) => b.kind)).toContain('masked');
+    });
+
+    it('keeps a label that is null and turns a beat that is not a whole number into one', async () => {
+      const plan = await marked({ highlights: [{ ...HIGHLIGHT, label: null, beat: 1.7 }] });
+      expect(visualOf(plan, 'shot', 'screenshot').highlights).toEqual([
+        { ...HIGHLIGHT, label: null, beat: 1 },
+      ]);
+    });
+
+    it('leaves both fields out when there are none, so the plan of an older storyboard does not change', async () => {
+      const plan = await marked({ highlights: [], focus: null });
+      const shot = visualOf(plan, 'shot', 'screenshot');
+      expect(Object.keys(shot).sort()).toEqual(['caption', 'image', 'type']);
+      const compare = visualOf(plan, 'compare', 'before-after');
+      if (compare.before.kind !== 'screenshot') throw new Error('expected a screenshot panel');
+      expect(Object.keys(compare.before).sort()).toEqual(['image', 'kind', 'label']);
+      expect(JSON.stringify(plan)).not.toContain('highlights');
+    });
+  });
 });
 
 describe('buildRenderPlan: recordings', () => {
@@ -505,6 +607,7 @@ describe('buildRenderPlan: recordings', () => {
     terminal: kind === 'terminal' ? [{ kind: 'output' as const, text: 'ok', beat: 0 }] : [],
     screenshotId: null,
     recordingId: kind === 'recording' ? 'RC1' : null,
+    highlights: [],
   });
   // The scenes of the sample come first: the recording scene is the next one, and the comparison follows it.
   const RECORDING_SCENE = sample().storyboard.scenes.length + 1;
@@ -533,6 +636,8 @@ describe('buildRenderPlan: recordings', () => {
           trim: null,
           speed: 2,
           zoom: null,
+          highlights: [],
+          focus: null,
         }),
         make('cmp', {
           type: 'before-after',
@@ -567,6 +672,35 @@ describe('buildRenderPlan: recordings', () => {
     expect(plan.scenes.find((s) => s.id === 'rec')!.badges).toEqual([{ kind: 'actual', text: 'Recorded' }]);
   });
 
+  it('puts the highlights and the focus of a recording scene into the plan, and leaves them out when there are none', async () => {
+    const withMarks = (marks: object) => {
+      const storyboard = withScene(sample().storyboard, 's1', (scene) => {
+        scene.visual = {
+          type: 'recording',
+          recordingId: 'RC1',
+          caption: null,
+          trim: null,
+          speed: null,
+          zoom: null,
+          highlights: [],
+          focus: null,
+          ...marks,
+        } as Scene['visual'];
+      });
+      return build({ storyboard, frames: frames([frameDirFor(1, null)]) });
+    };
+    const box = { x: 0.2, y: 0.3, w: 0.4, h: 0.1 };
+    const marked = visualOf(
+      await withMarks({ highlights: [{ ...box, label: 'The error', beat: 0 }], focus: box }),
+      's1',
+      'recording',
+    );
+    expect(marked.highlights).toEqual([{ ...box, label: 'The error', beat: 0 }]);
+    expect(marked.focus).toEqual(box);
+    const plain = visualOf(await withMarks({}), 's1', 'recording');
+    expect(Object.keys(plain).sort()).toEqual(['caption', 'frames', 'type']);
+  });
+
   it('starts a recording panel when the panel appears, and keeps the badge of a simulated side', async () => {
     const plan = await recordings('terminal');
     const scene = plan.scenes.find((s) => s.id === 'cmp')!;
@@ -595,6 +729,8 @@ describe('buildRenderPlan: recordings', () => {
         trim: null,
         speed: null,
         zoom: null,
+        highlights: [],
+        focus: null,
       };
     });
     await expect(build({ storyboard })).rejects.toMatchObject({ code: 'INTERNAL' });

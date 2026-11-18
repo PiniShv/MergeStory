@@ -197,6 +197,12 @@ no network access, so output does not depend on the machine. A recording is cut 
 with FFmpeg before narration starts, and each page receives only the frames that its part of the video
 can show, as images inside the page. The runtime shows one frame for each moment.
 
+A screenshot or a recording can carry highlights (boxes, in fractions of the picture) and a focus. The
+picture and its highlights sit in one camera element inside the window, which clips it. With a focus
+the camera moves from the whole picture to the focus view and rests there. The arithmetic of the camera
+and of the labels is in `src/core/picture-view.ts`, which Node tests and the runtime both import, so the
+frame depends only on the plan and the time.
+
 Why not an existing framework: Remotion's license requires a paid company license for larger
 companies, which would pass a cost on to every user of an open-source tool. Motion Canvas and Revideo are
 built around an editor or have uncertain maintenance. A small time-seeking runtime gives full

@@ -37,6 +37,7 @@ const VISUALS: Record<VisualType, Visual> = {
       terminal: [],
       screenshotId: null,
       recordingId: null,
+      highlights: [],
     },
     after: {
       label: 'After',
@@ -46,6 +47,7 @@ const VISUALS: Record<VisualType, Visual> = {
       terminal: [],
       screenshotId: null,
       recordingId: null,
+      highlights: [],
     },
     caption: null,
   },
@@ -53,8 +55,17 @@ const VISUALS: Record<VisualType, Visual> = {
   browser: { type: 'browser', url: '/x', pageTitle: 'x', blocks: [] },
   checklist: { type: 'checklist', items: [] },
   bullets: { type: 'bullets', heading: null, items: [] },
-  screenshot: { type: 'screenshot', screenshotId: 'SS1', caption: null },
-  recording: { type: 'recording', recordingId: 'RC1', caption: null, trim: null, speed: null, zoom: null },
+  screenshot: { type: 'screenshot', screenshotId: 'SS1', caption: null, highlights: [], focus: null },
+  recording: {
+    type: 'recording',
+    recordingId: 'RC1',
+    caption: null,
+    trim: null,
+    speed: null,
+    zoom: null,
+    highlights: [],
+    focus: null,
+  },
   summary: { type: 'summary', points: [], closing: null },
 };
 

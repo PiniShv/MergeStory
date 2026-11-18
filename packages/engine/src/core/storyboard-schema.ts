@@ -155,6 +155,25 @@ export const TerminalLineSchema = z.object({
   beat,
 });
 
+/** A box on a picture, as fractions of its width and its height. */
+export const PictureBoxSchema = z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() });
+
+/** A box that points at one part of a real picture. */
+export const HighlightSchema = PictureBoxSchema.extend({
+  label: z.string().nullable().describe('A few words next to the box, or null.'),
+  beat,
+});
+
+const highlights = z
+  .array(HighlightSchema)
+  // The default keeps storyboards written before highlights existed valid.
+  .default([])
+  .describe('Boxes drawn on the picture, each from its beat on. x, y, w and h are fractions from 0 to 1.');
+const focus = PictureBoxSchema.nullable()
+  // The default keeps storyboards written before the focus existed valid.
+  .default(null)
+  .describe('The part of the picture that the camera slowly zooms into, as fractions from 0 to 1, or null.');
+
 export const PanelSchema = z.object({
   label: z.string().describe('e.g. "Before" or "After".'),
   kind: z.enum(['code', 'bullets', 'terminal', 'screenshot', 'recording']),
@@ -164,6 +183,7 @@ export const PanelSchema = z.object({
   screenshotId: z.string().nullable().describe('An SS<n> id from the evidence pack.'),
   // The default keeps storyboards written before recordings existed valid.
   recordingId: z.string().nullable().default(null).describe('An RC<n> id from the evidence pack.'),
+  highlights: highlights.describe('Boxes drawn on a screenshot panel. Empty for every other kind.'),
 });
 
 export const BeforeAfterVisualSchema = z.object({
@@ -241,6 +261,8 @@ export const ScreenshotVisualSchema = z.object({
   type: z.literal('screenshot'),
   screenshotId: z.string(),
   caption: z.string().nullable(),
+  highlights,
+  focus,
 });
 
 export const RecordingVisualSchema = z.object({
@@ -258,6 +280,8 @@ export const RecordingVisualSchema = z.object({
     .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
     .nullable()
     .describe('The part of the frame to show, as fractions from 0 to 1. null shows the whole frame.'),
+  highlights,
+  focus,
 });
 
 export const SummaryVisualSchema = z.object({
@@ -330,6 +354,8 @@ export type Severity = z.infer<typeof SeveritySchema>;
 export type Visual = z.infer<typeof VisualSchema>;
 export type VisualType = Visual['type'];
 export type Panel = z.infer<typeof PanelSchema>;
+export type PictureBox = z.infer<typeof PictureBoxSchema>;
+export type Highlight = z.infer<typeof HighlightSchema>;
 export type TerminalLine = z.infer<typeof TerminalLineSchema>;
 export type NarrationLine = z.infer<typeof NarrationLineSchema>;
 export type Scene = z.infer<typeof SceneSchema>;
@@ -431,6 +457,11 @@ export const STORYBOARD_LIMITS = {
   maxTitleLength: 60,
   minRecordingSpeed: 0.5,
   maxRecordingSpeed: 4,
+  maxHighlights: 4,
+  maxHighlightLabelLength: 40,
+  /** The smallest side of a highlight box and of a focus box, as a fraction of the picture. */
+  minHighlightSide: 0.02,
+  minFocusSide: 0.2,
   /** Average speaking rate used to estimate narration length before speech exists. */
   wordsPerSecond: 2.5,
 } as const;

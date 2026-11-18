@@ -26,12 +26,15 @@ import type {
   ResolvedImage,
   ResolvedPanel,
   ResolvedVisual,
+  ScreenshotResolved,
 } from '../core/render-plan.ts';
 import { maskPrivateReport } from '../core/secrets.ts';
 import { BACKING_EVIDENCE_KINDS } from '../core/storyboard-facts.ts';
 import {
   type CodeRefInput,
+  type Highlight,
   type Panel,
+  type PictureBox,
   type Scene,
   STORYBOARD_LIMITS,
   type Storyboard,
@@ -179,6 +182,29 @@ function frameSetFor(
     });
   }
   return { ...made, fps: RECORDING_FPS, startSec, speed };
+}
+
+/** The marks that a picture gets: left out of the plan when there are none, so older plans do not change. */
+function marksOf(
+  visual: { highlights: readonly Highlight[]; focus?: PictureBox | null },
+  scrub: Scrubber,
+): Pick<ScreenshotResolved, 'highlights' | 'focus'> {
+  const { highlights, focus } = visual;
+  return {
+    ...(highlights.length > 0
+      ? {
+          highlights: highlights.map((hl) => ({
+            x: hl.x,
+            y: hl.y,
+            w: hl.w,
+            h: hl.h,
+            label: scrub.maybe(hl.label),
+            beat: beatIndex(hl.beat),
+          })),
+        }
+      : {}),
+    ...(focus ? { focus: { x: focus.x, y: focus.y, w: focus.w, h: focus.h } } : {}),
+  };
 }
 
 function screenshotFor(env: Environment, id: string): Promise<ResolvedImage> {
@@ -336,7 +362,7 @@ async function resolvePanel(
         );
       }
       const image = await screenshotFor(env, panel.screenshotId);
-      return { panel: { label, kind: 'screenshot', image }, masked: false };
+      return { panel: { label, kind: 'screenshot', image, ...marksOf(panel, scrub) }, masked: false };
     }
     case 'recording': {
       if (!panel.recordingId) {
@@ -536,6 +562,7 @@ async function resolveVisual(
           type: 'screenshot',
           image: await screenshotFor(env, visual.screenshotId),
           caption: scrub.maybe(visual.caption),
+          ...marksOf(visual, scrub),
         },
       };
     case 'summary':
@@ -555,6 +582,7 @@ async function resolveVisual(
           type: 'recording',
           frames: frameSetFor(env, scene.number, null, SCENE_CLIP_START_SEC, visual.speed ?? 1),
           caption: scrub.maybe(visual.caption),
+          ...marksOf(visual, scrub),
         },
       };
     default:

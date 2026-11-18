@@ -46,7 +46,9 @@
         "caption": null,
         "trim": null,
         "speed": null,
-        "zoom": null
+        "zoom": null,
+        "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.36, "h": 0.14, "label": "23, not 5", "beat": 1 }],
+        "focus": { "x": 0.02, "y": 0.5, "w": 0.5, "h": 0.3 }
       },
       "visualDescription": "The recorded basket page before the fix: the count reads 23 items.",
       "transition": "slide",
@@ -86,11 +88,11 @@
       "title": "The page after the fix",
       "narration": [
         {
-          "text": "After the fix, the same steps give the right answer.",
-          "evidence": ["RC2"]
+          "text": "After the fix, the same steps give the right answer. Someone types 2 trail mix and 3 oat bars.",
+          "evidence": ["TASK", "RC2"]
         },
         {
-          "text": "The trail mix is 2 and the oat bars are 3, and the basket now says 5 items.",
+          "text": "The basket now says 5 items.",
           "evidence": ["TASK", "RC2"]
         }
       ],
@@ -100,7 +102,9 @@
         "caption": null,
         "trim": null,
         "speed": null,
-        "zoom": null
+        "zoom": null,
+        "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.32, "h": 0.14, "label": "5 items", "beat": 1 }],
+        "focus": null
       },
       "visualDescription": "The recorded basket page after the fix: the count reads 5 items.",
       "transition": "slide",
@@ -125,7 +129,8 @@
           "screenshotId": "SS1",
           "recordingId": null,
           "label": "Before",
-          "kind": "screenshot"
+          "kind": "screenshot",
+          "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.36, "h": 0.14, "label": null, "beat": 0 }]
         },
         "after": {
           "codeRef": null,
@@ -134,7 +139,8 @@
           "screenshotId": "SS2",
           "recordingId": null,
           "label": "After",
-          "kind": "screenshot"
+          "kind": "screenshot",
+          "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.32, "h": 0.14, "label": null, "beat": 0 }]
         },
         "caption": null
       },

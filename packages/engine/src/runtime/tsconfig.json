@@ -18,6 +18,7 @@
     "./**/*.ts",
     "../core/render-plan.ts",
     "../core/recording-frames.ts",
+    "../core/picture-view.ts",
     "../core/storyboard-schema.ts"
   ]
 }

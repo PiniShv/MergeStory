@@ -162,8 +162,8 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 1940 words today. The recording visual (its shape and one bullet) added 41 to the 1899 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(1945);
+    // 2005 words today. Highlights and focus (two shapes and one bullet) added 65 to the 1940 before them.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2010);
   });
 
   it('states every limit that the validator enforces', () => {
@@ -176,6 +176,8 @@ describe('authoring guide', () => {
     );
     expect(AUTHORING_GUIDE).toContain(`up to ${STORYBOARD_LIMITS.maxChecklistItems} review items`);
     expect(AUTHORING_GUIDE).toContain(`at most ${STORYBOARD_LIMITS.maxWordsPerNarrationLine} words`);
+    expect(AUTHORING_GUIDE).toContain(`up to ${STORYBOARD_LIMITS.maxHighlights} boxes`);
+    expect(AUTHORING_GUIDE).toContain(`up to ${STORYBOARD_LIMITS.maxHighlightLabelLength} characters`);
   });
 });
 

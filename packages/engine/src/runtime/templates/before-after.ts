@@ -1,5 +1,6 @@
 /** Two panels side by side: "before" appears first, then "after" wipes in beside it. */
 
+import { FULL_VIEW } from '../../core/picture-view.ts';
 import { scenePanelStarts } from '../../core/recording-frames.ts';
 import {
   type BeforeAfterResolved,
@@ -11,6 +12,7 @@ import { ease, enter, lerp, q } from '../anim.ts';
 import { planCodeView, renderCodeView } from '../code-view.ts';
 import { css, h } from '../dom.ts';
 import { fitText } from '../fit.ts';
+import { createHighlights } from '../highlights.ts';
 import { icon } from '../icons.ts';
 import { pop } from '../motion.ts';
 import type { SceneContext, SceneInstance, TemplateFactory } from '../types.ts';
@@ -146,6 +148,7 @@ function buildBody(
       }
       const fit = fitImage(panel.image.width, panel.image.height, PANEL_W, o.height - WINDOW_BAR_H);
       const img = h('img', { class: 'ms-ba__img', attrs: { src: panel.image.src, alt: panel.label } });
+      const marks = createHighlights(ctx, panel.highlights ?? []);
       const win = windowFrame({
         class: 'ms-ba__shot',
         style: {
@@ -155,9 +158,13 @@ function buildBody(
           top: `${Math.round((o.height - fit.height - WINDOW_BAR_H) / 2)}px`,
         },
         barHeight: WINDOW_BAR_H,
-        body: h('div', { class: 'ms-window__body' }, img),
+        body: h('div', { class: 'ms-window__body' }, img, marks.el),
       });
-      return { el: h('div', { class: 'ms-ba__shotbox' }, win), update: () => {} };
+      return {
+        el: h('div', { class: 'ms-ba__shotbox' }, win),
+        update: (t) => marks.update(t, 1),
+        layout: () => marks.layout(FULL_VIEW),
+      };
     }
     case 'recording': {
       const { frames } = panel;

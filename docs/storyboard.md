@@ -116,6 +116,9 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 | Title chips, mission points | 4. |
 | Part of one recording that one scene shows | 20 seconds (`inputs.maxClipSeconds`). The end is cut. |
 | Speed of a recording | 0.5 to 4. |
+| Highlights on one screenshot, recording or panel | 4. The first four stay. |
+| Label of a highlight | 40 characters. A longer label is cut at a word and ends in "…". |
+| Smallest side of a highlight, of a focus | 0.02, 0.2 (as fractions of the picture). |
 
 The offline generator and the length estimate use a speaking rate of 2.5 words a second. `--max-duration`
 (150 seconds by default) trims a storyboard before narration, least important scenes first. The mission and
@@ -166,13 +169,13 @@ never contains code.
 | `architecture` | Components and the links between them. Use it only when two or more components matter. Every edge must join two node ids that exist. | `direction` (`LR` or `TB`), `nodes`, `edges` |
 | `flow` | A request or call that the code implements, as steps between actors. | `actors`, `steps` |
 | `code` | Real lines of code, highlighted line by line. | `ref`, `mode`, `focus`, `caption` |
-| `before-after` | Two panels. Each shows code, bullets, a screenshot, a recording or a terminal. A panel has a `kind`, and a `recording` panel names its clip in `recordingId`. | `before`, `after`, `caption` |
+| `before-after` | Two panels. Each shows code, bullets, a screenshot, a recording or a terminal. A panel has a `kind`, and a `recording` panel names its clip in `recordingId`. A `screenshot` panel can have `highlights`. | `before`, `after`, `caption` |
 | `terminal` | A simulated terminal session. | `title`, `lines` |
 | `browser` | A simulated app screen. | `url`, `pageTitle`, `blocks` |
 | `checklist` | Review items with a severity and an optional code reference. The detail of an item should not repeat its title or its file and line. | `items` |
 | `bullets` | Short points. | `heading`, `items` |
-| `screenshot` | A real screenshot that you supplied. | `screenshotId`, `caption` |
-| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1, for at most `inputs.maxClipSeconds` seconds. The two panels start one after the other, so they are not in step. A `trim` with less than 0.2 seconds inside the clip is an error. | `recordingId`, `caption`, `trim`, `speed`, `zoom` |
+| `screenshot` | A real screenshot that you supplied. `highlights` point at parts of it and `focus` zooms the camera into one part. See "Pointing at a part of a picture". | `screenshotId`, `caption`, `highlights`, `focus` |
+| `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1, for at most `inputs.maxClipSeconds` seconds. The two panels start one after the other, so they are not in step. A `trim` with less than 0.2 seconds inside the clip is an error. `highlights` and `focus` work as on a screenshot. | `recordingId`, `caption`, `trim`, `speed`, `zoom`, `highlights`, `focus` |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
@@ -182,6 +185,22 @@ A node, step or item that is new or changed should cite evidence, or the checker
 **Beats.** Anything that appears while a scene plays has a `beat`: the 0-based index of the narration line
 on which it appears. After speech exists, every beat gets an exact time, so the picture follows the voice.
 A beat that points past the last line is moved to the last line.
+
+**Pointing at a part of a picture.** A `screenshot` visual, a `recording` visual and a `screenshot` panel in
+`before-after` can have `highlights`, up to 4. Each is `{x, y, w, h, label, beat}`. The box is in fractions of the
+picture as it is shown, from 0 to 1, with (0, 0) at the top left. For a recording with a `zoom`, the picture
+is the part that the zoom keeps. The `label` is a few words, or `null`. The box is a rounded frame in the
+accent colour of the theme, with a dark line outside it and a white line inside it, so it can be seen on any
+picture. The label is a small dark pill with white text. It sits above the top left corner of the box, below
+it when there is no room above, and inside it when there is none below. It stays inside the picture, and when
+a camera rests on a part of the picture it stays in view there too. When two labels would lie on top of each
+other, the later one moves to the next free side. A highlight fades in a moment before its `beat`. A `screenshot` or `recording` visual can also have a `focus`, a box of the
+same kind. The camera moves slowly from the whole picture to the focus, up to 4 times as close, and then rests.
+It never shows anything outside the picture. It starts after 1.2 seconds, or at the first beat of the scene if
+that is later. It takes 60% of the scene and at most 8 seconds, and it ends half a second before the scene
+does, so in a short scene it is shorter. A `focus` as wide or as high as the picture gives no zoom. The
+highlights move and grow with the picture. A panel has highlights but no camera. Use a
+`focus` when the part that matters is small, for example one error message in a whole page.
 
 **Simulated visuals.** The `terminal` and `browser` visuals, and terminal panels in `before-after`, show
 behaviour that the change implements, not a real run. The video always labels them "simulated". Use them
@@ -237,6 +256,11 @@ model writes, and the one the offline generator builds. There are three kinds of
   their limits. Duplicate scene ids are renamed.
 - Edges and steps that point at a node or actor that does not exist are dropped. Beats are moved into range.
 - A browser address is reduced to its path.
+- A highlight box or a focus box that reaches outside the picture is moved inside it, and a side that is too
+  small is made at least 0.02 (a highlight) or 0.2 (a focus) of the picture. Each box gets one line in `fixes`
+  that says which of the two was done. A box that only touches the edge is left as it is. The label of a highlight is checked like a caption,
+  and a label of more than 40 characters is shortened. The highlights of a panel that does not show a screenshot
+  are removed.
 - A recording's `trim` is put in order and cut to the clip, and cut to 20 seconds from its end. A `speed` or
   `zoom` outside its range is moved into it.
 - **Secrets and e-mail addresses are masked** in every string, and hidden control characters are removed.
@@ -309,6 +333,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `recording-unknown` | A before and after panel names a recording that you did not supply. The panel shows its bullets instead. |
 | `recording-trim-out-of-range` | The `trim` of a recording reached outside the clip. It was cut to fit. |
 | `recording-too-long` | A recording scene would show more than 20 seconds of the clip. The clip was shortened from its end. |
+| `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the

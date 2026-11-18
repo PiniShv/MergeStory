@@ -537,6 +537,7 @@ export function sampleStoryboard(): Storyboard {
             terminal: [],
             screenshotId: null,
             recordingId: null,
+            highlights: [],
           },
           after: {
             label: 'After',
@@ -550,6 +551,7 @@ export function sampleStoryboard(): Storyboard {
             ],
             screenshotId: null,
             recordingId: null,
+            highlights: [],
           },
           caption: null,
         },

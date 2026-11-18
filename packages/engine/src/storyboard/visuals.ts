@@ -1,6 +1,12 @@
 /** Rules that depend on the visual type: size limits, evidence ids, on-screen text and internal consistency. */
 import { MIN_CLIP_SECONDS } from '../core/recording-frames.ts';
-import { STORYBOARD_LIMITS as LIMITS, type Scene, type Visual } from '../core/storyboard-schema.ts';
+import {
+  type Highlight,
+  STORYBOARD_LIMITS as LIMITS,
+  type PictureBox,
+  type Scene,
+  type Visual,
+} from '../core/storyboard-schema.ts';
 import type { Run, TextCleaner } from './run.ts';
 import type { IssueCode } from './types.ts';
 
@@ -69,6 +75,13 @@ export function applyVisualLimits(visual: Visual, p: string, run: Run): void {
           'terminal lines',
           run,
         );
+        panel.highlights = trimList(
+          panel.highlights,
+          LIMITS.maxHighlights,
+          `${p}.${name}.highlights`,
+          'highlights',
+          run,
+        );
       }
       break;
     case 'terminal':
@@ -86,10 +99,18 @@ export function applyVisualLimits(visual: Visual, p: string, run: Run): void {
     case 'summary':
       visual.points = trimList(visual.points, LIMITS.maxBullets, `${p}.points`, 'points', run);
       break;
-    case 'files':
-    case 'code':
     case 'screenshot':
     case 'recording':
+      visual.highlights = trimList(
+        visual.highlights,
+        LIMITS.maxHighlights,
+        `${p}.highlights`,
+        'highlights',
+        run,
+      );
+      break;
+    case 'files':
+    case 'code':
       break;
     default:
       exhaustive(visual);
@@ -145,6 +166,14 @@ export function filterVisualEvidence(visual: Visual, p: string, run: Run): void 
   }
 }
 
+/** A highlight label is on-screen text like a caption: the same checks, and null when nothing is left. */
+function cleanHighlightLabels(list: Highlight[], path: string, cleaner: TextCleaner): Highlight[] {
+  return list.map((highlight, i) => ({
+    ...highlight,
+    label: cleaner.optional(highlight.label, `${path}[${i}].label`),
+  }));
+}
+
 /** Remove unverifiable claims and names that the change does not contain from on-screen text. */
 export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner): void {
   switch (visual.type) {
@@ -186,6 +215,7 @@ export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner)
         panel.label = cleaner.required(panel.label, `${p}.${name}.label`);
         panel.bullets = cleaner.list(panel.bullets, `${p}.${name}.bullets`);
         panel.terminal = cleaner.keepTexts(panel.terminal, `${p}.${name}.terminal`);
+        panel.highlights = cleanHighlightLabels(panel.highlights, `${p}.${name}.highlights`, cleaner);
       }
       visual.caption = cleaner.optional(visual.caption, `${p}.caption`);
       break;
@@ -214,6 +244,7 @@ export function cleanVisualText(visual: Visual, p: string, cleaner: TextCleaner)
     case 'screenshot':
     case 'recording':
       visual.caption = cleaner.optional(visual.caption, `${p}.caption`);
+      visual.highlights = cleanHighlightLabels(visual.highlights, `${p}.highlights`, cleaner);
       break;
     case 'summary':
       visual.points = cleaner.keepTexts(visual.points, `${p}.points`);
@@ -339,6 +370,72 @@ function checkRecordingWindow(
   }
 }
 
+/** Two numbers closer than this are the same: a box that ends exactly on an edge may be off by a rounding error. */
+const EPSILON = 1e-9;
+const near = (a: number, b: number): boolean => Math.abs(a - b) <= EPSILON;
+
+/**
+ * Put a box inside the picture: the sides into minSide..1, then the corner so that the box fits.
+ * Every repair lands on a box that passes the same check again, and a box that is fine keeps its own
+ * numbers. Says in one fix what changed: the box moved, or only a side was raised to the smallest size.
+ */
+function repairBox<T extends PictureBox>(box: T, minSide: number, noun: string, path: string, run: Run): T {
+  const w = clamp(box.w, minSide, 1);
+  const h = clamp(box.h, minSide, 1);
+  const fit = { x: clamp(box.x, 0, 1 - w), y: clamp(box.y, 0, 1 - h), w, h };
+  const raised = box.w < minSide - EPSILON || box.h < minSide - EPSILON;
+  const moved =
+    !near(fit.x, box.x) ||
+    !near(fit.y, box.y) ||
+    !near(w, Math.max(box.w, minSide)) ||
+    !near(h, Math.max(box.h, minSide));
+  if (!moved && !raised) return box;
+  const parts = [];
+  if (moved) parts.push(`moved the ${noun} inside the picture (x, y, w and h are fractions from 0 to 1)`);
+  if (raised) {
+    parts.push(`${moved ? 'made it' : `made the ${noun}`} at least ${minSide} of the picture wide and high`);
+  }
+  run.fix(path, parts.join(' and '));
+  return { ...box, ...fit };
+}
+
+/** Cut a label to the limit at a word boundary where there is one. The "…" counts in the limit. */
+function shortenLabel(label: string): string {
+  const chars = Array.from(label.trim());
+  const room = LIMITS.maxHighlightLabelLength - 1;
+  // The cut is at the last space inside the room, or right here when the next character is one.
+  const space = /\s/.test(chars[room] ?? '') ? room : chars.slice(0, room).findLastIndex((c) => /\s/.test(c));
+  const word = chars.slice(0, Math.max(space, 0)).join('').trimEnd();
+  // A word boundary that leaves almost nothing is no use: cut at the limit instead.
+  return `${Array.from(word).length >= 2 ? word : chars.slice(0, room).join('').trimEnd()}…`;
+}
+
+function checkHighlights(list: Highlight[], path: string, run: Run): Highlight[] {
+  return list.map((highlight, index) => {
+    const at = `${path}[${index}]`;
+    const box = repairBox(highlight, LIMITS.minHighlightSide, 'highlight', at, run);
+    let label = highlight.label;
+    const length = label === null ? 0 : Array.from(label).length;
+    if (label !== null && length > LIMITS.maxHighlightLabelLength) {
+      run.warn(
+        `${at}.label`,
+        'highlight-label-too-long',
+        `the label has ${length} characters and the limit is ${LIMITS.maxHighlightLabelLength}; it was shortened`,
+      );
+      run.fix(
+        `${at}.label`,
+        `shortened the label to at most ${LIMITS.maxHighlightLabelLength} characters (the limit is ${LIMITS.maxHighlightLabelLength})`,
+      );
+      label = shortenLabel(label);
+    }
+    return { ...box, label };
+  });
+}
+
+function checkFocus(visual: { focus: PictureBox | null }, path: string, run: Run): void {
+  if (visual.focus) visual.focus = repairBox(visual.focus, LIMITS.minFocusSide, 'focus', path, run);
+}
+
 /** Internal consistency of one visual after the other steps: dangling ids, empty lists, screenshots, addresses. */
 export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner: TextCleaner): void {
   const visual = scene.visual;
@@ -391,6 +488,8 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
           `"${visual.screenshotId}" is not a supplied screenshot; ${known.length ? `use one of ${known.join(', ')}` : 'no screenshots were supplied, so use another visual'}`,
         );
       }
+      visual.highlights = checkHighlights(visual.highlights, `${vp}.highlights`, run);
+      checkFocus(visual, `${vp}.focus`, run);
       break;
     }
     case 'recording': {
@@ -405,6 +504,8 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
         break;
       }
       checkRecordingWindow(visual, recording.durationSec, vp, run);
+      visual.highlights = checkHighlights(visual.highlights, `${vp}.highlights`, run);
+      checkFocus(visual, `${vp}.focus`, run);
       break;
     }
     case 'before-after': {
@@ -438,6 +539,10 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
           panel.kind = 'bullets';
           panel.recordingId = null;
         }
+        if (panel.kind !== 'screenshot' && panel.highlights.length > 0) {
+          run.fix(panelPath, 'removed the highlights of a panel that does not show a screenshot');
+          panel.highlights = [];
+        } else panel.highlights = checkHighlights(panel.highlights, `${panelPath}.highlights`, run);
         if (panel.kind === 'bullets' && panel.bullets.length === 0) empty = true;
         if (panel.kind === 'terminal' && panel.terminal.length === 0) empty = true;
       }
