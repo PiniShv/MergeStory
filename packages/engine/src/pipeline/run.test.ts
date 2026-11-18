@@ -12,7 +12,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { formatPublishResult } from '../cli/commands/publish.ts';
-import { formatCost } from '../cli/format.ts';
+import { formatCost, formatError } from '../cli/format.ts';
+import { describeError } from '../cli/runtime.ts';
 import { createStyle } from '../cli/style.ts';
 import type { ConfigInput } from '../core/config.ts';
 import { estimateTokens } from '../core/cost.ts';
@@ -1049,5 +1050,40 @@ describe('checkStoryboard', () => {
     });
     expect(result.errors).toEqual([]);
     expect(lines.filter((line) => line.includes('Storyboard has errors'))).toEqual([]);
+  });
+});
+
+describe('generate: a supplied storyboard with errors', () => {
+  it('is refused with GROUNDING_FAILED, and each problem is in the details with its path, code and message', async () => {
+    const board = await readJson<{ scenes: { visual: Record<string, unknown> }[] }>(
+      join(DEMO, 'storyboard.json'),
+    );
+    // The first scene is a title card, and the heading is a required field.
+    delete board.scenes[0]?.visual.heading;
+    const error = await failure(generate({ ...options(), storyboard: board, dryRun: true }));
+    expect(error.code).toBe('GROUNDING_FAILED');
+    expect(error.exitCode).toBe(3);
+    expect(error.message).toBe('The supplied storyboard has 1 problem(s) that block rendering.');
+    expect(error.hint).toBe(
+      'Fix the listed problems and run again. `mergestory validate <storyboard.json> <source>` checks without rendering.',
+    );
+    expect(error.details).toEqual({
+      errors: [{ path: 'scenes[0].visual.heading', code: 'schema', message: expect.any(String) }],
+      warnings: [],
+    });
+  });
+
+  it('holds at most 40 problems, and the text of the error says that more may follow', async () => {
+    const board = await readJson<{ scenes: Record<string, unknown>[] }>(join(DEMO, 'storyboard.json'));
+    // Five required fields are missing from each of the nine scenes: 45 schema problems.
+    for (const scene of board.scenes)
+      for (const field of ['id', 'role', 'title', 'visualDescription', 'transition']) delete scene[field];
+    const error = await failure(generate({ ...options(), storyboard: board, dryRun: true }));
+    expect(error.code).toBe('GROUNDING_FAILED');
+    expect(error.details?.errors).toHaveLength(40);
+    const lines = formatError(describeError(error), createStyle(false)).split('\n');
+    expect(lines.filter((line) => line.startsWith('  error  '))).toHaveLength(40);
+    expect(lines[41]).toContain('The list shows at most 40 problems.');
+    expect(lines[42]).toMatch(/^hint: /);
   });
 });

@@ -36,6 +36,56 @@ describe('generate: --storyboard', () => {
   });
 });
 
+describe('generate: a storyboard that is refused', () => {
+  const message = 'The supplied storyboard has 2 problem(s) that block rendering.';
+  const hint =
+    'Fix the listed problems and run again. `mergestory validate <storyboard.json> <source>` checks without rendering.';
+  const errors = [
+    { path: 'scenes[0].visual.heading', code: 'schema', message: 'is required' },
+    { path: 'scenes[1].narration[0]', code: 'uncited-line', message: 'cites no evidence' },
+  ];
+  const refused = () =>
+    new MergeStoryError('GROUNDING_FAILED', message, { hint, details: { errors, warnings: [] } });
+
+  it('lists each blocking problem under the message, so that the hint is true', async () => {
+    await writeFile(join(dir, 'storyboard.json'), '{}');
+    generateMock.mockRejectedValue(refused());
+    const expected = [
+      `error [GROUNDING_FAILED]: ${message}`,
+      '  error  scenes[0].visual.heading  [schema]  is required',
+      '  error  scenes[1].narration[0]  [uncited-line]  cites no evidence',
+      `hint: ${hint}`,
+      '',
+    ].join('\n');
+    const render = await run(['generate', 'acme/app#1', '--storyboard', 'storyboard.json']);
+    expect(render.code).toBe(3);
+    expect(render.stdout).toBe('');
+    expect(render.stderr).toBe(expected);
+    // `agent render` takes the same path.
+    const agent = await run(['agent', 'render', '--name', 'fix-1']);
+    expect(agent.code).toBe(3);
+    expect(agent.stderr).toBe(expected);
+  });
+
+  it('keeps the JSON error and the exit code as they were', async () => {
+    await writeFile(join(dir, 'storyboard.json'), '{}');
+    generateMock.mockRejectedValue(refused());
+    const { code, stdout, stderr } = await run([
+      'generate',
+      'acme/app#1',
+      '--storyboard',
+      'storyboard.json',
+      '--json',
+    ]);
+    expect(code).toBe(3);
+    expect(stderr).toBe('');
+    expect(JSON.parse(stdout)).toEqual({
+      ok: false,
+      error: { code: 'GROUNDING_FAILED', message, hint, details: { errors, warnings: [] } },
+    });
+  });
+});
+
 describe('generate: output', () => {
   it('prints a short human summary', async () => {
     generateMock.mockResolvedValue(fakeResult());

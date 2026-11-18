@@ -5,10 +5,12 @@
  * paths can come from a pull request or a repository.
  */
 
+import { isRecord } from '../core/json.ts';
 import { shellQuote, terminalSafe } from '../core/text.ts';
 import type { CostReport, EgressRecord, GenerateResult, PlanResult } from '../core/types.ts';
 import type { JobSummary, PublicJob } from '../jobs/view.ts';
 import type { AuthoringResult } from '../pipeline/index.ts';
+import { MAX_LISTED_PROBLEMS } from '../pipeline/types.ts';
 import type { ValidationResult } from '../storyboard/index.ts';
 import { formatBytes } from './files.ts';
 import type { Style } from './style.ts';
@@ -256,11 +258,25 @@ export function formatAuthoring(
   return `${lines.join('\n')}\n`;
 }
 
+interface Issue {
+  path: string;
+  code: string;
+  message: string;
+}
+
+/**
+ * One problem of a storyboard, in the form that `validate` prints it. A line break or tab inside the
+ * text becomes a space: the text can come from the storyboard, and it must not look like other lines.
+ */
+function formatIssue(kind: 'error' | 'warn', issue: Issue, style: Style): string {
+  const label = kind === 'error' ? style.red('error') : style.yellow('warn ');
+  const line = `  ${label}  ${issue.path || '(storyboard)'}  [${issue.code}]  ${issue.message}`;
+  return line.replace(/[\r\n\t]+/g, ' ');
+}
+
 /** The block printed by `validate`. */
 export function formatValidation(raw: ValidationResult, style: Style): string {
   const result = clean(raw);
-  const issueLine = (kind: 'error' | 'warn', i: { path: string; code: string; message: string }): string =>
-    `  ${kind === 'error' ? style.red('error') : style.yellow('warn ')}  ${i.path || '(storyboard)'}  [${i.code}]  ${i.message}`;
   const lines: string[] = [];
   if (result.errors.length === 0) {
     lines.push(
@@ -271,8 +287,9 @@ export function formatValidation(raw: ValidationResult, style: Style): string {
       `${style.red('Storyboard has errors')}: ${result.errors.length} to fix before it can be rendered.`,
     );
   }
-  if (result.errors.length > 0) lines.push('', ...result.errors.map((i) => issueLine('error', i)));
-  if (result.warnings.length > 0) lines.push('', ...result.warnings.map((i) => issueLine('warn', i)));
+  if (result.errors.length > 0) lines.push('', ...result.errors.map((i) => formatIssue('error', i, style)));
+  if (result.warnings.length > 0)
+    lines.push('', ...result.warnings.map((i) => formatIssue('warn', i, style)));
   if (result.fixes.length > 0) {
     lines.push('', style.bold('Fixed automatically when rendering'), ...result.fixes.map((f) => `  - ${f}`));
   }
@@ -363,12 +380,35 @@ export interface ErrorView {
   message: string;
   hint: string | null;
   exitCode: number;
+  /** The same details as the JSON error. Only the problems of a refused storyboard are printed. */
+  details?: Record<string, unknown> | null;
 }
 
-/** "error [CODE]: message" and a hint line. */
+function isIssue(value: unknown): value is Issue {
+  return (
+    isRecord(value) &&
+    typeof value.path === 'string' &&
+    typeof value.code === 'string' &&
+    typeof value.message === 'string'
+  );
+}
+
+/** "error [CODE]: message", the problems of a refused storyboard, and a hint line. */
 export function formatError(raw: ErrorView, style: Style): string {
   const error = clean(raw);
   const lines = [`${style.red(`error [${error.code}]`)}: ${error.message}`];
+  // The hint of this error says to fix the listed problems, so list them, as `validate` does.
+  const problems = error.code === 'GROUNDING_FAILED' ? error.details?.errors : undefined;
+  if (Array.isArray(problems)) {
+    const listed = problems.filter(isIssue);
+    lines.push(...listed.map((i) => formatIssue('error', i, style)));
+    // The error holds no more than the limit, so a full list may have been cut.
+    if (listed.length >= MAX_LISTED_PROBLEMS) {
+      lines.push(
+        `  The list shows at most ${MAX_LISTED_PROBLEMS} problems. If there are more, fix these and run again to see them.`,
+      );
+    }
+  }
   if (error.hint) lines.push(`${style.cyan('hint')}: ${error.hint}`);
   return `${lines.join('\n')}\n`;
 }

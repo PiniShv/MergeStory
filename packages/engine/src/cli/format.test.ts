@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { CostReport, GenerateResult, PublishResult } from '../core/types.ts';
 import type { JobSummary, PublicJob } from '../jobs/view.ts';
 import type { AuthoringResult } from '../pipeline/index.ts';
+import type { ValidationIssue } from '../storyboard/index.ts';
 import {
+  type ErrorView,
   formatAuthoring,
   formatCost,
   formatDuration,
@@ -13,6 +15,7 @@ import {
   formatJobList,
   formatRows,
   formatUsd,
+  formatValidation,
 } from './format.ts';
 import { colorEnabled, createStyle } from './style.ts';
 
@@ -273,6 +276,93 @@ describe('formatJobList', () => {
   });
 });
 
+describe('formatError: a refused storyboard', () => {
+  const errors: ValidationIssue[] = [
+    { path: 'scenes[0].visual.heading', code: 'schema', message: 'is required' },
+    { path: '', code: 'too-few-scenes', message: 'A storyboard needs at least 3 scenes' },
+  ];
+  const refused = (details: ErrorView['details']): ErrorView => ({
+    code: 'GROUNDING_FAILED',
+    message: 'The supplied storyboard has 2 problem(s) that block rendering.',
+    hint: 'Fix the listed problems and run again.',
+    exitCode: 3,
+    details,
+  });
+
+  it('lists each blocking problem under the message, as validate prints it, and then the hint', () => {
+    const warnings = [{ path: 'scenes[1]', code: 'visual-fallback', message: 'does not block' }];
+    const text = formatError(refused({ errors, warnings }), plain);
+    expect(text.split('\n')).toEqual([
+      'error [GROUNDING_FAILED]: The supplied storyboard has 2 problem(s) that block rendering.',
+      '  error  scenes[0].visual.heading  [schema]  is required',
+      '  error  (storyboard)  [too-few-scenes]  A storyboard needs at least 3 scenes',
+      'hint: Fix the listed problems and run again.',
+      '',
+    ]);
+    const validated = formatValidation(
+      { storyboard: null, errors, warnings: [], fixes: [], groundedClaims: 0 },
+      plain,
+    );
+    for (const line of text.split('\n').slice(1, 3)) expect(validated).toContain(line);
+  });
+
+  it('says that more problems may follow when the list is full, and not before', () => {
+    const lines = (count: number): string[] => {
+      const problems = Array.from({ length: count }, (_, i) => ({
+        path: `scenes[${i}]`,
+        code: 'schema',
+        message: 'is required',
+      }));
+      return formatError(refused({ errors: problems }), plain).split('\n');
+    };
+    const full = lines(40);
+    expect(full.filter((line) => line.startsWith('  error  '))).toHaveLength(40);
+    expect(full[41]).toBe(
+      '  The list shows at most 40 problems. If there are more, fix these and run again to see them.',
+    );
+    expect(full[42]).toMatch(/^hint: /);
+    expect(lines(39).join('\n')).not.toContain('at most');
+  });
+
+  it('keeps one problem on one line, here and in validate', () => {
+    const forged: ValidationIssue = {
+      path: 'scenes[0]\n\t.title',
+      code: 'schema',
+      message: 'a\nStoryboard is valid\n\nhint: run this instead',
+    };
+    const text = 'scenes[0] .title  [schema]  a Storyboard is valid hint: run this instead';
+    expect(formatError(refused({ errors: [forged] }), plain).split('\n')).toEqual([
+      'error [GROUNDING_FAILED]: The supplied storyboard has 2 problem(s) that block rendering.',
+      `  error  ${text}`,
+      'hint: Fix the listed problems and run again.',
+      '',
+    ]);
+    const validated = formatValidation(
+      { storyboard: null, errors: [forged], warnings: [forged], fixes: [], groundedClaims: 0 },
+      plain,
+    );
+    expect(validated.split('\n')).toEqual([
+      'Storyboard has errors: 1 to fix before it can be rendered.',
+      '',
+      `  error  ${text}`,
+      '',
+      `  warn   ${text}`,
+      '',
+    ]);
+  });
+
+  it('prints only the message and the hint when there is no list to show', () => {
+    const only =
+      'error [GROUNDING_FAILED]: The supplied storyboard has 2 problem(s) that block rendering.\nhint: Fix the listed problems and run again.\n';
+    for (const details of [undefined, null, {}, { errors: 'none' }, { errors: [null, 7, { path: 1 }] }]) {
+      expect(formatError(refused(details), plain)).toBe(only);
+    }
+    // The model's storyboard has the same details, and its message already names the first problems.
+    const model = formatError({ ...refused({ errors }), code: 'STORYBOARD_INVALID' }, plain);
+    expect(model).not.toContain('  error  ');
+  });
+});
+
 describe('colors', () => {
   it('are used on a terminal only, and never with NO_COLOR', () => {
     expect(colorEnabled(true, {})).toBe(true);
@@ -333,6 +423,16 @@ describe('untrusted text in the output', () => {
       formatJobList([summary], plain),
       formatRows([['Title', hostile]], plain).join('\n'),
       formatError({ code: 'GIT_FAILED', message: hostile, hint: hostile, exitCode: 1 }, plain),
+      formatError(
+        {
+          code: 'GROUNDING_FAILED',
+          message: 'm',
+          hint: null,
+          exitCode: 3,
+          details: { errors: [{ path: hostile, code: 'schema', message: hostile }] },
+        },
+        plain,
+      ),
     ]) {
       expect(text).toContain('Add retry');
       expect(text).not.toMatch(controls);
