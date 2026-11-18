@@ -90,6 +90,22 @@ describe('evidence pack structure', () => {
     expect(markdown).toContain('Style: technical. Narration language: de.');
   });
 
+  it('says that the test line counts files, not test cases', async () => {
+    const { markdown } = await pack([
+      ...SAMPLE,
+      {
+        path: 'src/a.test.ts',
+        base: "it('a', () => {});\n",
+        head: "it('a', () => {});\nit('b', () => {});\n",
+      },
+    ]);
+    // One new test case in a modified file: "Tests: 0 added" read as "no tests were added".
+    expect(markdown).toContain(
+      'Test files: 0 added, 1 modified, 0 removed. These are files, not test cases: a modified file can hold new cases.',
+    );
+    expect(markdown).not.toMatch(/^Tests: /m);
+  });
+
   it('describes a local change without a pull request section', async () => {
     const { markdown } = await pack(SAMPLE, {}, { pr: null, webUrl: null });
     expect(markdown).toContain('- Change: Local change a1b2c3d..f6e5d4c');

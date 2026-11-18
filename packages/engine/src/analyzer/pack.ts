@@ -350,7 +350,11 @@ function filesSection(c: Ctx, l: Limits): string[] {
       `Showing ${ranked.length} of ${files.length} files, ranked by importance. The other file ids are in the evidence id list.`,
     );
   const t = c.analysis.tests;
-  out.push('', `Tests: ${t.added.length} added, ${t.modified.length} modified, ${t.removed.length} removed.`);
+  // The lists hold file paths. Without the unit, "0 added" reads as "no new tests".
+  out.push(
+    '',
+    `Test files: ${t.added.length} added, ${t.modified.length} modified, ${t.removed.length} removed. These are files, not test cases: a modified file can hold new cases.`,
+  );
   if (c.analysis.languages.length > 0)
     out.push(`Languages: ${c.analysis.languages.map((x) => `${x.language} (${x.files})`).join(', ')}.`);
   return out;

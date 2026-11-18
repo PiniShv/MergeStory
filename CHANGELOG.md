@@ -9,6 +9,11 @@ All notable changes to MergeStory are listed here, newest first.
 - **Added:** `mergestory runs delete --older-than <days>` removes every run and finished background
   job made more than that many days ago. Deleting a run by id now also removes the files of the job
   that made it. A run that a job is still making is kept.
+- **Fixed:** the evidence pack says that its test line counts test files, not test cases. Before,
+  "Tests: 0 added" could be read as "no tests were added" when modified test files held new cases.
+- **Fixed:** a review prompt reports the right number in "and N more". Before, the count stopped at
+  8 places. For source files without a test change it stopped at 5, and for large blocks and long
+  functions at 3.
 
 ## 1.5.1
 

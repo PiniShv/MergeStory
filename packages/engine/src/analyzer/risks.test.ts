@@ -367,6 +367,55 @@ describe('risk detection', () => {
     expect(analysis.risks.map((r) => r.id)).toEqual(Array.from({ length: 10 }, (_, i) => `R${i + 1}`));
     expect(analysis.risks.every((r) => /^(Check|Confirm)\b/.test(r.title))).toBe(true);
   });
+
+  it('counts every place in "and N more", also past the places it keeps', async () => {
+    const notes = Array.from({ length: 12 }, (_, i) => `// TODO: step ${i + 1}`);
+    const many = await run([{ path: 'src/a.ts', base: 'a\n', head: `a\n${notes.join('\n')}\n` }, TEST_FILE]);
+    expect(titled(many, /TODO/)!.detail).toBe(
+      'Adds a TODO, FIXME or HACK note at src/a.ts:2, src/a.ts:3, src/a.ts:4 and 9 more.',
+    );
+    const few = await run([
+      { path: 'src/a.ts', base: 'a\n', head: `a\n${notes.slice(0, 3).join('\n')}\n` },
+      TEST_FILE,
+    ]);
+    expect(titled(few, /TODO/)!.detail).toBe(
+      'Adds a TODO, FIXME or HACK note at src/a.ts:2, src/a.ts:3, src/a.ts:4.',
+    );
+  });
+
+  it('counts every file, block and function of a finding about files, not only the first ones', async () => {
+    const sources = Array.from({ length: 12 }, (_, i) => ({
+      path: `src/f${String(i).padStart(2, '0')}.ts`,
+      base: 'a\n',
+      head: 'a\nb\n',
+    }));
+    const untested = await run(sources);
+    expect(titled(untested, /covered by tests/)!.detail).toBe(
+      'Changes source files while no test file changed at src/f00.ts:1, src/f01.ts:1, src/f02.ts:1 and 9 more.',
+    );
+
+    const body = Array.from({ length: 140 }, (_, i) => `  total += ${i};`).join('\n');
+    const long = (name: string) =>
+      `export function ${name}() {\n  let total = 0;\n${body}\n  return total;\n}\n`;
+    const five = await run([
+      ...['a', 'b', 'c', 'd', 'e'].map((name) => ({ path: `src/${name}.ts`, base: null, head: long(name) })),
+      TEST_FILE,
+    ]);
+    expect(titled(five, /large change/)!.detail).toContain('src/c.ts:1 and 2 more.');
+    expect(titled(five, /long function/)!.detail).toContain('src/c.ts:1 and 2 more.');
+  });
+
+  it('counts every new environment variable in "and N more"', async () => {
+    const reads = Array.from({ length: 11 }, (_, i) => `export const v${i} = process.env.NEW_VAR_${i};`);
+    const analysis = await run([
+      { path: 'src/config.ts', base: 'a\n', head: `a\n${reads.join('\n')}\n` },
+      TEST_FILE,
+    ]);
+    const detail = titled(analysis, /environment variables/)!.detail;
+    // 11 names: 6 are listed and 5 are counted. 11 places: 3 are listed and 8 are counted.
+    expect(detail).toContain('NEW_VAR_5 and 5 more)');
+    expect(detail).toContain('src/config.ts:4 and 8 more.');
+  });
 });
 
 describe('risk kinds', () => {
