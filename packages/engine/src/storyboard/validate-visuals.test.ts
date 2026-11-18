@@ -273,6 +273,61 @@ describe('simulated visuals', () => {
     }
   });
 
+  it('keeps the first twelve terminal lines and the first eight browser blocks, and says so', async () => {
+    const fx = retryFixture();
+    const check = async (visual: Json) => {
+      const sb = baseStoryboard(fx);
+      scene(sb, 2).visual = visual;
+      const result = await run(sb, fx);
+      expect(result.errors).toEqual([]);
+      return result;
+    };
+    const lines = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({ kind: 'output', text: `Attempt ${i + 1}`, beat: i % 2 }));
+    const texts = (list: { text: string }[]) => list.map((item) => item.text);
+
+    const terminal = await check({ type: 'terminal', title: 'Example run', lines: lines(15) });
+    const shown = terminal.storyboard!.scenes[2]!.visual;
+    expect(shown.type === 'terminal' && texts(shown.lines)).toEqual(texts(lines(12)));
+    expect(terminal.fixes.some((f) => f.includes('kept the first 12 of 15 terminal lines'))).toBe(true);
+
+    const panel = await check({
+      type: 'before-after',
+      before: {
+        label: 'Before',
+        kind: 'bullets',
+        codeRef: null,
+        bullets: ['One try only.'],
+        terminal: [],
+        screenshotId: null,
+      },
+      after: {
+        label: 'After',
+        kind: 'terminal',
+        codeRef: null,
+        bullets: [],
+        terminal: lines(14),
+        screenshotId: null,
+      },
+      caption: null,
+    });
+    const after = panel.storyboard!.scenes[2]!.visual;
+    expect(after.type === 'before-after' && texts(after.after.terminal)).toEqual(texts(lines(12)));
+    expect(panel.fixes.some((f) => f.includes('kept the first 12 of 14 terminal lines'))).toBe(true);
+
+    const blocks = Array.from({ length: 11 }, (_, i) => ({
+      kind: 'text',
+      text: `Block ${i + 1}`,
+      items: [],
+      emphasis: false,
+      beat: i % 2,
+    }));
+    const browser = await check({ type: 'browser', url: '/forecast', pageTitle: 'Forecast', blocks });
+    const page = browser.storyboard!.scenes[2]!.visual;
+    expect(page.type === 'browser' && texts(page.blocks)).toEqual(texts(blocks.slice(0, 8)));
+    expect(browser.fixes.some((f) => f.includes('kept the first 8 of 11 blocks'))).toBe(true);
+  });
+
   it('keeps an ordinary path, and a path that names code from the change', async () => {
     const fx = retryFixture();
     for (const url of ['/settings/cities?tab=plan', '/delayFor/preview']) {

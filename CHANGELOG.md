@@ -2,6 +2,19 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Changed:** `AUTHORING.md` states four more rules. A terminal holds at most 12 lines and a browser
+  page at most 8 blocks. The `text` of a browser block is its label, title, header, first line or
+  caption, depending on the kind. A focus range outside the code is dropped, and neither the ranges
+  nor their beats have to rise. Narration over the word budget is kept as it is, and only a video
+  estimated longer than `--max-duration` is trimmed, after a warning from `validate`. The rules for
+  focus ranges and block text are field descriptions in the schema, so a model that writes a
+  storyboard receives them as well (about 100 tokens more per request). The guide that a model gets
+  as its prompt is unchanged.
+
 ## 1.6.0
 
 ### Skill and plugin

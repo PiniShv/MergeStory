@@ -93,8 +93,8 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
   return [
     '# Writing the storyboard',
     '',
-    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total).`,
-    `Longest video: ${p.config.maxDurationSec} seconds. When a storyboard is estimated to be longer, \`generate\` leaves out the least important scenes and lines (never the mission or the review scene).`,
+    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total). This is a guide, not a limit: narration over it is kept as it is.`,
+    `Longest video: ${p.config.maxDurationSec} seconds. When a storyboard is estimated to be longer, \`validate\` warns (over-length) and \`generate\` leaves out the least important scenes and lines (never the mission or the review scene).`,
     `Style: ${p.config.style}. Narration language: ${p.config.language}.`,
     '',
     '1. Read `evidence.md` in this folder. It lists every fact you may use, each with an id.',

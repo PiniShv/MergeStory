@@ -407,6 +407,22 @@ describe('code references', () => {
     ]);
   });
 
+  it('does not need the focus ranges, or their beats, to rise', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    const focus = [
+      { startLine: 26, endLine: 27, note: 'Waits before the next try', beat: 1 },
+      { startLine: 23, endLine: 23, note: 'Reads the attempt limit', beat: 0 },
+    ];
+    scene(sb, 1).visual.focus = focus;
+    const result = await run(sb, fx);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toEqual([]);
+    const visual = result.storyboard!.scenes[1]!.visual;
+    expect(visual.type === 'code' && visual.focus).toEqual(focus);
+  });
+
   it('puts a new file on its head side and a deleted file on its base side', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);

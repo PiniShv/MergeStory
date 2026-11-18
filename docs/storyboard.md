@@ -117,7 +117,9 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 
 The offline generator and the length estimate use a speaking rate of 2.5 words a second. `--max-duration`
 (150 seconds by default) trims a storyboard before narration, least important scenes first. The mission and
-review scenes always stay.
+review scenes always stay. The target length that `analyze` gives is a guide, not a limit: narration over its
+word budget is kept as it is. Only a storyboard that is estimated to be longer than `--max-duration` is
+trimmed, and `validate` warns about it first (`over-length`).
 
 ## Evidence ids
 
@@ -205,7 +207,8 @@ A code reference points at lines. The engine reads the real code at render time.
   side. Use `diff` only for lines inside a changed hunk. The screen holds 18 rows, and a diff also needs rows
   for removed lines. When a range needs more, the checker shortens it, or switches to `snippet`.
 - `focus` highlights lines in turn. Each focus has `startLine`, `endLine`, a short `note` (or `null`) and the
-  `beat` of the narration line that explains it. A focus outside the range is dropped or clamped.
+  `beat` of the narration line that explains it. A focus outside the range is dropped or clamped. The
+  ranges and their beats do not have to rise: the video plays the ranges in the order of their beats.
 
 ## What the checks do
 

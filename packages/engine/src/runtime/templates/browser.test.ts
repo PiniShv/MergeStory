@@ -38,6 +38,10 @@ describe('parseTable', () => {
     expect(parseTable('Cities', ['a', 'b'])).toEqual({ header: ['Cities'], rows: [['a'], ['b']] });
     expect(parseTable('', ['a']).header).toBeNull();
   });
+
+  it('uses the text as the header only when no item has a pipe', () => {
+    expect(parseTable('Cities', ['Name | Temperature', 'Oslo | 4']).header).toEqual(['Name', 'Temperature']);
+  });
 });
 
 describe('page scrolling', () => {

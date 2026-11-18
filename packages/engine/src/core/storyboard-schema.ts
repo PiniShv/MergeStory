@@ -133,14 +133,19 @@ export const CodeVisualSchema = z.object({
   mode: z
     .enum(['snippet', 'diff'])
     .describe('"diff" shows removed and added lines of the hunk; "snippet" shows code at one side.'),
-  focus: z.array(
-    z.object({
-      startLine: z.number().int(),
-      endLine: z.number().int(),
-      note: z.string().nullable().describe('Short callout shown next to the highlighted lines.'),
-      beat,
-    }),
-  ),
+  focus: z
+    .array(
+      z.object({
+        startLine: z.number().int(),
+        endLine: z.number().int(),
+        note: z.string().nullable().describe('Short callout shown next to the highlighted lines.'),
+        beat,
+      }),
+    )
+    .describe(
+      'A range outside "ref" is dropped, and one that sticks out is cut to fit. ' +
+        'Neither the ranges nor their beats have to rise: the video plays the ranges in the order of their beats.',
+    ),
   caption: z.string().nullable(),
 });
 
@@ -190,7 +195,13 @@ export const BrowserVisualSchema = z.object({
         'badge',
         'image',
       ]),
-      text: z.string(),
+      text: z
+        .string()
+        .describe(
+          'heading, text, button, badge: shown as it is. input: the label of the field. list: an optional title. ' +
+            'table: the header, only when no item has "|". card: the title. toast: the first line. ' +
+            'image: an optional caption.',
+        ),
       items: z
         .array(z.string())
         .describe(
