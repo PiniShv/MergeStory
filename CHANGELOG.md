@@ -72,6 +72,17 @@ All notable changes to MergeStory are listed here, newest first.
   940 more tokens in every request. A recording scene with a `focus` keeps its frames up to 1.5 times
   larger, so the zoomed picture stays sharp. The bug-fix demo in `examples/bugfix-demo` uses both. The skill
   tells an agent about them. See "Visuals" in `docs/storyboard.md`.
+- **Fixed:** the same inputs give the same video with a full browser too. A full Chrome, Chromium or
+  Edge draws its pages on the GPU, and there a page was drawn a little differently when the browser had
+  drawn another page before: in the first frames in which a recording slides away, some pixels along
+  edges were one level lighter or darker. Which browser draws which part of a video changes from run to
+  run, so the bytes of the video changed too. The headless shell, which MergeStory uses when it is
+  installed, draws on the CPU and was not affected. Now every browser draws its pages on the CPU. A full
+  browser gave 4 different videos in 24 renders of the bug-fix demo; now it gives one.
+- **Fixed:** the colours of code no longer depend on how busy the machine is. The highlighter stopped
+  work on a line after half a second on the clock, so on a very busy machine the rest of a line lost
+  its colours, and the video was different. Now there is no time limit. A line of 20,000 characters or
+  more is shown without colours instead; the video shows the first 240 characters of a line.
 
 ## 1.7.0
 

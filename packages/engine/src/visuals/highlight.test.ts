@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CodeToken } from '../core/render-plan.ts';
-import { highlightText, plainTokens, resolveLanguage } from './highlight.ts';
+import { highlightText, MAX_HIGHLIGHT_LINE_CHARS, plainTokens, resolveLanguage } from './highlight.ts';
 
 const join = (tokens: CodeToken[]): string => tokens.map((t) => t.t).join('');
 
@@ -71,6 +71,34 @@ describe('highlightText', () => {
   it('merges neighbouring tokens that look the same', async () => {
     const [line] = await highlightText('a b c', { language: 'text', theme: 'github-dark-default' });
     expect(line).toEqual([{ t: 'a b c', c: null, s: 0 }]);
+  });
+
+  it('colours a line the same however long the machine takes', async () => {
+    const code = 'function basketCount(first, second) {\n  return Number(first) + Number(second);\n}';
+    const options = { language: 'javascript', theme: 'github-dark-default' };
+    const calm = await highlightText(code, options);
+    expect(calm[0]!.length).toBeGreaterThan(3);
+    // A clock that jumps a second at every reading: a machine too busy to colour a line in half a second.
+    let now = 0;
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => {
+      now += 1000;
+      return now;
+    });
+    try {
+      expect(await highlightText(code, options)).toEqual(calm);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it('leaves a very long line without colours, and colours the lines after it', async () => {
+    const long = 'x = 1; '.repeat(Math.ceil(MAX_HIGHLIGHT_LINE_CHARS / 7));
+    const [first, second] = await highlightText(`${long}\nconst a = 1;`, {
+      language: 'typescript',
+      theme: 'github-dark-default',
+    });
+    expect(first).toEqual([{ t: long, c: null, s: 0 }]);
+    expect(second!.find((t) => t.t === 'const')!.c).toMatch(/^#[0-9a-f]{6}$/);
   });
 });
 
