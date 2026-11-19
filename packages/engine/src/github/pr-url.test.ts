@@ -98,6 +98,20 @@ describe('parsePullRequestUrl', () => {
     }
   });
 
+  it('stays fast on a long run of dots that is within the limit', () => {
+    const text = `a${'.'.repeat(2_000)}`;
+    expect(() => parsePullRequestUrl(text)).toThrow('it is not a URL');
+    const started = performance.now();
+    for (let i = 0; i < 1_000; i += 1) {
+      try {
+        parsePullRequestUrl(text);
+      } catch {
+        // Expected: the text is not an address.
+      }
+    }
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+
   it.each([
     'https://bitbucket.org/team/app/pull-requests/42',
     'https://gitlab.com/group/app/-/merge_requests/7',
@@ -139,5 +153,12 @@ describe('API url helpers', () => {
     expect(graphqlUrlFor('https://ghe.example.com/api/v3')).toBe('https://ghe.example.com/api/graphql');
     expect(graphqlUrlFor('https://ghe.example.com/api/v3/')).toBe('https://ghe.example.com/api/graphql');
     expect(graphqlUrlFor('https://api.acme.ghe.com')).toBe('https://api.acme.ghe.com/graphql');
+  });
+
+  it('trims the slashes at the end of an API URL in linear time', () => {
+    const apiUrl = `https://ghe.example.com${'/'.repeat(100_000)}x`;
+    const started = performance.now();
+    expect(graphqlUrlFor(apiUrl)).toBe(`${apiUrl}/graphql`);
+    expect(performance.now() - started).toBeLessThan(500);
   });
 });

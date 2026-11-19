@@ -1,5 +1,6 @@
 /** Parsing of pull request references, and the API URLs that belong to a GitHub host. */
 import { MergeStoryError } from '../core/errors.ts';
+import { trimTrailingSlashes } from '../core/text.ts';
 
 export interface PullRequestRef {
   owner: string;
@@ -33,10 +34,6 @@ function invalid(reason: string): MergeStoryError {
       'Use https://github.com/<owner>/<repo>/pull/<number> or <owner>/<repo>#<number>. ' +
       'For a pull request on another host, pass the path of the local repository instead, with --base <branch>.',
   });
-}
-
-function trimTrailingSlashes(value: string): string {
-  return value.replace(/\/+$/, '');
 }
 
 /** API root for a web host. A non-default `configuredApiUrl` wins for hosts other than github.com. */
@@ -83,8 +80,9 @@ export function parsePullRequestUrl(input: string, defaultApiUrl = DEFAULT_API_U
 
   let candidate = text;
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
-    // "github.com/o/r/pull/1": a host name (it has a dot) followed by a path.
-    if (!/^[^/\s@:]+\.[^/\s@:]+\//.test(candidate))
+    // "github.com/o/r/pull/1": a host name (it has a dot) followed by a path. Only the first dot after the
+    // first character can be that dot: a pattern that may split at any dot is slow on a long run of dots.
+    if (!/^[^/\s@:][^/\s@:.]*\.[^/\s@:]+\//.test(candidate))
       throw invalid('it is not a URL or <owner>/<repo>#<number>');
     candidate = `https://${candidate}`;
   }

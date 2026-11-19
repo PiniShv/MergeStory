@@ -9,6 +9,7 @@ import { isLikelyBinaryPath } from '../core/binary-paths.ts';
 import type { RunContext } from '../core/context.ts';
 import { isMergeStoryError, MergeStoryError } from '../core/errors.ts';
 import type { LoadedSource, SourceInput, SourceProvider } from '../core/providers.ts';
+import { trimTrailingSlashes } from '../core/text.ts';
 import type { FileStatus, RepoInfo } from '../core/types.ts';
 import { GitHubClient } from '../github/client.ts';
 import { findLinkedIssues } from '../github/linked-issues.ts';
@@ -51,7 +52,7 @@ function repoInfo(repo: GitHubRepo, webHost: string): RepoInfo {
     try {
       const url = new URL(repo.htmlUrl);
       if ((url.protocol === 'https:' || url.protocol === 'http:') && url.host.toLowerCase() === webHost) {
-        webUrl = url.origin + url.pathname.replace(/\/+$/, '');
+        webUrl = url.origin + trimTrailingSlashes(url.pathname);
       }
     } catch {
       // Keep the address built from the host and name.

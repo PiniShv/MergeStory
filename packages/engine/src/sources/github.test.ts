@@ -316,6 +316,15 @@ describe('GitHubSource', () => {
     expect(changeSet.limits.note).toContain('no code for 1 changed file');
   });
 
+  it('keeps a repository address with a very long run of slashes, and does so fast', async () => {
+    const htmlUrl = `https://github.com/acme/widgets${'/'.repeat(200_000)}x`;
+    installFetch({ repo: { html_url: htmlUrl } });
+    const started = performance.now();
+    const { changeSet } = await new GitHubSource().load({ kind: 'github', url: PR_URL }, makeContext());
+    expect(changeSet.repo.webUrl).toBe(htmlUrl);
+    expect(performance.now() - started).toBeLessThan(2_000);
+  });
+
   it('never keeps sensitive or excluded content, even though GitHub sends the patch', async () => {
     installFetch();
     const { changeSet, reader } = await new GitHubSource().load(
