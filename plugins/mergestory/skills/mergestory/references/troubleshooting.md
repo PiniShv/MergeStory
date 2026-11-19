@@ -37,7 +37,7 @@ These codes are errors:
 | `screenshot-unknown` | A screenshot visual names an id that was not supplied. | Use an `SS` id from `evidence.md`, or another visual. |
 | `recording-unknown` | A recording visual names an id that was not supplied. | Use an `RC` id from `evidence.md`, or another visual. |
 | `recording-trim-out-of-range` | A recording `trim` has less than 0.2 seconds inside the clip. | Choose a part that lies inside the clip. |
-| `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied (this needs an engine newer than 1.7.0), or none of its steps exists. | Write `repro.json` (or pass `--repro-file`) and list steps from `REPRO.1`, or use another visual. |
+| `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied (this needs engine 1.8.0 or newer), or none of its steps exists. | Write `repro.json` (or pass `--repro-file`) and list steps from `REPRO.1`, or use another visual. |
 | `log-unknown` | A log visual names an id that was not supplied. | Use an `L` id from `evidence.md`, or another visual. |
 | `log-range-out-of-range` | The lines of a log visual lie fully outside the log. | Choose lines inside the log. |
 | `simulated-unbacked` | A terminal or browser visual has narration that cites no file, hunk or symbol id. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |

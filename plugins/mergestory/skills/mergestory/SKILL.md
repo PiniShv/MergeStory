@@ -10,7 +10,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -25,7 +25,7 @@ Do not use it for text-only summaries or code review comments. It does not recor
 ## 1. Find the engine
 
 Run `mergestory --version`. It must print 1.5.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.7.0`. Never start
+the user whether you may install it, then run `npm install -g mergestory@1.8.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -87,14 +87,14 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   A step may have `"screenshot": "SS1"` or `"recording": "RC1"` (not both): the id of a capture that you
   copied into `screenshots/` or `recordings/`, below. A step may also have a `result` of `expected`,
   `actual`, `bug` or `fixed`. Use 1 to 12 steps. Never make up a step you did not do. Without this file the
-  video has no reproduction. This needs an engine newer than 1.7.0. An older engine ignores the file, so
+  video has no reproduction. This needs engine 1.8.0 or newer. An older engine ignores the file, so
   cite no `REPRO` id there.
 - `screenshots/`: screenshots that were really captured (PNG or JPEG, up to 4 MB each); never make
   one up. Copy each one into `screenshots/` in the work folder before `agent analyze` runs. A file
   tool cannot write a picture, and this skill allows no copy command, so the user may have to approve
   the copy. The files are used in name order, and the first `inputs.maxScreenshots` are used (6 by default, at most 12). To name them, add
   `screenshots/captions.json` as `{"page.png": {"caption": "What it shows", "side": "before"}}`.
-  This needs an engine newer than 1.7.0. An older engine ignores the folder, so cite no `SS` id
+  This needs engine 1.8.0 or newer. An older engine ignores the folder, so cite no `SS` id
   there. MergeStory masks text, not pictures: a secret or an e-mail address that shows in a screenshot
   shows in the video, unless you hide it.
 - `recordings/`: screen recordings that were really captured; never make one up. Copy each one into
@@ -119,7 +119,7 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
 - `logs/`: real output of a run, a test or a command that you really ran; never write one by hand.
   Save each output as a `.log` or `.txt` file in `logs/` in the work folder (UTF-8 text, at most 256 KB,
   at most 4 files; they are used in name order). To name them, add `logs/captions.json` as
-  `{"run.log": {"caption": "The check after the fix"}}`. This needs an engine newer than 1.7.0. An older
+  `{"run.log": {"caption": "The check after the fix"}}`. This needs engine 1.8.0 or newer. An older
   engine ignores the folder, so cite no `L` id there. A log is masked like code, but check that it holds
   nothing its viewers must not see. In `tests.json`, a result can add `"log": "L1.120-140"` to point at
   the lines that show its output. Add `"log"` only when `mergestory --version` prints a version newer
@@ -142,7 +142,7 @@ These become citable evidence (TASK, NOTES, T1, REPRO.1, SS1, RC1, L1) in the vi
    paste code. Show the bug before the code, and the fix working after the code: a `reproduction`
    scene with a `repro` visual, then a `proof` scene. Use only screenshots and recordings that were
    really captured and supplied. A line that cites `REPRO` says what the reproduction shows, not
-   what the code does. This needs an engine newer than 1.7.0.
+   what the code does. This needs engine 1.8.0 or newer.
    To show a recording, point at the part that matters with `highlights` (boxes in fractions of the
    picture, each on a narration `beat`) and use `focus` when it is small. Both need an engine newer
    than 1.7.0. An engine up to 1.7.0 leaves them out without a warning.

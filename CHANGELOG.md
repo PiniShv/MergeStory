@@ -2,7 +2,12 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.8.0
+
+### Skill and plugin
+
+- The skill installs `mergestory@1.8.0`. It still asks for 1.5.0 or newer: an older engine ignores the new
+  folders and files, and the skill says what to do then.
 
 ### Engine
 
@@ -19,7 +24,7 @@ All notable changes to MergeStory are listed here, newest first.
   several sources. A request to a model with one source does not change; with several it gets one extra
   paragraph of about 160 tokens. The `agent` commands and the HTTP API keep one source. The reproduction, the
   logs, the hidden regions and the screenshots are not tied to a repository and work with several sources. It
-  needs an engine newer than 1.7.0. See `examples/two-repos-demo` and "Several sources" in `docs/cli.md`.
+  needs engine 1.8.0 or newer. See `examples/two-repos-demo` and "Several sources" in `docs/cli.md`.
 - **Added:** real logs in the video. `--log <file>[:<caption>]` passes the output of a run, a test or a
   command as context to `analyze`, `validate` and `generate`. You can repeat it up to 4 times. A log must be
   UTF-8 text of at most 256 KB. Its lines are numbered from 1, and the colour codes of a terminal are
@@ -33,7 +38,7 @@ All notable changes to MergeStory are listed here, newest first.
   window. The bug-fix demo now shows the real output of a small check. The checks are `log-unknown`,
   `log-range-out-of-range` and `log-too-long`; a range is cut to the log and to 18 lines, and each cut is
   listed in `fixes`. A line of a log is masked like a line of code. A model that writes a storyboard gets
-  about 360 more tokens in every request. It needs an engine newer than 1.7.0.
+  about 360 more tokens in every request. It needs engine 1.8.0 or newer.
 - **Added:** hide parts of a screenshot or a recording. `--redact <file>` on `analyze`, `validate` and
   `generate` takes a JSON file with a list of regions for each capture, for example
   `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`.
@@ -46,7 +51,7 @@ All notable changes to MergeStory are listed here, newest first.
   "parts hidden". The file is checked strictly: an id that was not passed, an unknown field or a region
   outside the picture is an error, and nothing is skipped. MergeStory finds nothing by itself. A publish
   target only ever gets the video, its poster, its captions and the watch page, and a publisher now refuses
-  any other file. It needs an engine newer than 1.7.0. See "Hidden regions" in `docs/cli.md`.
+  any other file. It needs engine 1.8.0 or newer. See "Hidden regions" in `docs/cli.md`.
 - **Added:** reproduction steps. `--repro-file <file>` passes the steps that show a bug to `analyze`,
   `validate` and `generate`, as JSON: a `title`, an optional `environment` and 1 to 12 `steps`. A step has a
   `text`, and may have a `screenshot` or a `recording` (an id such as `SS1` or `RC1` of a capture that you

@@ -1,6 +1,6 @@
 # The two-repositories demo
 
-A shop page showed a total that was a hundred times too big. The service (`orders-api`) gave the total in cents under the name `total`, and the page (`storefront`) showed it as euros. The fix needs a change in both repositories, and each change alone leaves the page wrong. This demo makes one video for the two changes. It needs an engine newer than 1.7.0.
+A shop page showed a total that was a hundred times too big. The service (`orders-api`) gave the total in cents under the name `total`, and the page (`storefront`) showed it as euros. The fix needs a change in both repositories, and each change alone leaves the page wrong. This demo makes one video for the two changes. It needs engine 1.8.0 or newer.
 
 The shop, its names and its prices are made up.
 
