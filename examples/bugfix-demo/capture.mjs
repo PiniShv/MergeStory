@@ -2,7 +2,8 @@
 // usage: node capture.mjs <output folder>
 // Writes before.png, after.png, before.mp4 and after.mp4, a folder screenshots/ with the same two
 // pictures and a captions.json (for --screenshots-dir), and count.json: where the text of the item
-// count ends up in each picture, as fractions of it. Needs a Chrome or Chromium
+// count ends up in each picture, as fractions of it, and signed-in.json: the same for the "Signed in as"
+// line that redact.json hides (the union over the whole clip, if it moves). Needs a Chrome or Chromium
 // (MERGESTORY_BROWSER_PATH) and FFmpeg (MERGESTORY_FFMPEG_PATH, or ffmpeg on the PATH). Nothing is written inside the repository.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -32,10 +33,28 @@ const VIEWPORT = { width: 960, height: 540 };
 // Where the text of the item count is at the end, as fractions of the picture: a font that is wider or
 // taller than the one of the machine that made the storyboard shows in this file.
 const counts = {};
+const signedIn = {};
 
 const browser = await chromium.launch({ executablePath: browserPath, headless: true });
 // A small window, so the text stays large when the video shows it in a frame.
 const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 });
+
+// The box of the text of an element, in pixels of the page (the element itself is as wide as the page).
+const boxOf = (selector) => {
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector(selector));
+  const { x, y, width, height } = range.getBoundingClientRect();
+  return { x, y, width, height };
+};
+// Keeps the union of every box that the line had in a side's clip, as fractions of the picture.
+const measureSignedIn = (side, box) => {
+  const prev = signedIn[side];
+  const left = Math.min(box.x / VIEWPORT.width, prev ? prev.x : 1);
+  const top = Math.min(box.y / VIEWPORT.height, prev ? prev.y : 1);
+  const right = Math.max((box.x + box.width) / VIEWPORT.width, prev ? prev.x + prev.w : 0);
+  const bottom = Math.max((box.y + box.height) / VIEWPORT.height, prev ? prev.y + prev.h : 0);
+  signedIn[side] = { x: left, y: top, w: right - left, h: bottom - top };
+};
 
 for (const side of ['before', 'after']) {
   await page.goto(pathToFileURL(join(here, side === 'before' ? 'base' : 'feature', 'index.html')).href);
@@ -43,6 +62,7 @@ for (const side of ['before', 'after']) {
   let n = 0;
   // A recording is a screenshot after each step, repeated for as long as the step should last (10 frames a second).
   const hold = async (frames) => {
+    measureSignedIn(side, await page.evaluate(boxOf, '.who'));
     const png = await page.screenshot();
     for (let i = 0; i < frames; i++) writeFileSync(join(work, `f-${String(n++).padStart(4, '0')}.png`), png);
   };
@@ -58,6 +78,7 @@ for (const side of ['before', 'after']) {
   await type('#qty-mix', '2');
   await type('#qty-bar', '3');
   await hold(14);
+  measureSignedIn(side, await page.evaluate(boxOf, '.who'));
   await page.screenshot({ path: join(outDir, `${side}.png`) });
   // The box of the text itself: the element is as wide as the whole page.
   const text = await page.evaluate(() => {
@@ -103,6 +124,11 @@ for (const side of ['before', 'after']) {
 }
 await browser.close();
 writeFileSync(join(outDir, 'count.json'), `${JSON.stringify(counts, null, 2)}\n`);
+writeFileSync(
+  join(outDir, 'signed-in.json'),
+  `${JSON.stringify(signedIn, null, 2)}
+`,
+);
 writeFileSync(
   join(shots, 'captions.json'),
   JSON.stringify({

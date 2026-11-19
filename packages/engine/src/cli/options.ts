@@ -188,6 +188,16 @@ export function addContextFlags(command: Command): Command {
       '--recording <spec>',
       'a real screen recording, MP4 (H.264) or WebM (VP8 or VP9), checked with ffprobe: <path>[:<caption>[:before|after]] (repeatable)',
       collect,
+    )
+    .option(
+      '--redact <file>',
+      'JSON file (max 64 KB) of regions to cover with a solid block in screenshots and recordings: {"SS1": [{"x", "y", "w", "h"}], "RC1": [{"x", "y", "w", "h"}]}, fractions of the picture, hidden for the whole clip in a recording (given once)',
+      (value: string, previous: string | undefined) => {
+        // A second file would replace the first in silence, and show what the first one hid.
+        if (previous !== undefined)
+          throw new InvalidArgumentError('Give --redact once, with one file of all regions.');
+        return value;
+      },
     );
 }
 
@@ -495,6 +505,7 @@ export function followUpFor(
     const { path } = parseScreenshotSpec(spec);
     contextArgs.push('--recording', `${resolve(cwd, path)}${spec.slice(path.length)}`);
   }
+  if (flags.redact !== undefined) contextArgs.push('--redact', resolve(cwd, flags.redact));
   return { source, args: [...refs, ...contextArgs], contextArgs };
 }
 

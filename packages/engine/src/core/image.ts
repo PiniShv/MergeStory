@@ -7,6 +7,8 @@ export interface ImageInfo {
   mime: 'image/png' | 'image/jpeg';
   width: number;
   height: number;
+  /** The EXIF orientation, 2 to 8, of a picture that is stored turned or mirrored. Absent when it is upright. */
+  orientation?: number;
 }
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -20,7 +22,19 @@ function pngInfo(buf: Buffer): ImageInfo | null {
   if (buf.length < 24) return null;
   if (!PNG_SIGNATURE.every((byte, i) => buf[i] === byte)) return null;
   if (buf.toString('ascii', 12, 16) !== 'IHDR') return null;
-  return { mime: 'image/png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  const info: ImageInfo = { mime: 'image/png', width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+  // An eXIf chunk holds the same TIFF data as a JPEG. Its orientation is reported, the size is not turned.
+  // FFmpeg reads the chunk after the image data too, so every chunk is looked at.
+  for (let pos = 8; pos + 8 <= buf.length; pos += 12 + buf.readUInt32BE(pos)) {
+    const type = buf.toString('latin1', pos + 4, pos + 8);
+    if (type === 'IEND') break;
+    if (type === 'eXIf') {
+      const orientation = exifOrientation(buf.subarray(pos + 8, pos + 8 + buf.readUInt32BE(pos)));
+      if (orientation !== 1) info.orientation = orientation;
+      break;
+    }
+  }
+  return info;
 }
 
 /** True for an animated PNG (APNG): one with an animation chunk (acTL) before its image data. Browsers play those. */
@@ -93,6 +107,7 @@ function jpegInfo(buf: Buffer): ImageInfo | null {
     mime: 'image/jpeg',
     width: turned ? size.height : size.width,
     height: turned ? size.width : size.height,
+    ...((orientation ?? 1) !== 1 ? { orientation: orientation! } : {}),
   };
 }
 

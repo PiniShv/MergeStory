@@ -10,6 +10,8 @@ import { MergeStoryError } from '../core/errors.ts';
 import { detectImage, type ImageInfo } from '../core/image.ts';
 import { runCommand } from '../core/process.ts';
 import type { ResolvedImage } from '../core/render-plan.ts';
+import type { HiddenRegion } from '../core/types.ts';
+import { hideInScreenshot } from './hide-regions.ts';
 
 export { detectImage, type ImageInfo } from '../core/image.ts';
 
@@ -85,15 +87,25 @@ async function shrink(ffmpeg: string, path: string, info: ImageInfo, name: strin
   return result.stdoutBuffer;
 }
 
+/** The regions to hide in a screenshot, and the id that the messages call it by. */
+export interface ScreenshotHiding {
+  id: string;
+  regions: readonly HiddenRegion[];
+  signal?: AbortSignal;
+}
+
 /**
  * Read a screenshot from disk and return it as a data URL. Throws a USAGE error for anything unusable.
  * A picture wider than 2560 pixels is made that wide first (the file itself is not changed); `name` is
- * how the error calls the picture ("Screenshot SS1 (page.png)").
+ * how the error calls the picture ("Screenshot SS1 (page.png)"). With `hide`, the regions are covered
+ * on the picture as it is stored, and the covered picture is then made smaller: only that version is
+ * returned, and an error when it cannot be made.
  */
 export async function loadScreenshot(
   path: string,
   config: Pick<Config, 'render'>,
   name = 'A screenshot',
+  hide?: ScreenshotHiding,
 ): Promise<ResolvedImage> {
   let size: number;
   try {
@@ -120,7 +132,25 @@ export async function loadScreenshot(
       hint: 'Only PNG and JPEG files are supported, up to 4 MiB and 40 megapixels.',
     });
   }
-  if (info.width > MAX_SCREENSHOT_WIDTH) {
+  const tooWide = info.width > MAX_SCREENSHOT_WIDTH;
+  if (hide && hide.regions.length > 0) {
+    const covered = await hideInScreenshot(
+      (await resolveFfmpeg(config)).ffmpeg,
+      path,
+      info,
+      hide.regions,
+      hide.id,
+      hide.signal,
+      tooWide ? { scaleTo: MAX_SCREENSHOT_WIDTH, maxBytes: MAX_SHRUNK_BYTES } : undefined,
+    );
+    const made = detectImage(covered) as ImageInfo;
+    return {
+      src: `data:${made.mime};base64,${covered.toString('base64')}`,
+      width: made.width,
+      height: made.height,
+    };
+  }
+  if (tooWide) {
     const smaller = await shrink((await resolveFfmpeg(config)).ffmpeg, path, info, name);
     const made = detectImage(smaller) as ImageInfo;
     return {

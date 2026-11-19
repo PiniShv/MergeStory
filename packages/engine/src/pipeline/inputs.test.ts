@@ -8,11 +8,12 @@ import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs } from '../core/types.ts';
 import { testConfig } from '../testing/context.ts';
 import { makeClip } from '../testing/media.ts';
-import { makePng } from '../testing/png.ts';
+import { makeJpeg, makePng } from '../testing/png.ts';
 import { sampleStoryboard } from '../testing/sample-change.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import {
   buildContextInputs,
+  checkRedactions,
   checkRepro,
   checkTestResults,
   evidenceUsed,
@@ -883,6 +884,206 @@ describe('checkRepro: hidden characters', () => {
       title: 'Basket shows 23',
       environment: 'window',
       steps: [{ text: 'Open the basket page' }],
+    });
+  });
+});
+
+describe('checkRedactions', () => {
+  const region = { x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
+  const message = (value: unknown): string | null => {
+    try {
+      checkRedactions(value);
+    } catch (err) {
+      expect(err).toMatchObject({ code: 'USAGE' });
+      return (err as Error).message;
+    }
+    return null;
+  };
+
+  it('reads regions by id, for a screenshot and a recording alike', () => {
+    expect(checkRedactions({ SS2: [region], RC1: [region, region] })).toEqual(
+      new Map([
+        ['SS2', [region]],
+        ['RC1', [region, region]],
+      ]),
+    );
+    expect(checkRedactions({ SS1: [] })).toEqual(new Map([['SS1', []]]));
+  });
+
+  it('refuses "from" and "to" with their own message: a region is hidden for the whole clip', () => {
+    for (const [value, at, field] of [
+      [{ RC1: [{ ...region, from: 1, to: 2 }] }, 'RC1, region 1', 'from'],
+      [{ RC2: [region, { ...region, to: 1 }] }, 'RC2, region 2', 'to'],
+      [{ SS1: [{ ...region, from: 1 }] }, 'SS1, region 1', 'from'],
+    ] as const) {
+      expect(message(value)).toBe(
+        `Hidden regions: ${at} has "${field}": a region cannot be limited to a part of a clip. Leave out "from" and "to", and the region is hidden for the whole clip.`,
+      );
+    }
+  });
+
+  it('fails on every mistake, naming the id and the entry, and skips nothing', () => {
+    const cases: [unknown, string][] = [
+      [[], 'expected a JSON object'],
+      ['x', 'expected a JSON object'],
+      [null, 'expected a JSON object'],
+      [{ screen: [region] }, '"screen" is not the id of a screenshot or a recording'],
+      [{ SS0: [region] }, '"SS0" is not the id'],
+      [{ SS1: region }, 'SS1 needs a list of regions.'],
+      [{ SS1: Array.from({ length: 21 }, () => region) }, 'SS1 has 21 regions, the most is 20.'],
+      [{ SS1: [region, 'x'] }, 'SS1, region 2 is not an object.'],
+      [{ SS1: [{ ...region, z: 1 }] }, 'SS1, region 1 has unknown field "z". Allowed: x, y, w, h.'],
+      [{ SS1: [{ x: 0, y: 0, w: 1 }] }, 'SS1, region 1 needs "h" as a number.'],
+      [{ SS1: [{ ...region, x: '0.1' }] }, 'SS1, region 1 needs "x" as a number.'],
+      [{ SS1: [{ ...region, y: Number.NaN }] }, 'SS1, region 1 needs "y" as a number.'],
+      [{ SS1: [{ ...region, w: null }] }, 'SS1, region 1 needs "w" as a number.'],
+      [{ SS1: [{ ...region, w: 0 }] }, 'SS1, region 1 needs "w" and "h" above 0.'],
+      [{ SS1: [{ ...region, h: -1 }] }, 'SS1, region 1 needs "w" and "h" above 0.'],
+    ];
+    for (const [value, expected] of cases) {
+      expect(message(value), JSON.stringify(value)).toContain(expected);
+    }
+  });
+
+  it('masks an e-mail address that is used as an id or a field name', () => {
+    expect(message({ 'jane.doe@example.com': [] })).not.toContain('jane.doe@');
+    expect(message({ SS1: [{ ...region, 'jane.doe@example.com': 1 }] })).not.toContain('jane.doe@');
+  });
+});
+
+describe('buildContextInputs: regions to hide', () => {
+  const shot = (name: string) => ({ path: join(dir, name), caption: 'Page', moment: 'after' as const });
+  const region = { x: 0.1, y: 0.2, w: 0.3, h: 0.4 };
+  beforeEach(async () => {
+    await writeFile(join(dir, 'a.png'), makePng(4, 4));
+    await writeFile(join(dir, 'b.png'), makePng(4, 4));
+  });
+
+  it('gives a screenshot its regions, and leaves a screenshot without regions as it was', async () => {
+    const inputs = await buildContextInputs(
+      { screenshots: [shot('a.png'), shot('b.png')], redact: { SS2: [region] } },
+      dir,
+      testConfig(),
+    );
+    expect(inputs.screenshots[0]).not.toHaveProperty('hidden');
+    expect(inputs.screenshots[1]?.hidden).toEqual([region]);
+    const plain = await buildContextInputs({ screenshots: [shot('a.png')] }, dir, testConfig());
+    expect(plain.screenshots[0]).not.toHaveProperty('hidden');
+  });
+
+  it('cuts a region that reaches outside the picture to the picture', async () => {
+    const inputs = await buildContextInputs(
+      {
+        screenshots: [shot('a.png')],
+        redact: {
+          SS1: [
+            { x: -0.5, y: 0.8, w: 1, h: 0.5 },
+            { x: 0.9, y: 0, w: 5, h: 0.1 },
+          ],
+        },
+      },
+      dir,
+      testConfig(),
+    );
+    const [first, second] = inputs.screenshots[0]!.hidden!;
+    expect(first).toMatchObject({ x: 0, w: 0.5 });
+    expect(first!.y).toBeCloseTo(0.8);
+    expect(first!.h).toBeCloseTo(0.2);
+    expect(second!.x).toBeCloseTo(0.9);
+    expect(second!.w).toBeCloseTo(0.1);
+  });
+
+  it('refuses a region with no part inside the picture', async () => {
+    for (const bad of [
+      { x: 1, y: 0, w: 0.5, h: 0.5 },
+      { x: 0, y: 1.2, w: 0.5, h: 0.5 },
+      { x: -0.6, y: 0, w: 0.5, h: 0.5 },
+      { x: 0, y: -1, w: 0.5, h: 1 },
+    ]) {
+      await expect(
+        buildContextInputs(
+          { screenshots: [shot('a.png')], redact: { SS1: [region, bad] } },
+          dir,
+          testConfig(),
+        ),
+      ).rejects.toMatchObject({
+        code: 'USAGE',
+        message: 'Hidden regions: SS1, region 2 has no part inside the picture.',
+      });
+    }
+  });
+
+  it('refuses an id that this run does not have, and one that the limit dropped', async () => {
+    await expect(
+      buildContextInputs({ screenshots: [shot('a.png')], redact: { SS2: [region] } }, dir, testConfig()),
+    ).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'Hidden regions: SS2 is not a screenshot or recording of this run.',
+      hint: expect.stringContaining('This run has: SS1.'),
+    });
+    await expect(buildContextInputs({ redact: { RC1: [region] } }, dir, testConfig())).rejects.toMatchObject({
+      hint: expect.stringContaining('no screenshots or recordings'),
+    });
+    const seven = Array.from({ length: 7 }, () => shot('a.png'));
+    await expect(
+      buildContextInputs({ screenshots: seven, redact: { SS7: [region] } }, dir, testConfig(), () => {}),
+    ).rejects.toMatchObject({ message: expect.stringContaining('SS7 is not a screenshot or recording') });
+  });
+
+  it('refuses a screenshot that is stored turned when it has regions, also when only a reproduction step uses it', async () => {
+    // A JPEG with an EXIF orientation of 6 (big endian) right after its first marker.
+    const tiff = Buffer.alloc(26);
+    tiff.write('MM', 0, 'latin1');
+    tiff.writeUInt16BE(42, 2);
+    tiff.writeUInt32BE(8, 4);
+    tiff.writeUInt16BE(1, 8);
+    tiff.writeUInt16BE(0x0112, 10);
+    tiff.writeUInt16BE(3, 12);
+    tiff.writeUInt32BE(1, 14);
+    tiff.writeUInt16BE(6, 18);
+    const head = Buffer.from([0xff, 0xe1, 0, 0]);
+    head.writeUInt16BE(2 + 6 + tiff.length, 2);
+    const jpeg = makeJpeg(64, 48);
+    await writeFile(
+      join(dir, 'turned.jpg'),
+      Buffer.concat([jpeg.subarray(0, 2), head, Buffer.from('Exif\0\0', 'latin1'), tiff, jpeg.subarray(2)]),
+    );
+    const repro = { title: 'Bug', steps: [{ text: 'Open the page', screenshot: 'SS1' }] };
+    await expect(
+      buildContextInputs(
+        { screenshots: [shot('turned.jpg')], repro, redact: { SS1: [region] } },
+        dir,
+        testConfig(),
+      ),
+    ).rejects.toMatchObject({ code: 'USAGE', message: expect.stringContaining('has hidden regions') });
+    // Without a region it is accepted, so the refusal is about the regions.
+    const plain = await buildContextInputs({ screenshots: [shot('turned.jpg')], repro }, dir, testConfig());
+    expect(plain.screenshots[0]!.hidden).toBeUndefined();
+  });
+
+  it('checks the file before it reads any screenshot', async () => {
+    await expect(
+      buildContextInputs({ screenshots: [shot('missing.png')], redact: { SS1: 'x' } }, dir, testConfig()),
+    ).rejects.toMatchObject({ message: expect.stringContaining('Hidden regions: SS1 needs a list') });
+  });
+
+  describe.skipIf(tools === null)('recordings', () => {
+    const clip = (name: string) => ({ path: join(dir, name), caption: 'Clip', moment: 'before' as const });
+    const makeC = async () => {
+      if (!(await makeClip(tools!.ffmpeg, join(dir, 'c.mp4'), { seconds: 2 }))) throw new Error('no clip');
+    };
+
+    it('gives a recording its regions, cut to the picture, for the whole clip', async () => {
+      await makeC();
+      const inputs = await buildContextInputs(
+        { recordings: [clip('c.mp4')], redact: { RC1: [region, { x: 0.9, y: 0, w: 5, h: 0.1 }] } },
+        dir,
+        testConfig(),
+      );
+      const [first, second] = inputs.recordings[0]!.hidden!;
+      expect(first).toEqual(region);
+      expect(Object.keys(second!)).toEqual(['x', 'y', 'w', 'h']);
+      expect(second!.w).toBeCloseTo(0.1);
     });
   });
 });

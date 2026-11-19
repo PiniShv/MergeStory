@@ -230,7 +230,7 @@ async function produce(
 
   // Before any speech is paid for: a recording that cannot be decoded, or a screenshot that cannot be made smaller, stops the run here.
   const frames = await extractStoryboardFrames(storyboard, p.inputs, config, ctx.runDir, ctx.signal);
-  const images = await loadStoryboardScreenshots(storyboard, p.inputs, config);
+  const images = await loadStoryboardScreenshots(storyboard, p.inputs, config, ctx.signal);
 
   // Narration and timing
   ctx.progress({ stage: 'narrate', status: 'start', message: `Narrating with ${tts.id}` });

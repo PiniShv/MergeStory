@@ -184,6 +184,16 @@ describe('the files that are uploaded', () => {
     }
   });
 
+  it('never include a capture, a frame of a recording or the render plan that lie in the run folder', async () => {
+    await writeRun();
+    await mkdir(join(runDir, 'recording-frames', 's-1'), { recursive: true });
+    await writeFile(join(runDir, 'recording-frames', 's-1', 'f-00001.jpg'), 'FRAME');
+    for (const name of ['render-plan.json', 'before.png', 'before.mp4'])
+      await writeFile(join(runDir, name), 'x');
+    await publish();
+    expect(received[0]?.files.map((f) => f.name)).toEqual(['video.mp4', 'poster.jpg', 'captions.vtt']);
+  });
+
   it('are refused when a name in the folder leads outside of it, and nothing is uploaded', async () => {
     const secret = join(root, 'credentials');
     await writeFile(secret, 'aws_secret_access_key = very-secret');

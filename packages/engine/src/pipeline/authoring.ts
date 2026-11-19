@@ -106,7 +106,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       : [
           '',
           'Give both commands the same source and the same `--base`, `--head`, `--task-file`, `--notes-file`, `--tests-file`,',
-          '`--repro-file`, `--screenshot`, `--screenshots-dir` and `--recording` flags as the analysis. They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1. Without them those ids do not',
+          '`--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording` and `--redact` flags as the analysis. They create the ids TASK, NOTES, T1, REPRO, SS1 and RC1. Without them those ids do not',
           'exist, and lines that cite only them are removed.',
         ]),
     '',
@@ -118,6 +118,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
           'Real screenshots (PNG or JPEG) go in the `screenshots/` folder here. They become SS1, SS2 and so on.',
           'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
           'The steps that show the bug go in `repro.json` here. They become REPRO, REPRO.1, REPRO.2 and so on.',
+          'Parts of a screenshot or recording that must not show go in `redact.json` here: {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}, fractions of the picture. A region of a recording is hidden for the whole clip.',
         ]
       : []),
     '',

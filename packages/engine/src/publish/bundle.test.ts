@@ -25,18 +25,29 @@ describe('classifyBundle', () => {
     const poster = await file('poster.jpg', '123');
     const video = await file('video.mp4', '12345');
     const captions = await file('captions.vtt', '12');
-    const other = await file('notes.json', '1');
-    const result = await classifyBundle({ files: [poster, other, captions, video] });
+    const result = await classifyBundle({ files: [poster, captions, video] });
     expect(result.video.file).toBe(video);
     expect(result.poster?.file).toBe(poster);
     expect(result.captions?.file).toBe(captions);
-    expect(result.ordered.map((e) => e.file.name)).toEqual([
-      'video.mp4',
-      'captions.vtt',
-      'poster.jpg',
+    expect(result.ordered.map((e) => e.file.name)).toEqual(['video.mp4', 'captions.vtt', 'poster.jpg']);
+    expect(result.totalBytes).toBe(10);
+  });
+
+  it('refuses any file that is not the video, its poster or its captions: a capture never leaves the machine', async () => {
+    const video = await file('video.mp4');
+    for (const name of [
+      'before.png',
+      'recording.mp4',
       'notes.json',
-    ]);
-    expect(result.totalBytes).toBe(11);
+      'f-00001.jpg',
+      'render-plan.json',
+      'poster-1.png',
+    ]) {
+      await expect(classifyBundle({ files: [video, await file(name)] }), name).rejects.toMatchObject({
+        code: 'PUBLISH_FAILED',
+        message: `${name} is not the video, its poster or its captions.`,
+      });
+    }
   });
 
   it('allows a bundle with only a video', async () => {

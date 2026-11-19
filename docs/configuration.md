@@ -285,7 +285,7 @@ These settings change what else is hidden:
   - `\` counts as `/`. A leading `./` and spaces around a pattern are ignored. A pattern that is blank or
     only `/` hides nothing.
 - `privacy.maskEmails` keeps e-mail addresses out of captions, narration, code and logs. It is on by default.
-  Screenshots and recordings are shown as they are.
+  Screenshots and recordings are shown as they are, apart from the regions you ask to hide (`--redact`).
 - `privacy.llmContext` set to `minimal` keeps code away from a model. The model then gets only metadata,
   paths and symbol names, and writes a storyboard without code scenes.
 

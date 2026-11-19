@@ -475,13 +475,17 @@ function hunkBlock(c: Ctx, id: string): string | null {
   return `${title}\n${why}\n${enclosing}${fence(rows.join('\n'))}`;
 }
 
+/** ", parts hidden" for a capture that has regions the video hides, so the author knows the picture is not complete. */
+const hiddenMark = (item: { hidden?: unknown[] }): string => (item.hidden?.length ? ', parts hidden' : '');
+
 function screenshots(c: Ctx): string[] {
   if (c.inputs.screenshots.length === 0) return [];
   return [
     '## Available screenshots',
     '',
     ...c.inputs.screenshots.map(
-      (s) => `- ${s.id} (${s.moment}): ${c.mask.text(truncate(s.caption.replace(/\s+/g, ' '), 160))}`,
+      (s) =>
+        `- ${s.id} (${s.moment}${hiddenMark(s)}): ${c.mask.text(truncate(s.caption.replace(/\s+/g, ' '), 160))}`,
     ),
   ];
 }
@@ -493,7 +497,7 @@ function recordings(c: Ctx): string[] {
     '',
     ...c.inputs.recordings.map(
       (r) =>
-        `- ${r.id} (${r.moment}, ${Math.round(r.durationSec * 10) / 10} s, ${r.width}x${r.height}): ${c.mask.text(truncate(r.caption.replace(/\s+/g, ' '), 160))}`,
+        `- ${r.id} (${r.moment}, ${Math.round(r.durationSec * 10) / 10} s, ${r.width}x${r.height}${hiddenMark(r)}): ${c.mask.text(truncate(r.caption.replace(/\s+/g, ' '), 160))}`,
     ),
   ];
 }

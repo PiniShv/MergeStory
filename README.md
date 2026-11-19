@@ -39,7 +39,7 @@ about 20 cents per video if you pay per token. [See what it costs and why.](#wha
 
 ## Private by default.
 
-No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in all text: captions, narration, code and logs. Screenshots and recordings you supply are shown as they are.
+No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in all text: captions, narration, code and logs. Screenshots and recordings you supply are shown as they are, apart from the regions you ask to hide.
 
 ## Works with your agent.
 

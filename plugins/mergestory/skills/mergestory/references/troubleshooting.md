@@ -13,9 +13,9 @@ without any error.
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
 - **A removed `TASK`, `NOTES`, `T1`, `REPRO`, `SS1` or `RC1` means that context is missing.** With the `agent`
-  commands, `task.md`, `notes.md`, `tests.json` and `repro.json` must be in the work folder before `agent analyze`
+  commands, `task.md`, `notes.md`, `tests.json`, `repro.json` and `redact.json` must be in the work folder before `agent analyze`
   runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
-  `--screenshot`, `--screenshots-dir` and `--recording` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  `--screenshot`, `--screenshots-dir`, `--recording` and `--redact` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
   do not exist. A removed `SS1` or `RC1` means that the picture or recording was not passed to this command (or that the
   `screenshots/` or `recordings/` folder lacks the file, or the engine is older than the one that reads it).
 
@@ -64,6 +64,31 @@ repository.
 
 "There are no changes to explain": for a local repository only committed changes count. Commit the
 work, or check `--base` and `--head`.
+
+## Hidden regions fail (exit code 2)
+
+The run stops and nothing is shown unhidden. The message names the id and the entry.
+
+An engine of 1.7.0 or older does not know `--redact` or `redact.json`: the agent commands ignore the
+file and give no error. When a part of a capture must be hidden and `mergestory --version` prints 1.7.0
+or older, do not pass that capture at all.
+
+- "Hidden regions: SS2 is not a screenshot or recording of this run": the id is not in this command. Ids
+  restart at `SS1` and `RC1` in every command, and the limits drop the later files. Fix the id, or pass
+  the capture.
+- "has unknown field", "needs a list of regions", "needs ... as a number", "needs w and h above 0",
+  "has N regions, the most is 20": fix the entry as the message says.
+- "a region cannot be limited to a part of a clip": the entry has `from` or `to`. Remove them.
+  A region of a recording is hidden in every frame of the clip.
+- "gives SS1 twice", "gives a field twice in one region" or "has a backslash": JSON keeps only the last of
+  two equal names, so the engine refuses them. Give each id once, each field once, and write no escapes.
+- "Give --redact once": put all regions into one file.
+- "stored turned (EXIF orientation N)": the screenshot is saved turned or mirrored. Save it upright (for
+  example, export it again from the browser or an image editor), then measure the regions on it.
+- "has no part inside the picture": the region lies outside
+  the capture. Measure it again as fractions (0 to 1) of the whole picture.
+- "cannot be shown with its hidden regions" or "could not be decoded": FFmpeg failed on that capture.
+  Make the capture again, or leave it out. Never pass it without the regions.
 
 ## The agent commands refuse to run (exit code 2)
 

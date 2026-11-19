@@ -156,7 +156,16 @@ See [docs/api.md](docs/api.md#safety-rules).
 - Masking is for text: code, captions, narration and logs. MergeStory does not look inside a screenshot or a
   recording. A secret or an e-mail address that shows in a capture shows in the video, and in the pictures
   that the run folder keeps in `recording-frames/` (a step of a reproduction keeps one picture of its
-  recording there). Check a capture before you pass it.
+  recording there), unless you hide it with `--redact`. That option covers
+  the regions you name with a solid block before anything is written: the video, the render plan and the
+  frames hold only the covered picture, and a failure stops the run. The cover is the same whatever was
+  under it. In a recording, a region is covered in every frame of the clip. It is not a blur, because a blurred or pixelated text can sometimes be read
+  back. It finds nothing by itself, so a region you forget stays visible. Check a capture before you pass
+  it.
+- A screenshot, a recording, a file in `recording-frames/` and the render plan never leave the machine. The
+  files that go to a publish target are the video, its poster, its captions and the watch page, and a
+  publisher refuses any other file. Model and speech providers get text only. The pull request comment
+  holds text and a link.
 - MergeStory never runs your tests or your code. Test results in a video are the ones you reported, and
   the video says who reported them.
 - A model server on this machine or on a private network counts as $0 in the budget check when no price is

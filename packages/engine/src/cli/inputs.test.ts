@@ -412,6 +412,76 @@ describe('buildContext: --screenshots-dir', () => {
   });
 });
 
+describe('buildContext: --redact', () => {
+  it('hands the JSON of the file on, to be checked where the ids are known', async () => {
+    await writeFile(join(dir, 'redact.json'), JSON.stringify({ SS1: [{ x: 0, y: 0, w: 1, h: 0.1 }] }));
+    const context = await buildContext({ redact: 'redact.json' }, dir);
+    expect(context?.redact).toEqual({ SS1: [{ x: 0, y: 0, w: 1, h: 0.1 }] });
+    expect(await buildContext({}, dir)).toBeUndefined();
+  });
+
+  it('refuses a file that is missing, too large, not JSON, or named like a credentials file', async () => {
+    await expect(buildContext({ redact: 'missing.json' }, dir)).rejects.toThrow(/--redact: file not found/);
+    await writeFile(join(dir, 'big.json'), `{"SS1": [], "pad": "${'x'.repeat(64 * 1024)}"}`);
+    await expect(buildContext({ redact: 'big.json' }, dir)).rejects.toThrow(/--redact: .*limit is 64 KB/);
+    await writeFile(join(dir, 'bad.json'), '{');
+    await expect(buildContext({ redact: 'bad.json' }, dir)).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining('is not valid JSON'),
+    });
+    await writeFile(join(dir, '.env'), '{}');
+    await expect(buildContext({ redact: '.env' }, dir)).rejects.toThrow(/credentials file/);
+  });
+
+  it('names a picture of --screenshots-dir by its id, like any other screenshot', async () => {
+    await mkdir(join(dir, 'shots'));
+    await writeFile(join(dir, 'shots', 'a.png'), makePng(8, 8));
+    await writeFile(join(dir, 'shots', 'b.png'), makePng(8, 8));
+    await writeFile(join(dir, 'redact.json'), JSON.stringify({ SS2: [{ x: 0, y: 0, w: 0.5, h: 0.5 }] }));
+    const context = await buildContext({ screenshotsDir: 'shots', redact: 'redact.json' }, dir);
+    const inputs = await buildContextInputs(context!, dir, testConfig());
+    expect(inputs.screenshots.map((s) => [s.id, s.hidden?.length ?? 0])).toEqual([
+      ['SS1', 0],
+      ['SS2', 1],
+    ]);
+  });
+
+  it('stops the run on "from" or "to", with a message that says the region is hidden for the whole clip', async () => {
+    await writeFile(join(dir, 'shot.png'), makePng(8, 8));
+    await writeFile(
+      join(dir, 'redact.json'),
+      JSON.stringify({ SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5, to: 2 }] }),
+    );
+    const context = await buildContext({ screenshot: ['shot.png'], redact: 'redact.json' }, dir);
+    await expect(buildContextInputs(context!, dir, testConfig())).rejects.toMatchObject({
+      code: 'USAGE',
+      message: expect.stringContaining(
+        'SS1, region 1 has "to": a region cannot be limited to a part of a clip.',
+      ),
+    });
+  });
+
+  it('refuses a name given twice, which JSON would drop in silence, and any backslash', async () => {
+    const cases: [string, RegExp][] = [
+      ['{"SS1": [{"x": 0, "y": 0, "w": 0.1, "h": 0.1}], "SS1": []}', /gives SS1 twice/],
+      ['{"SS1": [{"x": 0, "x": 0.9, "y": 0, "w": 0.1, "h": 0.1}]}', /gives a field twice in one region/],
+      ['{"SS1": [{"\\u0078": 0, "x": 0.9, "y": 0, "w": 0.1, "h": 0.1}]}', /has a backslash/],
+    ];
+    for (const [text, message] of cases) {
+      await writeFile(join(dir, 'twice.json'), text);
+      await expect(buildContext({ redact: 'twice.json' }, dir)).rejects.toMatchObject({
+        code: 'USAGE',
+        message: expect.stringMatching(message),
+      });
+    }
+    // The same fields in different regions are fine.
+    const fine =
+      '{"SS1": [{"x": 0, "y": 0, "w": 0.1, "h": 0.1}, {"x": 0.5, "y": 0, "w": 0.1, "h": 0.1}], "RC1": []}';
+    await writeFile(join(dir, 'fine.json'), fine);
+    expect((await buildContext({ redact: 'fine.json' }, dir))?.redact).toEqual(JSON.parse(fine));
+  });
+});
+
 describe('formatBytes', () => {
   it('uses B, KB and MB', () => {
     expect(formatBytes(0)).toBe('0 B');

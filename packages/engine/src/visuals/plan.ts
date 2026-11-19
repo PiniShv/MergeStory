@@ -53,12 +53,13 @@ import type {
   EvidenceItem,
   RepoInfo,
   RepoReader,
+  ScreenshotInput,
   Timeline,
   TimelineScene,
 } from '../core/types.ts';
 import { ENGINE_VERSION } from '../version.ts';
 import { CodeResolver, type FocusRange } from './code.ts';
-import { loadScreenshot } from './image.ts';
+import { loadScreenshot, type ScreenshotHiding } from './image.ts';
 import { layoutArchitecture } from './layout.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
 
@@ -150,6 +151,7 @@ interface Environment {
   resolver: CodeResolver;
   images: Map<string, Promise<ResolvedImage>>;
   frames: ReadonlyMap<string, ExtractedFrames>;
+  signal: AbortSignal;
 }
 
 /** The scene being resolved: its frame folders are named by its place in the storyboard (from 1), and a panel appears at a time that follows its beats. */
@@ -161,7 +163,7 @@ interface SceneRef {
 
 interface ResolvedScene {
   visual: ResolvedVisual;
-  /** Code in this scene had secrets masked. */
+  /** Code in this scene had secrets masked, or a capture that it shows has hidden regions. */
   codeMasked: boolean;
   /** Labels of the scene's own code references, shown before cited evidence. */
   codeLabels: string[];
@@ -224,11 +226,28 @@ function screenshotFor(env: Environment, id: string): Promise<ResolvedImage> {
         hint: 'Screenshots must be passed with the run context; ids look like SS1.',
       });
     }
-    pending = loadScreenshot(input.path, env.config, screenshotName(id, input.path));
+    pending = loadScreenshot(
+      input.path,
+      env.config,
+      screenshotName(id, input.path),
+      hidingOf(input, env.signal),
+    );
     env.images.set(id, pending);
   }
   return pending;
 }
+
+/** The regions to hide in a screenshot, or nothing when it has none. */
+function hidingOf(input: ScreenshotInput, signal?: AbortSignal): ScreenshotHiding | undefined {
+  return input.hidden && input.hidden.length > 0
+    ? { id: input.id, regions: input.hidden, signal }
+    : undefined;
+}
+
+/** Whether the capture (a screenshot or a recording id) has regions that are hidden. */
+const hasHidden = (env: Environment, id: string): boolean =>
+  ([...env.inputs.screenshots, ...env.inputs.recordings].find((item) => item.id === id)?.hidden?.length ??
+    0) > 0;
 
 /** The name that a message calls a screenshot by. */
 function screenshotName(id: string, path: string): string {
@@ -243,6 +262,7 @@ export async function loadStoryboardScreenshots(
   storyboard: Storyboard,
   inputs: ContextInputs,
   config: Config,
+  signal?: AbortSignal,
 ): Promise<Map<string, ResolvedImage>> {
   const ids = new Set<string>();
   for (const { visual } of storyboard.scenes) {
@@ -263,7 +283,12 @@ export async function loadStoryboardScreenshots(
   const out = new Map<string, ResolvedImage>();
   for (const id of ids) {
     const input = inputs.screenshots.find((s) => s.id === id);
-    if (input) out.set(id, await loadScreenshot(input.path, config, screenshotName(id, input.path)));
+    if (input) {
+      out.set(
+        id,
+        await loadScreenshot(input.path, config, screenshotName(id, input.path), hidingOf(input, signal)),
+      );
+    }
   }
   return out;
 }
@@ -460,7 +485,10 @@ async function resolvePanel(
         );
       }
       const image = await screenshotFor(env, panel.screenshotId);
-      return { panel: { label, kind: 'screenshot', image, ...marksOf(panel, scrub) }, masked: false };
+      return {
+        panel: { label, kind: 'screenshot', image, ...marksOf(panel, scrub) },
+        masked: hasHidden(env, panel.screenshotId),
+      };
     }
     case 'recording': {
       if (!panel.recordingId) {
@@ -473,7 +501,7 @@ async function resolvePanel(
       const startSec = Math.round((scenePanelStarts(scene)[side] + PANEL_CLIP_DELAY_SEC) * 1000) / 1000;
       return {
         panel: { label, kind: 'recording', frames: frameSetFor(env, scene.number, side, startSec, 1) },
-        masked: false,
+        masked: hasHidden(env, panel.recordingId),
       };
     }
     default:
@@ -656,6 +684,7 @@ async function resolveVisual(
       return {
         ...base,
         actual: true,
+        codeMasked: hasHidden(env, visual.screenshotId),
         visual: {
           type: 'screenshot',
           image: await screenshotFor(env, visual.screenshotId),
@@ -676,6 +705,7 @@ async function resolveVisual(
       return {
         ...base,
         recorded: true,
+        codeMasked: hasHidden(env, visual.recordingId),
         visual: {
           type: 'recording',
           frames: frameSetFor(env, scene.number, null, SCENE_CLIP_START_SEC, visual.speed ?? 1),
@@ -686,8 +716,12 @@ async function resolveVisual(
     case 'repro': {
       const resolved = await resolveRepro(visual, env, scrub, scene);
       const thumbs = resolved.steps.flatMap((s) => (s.thumb ? [s.thumb.kind] : []));
+      const shown = visual.steps.map(({ step }) => env.inputs.repro?.steps[step - 1]);
       return {
         ...base,
+        codeMasked: shown.some((s) =>
+          [s?.screenshotId, s?.recordingId].some((id) => id && hasHidden(env, id)),
+        ),
         visual: resolved,
         reported: true,
         actual: thumbs.includes('screenshot'),
@@ -792,6 +826,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     resolver: new CodeResolver({ reader, changeSet, shiki: theme.shiki, logger: ctx.logger }),
     images: new Map([...(input.images ?? [])].map(([id, image]) => [id, Promise.resolve(image)])),
     frames: input.frames ?? new Map(),
+    signal: ctx.signal,
   };
   const evidence = new Map(analysis.evidence.map((item) => [item.id, item]));
   const metaScrub = createScrubber(config.privacy.maskEmails);

@@ -332,6 +332,49 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
   });
 
+  it('are given --redact with an absolute path, because a later command without it would show what was hidden', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    await writeFile(join(dir, 'redact.json'), '{}');
+    const { code, stdout } = await run(['analyze', 'repo', '--redact', 'redact.json']);
+    expect(code).toBe(0);
+    expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual(['--redact', join(dir, 'redact.json')]);
+    expect(stdout).toContain(`--redact ${join(dir, 'redact.json')}`);
+  });
+
+  it('repeat --repro-file and --redact together, so a later command shows neither the steps nor what was hidden', async () => {
+    analyzeMock.mockResolvedValue(authoring);
+    await mkdir(join(dir, 'repo'));
+    await writeFile(join(dir, 'repro.json'), JSON.stringify({ title: 'Bug', steps: [{ text: 'Open it' }] }));
+    await writeFile(join(dir, 'redact.json'), '{}');
+    const { code, stdout } = await run([
+      'analyze',
+      'repo',
+      '--redact',
+      'redact.json',
+      '--repro-file',
+      'repro.json',
+    ]);
+    expect(code).toBe(0);
+    expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual([
+      '--repro-file',
+      join(dir, 'repro.json'),
+      '--redact',
+      join(dir, 'redact.json'),
+    ]);
+    expect(stdout).toContain(`--repro-file ${join(dir, 'repro.json')} --redact ${join(dir, 'redact.json')}`);
+  });
+
+  it('refuse a second --redact: the first file would be dropped in silence', async () => {
+    await mkdir(join(dir, 'repo'), { recursive: true });
+    await writeFile(join(dir, 'a.json'), '{}');
+    await writeFile(join(dir, 'b.json'), '{}');
+    const { code, stderr } = await run(['analyze', 'repo', '--redact', 'a.json', '--redact', 'b.json']);
+    expect(code).toBe(2);
+    expect(stderr).toContain('Give --redact once');
+    expect(analyzeMock).not.toHaveBeenCalled();
+  });
+
   it('are given an inline task as it was typed, and nothing else when no flag was used', async () => {
     analyzeMock.mockResolvedValue(authoring);
     await run(['analyze', 'acme/app#42', '--task', 'Add retries']);

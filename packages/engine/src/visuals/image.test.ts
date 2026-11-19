@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
+import { checkScreenshotFile } from '../pipeline/inputs.ts';
 import { testConfig } from '../testing/context.ts';
 import { ffmpegTo } from '../testing/media.ts';
 import { makeJpeg, makePng, pngHeader } from '../testing/png.ts';
@@ -41,16 +42,48 @@ describe('detectImage', () => {
     const withExif = (segment: Buffer, at = 2) =>
       Buffer.concat([jpeg.subarray(0, at), segment, jpeg.subarray(at)]);
     const turned = { mime: 'image/jpeg', width: 720, height: 1280 };
-    expect(detectImage(withExif(exif(6)))).toEqual(turned);
-    expect(detectImage(withExif(exif(8, 'II')))).toEqual(turned);
+    expect(detectImage(withExif(exif(6)))).toEqual({ ...turned, orientation: 6 });
+    expect(detectImage(withExif(exif(8, 'II')))).toEqual({ ...turned, orientation: 8 });
     // After the frame header, where some cameras write it.
-    expect(detectImage(withExif(exif(5), jpeg.length - 2))).toEqual(turned);
-    // Turned by a half, mirrored, not an orientation, or pointing outside its data: the size stays.
+    expect(detectImage(withExif(exif(5), jpeg.length - 2))).toEqual({ ...turned, orientation: 5 });
+    // Turned by a half or mirrored: the size stays, and the orientation is handed out.
+    expect(detectImage(withExif(exif(3)))).toEqual({
+      mime: 'image/jpeg',
+      width: 1280,
+      height: 720,
+      orientation: 3,
+    });
+    expect(detectImage(withExif(exif(2)))).toEqual({
+      mime: 'image/jpeg',
+      width: 1280,
+      height: 720,
+      orientation: 2,
+    });
+    // Upright, not an orientation, or pointing outside its data: nothing to tell.
     const outside = exif(6);
     outside.writeUInt32BE(0xffff, 14);
-    for (const segment of [exif(3), exif(2), exif(9), outside]) {
+    for (const segment of [exif(1), exif(9), outside]) {
       expect(detectImage(withExif(segment))).toEqual({ mime: 'image/jpeg', width: 1280, height: 720 });
     }
+  });
+
+  it('hands out the orientation of a PNG eXIf chunk', () => {
+    const png = makePng(40, 20);
+    const chunk = (orientation: number): Buffer => {
+      const tiff = exif(orientation).subarray(10);
+      const head = Buffer.alloc(8);
+      head.writeUInt32BE(tiff.length, 0);
+      head.write('eXIf', 4, 'latin1');
+      return Buffer.concat([head, tiff, Buffer.alloc(4)]);
+    };
+    // Right after the 33 bytes of the signature and the header chunk.
+    const withChunk = (orientation: number) =>
+      Buffer.concat([png.subarray(0, 33), chunk(orientation), png.subarray(33)]);
+    expect(detectImage(withChunk(6))).toEqual({ mime: 'image/png', width: 40, height: 20, orientation: 6 });
+    expect(detectImage(withChunk(1))).toEqual({ mime: 'image/png', width: 40, height: 20 });
+    // After the image data, just before the end chunk.
+    const late = Buffer.concat([png.subarray(0, -12), chunk(3), png.subarray(-12)]);
+    expect(detectImage(late)).toEqual({ mime: 'image/png', width: 40, height: 20, orientation: 3 });
   });
 
   it('rejects everything else, whatever the file name says', () => {
@@ -236,4 +269,45 @@ describe('loadScreenshot: a picture wider than 2560 pixels', () => {
       expect(args.at(-1)).toBe('pipe:1');
     }
   });
+});
+
+describe('a screenshot that is stored turned', () => {
+  let dir: string;
+  beforeAll(async () => {
+    dir = await mkdtemp(join(tmpdir(), 'mergestory-turned-'));
+    await writeFile(join(dir, 'fails.sh'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+  });
+  afterAll(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+  const jpeg = makeJpeg(64, 32);
+  const turned = (orientation: number) =>
+    Buffer.concat([jpeg.subarray(0, 2), exif(orientation), jpeg.subarray(2)]);
+  const hide = {
+    id: 'SS1',
+    regions: [{ x: 0, y: 0, w: 0.5, h: 0.5 }],
+  };
+  // Never run: the picture is refused before FFmpeg is asked, so this one would fail if it were.
+  const config = (): ReturnType<typeof testConfig> => {
+    const fake = join(dir, 'fails.sh');
+    return testConfig({ render: { ffmpegPath: fake, ffprobePath: fake } });
+  };
+
+  for (const orientation of [6, 3]) {
+    it(`is refused with hidden regions, and shown as it is without them (orientation ${orientation})`, async () => {
+      const file = join(dir, `turned-${orientation}.jpg`);
+      const bytes = turned(orientation);
+      await writeFile(file, bytes);
+      const refused = {
+        code: 'USAGE',
+        message: expect.stringContaining(`stored turned (EXIF orientation ${orientation})`),
+      };
+      await expect(loadScreenshot(file, config(), 'Screenshot SS1', hide)).rejects.toMatchObject(refused);
+      await expect(checkScreenshotFile(file, dir, 'Screenshot', true)).rejects.toMatchObject(refused);
+      expect((await loadScreenshot(file, config())).src).toBe(
+        `data:image/jpeg;base64,${bytes.toString('base64')}`,
+      );
+      expect(await checkScreenshotFile(file, dir)).toBe(file);
+    });
+  }
 });

@@ -7,6 +7,8 @@ import type { PublishBundle, PublishFile } from '../core/providers.ts';
 /** Name of the generated watch page. Bundles may not contain a file with this name. */
 export const WATCH_PAGE_NAME = 'index.html';
 
+/** The only files that a publisher is handed, by name without the extension: the video, its poster and its captions. */
+const PUBLISHED_STEMS = ['video', 'poster', 'captions'];
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const VIDEO_EXT = /\.(mp4|m4v|webm|mov)$/i;
 const IMAGE_EXT = /\.(jpe?g|png|webp)$/i;
@@ -21,7 +23,7 @@ export interface ClassifiedBundle {
   video: BundleFile;
   poster: BundleFile | null;
   captions: BundleFile | null;
-  /** Upload order: video first (fail early), then captions and poster, then anything else. */
+  /** Upload order: video first (fail early), then captions and poster. */
   ordered: BundleFile[];
   totalBytes: number;
 }
@@ -55,6 +57,13 @@ export async function classifyBundle(bundle: Pick<PublishBundle, 'files'>): Prom
   const entries: BundleFile[] = [];
   for (const file of bundle.files) {
     assertSafeName(file.name);
+    // Only these three leave the machine. A capture, a frame of a recording or the render plan can never be in a bundle.
+    if (!PUBLISHED_STEMS.includes(file.name.replace(/\.[^.]*$/, '').toLowerCase())) {
+      throw invalid(
+        `${file.name.slice(0, 40)} is not the video, its poster or its captions.`,
+        'Only the video, its poster and its captions are published.',
+      );
+    }
     const key = file.name.toLowerCase();
     if (seen.has(key))
       throw invalid(`The bundle lists ${file.name} twice.`, 'Each published file needs a unique name.');
@@ -76,7 +85,6 @@ export async function classifyBundle(bundle: Pick<PublishBundle, 'files'>): Prom
   if (!video) throw invalid('The bundle has no video file.', 'Render the video before publishing.');
   const poster = entries.find((e) => IMAGE_EXT.test(e.file.name)) ?? null;
   const captions = entries.find((e) => CAPTION_EXT.test(e.file.name)) ?? null;
-  const rest = entries.filter((e) => e !== video && e !== poster && e !== captions);
-  const ordered = [video, captions, poster, ...rest].filter((e): e is BundleFile => e !== null);
+  const ordered = [video, captions, poster].filter((e): e is BundleFile => e !== null);
   return { video, poster, captions, ordered, totalBytes: ordered.reduce((sum, e) => sum + e.sizeBytes, 0) };
 }
