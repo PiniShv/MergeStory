@@ -505,6 +505,52 @@ function tidy(text: string): string {
     .trim();
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
+
+/**
+ * Clock times, ISO dates and dotted versions in the words a person says: "17:00" is "5 PM",
+ * "2026-11-19" is "November 19, 2026", "1.0.0.52" is "1 point 0 point 0 point 52". Without this the
+ * later passes read the separators as gaps ("2026 11 19"). Line references such as "app.ts:42" and
+ * plain decimals such as "1.5" and times that already say AM or PM are left alone.
+ */
+function expandTimesDatesVersions(text: string): string {
+  return text
+    .replace(
+      /(?<![\w.-])(\d{4})-(\d{2})-(\d{2})(?![\w-]|[.:]\d)/g,
+      (match, y: string, m: string, d: string) => {
+        const month = MONTHS[Number(m) - 1];
+        const day = Number(d);
+        return month && day >= 1 && day <= 31 ? `${month} ${day}, ${y}` : match;
+      },
+    )
+    .replace(
+      /(?<![\w.:/-])([01]?\d|2[0-3]):([0-5]\d)(?![\w:]|\.\d|\s?[AaPp]\.?[Mm]\b)/g,
+      (_m, h: string, min: string) => {
+        const hour = Number(h);
+        if (hour === 0 && min === '00') return 'midnight';
+        if (hour === 12 && min === '00') return 'noon';
+        const clock = hour % 12 === 0 ? 12 : hour % 12;
+        return `${clock}${min === '00' ? '' : ` ${min}`} ${hour < 12 ? 'AM' : 'PM'}`;
+      },
+    )
+    .replace(/(?<![\w.])v?(\d+(?:\.\d+){2,})(?![\w]|\.\d)/g, (_m, version: string) =>
+      version.split('.').join(' point '),
+    );
+}
+
 /** Text as it should be spoken: markup removed, symbols, units, paths and identifiers in plain words. */
 export function toSpokenText(text: string): string {
   let out = normalizeCharacters(text);
@@ -513,6 +559,7 @@ export function toSpokenText(text: string): string {
   out = out.replace(/\S•{3,}@[\w.-]*\w/g, 'an email address');
   out = out.replace(/•{3,}/g, 'a hidden value');
   out = replaceUrls(out);
+  out = expandTimesDatesVersions(out);
   out = expandAbbreviations(out);
   out = replaceTerms(out);
   out = replacePaths(out);

@@ -2,6 +2,14 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Fixed:** the voice reads clock times, dates and versions as a person says them. `17:00` is "5 PM",
+  `2026-11-19` is "November 19, 2026" and `1.0.0.52` is "1 point 0 point 0 point 52". Before, the speech
+  engine chose how to read them. Captions still show the text as written.
+
 ## 1.8.0
 
 ### Skill and plugin
