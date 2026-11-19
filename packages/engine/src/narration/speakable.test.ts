@@ -97,6 +97,24 @@ describe('toSpokenText: comparisons and powers', () => {
   });
 });
 
+describe('toSpokenText: times, dates and versions', () => {
+  cases([
+    ['The job runs at 17:00.', 'The job runs at 5 PM.'],
+    ['It starts at 09:30.', 'It starts at 9 30 A-M.'],
+    ['At 00:00 and at 12:00.', 'At midnight and at noon.'],
+    ['On 2026-11-19 it changed.', 'On November 19, 2026 it changed.'],
+    ['Version 1.0.0.52 ships.', 'Version 1 point 0 point 0 point 52 ships.'],
+    ['Bump to v2.3.1, not 1.5.', 'Bump to 2 point 3 point 1, not 1.5.'],
+    ['Ticket ABC-123 asks for it.', 'Ticket A-B-C-123 asks for it.'],
+  ]);
+
+  it('leaves line references, ratios, impossible dates and times with AM or PM alone', () => {
+    expect(toSpokenText('See app.ts:42.')).toBe('See the app file, line 42.');
+    expect(toSpokenText('A 16:9 frame, not 2026-13-40.')).toBe('A 16:9 frame, not 2026-13-40.');
+    expect(toSpokenText('At 3:45 PM.')).toBe('At 3:45 PM.');
+  });
+});
+
 describe('toSpokenText: issue numbers', () => {
   cases([
     ['Fixes #123', 'Fixes number 123'],
@@ -129,7 +147,7 @@ describe('toSpokenText: units glued to numbers', () => {
     expect(toSpokenText('Music from the 1990s')).toBe('Music from the 1990s');
     expect(toSpokenText('Error 429')).toBe('Error 429');
     expect(toSpokenText('30000 items')).toBe('30000 items');
-    expect(toSpokenText('Version v2.1.0')).toBe('Version v2.1.0');
+    expect(toSpokenText('Version v2.1')).toBe('Version v2.1');
     expect(toSpokenText('2.5 second wait')).toBe('2.5 second wait');
     expect(toSpokenText('Percentile p99')).toBe('Percentile p99');
   });
