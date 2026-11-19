@@ -49,8 +49,24 @@ describe('evidence pack structure', () => {
       emptyInputs({
         task: 'Add retry to the client',
         notes: 'Used a plain loop.',
-        tests: [{ id: 'T1', command: 'npm test', passed: true, summary: '4 passed', source: 'agent' }],
-        screenshots: [{ id: 'SS1', path: '/tmp/x.png', caption: 'The settings page', moment: 'after' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: true,
+            summary: '4 passed',
+            source: 'agent',
+            log: null,
+          },
+        ],
+        screenshots: [
+          {
+            id: 'SS1',
+            path: '/tmp/x.png',
+            caption: 'The settings page',
+            moment: 'after',
+          },
+        ],
       }),
     );
     const headings = [
@@ -272,7 +288,16 @@ describe('evidence pack structure', () => {
       {},
       {},
       emptyInputs({
-        tests: [{ id: 'T1', command: 'npm test', passed: false, summary: '2 failed', source: 'ci' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: false,
+            summary: '2 failed',
+            source: 'ci',
+            log: null,
+          },
+        ],
       }),
     );
     expect(markdown).toMatch(/reported by the caller/);
@@ -467,6 +492,7 @@ describe('masking', () => {
             passed: true,
             summary: GH_TOKEN,
             source: 'user',
+            log: null,
           },
         ],
       }),
@@ -583,5 +609,148 @@ describe('minimal context', () => {
     // Metadata, paths and symbol names stay.
     expect(markdown).toContain('src/retry.ts');
     expect(markdown).toContain('`retry`');
+  });
+});
+
+describe('logs in the evidence pack', () => {
+  const numbered = (n: number, text = 'plain line') =>
+    Array.from({ length: n }, (_, i) => `${text} ${i + 1}`);
+  const log = (lines: string[], caption = 'Run of the checks') => ({
+    id: 'L1',
+    path: '/tmp/run.log',
+    caption,
+    lines,
+  });
+
+  it('lists each log with its line count, says how to cite a range, and lists the id', async () => {
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(numbered(412))] }));
+    expect(markdown).toContain('## Available logs');
+    expect(markdown).toContain('- L1 (412 lines): Run of the checks');
+    expect(markdown).toContain('`L1.120-140`');
+    expect(markdown).toMatch(/- Other: .*L1/);
+  });
+
+  it('shows the first 30 and the last 30 lines, numbered, with "..." where lines are left out', async () => {
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(numbered(100))] }));
+    const excerpt = markdown.slice(markdown.indexOf('L1 excerpt'));
+    expect(excerpt).toMatch(/^ +1 {3}plain line 1$/m);
+    expect(excerpt).toMatch(/^ +30 {3}plain line 30$/m);
+    expect(excerpt).not.toContain('plain line 31\n');
+    expect(excerpt).not.toContain('plain line 70\n');
+    expect(excerpt).toMatch(/^ +71 {3}plain line 71$/m);
+    expect(excerpt).toMatch(/^ +100 {3}plain line 100$/m);
+    expect(excerpt).toMatch(/^ +\.\.\.$/m);
+  });
+
+  it('shows lines with error words, in any letter case, with one line before and after each', async () => {
+    const lines = numbered(100);
+    lines[49] = 'Something FAILED here';
+    lines[59] = 'a Traceback follows';
+    lines[64] = 'an unrelated passed line';
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(lines)] }));
+    const excerpt = markdown.slice(markdown.indexOf('L1 excerpt'));
+    for (const n of [49, 50, 51, 59, 60, 61])
+      expect(excerpt, `line ${n}`).toMatch(new RegExp(`^ +${n} {3}`, 'm'));
+    expect(excerpt).not.toMatch(/^ +48 {3}/m);
+    expect(excerpt).not.toMatch(/^ +65 {3}an unrelated/m);
+  });
+
+  it('shows at most 40 lines with an error word', async () => {
+    const lines = numbered(400).map((line, i) =>
+      i >= 40 && i < 300 && i % 4 === 0 ? `error at ${i}` : line,
+    );
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(lines)] }));
+    const shown = markdown.match(/^ +\d+ {3}error at \d+$/gm) ?? [];
+    expect(shown).toHaveLength(40);
+  });
+
+  it('counts only lines that are not shown yet, so a failure in the middle is not lost', async () => {
+    const lines = numbered(300, 'step');
+    for (let i = 0; i < 45; i++) lines[i] = `npm warn deprecated pkg${i + 1}`;
+    lines[149] = 'FAIL assertion: expected 5 got 23';
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(lines)] }));
+    expect(markdown).toMatch(/^ +150 {3}FAIL assertion: expected 5 got 23$/m);
+  });
+
+  it('keeps the code in the pack when four large logs are supplied, by shortening the excerpts', async () => {
+    const wide = (tag: string) =>
+      Array.from({ length: 900 }, (_, i) => `error ${tag} ${i + 1} `.padEnd(200, 'x'));
+    const logs = ['a', 'b', 'c', 'd'].map((tag, i) => ({ ...log(wide(tag)), id: `L${i + 1}` }));
+    const { includedHunks, markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs }));
+    expect(includedHunks.length).toBeGreaterThan(0);
+    // Shortened, but each log still shows its first lines.
+    expect(markdown).toMatch(/^ +1 {3}error a 1 /m);
+    expect(markdown.match(/^ +\d+ {3}error a /gm)?.length).toBeLessThan(60);
+  });
+
+  it('shows a short log whole, without "..."', async () => {
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(numbered(5))] }));
+    const excerpt = markdown.slice(markdown.indexOf('L1 excerpt'));
+    expect(excerpt.match(/^ +\d+ {3}plain line/gm)).toHaveLength(5);
+    expect(excerpt).not.toMatch(/^ +\.\.\.$/m);
+  });
+
+  it('cuts a long line to 200 characters and masks a secret and an e-mail address', async () => {
+    const lines = ['word '.repeat(100), `key ${AWS_KEY} mail jane.doe@example.com`];
+    const { markdown } = await pack(SAMPLE, { maskEmails: true }, {}, emptyInputs({ logs: [log(lines)] }));
+    const row = /^ +1 {3}(word .*)$/m.exec(markdown)?.[1] ?? '';
+    expect(row).toHaveLength(200);
+    expect(row.endsWith('…')).toBe(true);
+    expect(markdown).not.toContain(AWS_KEY);
+    expect(markdown).not.toContain('jane.doe@');
+  });
+
+  it('masks a private key that starts above the excerpt', async () => {
+    const body = 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj';
+    const lines = [
+      ...numbered(40),
+      '-----BEGIN PRIVATE KEY-----',
+      body,
+      body,
+      '-----END PRIVATE KEY-----',
+      ...numbered(5),
+    ];
+    const { markdown } = await pack(SAMPLE, {}, {}, emptyInputs({ logs: [log(lines)] }));
+    expect(markdown).not.toContain(body);
+    expect(markdown).not.toContain('PRIVATE KEY');
+  });
+
+  it('leaves the excerpt out with minimal context, and keeps the list line', async () => {
+    const { markdown } = await pack(
+      SAMPLE,
+      { llmContext: 'minimal' },
+      {},
+      emptyInputs({ logs: [log(['secret line'])] }),
+    );
+    expect(markdown).toContain('- L1 (1 line): Run of the checks');
+    expect(markdown).not.toContain('secret line');
+    expect(markdown).not.toContain('L1 excerpt');
+  });
+
+  it('shows the log of a test result next to the result', async () => {
+    const { markdown } = await pack(
+      SAMPLE,
+      {},
+      {},
+      emptyInputs({
+        logs: [log(numbered(200))],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: true,
+            summary: '4 passed',
+            source: 'agent',
+            log: 'L1.120-140',
+          },
+        ],
+      }),
+    );
+    expect(markdown).toContain('(source: agent, output: L1.120-140)');
+  });
+
+  it('writes nothing about logs when there is none', async () => {
+    const { markdown } = await pack(SAMPLE);
+    expect(markdown).not.toContain('Available logs');
   });
 });

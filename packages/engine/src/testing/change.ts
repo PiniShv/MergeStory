@@ -213,5 +213,14 @@ export function buildChange(files: FixtureFile[], options: ChangeOptions = {}): 
 }
 
 export function emptyInputs(overrides: Partial<ContextInputs> = {}): ContextInputs {
-  return { task: null, notes: null, tests: [], screenshots: [], recordings: [], repro: null, ...overrides };
+  return {
+    task: null,
+    notes: null,
+    tests: [],
+    screenshots: [],
+    recordings: [],
+    repro: null,
+    logs: [],
+    ...overrides,
+  };
 }

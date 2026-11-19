@@ -138,6 +138,35 @@
     },
     {
       "id": "s5",
+      "role": "under-the-hood",
+      "title": "The real output",
+      "narration": [
+        {
+          "text": "This is the real output of a small check that runs the fixed code. The old way joined the text and gave 23.",
+          "evidence": ["L1.2", "T2"]
+        },
+        {
+          "text": "The fixed code adds the numbers and gives 5 items.",
+          "evidence": ["L1.3", "T2"]
+        }
+      ],
+      "visual": {
+        "type": "log",
+        "logId": "L1",
+        "startLine": 1,
+        "endLine": 7,
+        "focus": [
+          { "startLine": 2, "endLine": 2, "note": "Text joined: 23", "beat": 0 },
+          { "startLine": 3, "endLine": 3, "note": "Numbers added: 5 items", "beat": 1 }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The real output of the check: the old way gives 23, the fixed code gives 5 items.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s6",
       "role": "before-after",
       "title": "Before and after",
       "narration": [
@@ -175,7 +204,7 @@
       "targetSeconds": null
     },
     {
-      "id": "s6",
+      "id": "s7",
       "role": "review",
       "title": "What to check",
       "narration": [
@@ -206,7 +235,7 @@
       "targetSeconds": null
     },
     {
-      "id": "s7",
+      "id": "s8",
       "role": "conclusion",
       "title": "Wrap up",
       "narration": [

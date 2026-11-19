@@ -6,6 +6,7 @@
  * Steps, in order: schema, secrets and personal data, language and titles, limits, evidence ids,
  * code references, narration, on-screen text, visual consistency, beat indexes.
  */
+import { findEvidence } from '../analyzer/evidence.ts';
 import { changedLinesAt, diffViewSpan, fitDiffRange, overlapsAnyHunk } from '../core/diff-view.ts';
 import { maskPrivateReport } from '../core/secrets.ts';
 import { beatHolders, groundedLines, isSimulated } from '../core/storyboard-facts.ts';
@@ -95,6 +96,7 @@ const MASK_SKIP_KEYS = new Set([
   'evidence',
   'screenshotId',
   'recordingId',
+  'logId',
   'severity',
   'direction',
   'transition',
@@ -343,9 +345,10 @@ async function resolveOptionalRef(ref: CodeRefInput, path: string, run: Run): Pr
 
 function clampFocus(
   focus: { startLine: number; endLine: number; note: string | null; beat: number }[],
-  ref: CodeRefInput,
+  ref: Pick<CodeRefInput, 'startLine' | 'endLine'>,
   path: string,
   run: Run,
+  shown = 'the code shown',
 ): typeof focus {
   const kept: typeof focus = [];
   focus.forEach((item, index) => {
@@ -355,7 +358,7 @@ function clampFocus(
     if (end < ref.startLine || start > ref.endLine) {
       run.fix(
         `${path}[${index}]`,
-        `dropped the focus range ${item.startLine}-${item.endLine} because it is outside the code shown (${ref.startLine}-${ref.endLine})`,
+        `dropped the focus range ${item.startLine}-${item.endLine} because it is outside ${shown} (${ref.startLine}-${ref.endLine})`,
       );
       return;
     }
@@ -364,7 +367,7 @@ function clampFocus(
     if (clampedStart !== item.startLine || clampedEnd !== item.endLine) {
       run.fix(
         `${path}[${index}]`,
-        `focus range ${item.startLine}-${item.endLine} was changed to ${clampedStart}-${clampedEnd} to fit the code shown`,
+        `focus range ${item.startLine}-${item.endLine} was changed to ${clampedStart}-${clampedEnd} to fit ${shown}`,
       );
     }
     kept.push({ ...item, startLine: clampedStart, endLine: clampedEnd });
@@ -461,6 +464,73 @@ async function resolveCodeRefs(scene: Scene, visual: VisualOf<'code'>, vp: strin
   recordShownLines(outcome.lines, visual.ref, run);
 }
 
+/**
+ * Put the lines of a log visual in order and inside the log, and no more than the screen holds. Every
+ * repair lands on a range that passes the same check again, so a second validation changes nothing.
+ */
+function resolveLog(visual: VisualOf<'log'>, vp: string, run: Run): void {
+  const log = run.logs.get(visual.logId);
+  if (!log) {
+    const known = [...run.logs.keys()];
+    run.error(
+      `${vp}.logId`,
+      'log-unknown',
+      `"${visual.logId}" is not a supplied log; ${known.length ? `use one of ${known.join(', ')}` : 'no logs were supplied, so use another visual'}`,
+    );
+    return;
+  }
+  const total = log.lines.length;
+  let start = Math.trunc(visual.startLine);
+  let end = Math.trunc(visual.endLine);
+  if (start > end) {
+    [start, end] = [end, start];
+    run.fix(vp, 'put startLine and endLine in order');
+  }
+  const asked = `${start} to ${end}`;
+  if (end < 1 || start > total) {
+    run.error(
+      `${vp}.startLine`,
+      'log-range-out-of-range',
+      `lines ${asked} are outside the log "${log.id}", which has ${total} lines; choose lines inside it`,
+    );
+    return;
+  }
+  if (start < 1 || end > total) {
+    start = Math.max(start, 1);
+    end = Math.min(end, total);
+    run.warn(
+      `${vp}.startLine`,
+      'log-range-out-of-range',
+      `lines ${asked} reach outside the log "${log.id}", which has ${total} lines; they were cut to fit`,
+    );
+    run.fix(vp, `cut the lines to ${start} to ${end}, inside the log`);
+  }
+  const max = LIMITS.maxLogLines;
+  if (end - start + 1 > max) {
+    run.warn(
+      `${vp}.endLine`,
+      'log-too-long',
+      `a scene shows at most ${max} lines of a log; lines ${start} to ${end} were shortened`,
+    );
+    run.fix(
+      vp,
+      `shortened the lines from the end to ${start} to ${start + max - 1} (the limit is ${max} lines)`,
+    );
+    end = start + max - 1;
+  }
+  visual.startLine = start;
+  visual.endLine = end;
+  visual.focus = clampFocus(
+    visual.focus,
+    { startLine: start, endLine: end },
+    `${vp}.focus`,
+    run,
+    'the lines shown',
+  );
+  // The lines are on screen, so the names in them are known names.
+  addCorpusText(run.corpus, log.lines.slice(start - 1, end).join('\n'));
+}
+
 async function resolveBeforeAfterRefs(
   scene: Scene,
   visual: VisualOf<'before-after'>,
@@ -509,6 +579,8 @@ async function resolveSceneRefs(scene: Scene, p: string, run: Run): Promise<void
   switch (visual.type) {
     case 'code':
       return resolveCodeRefs(scene, visual, vp, run);
+    case 'log':
+      return resolveLog(visual, vp, run);
     case 'before-after':
       return resolveBeforeAfterRefs(scene, visual, vp, run);
     case 'checklist':
@@ -561,7 +633,7 @@ function clampBeats(scene: Scene, p: string, run: Run): void {
 function checkSimulatedEvidence(scene: Scene, p: string, run: Run): void {
   if (!isSimulated(scene.visual)) return;
   const backed = narrationEvidence(scene).some((id) => {
-    const kind = run.evidence.get(id)?.kind;
+    const kind = findEvidence(run.evidence, id)?.kind;
     return kind === 'file' || kind === 'hunk' || kind === 'symbol';
   });
   if (!backed) {

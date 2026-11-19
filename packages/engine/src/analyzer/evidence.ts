@@ -1,5 +1,6 @@
 /** The evidence index: every citable fact, with a short label and a link when one exists. */
 
+import { lineRangeText, resolveLogId } from '../core/log-id.ts';
 import { maskPrivate } from '../core/secrets.ts';
 import { trimTrailingSlashes, truncate } from '../core/text.ts';
 import type {
@@ -19,6 +20,26 @@ import { blobUrl, shortSha } from './util.ts';
 export function cleanLabel(text: string, max: number): string {
   // Labels always mask e-mail addresses, whatever the privacy setting.
   return truncate(maskPrivate(text.replace(/\s+/g, ' ').trim(), { maskEmails: true }), max);
+}
+
+/**
+ * The evidence item that an id points at, or null when there is none. Every id is an exact match,
+ * except a range of lines of a log ("L1.120-140"), which is valid when the log exists and the range
+ * lies inside it. A range gets its own label. Use this wherever an id is looked up or labelled.
+ */
+export function findEvidence(index: ReadonlyMap<string, EvidenceItem>, id: string): EvidenceItem | null {
+  const exact = index.get(id);
+  if (exact) return exact;
+  const cite = resolveLogId(id, { get: (log) => index.get(log)?.lines });
+  const log = cite ? index.get(cite.log) : undefined;
+  if (!cite || !log) return null;
+  return {
+    id,
+    kind: 'log',
+    label: `${log.label}, ${lineRangeText(cite.start, cite.end)}`,
+    ref: null,
+    url: null,
+  };
 }
 
 export interface EvidenceSources {
@@ -128,6 +149,17 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
     add('REPRO', 'repro', cleanLabel(inputs.repro.title, 100), null, null);
     for (const [i, step] of inputs.repro.steps.entries())
       add(`REPRO.${i + 1}`, 'repro', cleanLabel(`Step ${i + 1}: ${step.text}`, 100), null, null);
+  }
+  for (const log of inputs.logs) {
+    const label = `Log: ${cleanLabel(log.caption, 80)}`;
+    items.push({
+      id: log.id,
+      kind: 'log',
+      label,
+      ref: null,
+      url: null,
+      lines: log.lines.length,
+    });
   }
   add('REPO', 'repo', 'Repository structure', null, web);
   return items;

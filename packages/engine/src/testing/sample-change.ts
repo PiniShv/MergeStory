@@ -387,10 +387,20 @@ export function sampleInputs(): ContextInputs {
   return {
     task: null,
     notes: null,
-    tests: [{ id: 'T1', command: 'npm test', passed: true, summary: '42 passed', source: 'agent' }],
+    tests: [
+      {
+        id: 'T1',
+        command: 'npm test',
+        passed: true,
+        summary: '42 passed',
+        source: 'agent',
+        log: null,
+      },
+    ],
     screenshots: [],
     recordings: [],
     repro: null,
+    logs: [],
   };
 }
 

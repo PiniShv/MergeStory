@@ -67,6 +67,14 @@ const VISUALS: Record<VisualType, Visual> = {
     focus: null,
   },
   repro: { type: 'repro', steps: [{ step: 1, beat: 0 }] },
+  log: {
+    type: 'log',
+    logId: 'L1',
+    startLine: 1,
+    endLine: 2,
+    focus: [],
+    caption: null,
+  },
   summary: { type: 'summary', points: [], closing: null },
 };
 

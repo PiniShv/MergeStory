@@ -34,8 +34,8 @@ const Source = z.string().superRefine((value, ctx) => {
   if (problem) ctx.addIssue({ code: 'custom', message: problem });
 });
 
-/** The pipeline's test result, with the API's own length limits. */
-const TestResult = TestResultSchema.extend({
+/** The pipeline's test result, with the API's own length limits. The API takes no log, so a "log" is refused. */
+const TestResult = TestResultSchema.omit({ log: true }).extend({
   command: z.string().min(1).max(1000),
   summary: z.string().max(4000),
 });

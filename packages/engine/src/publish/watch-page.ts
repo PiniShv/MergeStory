@@ -370,7 +370,7 @@ function renderTrust(claims: WatchPageData['claims']): string {
     '<section class="card" aria-labelledby="h-trust"><h2 id="h-trust">Why you can trust this video</h2>' +
     `<p class="stat"><strong>${grounded} of ${all.length}</strong> narration ${single ? 'line cites' : 'lines cite'} evidence from the change.</p>` +
     `<progress class="meter" max="${all.length}" value="${grounded}" aria-hidden="true"></progress>` +
-    '<p class="muted">Each line points at files, hunks, symbols, commits, tests, or screenshots and recordings that were supplied with it, and MergeStory checks every reference before it renders the video. Open a chapter to see what its lines rely on.</p>' +
+    '<p class="muted">Each line points at files, hunks, symbols, commits, tests, or screenshots, recordings and logs that were supplied with it, and MergeStory checks every reference before it renders the video. Open a chapter to see what its lines rely on.</p>' +
     `${details}${hidden > 0 ? `<p class="muted">${hidden} more lines are not shown.</p>` : ''}</section>`
   );
 }

@@ -55,6 +55,7 @@ export const MIN_SCENE_SECONDS: Record<VisualType, number> = {
   screenshot: 4.5,
   recording: 4.5,
   repro: 4.5,
+  log: 6,
   summary: 4.5,
 };
 

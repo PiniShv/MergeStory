@@ -2,11 +2,14 @@
  * State shared by the validation steps: the issue lists, indexes of what the change contains,
  * the corpus of known names, and the sentence-level checks used for narration and on-screen text.
  */
+
+import { findEvidence } from '../analyzer/evidence.ts';
 import type { Config } from '../core/config.ts';
 import { isShowable } from '../core/path-policy.ts';
 import { truncate } from '../core/text.ts';
 import type {
   EvidenceItem,
+  LogInput,
   RecordingInput,
   ReproInput,
   ScreenshotInput,
@@ -168,6 +171,7 @@ export class Run {
   readonly screenshots: Map<string, ScreenshotInput>;
   readonly recordings: Map<string, RecordingInput>;
   readonly repro: ReproInput | null;
+  readonly logs: Map<string, LogInput>;
   readonly corpus: KnownCorpus;
   /** Hosts of web addresses that appear in visible code or in the caller's task and notes. */
   readonly codeHosts: ReadonlySet<string>;
@@ -188,6 +192,7 @@ export class Run {
     this.screenshots = new Map(deps.inputs.screenshots.map((shot) => [shot.id, shot]));
     this.recordings = new Map(deps.inputs.recordings.map((rec) => [rec.id, rec]));
     this.repro = deps.inputs.repro;
+    this.logs = new Map(deps.inputs.logs.map((log) => [log.id, log]));
     this.corpus = buildKnownCorpus(deps);
     this.codeHosts = collectCodeHosts(deps);
     this.codeText = codeTextOf(
@@ -216,7 +221,7 @@ export class Run {
     const unknown: string[] = [];
     for (const raw of ids) {
       const id = raw.trim();
-      if (this.evidence.has(id)) {
+      if (findEvidence(this.evidence, id)) {
         if (!valid.includes(id)) valid.push(id);
       } else if (id) {
         unknown.push(id);

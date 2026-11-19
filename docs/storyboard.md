@@ -122,6 +122,8 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 | Terminal lines, browser blocks | 12, 8. |
 | Title chips, mission points | 4. |
 | Steps of a reproduction in one scene | 6. A longer reproduction is shown in two scenes. |
+| Lines of a log in one `log` visual | 18. The end is cut. |
+| Lines that one cited range of a log spans (`L1.120-140`) | 200. A longer range is not a valid id. |
 | Part of one recording that one scene shows | 20 seconds (`inputs.maxClipSeconds`). The end is cut. |
 | Speed of a recording | 0.5 to 4. |
 | Highlights on one screenshot, recording or panel | 4. The first four stay. |
@@ -158,11 +160,12 @@ same input always gives the same ids.
 | `RC1`, ... | A screen recording you supplied with `--recording`. |
 | `REPRO` | The title of the reproduction you supplied with `--repro-file`. |
 | `REPRO.1`, ... | Step 1, 2, and so on of that reproduction. |
+| `L1`, ... | A log you supplied with `--log`. `L1.120-140` is lines 120 to 140 of it, and `L1.120` is one line. A range is valid when the log exists and the range lies inside it. |
 | `REPO` | The structure of the repository: a file tree and an excerpt of the README. |
 
-`TASK`, `NOTES`, `T1`, `REPRO`, `SS1` and `RC1` exist only when you pass the matching flag. **Pass the same flags to
-`analyze`, `validate` and `generate`.** Otherwise those ids do not exist in the later steps, and lines that
-cite only them are removed.
+`TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1` and `L1` exist only when you pass the matching flag. **Pass the
+same flags to `analyze`, `validate` and `generate`.** Otherwise those ids do not exist in the later steps, and
+lines that cite only them are removed.
 
 Cite ids on every narration line. `TASK`, `NOTES` and `REPRO` are the author's words and are not checked against
 the code. Use them for the reason behind the change, and say whose words they are ("the notes say ...", "the
@@ -190,6 +193,7 @@ never contains code.
 | `screenshot` | A real screenshot that you supplied. `highlights` point at parts of it and `focus` zooms the camera into one part. See "Pointing at a part of a picture". | `screenshotId`, `caption`, `highlights`, `focus` |
 | `recording` | A real screen recording that you supplied, without its sound. `trim` is the part to show (`start` and `end`, in seconds of the recording), `speed` is 0.5 to 4, and `zoom` is the part of the frame to show (`x`, `y`, `w` and `h`, as fractions from 0 to 1). `null` means the start, speed 1 and the whole frame. The scene lasts as long as its narration. A clip that ends early stays on its last frame. The clip plays at 12 frames a second and its sound is not used. `trim` and `speed` choose what is seen: a panel in `before-after` plays the clip from its start, at speed 1, for at most `inputs.maxClipSeconds` seconds. The two panels start one after the other, so they are not in step. A `trim` with less than 0.2 seconds inside the clip is an error. `highlights` and `focus` work as on a screenshot. | `recordingId`, `caption`, `trim`, `speed`, `zoom`, `highlights`, `focus` |
 | `repro` | The steps of the reproduction that you supplied, as a numbered list. Each step appears on its beat, with its capture as a small picture: a screenshot, or the last picture of a recording. `step` is the number of a step, from 1. The text, the result and the capture of a step come from the supplied reproduction and never from the storyboard. A step marked `bug` is red and one marked `fixed` is green, each with an icon and a word. The heading is the title of the reproduction, with its environment under it. At most 6 steps in one scene. | `steps` (`step`, `beat`) |
+| `log` | Real lines of a log that you supplied, in monospace, with the lines that the narration talks about highlighted. `logId` names the log, `startLine` and `endLine` the lines to show (at most 18). `focus` marks lines, each from its beat on, with an optional short `note`, as in `code`. | `logId`, `startLine`, `endLine`, `focus`, `caption` |
 | `summary` | The closing points. | `points`, `closing` |
 
 An architecture node has a `kind` (`service`, `module`, `ui`, `api`, `database`, `queue`, `external`,
@@ -222,9 +226,11 @@ only for behaviour that the code really has, and cite a file, hunk or symbol id 
 scene. Never show a real host name, token or personal data. A browser `url` is a path such as `/settings`,
 never an address with a host: the checker removes the host if you write one. Do not show test output or
 numbers that nobody measured. A `recording` is the opposite: it is real, and the video labels it
-"Recorded". MergeStory does not look inside a screenshot or a recording. The caller can hide regions with
-`--redact` (a region of a recording is hidden in every frame of the clip), and a scene that shows such a capture carries the badge "Sensitive data masked"; a storyboard
-cannot ask for hiding or undo it. Check a capture for secrets and e-mail addresses before you pass it.
+"Recorded". A `log` is real too, and the video labels it "Real output": show output that you supplied, and
+never write output yourself. MergeStory does not look inside a screenshot or a recording. The caller can hide
+regions with `--redact` (a region of a recording is hidden in every frame of the clip), and a scene that shows such a capture carries the badge "Sensitive data masked"; a
+storyboard cannot ask for hiding or undo it. Check a capture for secrets and e-mail addresses before you pass
+it. The lines of a log are masked like code.
 
 ## Code references
 
@@ -279,6 +285,8 @@ model writes, and the one the offline generator builds. There are three kinds of
 - The steps of a `repro` visual that the reproduction does not have are dropped, and so are repeated
   steps. Steps out of order are put in the order of the reproduction. A list of more than 6 is cut to the
   first 6.
+- The lines of a `log` visual are put in order, cut to the log, and cut to 18 lines from their end. A `focus`
+  range outside the shown lines is dropped, and one that sticks out is cut to fit.
 - A recording's `trim` is put in order and cut to the clip, and cut to 20 seconds from its end. A `speed` or
   `zoom` outside its range is moved into it.
 - **Secrets and e-mail addresses are masked** in every string, and hidden control characters are removed.
@@ -326,6 +334,8 @@ Each problem has a `path` (such as `scenes[3].visual.ref`), a `code` and a `mess
 | `recording-unknown` | A recording visual names an id that you did not supply. | Use an `RC` id from `evidence.md`, or another visual. |
 | `recording-trim-out-of-range` | The `trim` of a recording visual has less than 0.2 seconds inside the recording. | Choose a part that lies inside the clip. |
 | `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied, or none of its steps is a step of it. | Pass `--repro-file` (`repro.json` for the agent commands) and list steps from `REPRO.1`, or use another visual. |
+| `log-unknown` | A log visual names an id that you did not supply. | Use an `L` id from `evidence.md`, or another visual. |
+| `log-range-out-of-range` | The lines of a log visual lie fully outside the log. | Choose lines inside the log. `evidence.md` says how many lines it has. |
 | `simulated-unbacked` | A simulated terminal or browser has narration that cites no file, hunk or symbol. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 | `validator-failed` | The checker stopped on an unexpected problem. | Report it as a bug. |
@@ -355,6 +365,8 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `recording-too-long` | A recording scene would show more than 20 seconds of the clip. The clip was shortened from its end. |
 | `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". |
 | `repro-step-unknown` | A `repro` visual lists a step number that the reproduction does not have. The step was dropped. |
+| `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. |
+| `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the
@@ -376,9 +388,11 @@ and no second model sees the code. The reading and writing are your agent's own 
    `--repro-file` instead. The `agent` commands also read real screenshots from `screenshots/` in that folder
    (`.png`, `.jpg` or `.jpeg`, sorted by name, named by an optional `screenshots/captions.json`) and screen
    recordings from `recordings/` (`.mp4`, `.m4v`, `.mov`, `.webm` or `.mkv`, sorted by name, named by an
-   optional `recordings/captions.json`), and the regions to hide in them from `redact.json`. With
+   optional `recordings/captions.json`), and the regions to hide in them from `redact.json`. They also read
+   logs from `logs/` in that folder (`.log` or `.txt`, sorted by name, named by an optional
+   `logs/captions.json`), and a test result in `tests.json` may have `"log": "L1.120-140"`. With
    `analyze`, `validate` and `generate`, pass `--screenshots-dir <folder>`,
-   `--recording <path>[:<caption>[:before|after]]` and `--redact <file>` instead.
+   `--recording <path>[:<caption>[:before|after]]`, `--redact <file>` and `--log <file>[:<caption>]` instead.
 2. **Analyse the change.**
 
    ```bash

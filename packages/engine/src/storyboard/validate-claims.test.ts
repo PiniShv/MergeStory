@@ -33,8 +33,22 @@ describe('claims the change cannot prove', () => {
       inputs: {
         task: 'x',
         tests: [
-          { id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'agent' },
-          { id: 'T2', command: 'npm run e2e', passed: false, summary: '2 failed', source: 'agent' },
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: true,
+            summary: 'ok',
+            source: 'agent',
+            log: null,
+          },
+          {
+            id: 'T2',
+            command: 'npm run e2e',
+            passed: false,
+            summary: '2 failed',
+            source: 'agent',
+            log: null,
+          },
         ],
       },
     });
@@ -54,8 +68,22 @@ describe('claims the change cannot prove', () => {
       inputs: {
         task: 'x',
         tests: [
-          { id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'agent' },
-          { id: 'T2', command: 'npm run e2e', passed: true, summary: 'ok', source: 'agent' },
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: true,
+            summary: 'ok',
+            source: 'agent',
+            log: null,
+          },
+          {
+            id: 'T2',
+            command: 'npm run e2e',
+            passed: true,
+            summary: 'ok',
+            source: 'agent',
+            log: null,
+          },
         ],
       },
     });
@@ -68,8 +96,22 @@ describe('claims the change cannot prove', () => {
       inputs: {
         task: 'x',
         tests: [
-          { id: 'T1', command: 'npm run lint', passed: true, summary: 'no lint errors', source: 'agent' },
-          { id: 'T2', command: 'npm test', passed: false, summary: '1 of 3 tests failed', source: 'agent' },
+          {
+            id: 'T1',
+            command: 'npm run lint',
+            passed: true,
+            summary: 'no lint errors',
+            source: 'agent',
+            log: null,
+          },
+          {
+            id: 'T2',
+            command: 'npm test',
+            passed: false,
+            summary: '1 of 3 tests failed',
+            source: 'agent',
+            log: null,
+          },
         ],
       },
     });
@@ -102,7 +144,16 @@ describe('claims the change cannot prove', () => {
     const lintOnly = retryFixture({
       inputs: {
         task: 'x',
-        tests: [{ id: 'T1', command: 'npm run lint', passed: true, summary: 'ok', source: 'agent' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm run lint',
+            passed: true,
+            summary: 'ok',
+            source: 'agent',
+            log: null,
+          },
+        ],
       },
     });
     const hunk = lintOnly.id.hunk('src/http/retry.ts');
@@ -114,7 +165,16 @@ describe('claims the change cannot prove', () => {
     const runner = retryFixture({
       inputs: {
         task: 'x',
-        tests: [{ id: 'T1', command: 'npx vitest run', passed: true, summary: 'ok', source: 'agent' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npx vitest run',
+            passed: true,
+            summary: 'ok',
+            source: 'agent',
+            log: null,
+          },
+        ],
       },
     });
     const kept = await narrationResult('The new tests pass.', runner, [
@@ -129,8 +189,22 @@ describe('claims the change cannot prove', () => {
       inputs: {
         task: 'x',
         tests: [
-          { id: 'T1', command: 'build', passed: true, summary: 'ok', source: 'ci' },
-          { id: 'T2', command: 'test', passed: false, summary: '1 failed', source: 'ci' },
+          {
+            id: 'T1',
+            command: 'build',
+            passed: true,
+            summary: 'ok',
+            source: 'ci',
+            log: null,
+          },
+          {
+            id: 'T2',
+            command: 'test',
+            passed: false,
+            summary: '1 failed',
+            source: 'ci',
+            log: null,
+          },
         ],
       },
     });
@@ -282,7 +356,16 @@ describe('claims the change cannot prove', () => {
     const withCi = retryFixture({
       inputs: {
         task: 'x',
-        tests: [{ id: 'T1', command: 'ci', passed: true, summary: 'green', source: 'ci' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'ci',
+            passed: true,
+            summary: 'green',
+            source: 'ci',
+            log: null,
+          },
+        ],
       },
     });
     const ok = await narrationResult('CI is green.', withCi, [withCi.id.hunk('src/http/retry.ts'), 'T1']);

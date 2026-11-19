@@ -20,7 +20,7 @@ MergeStory is a separate command-line engine. This skill only gathers context, c
 engine, and reports the result. The engine never changes code, and it never touches the pull
 request unless you pass `--comment` or `--update-description`.
 
-Do not use it for text-only summaries or code review comments. It does not record an app. It can show screenshots and recordings that were really captured.
+Do not use it for text-only summaries or code review comments. It does not record an app. It can show screenshots, recordings and logs that were really captured.
 
 ## 1. Find the engine
 
@@ -105,11 +105,19 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
   engine newer than 1.7.0. An engine of 1.7.0 or older does not read `redact.json` and gives no error, so
   when a part of a capture must be hidden and `mergestory --version` prints 1.7.0 or older, do not pass
   that capture at all.
+- `logs/`: real output of a run, a test or a command that you really ran; never write one by hand.
+  Save each output as a `.log` or `.txt` file in `logs/` in the work folder (UTF-8 text, at most 256 KB,
+  at most 4 files; they are used in name order). To name them, add `logs/captions.json` as
+  `{"run.log": {"caption": "The check after the fix"}}`. This needs an engine newer than 1.7.0. An older
+  engine ignores the folder, so cite no `L` id there. A log is masked like code, but check that it holds
+  nothing its viewers must not see. In `tests.json`, a result can add `"log": "L1.120-140"` to point at
+  the lines that show its output. Add `"log"` only when `mergestory --version` prints a version newer
+  than 1.7.0: version 1.7.0 and older refuse a `tests.json` with a `log` field.
 
 Use a capture only when you know what it shows. When you are not sure what may be shown, ask the user
 before you pass the capture; do not guess.
 
-These become citable evidence (TASK, NOTES, T1, REPRO.1, SS1, RC1) in the video.
+These become citable evidence (TASK, NOTES, T1, REPRO.1, SS1, RC1, L1) in the video.
 
 ## 4. Write the storyboard yourself (MergeStory adds no charge; your own usage counts)
 

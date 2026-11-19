@@ -250,8 +250,20 @@ describe('generate: context files', () => {
       task: 'Make uploads resilient.\n',
       notes: 'Backoff with jitter, capped at 20 seconds.',
       tests: [
-        { command: 'npm test', passed: true, summary: '42 passed', source: 'agent' },
-        { command: 'npm run lint', passed: false, summary: '1 error', source: 'ci' },
+        {
+          command: 'npm test',
+          passed: true,
+          summary: '42 passed',
+          source: 'agent',
+          log: null,
+        },
+        {
+          command: 'npm run lint',
+          passed: false,
+          summary: '1 error',
+          source: 'ci',
+          log: null,
+        },
       ],
       screenshots: [
         { path: join(dir, 'before.png'), caption: 'Login page', moment: 'before' },

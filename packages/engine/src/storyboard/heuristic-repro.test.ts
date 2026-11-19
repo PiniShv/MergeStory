@@ -104,7 +104,7 @@ describe('the offline storyboard with a reproduction', () => {
 
   it('is accepted by the checks as it is, so its lines are never fixed or dropped', async () => {
     const fx = withRepro(repro(...steps, step('Reload the page', 'fixed')), {
-      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci' }],
+      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci', log: null }],
     });
     const result = await validateStoryboard(make(fx), { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
@@ -140,8 +140,8 @@ describe('the proof scene of the offline storyboard', () => {
   it('ends with the test results that were reported, citing their ids', () => {
     const fx = withRepro(fixed, {
       tests: [
-        { id: 'T1', command: 'npm test', passed: true, summary: '12 ok', source: 'ci' },
-        { id: 'T2', command: 'npm run lint', passed: true, summary: 'clean', source: 'agent' },
+        { id: 'T1', command: 'npm test', passed: true, summary: '12 ok', source: 'ci', log: null },
+        { id: 'T2', command: 'npm run lint', passed: true, summary: 'clean', source: 'agent', log: null },
       ],
     });
     const proof = byRole(make(fx), 'proof')[0]!;
@@ -154,15 +154,28 @@ describe('the proof scene of the offline storyboard', () => {
 
   it('says the reported test line once: the conclusion does not repeat it', () => {
     const fx = withRepro(fixed, {
-      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci' }],
+      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci', log: null }],
     });
     const all = make(fx, 150).scenes.flatMap((s) => lines(s));
     expect(all.filter((text) => text.includes('reported that npm test passed'))).toHaveLength(1);
   });
 
+  it('reports a test result that points at a log once, with the log supplied, and stays valid', async () => {
+    const fx = withRepro(fixed, {
+      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci', log: 'L1.1-2' }],
+      logs: [{ id: 'L1', path: '/x/run.log', caption: 'run.log', lines: ['a', 'b', 'c'] }],
+    });
+    const storyboard = make(fx, 150);
+    const all = storyboard.scenes.flatMap((s) => lines(s));
+    expect(all.filter((text) => text.includes('reported that npm test passed'))).toHaveLength(1);
+    expect(byRole(storyboard, 'proof')[0]?.narration.at(-1)?.evidence).toEqual(['T1']);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
+    expect([result.errors, result.fixes, result.warnings]).toEqual([[], [], []]);
+  });
+
   it('has no proof scene when no step is marked as fixed, even with test results', () => {
     const fx = withRepro(repro(step('Open it'), step('Look', 'bug')), {
-      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci' }],
+      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: 'ok', source: 'ci', log: null }],
     });
     expect(roles(fx)).not.toContain('proof');
   });

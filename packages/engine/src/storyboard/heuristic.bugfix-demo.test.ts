@@ -82,6 +82,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
           },
         ],
         repro: checkRepro(JSON.parse(await readFile(join(DEMO, 'repro.json'), 'utf8')), '--repro-file'),
+        logs: [{ path: join(captures, 'check.log'), caption: 'check.log' }],
       },
       directory,
       ctx.config,
@@ -254,6 +255,10 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     ).toBeGreaterThan(60);
   });
 
+  it('reads the real output of the check as the log L1', () => {
+    expect(deps.inputs.logs.map((l) => [l.id, l.caption, l.lines.length])).toEqual([['L1', 'check.log', 7]]);
+  });
+
   it('has a hand-written storyboard with nothing to report, repair or remove', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
     expect(await expectCleanStoryboard(deps, written)).toEqual([]);
@@ -313,5 +318,6 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     const warning = unusedScreenshotWarning(board, deps.inputs, 'heuristic', { maskEmails: true });
     expect(warning).toContain('The recording RC2');
     expect(warning).not.toContain('RC1');
+    expect(warning).toContain('L1');
   });
 });

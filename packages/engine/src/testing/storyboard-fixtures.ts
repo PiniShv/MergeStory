@@ -322,6 +322,7 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     screenshots: [],
     recordings: [],
     repro: null,
+    logs: [],
     ...spec.inputs,
   };
 
@@ -394,6 +395,15 @@ export function buildFixture(spec: FixtureSpec): Fixture {
         url: null,
       });
   }
+  for (const l of inputs.logs)
+    evidence.push({
+      id: l.id,
+      kind: 'log',
+      label: l.caption,
+      ref: null,
+      url: null,
+      lines: l.lines.length,
+    });
   evidence.push({ id: 'REPO', kind: 'repo', label: 'Repository structure', ref: null, url: null });
 
   const analysis: Analysis = {
@@ -667,7 +677,16 @@ export function retryFixture(overrides: Partial<FixtureSpec> = {}): Fixture {
     ],
     inputs: {
       task: 'Make weather requests survive short server outages.',
-      tests: [{ id: 'T1', command: 'npm test', passed: true, summary: '12 tests passed', source: 'agent' }],
+      tests: [
+        {
+          id: 'T1',
+          command: 'npm test',
+          passed: true,
+          summary: '12 tests passed',
+          source: 'agent',
+          log: null,
+        },
+      ],
       screenshots: [
         {
           id: 'SS1',

@@ -85,12 +85,17 @@ accurate, because the engine can quote them as evidence.
 | `--screenshots-dir <dir>` | A folder of real screenshots: every `.png`, `.jpg` and `.jpeg` file in it, in name order. Give it once. They become `SS` ids after those of any `--screenshot`. An optional `captions.json` in the folder gives a caption and a side. See below. |
 | `--recording <spec>` | A real screen recording, written as `<path>[:<caption>[:before or after]]`. You can repeat the flag. They become `RC1`, `RC2`, and so on. |
 | `--redact <file>` | A JSON file of regions to hide in your screenshots and recordings. At most 64 KB. See "Hidden regions" below. |
+| `--log <spec>` | A real log, written as `<file>[:<caption>]`. You can repeat the flag. They become `L1`, `L2`, and so on. A range of lines is `L1.120-140`. |
 
 - **Test results.** Each entry has `command`, `passed` and `summary`, and may have `source` (`agent`, `ci` or
-  `user`; the default is `agent`). Example: `[{"command": "npm test", "passed": true, "summary": "42 passed"}]`.
+  `user`; the default is `agent`) and `log` (see below). Example:
+  `[{"command": "npm test", "passed": true, "summary": "42 passed"}]`.
   Any other field is an error, so a typo such as `pass` never turns into a made-up result. MergeStory shows
   results as you report them and never runs tests. Only the first 10 entries are used, and a warning says
-  so. A result with `source` set to `ci` is what lets a line say "CI is green".
+  so. A result with `source` set to `ci` is what lets a line say "CI is green". A result may also have
+  `"log": "L1.120-140"`, the lines of a `--log` file that hold its output. It must be a valid log id of the
+  same command, or the command stops with a usage error that names the entry and the id. `evidence.md`
+  shows it next to the result.
 - **Reproduction.** The steps that show the bug, written by the person who saw it:
   `{"title": "...", "environment": "...", "steps": [{"text": "...", "screenshot": "SS1", "result": "bug"}]}`.
   `title` is 1 to 120 characters. `environment` is optional, at most 200 characters, for example the browser.
@@ -156,6 +161,22 @@ accurate, because the engine can quote them as evidence.
   upright first), and FFmpeg failing to hide a region. A region smaller than 2 pixels grows to 2. MergeStory finds nothing by itself: it hides only the regions that you
   name. `analyze`, `validate` and a dry run only check the file. A storyboard cannot ask for hiding or
   undo it, and the HTTP API takes no such file.
+- **Logs.** A real log: the output of a run, a test or a command that really happened. It must be UTF-8
+  text. A file with a NUL byte, or one that is not valid UTF-8, is refused. Line ends are turned into one
+  kind, and the colour and cursor codes of a terminal are removed, so a log copied from a terminal reads
+  cleanly. Hidden and control characters are removed too, and a log with nothing left to read is
+  refused like an empty file. At most 4 logs, each at most 256 KB; the first ones are used and a warning
+  says so. A file that is too large is refused from its size, before it is read. The lines are numbered
+  from 1. `L1` is the whole log, `L1.120-140` is lines 120 to 140, and `L1.120` is one line. A range must lie inside the log and
+  spans at most 200 lines. A narration line can cite a range, and a range that is not valid is removed like
+  any unknown id. `evidence.md` lists each log with its number of lines and shows a masked excerpt: the
+  first 30 lines, the last 30 lines, and up to 40 lines with `error`, `fail`, `exception`, `assert`, `warn`,
+  `panic` or `traceback` that are not shown yet, with one line before and after each. Each line is cut to
+  200 characters. When the pack is full, the excerpt gets shorter, like the other sections: first 10 lines
+  from each end and 15 lines with a keyword, then 5 and 5. With `privacy.llmContext` set to `minimal` the
+  excerpt is left out. The video shows a log in the `log` visual, labelled "Real output". Secrets and
+  e-mail addresses are masked in every line that is shown or written, as they are in code. Use only
+  output that was really produced: MergeStory never makes one up. The offline storyboard does not show logs.
 - **Safety.** A file that looks like a credentials file (`.env`, a key file) is refused. Text that looks like
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
@@ -180,7 +201,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
 
 **Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`,
-`--screenshots-dir`, `--recording` and `--redact`. See [Context flags](#context-flags).
+`--screenshots-dir`, `--recording`, `--redact` and `--log`. See [Context flags](#context-flags).
 
 **Style and length.**
 
@@ -316,7 +337,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` | See [Context flags](#context-flags). They decide which evidence ids exist. |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--log` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
 It writes four files into the output folder:
@@ -338,14 +359,15 @@ mergestory validate <storyboard> [source] [flags]
 ```
 
 Checks a storyboard against a change without rendering anything, without any paid call and without writing
-files. It runs the same checks that `generate --storyboard` runs. Give it the same source, refs and context flags as `analyze`.
-Otherwise the ids `TASK`, `NOTES`, `T1`, `REPRO`, `SS1` and `RC1` do not exist, and the lines that cite
-only them are removed.
+files. It runs the same checks that `generate --storyboard` runs. Give it the same source, refs and
+context flags as `analyze`. Otherwise the ids `TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1` and `L1` do not
+exist, and the lines that cite only them are removed. A range of a log, such as `L1.120-140`, is valid when the
+log was passed and the range lies inside it.
 
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
-| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` | See [Context flags](#context-flags). | none |
+| `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--log` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |
 | `--language <code>` | The narration language. | `en` |
@@ -395,11 +417,12 @@ folder:
 | `repro.json` | the agent | The steps that show the bug, with the shape and the limits of `--repro-file`. Every agent command reads it. A step can use a screenshot from `screenshots/` or a recording from `recordings/`, by its id (`SS1`, `RC1`). |
 | `recordings/` | the agent | Screen recordings: every `.mp4`, `.m4v`, `.mov`, `.webm` and `.mkv` file in it, sorted by name, becomes `RC1`, `RC2`, and so on. An optional `recordings/captions.json` gives a caption and a side: `{"clip.mp4": {"caption": "Before the fix", "side": "before"}}`. `side` is `before` or `after`, or left out. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--recording`. |
 | `redact.json` | the agent | Regions to hide in the screenshots and recordings, in the format of `--redact`: keys are `SS1`, `RC1`, and so on, by the order of the files in `screenshots/` and `recordings/`. Same checks. Every agent command reads it, so the video never shows what it hides. |
+| `logs/` | the agent | Logs: every `.log` and `.txt` file in it, sorted by name, becomes `L1`, `L2`, and so on. An optional `logs/captions.json` gives a caption: `{"run.log": {"caption": "The check after the fix"}}`. A key that is not a file in the folder, and any other field, is an error. Same limits and checks as `--log`. |
 | `storyboard.json` | the agent | The storyboard. |
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot, a recording or a region as a flag. They read `screenshots/` and `recordings/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
+when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot, a recording, a log or a region as a flag. They read `screenshots/`, `recordings/` and `logs/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -407,7 +430,7 @@ only when its repository is one of the git remotes of the current repository, on
 `github.apiUrl`. Anything else is a usage error. For another repository or folder, run `mergestory analyze`.
 
 **What they refuse.** `--out`, `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
-`--storyboard`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
+`--storyboard`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--log`, `--music`, `--llm`, `--model`, `--llm-base-url`, `--publish`, `--visibility`, `--comment`,
 `--update-description`, `--budget` and `--async`. Of the global options, `--json`, `--log-level`,
 `--log-format` and `-q` apply.
 

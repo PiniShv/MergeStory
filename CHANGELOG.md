@@ -6,6 +6,20 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** real logs in the video. `--log <file>[:<caption>]` passes the output of a run, a test or a
+  command as context to `analyze`, `validate` and `generate`. You can repeat it up to 4 times. A log must be
+  UTF-8 text of at most 256 KB. Its lines are numbered from 1, and the colour codes of a terminal are
+  removed. A log gets the evidence id `L1`, `L2`, and so on, and a narration line can cite lines of it as
+  `L1.120-140`. A range that is not inside the log is removed like any unknown id. `evidence.md` lists each
+  log and shows a masked excerpt: the first and last lines, and the lines with an error word. The excerpt is
+  left out when `privacy.llmContext` is `minimal`. An entry of `--tests-file` can point at its output with
+  `"log": "L1.120-140"`. The agent commands read logs from `logs/` in the work folder. The new `log` visual
+  shows lines of a log in a code window with no syntax colours, with the lines the narration talks about
+  highlighted. The scene is labelled "Real output", and a line that is too long is cut at the edge of the
+  window. The bug-fix demo now shows the real output of a small check. The checks are `log-unknown`,
+  `log-range-out-of-range` and `log-too-long`; a range is cut to the log and to 18 lines, and each cut is
+  listed in `fixes`. A line of a log is masked like a line of code. A model that writes a storyboard gets
+  about 360 more tokens in every request. It needs an engine newer than 1.7.0.
 - **Added:** hide parts of a screenshot or a recording. `--redact <file>` on `analyze`, `validate` and
   `generate` takes a JSON file with a list of regions for each capture, for example
   `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`.

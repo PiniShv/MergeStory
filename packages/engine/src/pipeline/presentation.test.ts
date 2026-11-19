@@ -61,6 +61,34 @@ describe('labels of code references', () => {
     expect(watch.claims[0]?.evidence.map((e) => e.label)).toEqual(['MAX_RETRIES (src/http/retry.ts:8)']);
   });
 
+  it('give a cited range of a log its own label, and leave out a range outside the log', () => {
+    const { fx, storyboard } = setup();
+    fx.analysis.evidence.push({
+      id: 'L1',
+      kind: 'log',
+      label: 'Log: run.log',
+      ref: null,
+      url: null,
+      lines: 30,
+    });
+    storyboard.scenes[0]!.narration[0]!.evidence = ['L1.20-24', 'L1.29-31', 'L1'];
+    const watch = buildWatchPageData({
+      storyboard,
+      storyboardSource: 'agent',
+      changeSet: fx.changeSet,
+      analysis: fx.analysis,
+      chapters: [{ title: 'Why', startSec: 0 }],
+      durationSec: 90,
+      generator: { llm: null, tts: 'none' },
+      generatedAt: NOW,
+      captionsBurnedIn: true,
+    });
+    expect(watch.claims[0]?.evidence.map((e) => e.label)).toEqual([
+      'Log: run.log, lines 20 to 24',
+      'Log: run.log',
+    ]);
+  });
+
   it('are the same for the review checklist alone', () => {
     const { fx, storyboard } = setup();
     expect(reviewChecklist(storyboard, fx.changeSet).map((item) => item.ref?.label)).toEqual([

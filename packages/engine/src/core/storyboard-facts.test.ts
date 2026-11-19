@@ -87,6 +87,22 @@ describe('beatHolders', () => {
     expect(isSimulated(visual)).toBe(false);
   });
 
+  it('gives the focus of a log a beat each, and does not call a log simulated', () => {
+    const log: Visual = {
+      type: 'log',
+      logId: 'L1',
+      startLine: 1,
+      endLine: 5,
+      focus: [
+        { startLine: 2, endLine: 2, note: null, beat: 0 },
+        { startLine: 4, endLine: 5, note: 'x', beat: 1 },
+      ],
+      caption: null,
+    };
+    expect(beatHolders(log).map((h) => h.beat)).toEqual([0, 1]);
+    expect(isSimulated(log)).toBe(false);
+  });
+
   it('returns nothing for visuals without beats', () => {
     expect(beatHolders(visualOf('s1'))).toEqual([]);
   });

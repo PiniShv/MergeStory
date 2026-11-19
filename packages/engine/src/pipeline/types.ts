@@ -3,6 +3,7 @@ import type { ConfigInput } from '../core/config.ts';
 import type { Logger } from '../core/logger.ts';
 import type { SourceInput } from '../core/providers.ts';
 import type {
+  LogInput,
   ProgressEvent,
   RecordingInput,
   ReproFile,
@@ -13,7 +14,7 @@ import type {
 export interface ContextOptions {
   task?: string | null;
   notes?: string | null;
-  tests?: Omit<TestEvidence, 'id'>[];
+  tests?: (Omit<TestEvidence, 'id' | 'log'> & { log?: string | null })[];
   screenshots?: Omit<ScreenshotInput, 'id'>[];
   /** Screen recordings: absolute paths, checked again with ffprobe when the context is built. */
   recordings?: Pick<RecordingInput, 'path' | 'caption' | 'moment'>[];
@@ -24,6 +25,8 @@ export interface ContextOptions {
    * "RC1": [{x, y, w, h}]}, hidden for the whole clip in a recording. Checked strictly when the context is built (see checkRedactions).
    */
   redact?: unknown;
+  /** Log files: absolute paths, read and checked when the context is built. */
+  logs?: Pick<LogInput, 'path' | 'caption'>[];
 }
 
 export interface GenerateOptions {
@@ -78,7 +81,7 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
   /** Write the files here instead of under the MergeStory home. */
   outDir?: string | null;
   /**
-   * The source and the flags (task, notes, tests, screenshots, refs) of the command line, as raw
+   * The source and the flags (task, notes, tests, screenshots, recordings, logs, refs) of the command line, as raw
    * words. AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
    * same evidence ids as the analysis did. Without it the document says to repeat them. With `agent`,
    * it shows `mergestory agent validate` and `mergestory agent render`, which find the files by name.

@@ -70,7 +70,8 @@ The video explains a change that adds retries with exponential backoff to a smal
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
 to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.
 Real captures that you supply are labelled too: "Actual screenshot" for a screenshot and "Recorded" for a
-screen recording, and the steps of a reproduction are labelled "Reported steps" (see
+screen recording, the steps of a reproduction are labelled "Reported steps", and "Real output" marks lines
+of a log you supply (see
 [the storyboard guide](docs/storyboard.md)).
 
 ## Get started

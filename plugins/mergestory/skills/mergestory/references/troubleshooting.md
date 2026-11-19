@@ -12,12 +12,15 @@ without any error.
 - **An evidence id that is not in `evidence.md` is not an error.** The engine removes it and adds a
   line to `fixes` ("removed unknown evidence id"). A narration line with no valid id left is removed,
   with an `uncited-line` warning. It becomes an error only when no line of a scene keeps an id.
-- **A removed `TASK`, `NOTES`, `T1`, `REPRO`, `SS1` or `RC1` means that context is missing.** With the `agent`
+- **A removed `TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1` or `L1` means that context is missing.** With the `agent`
   commands, `task.md`, `notes.md`, `tests.json`, `repro.json` and `redact.json` must be in the work folder before `agent analyze`
   runs. With the other commands, use the same `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`,
-  `--screenshot`, `--screenshots-dir`, `--recording` and `--redact` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
+  `--screenshot`, `--screenshots-dir`, `--recording`, `--redact` and `--log` flags for `validate` and `generate` that you used for `analyze`. Otherwise those ids
   do not exist. A removed `SS1` or `RC1` means that the picture or recording was not passed to this command (or that the
-  `screenshots/` or `recordings/` folder lacks the file, or the engine is older than the one that reads it).
+  `screenshots/` or `recordings/` folder lacks the file, or the engine is older than the one that reads it). A removed
+  `L1.120-140` means the same for a log, or that the range is not valid: it must lie inside the log, at most
+  200 lines (`evidence.md` says how many lines each log has). Logs and `"log"` in `tests.json` need an
+  engine newer than 1.7.0. Version 1.7.0 and older refuse a `tests.json` with a `log` field: remove it.
 
 These codes are errors:
 
@@ -35,6 +38,8 @@ These codes are errors:
 | `recording-unknown` | A recording visual names an id that was not supplied. | Use an `RC` id from `evidence.md`, or another visual. |
 | `recording-trim-out-of-range` | A recording `trim` has less than 0.2 seconds inside the clip. | Choose a part that lies inside the clip. |
 | `repro-unknown` | A `repro` visual has no reproduction to show: none was supplied (this needs an engine newer than 1.7.0), or none of its steps exists. | Write `repro.json` (or pass `--repro-file`) and list steps from `REPRO.1`, or use another visual. |
+| `log-unknown` | A log visual names an id that was not supplied. | Use an `L` id from `evidence.md`, or another visual. |
+| `log-range-out-of-range` | The lines of a log visual lie fully outside the log. | Choose lines inside the log. |
 | `simulated-unbacked` | A terminal or browser visual has narration that cites no file, hunk or symbol id. | Cite an `F`, `F.H` or `S` id that shows the behaviour. |
 | `empty-text` | A text that is shown is empty. | Write it. |
 
@@ -56,6 +61,8 @@ wanted is gone:
 | `recording-too-long` | A recording scene would show more than 20 seconds. The clip was shortened from its end. | Pick the part that matters with `trim`. |
 | `highlight-label-too-long` | The `label` of a highlight has more than 40 characters. It was cut at a word and ends in "…". | Write a shorter label. |
 | `repro-step-unknown` | A `repro` visual lists a step that the reproduction does not have. The step was dropped. | List only steps from `REPRO.1` up to the last step. |
+| `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. | Check the lines that are shown. |
+| `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. | Show fewer lines, and mark the ones you discuss in `focus`. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
 repository.

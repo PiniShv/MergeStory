@@ -8,7 +8,14 @@ import { testConfig } from '../testing/context.ts';
 import { makePng } from '../testing/png.ts';
 import { MAX_SCREENSHOT_BYTES } from '../visuals/image.ts';
 import { formatBytes, readJsonFile, readTextFile } from './files.ts';
-import { buildContext, parseScreenshotSpec, readCaptureFolder, SCREENSHOT_KIND } from './inputs.ts';
+import {
+  buildContext,
+  LOG_KIND,
+  parseLogSpec,
+  parseScreenshotSpec,
+  readCaptureFolder,
+  SCREENSHOT_KIND,
+} from './inputs.ts';
 
 let dir: string;
 
@@ -479,6 +486,85 @@ describe('buildContext: --redact', () => {
       '{"SS1": [{"x": 0, "y": 0, "w": 0.1, "h": 0.1}, {"x": 0.5, "y": 0, "w": 0.1, "h": 0.1}], "RC1": []}';
     await writeFile(join(dir, 'fine.json'), fine);
     expect((await buildContext({ redact: 'fine.json' }, dir))?.redact).toEqual(JSON.parse(fine));
+  });
+});
+
+describe('buildContext: logs', () => {
+  it('makes the path absolute and defaults the caption to the file name', async () => {
+    const context = await buildContext({ log: ['run.log', 'sub/test.txt:Tests: all green'] }, dir);
+    expect(context?.logs).toEqual([
+      { path: join(dir, 'run.log'), caption: 'run.log' },
+      { path: join(dir, 'sub/test.txt'), caption: 'Tests: all green' },
+    ]);
+  });
+
+  it('adds the logs that the agent commands found, after the flags', async () => {
+    const context = await buildContext(
+      {
+        log: ['a.log'],
+        logFiles: [{ path: join(dir, 'b.log'), caption: 'b' }],
+      },
+      dir,
+    );
+    expect(context?.logs?.map((log) => log.caption)).toEqual(['a.log', 'b']);
+  });
+
+  it('refuses a missing path and a credentials-like file name', async () => {
+    await expect(buildContext({ log: [':caption'] }, dir)).rejects.toThrow(/--log: missing a file path/);
+    await expect(buildContext({ log: ['.env'] }, dir)).rejects.toThrow(/--log: refusing to read .env/);
+  });
+});
+
+describe('parseLogSpec', () => {
+  it('splits at the first colon, so a caption may hold colons, and keeps a drive letter', () => {
+    expect(parseLogSpec('run.log')).toEqual({ path: 'run.log', caption: null });
+    expect(parseLogSpec('run.log:')).toEqual({
+      path: 'run.log',
+      caption: null,
+    });
+    expect(parseLogSpec('run.log:Output: 5 passed')).toEqual({
+      path: 'run.log',
+      caption: 'Output: 5 passed',
+    });
+    expect(parseLogSpec('C:\\logs\\run.log:Run')).toEqual({
+      path: 'C:\\logs\\run.log',
+      caption: 'Run',
+    });
+  });
+});
+
+describe('the logs folder of the agent commands', () => {
+  const folder = (): string => join(dir, 'logs');
+  beforeEach(async () => {
+    await mkdir(folder());
+  });
+
+  it('reads .log and .txt files in name order, ignores sub-folders and other files, and reads captions.json', async () => {
+    for (const name of ['b.log', 'a.TXT', 'c.png']) await writeFile(join(folder(), name), 'x');
+    await mkdir(join(folder(), 'sub.log'));
+    await writeFile(join(folder(), 'captions.json'), JSON.stringify({ 'b.log': { caption: 'Run: ok' } }));
+    expect(await readCaptureFolder(folder(), LOG_KIND)).toEqual([
+      { path: join(folder(), 'a.TXT'), caption: 'a', moment: 'other' },
+      { path: join(folder(), 'b.log'), caption: 'Run: ok', moment: 'other' },
+    ]);
+  });
+
+  it('refuses a log that is a link, a credentials-like name and a side in captions.json', async () => {
+    await writeFile(join(dir, 'real.log'), 'x');
+    await symlink(join(dir, 'real.log'), join(folder(), 'linked.log'));
+    await expect(readCaptureFolder(folder(), LOG_KIND)).rejects.toMatchObject({
+      code: 'USAGE',
+      message: 'logs: linked.log is a link.',
+    });
+    await rm(join(folder(), 'linked.log'));
+    await writeFile(join(folder(), 'a.log'), 'x');
+    await writeFile(join(folder(), 'captions.json'), JSON.stringify({ 'a.log': { side: 'before' } }));
+    await expect(readCaptureFolder(folder(), LOG_KIND)).rejects.toMatchObject({
+      message: expect.stringContaining('unknown field "side". Allowed: caption.'),
+    });
+    await rm(join(folder(), 'captions.json'));
+    await writeFile(join(folder(), '.env.log'), 'x');
+    await expect(readCaptureFolder(folder(), LOG_KIND)).rejects.toThrow(/refusing to read \.env\.log/);
   });
 });
 

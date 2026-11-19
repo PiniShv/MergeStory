@@ -91,7 +91,7 @@ learns what happened.
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
 - `presentation.ts`: the data for the watch page and the PR comment;
 - `inputs.ts`: the one contract for caller context (task, notes, test results, reproduction, screenshots,
-  recordings; the limit of screenshots is a setting);
+  recordings, logs; the limit of screenshots is a setting);
 - `authoring.ts`: `prepareAuthoring` and `checkStoryboard` for callers that write the storyboard;
 - `publish-run.ts`: `publishRun`, which publishes a rendered run again.
 
@@ -140,7 +140,8 @@ stage asks `isProtectedFile` or `isShowable` and never matches a pattern itself.
 The analyzer gives every citable fact an id: `PR`, `TASK`, `NOTES`, `T1` (test result supplied by
 the caller), `IS1` (linked issue), `CM1` (commit), `F2` (file), `F2.H1` (diff hunk), `S3` (symbol),
 `M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen
-recording), `REPRO` and `REPRO.1` (the reproduction and its steps), `REPO`.
+recording), `REPRO` and `REPRO.1` (the reproduction and its steps), `L1` (log) and `L1.120-140` (lines of a
+log), `REPO`.
 Storyboards cite these ids. The watch page lists every claim with links to the cited code.
 
 ### Storyboard
@@ -148,8 +149,8 @@ Storyboards cite these ids. The watch page lists every claim with links to the c
 A storyboard has a title, a two-sentence summary, scenes, a review checklist and a list of
 uncertainties. Each scene has a role (mission, reproduction, big picture, under the hood, before/after, proof,
 review, conclusion), narration lines with evidence ids, one visual, a transition and an optional target
-length. There are 15 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
-`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `recording`, `repro`, `summary`.
+length. There are 16 visual types: `title`, `mission`, `files`, `architecture`, `flow`, `code`,
+`before-after`, `terminal`, `browser`, `checklist`, `bullets`, `screenshot`, `recording`, `repro`, `log`, `summary`.
 
 Visual elements carry a `beat`: the index of the narration line at which they appear. After speech
 is generated, beats get exact times, so the picture follows the voice.
@@ -204,7 +205,8 @@ reproduction that has a recording keeps one picture of it, the last one, in its 
 embedded as it is, unless it is wider than 2560 pixels: then FFmpeg makes it 2560 pixels wide first, so a
 full-page capture does not slow the page down. The regions that the caller hides are covered in the
 stored picture first, in the same call, so the cover is never made from a picture that was already
-smaller.
+smaller. A `log` is text: its lines are masked and cut when the render plan is built, and the runtime
+draws them in the code window without syntax colours.
 
 A screenshot or a recording can carry highlights (boxes, in fractions of the picture) and a focus. The
 picture and its highlights sit in one camera element inside the window, which clips it. With a focus

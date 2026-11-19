@@ -5,7 +5,7 @@ import { beforeAfterTemplate } from './templates/before-after.ts';
 import { browserTemplate } from './templates/browser.ts';
 import { bulletsTemplate } from './templates/bullets.ts';
 import { checklistTemplate } from './templates/checklist.ts';
-import { codeTemplate } from './templates/code.ts';
+import { codeTemplate, logTemplate } from './templates/code.ts';
 import { filesTemplate } from './templates/files.ts';
 import { flowTemplate } from './templates/flow.ts';
 import { missionTemplate } from './templates/mission.ts';
@@ -34,6 +34,7 @@ export const TEMPLATES: Registry = {
   screenshot: screenshotTemplate,
   recording: recordingTemplate,
   repro: reproTemplate,
+  log: logTemplate,
   summary: summaryTemplate,
 };
 

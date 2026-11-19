@@ -17,7 +17,13 @@ import { parsePullRequestUrl, webHostFromApiUrl } from '../../github/pr-url.ts';
 import { sourceProblem } from '../../jobs/input-rules.ts';
 import { GitRunner } from '../../sources/git.ts';
 import { parseGitHubRemote } from '../../sources/remote.ts';
-import { type ContextFlags, RECORDING_KIND, readCaptureFolder, SCREENSHOT_KIND } from '../inputs.ts';
+import {
+  type ContextFlags,
+  LOG_KIND,
+  RECORDING_KIND,
+  readCaptureFolder,
+  SCREENSHOT_KIND,
+} from '../inputs.ts';
 import {
   addSourceFlags,
   addStyleFlags,
@@ -47,9 +53,10 @@ const WORK_FILE = {
   redact: 'redact.json',
   storyboard: 'storyboard.json',
 } as const;
-/** The folders of screenshots and of screen recordings. Each may hold a captions.json. */
+/** The folders of screenshots, of screen recordings and of logs. Each may hold a captions.json. */
 const SCREENSHOTS_DIR = 'screenshots';
 const RECORDINGS_DIR = 'recordings';
+const LOGS_DIR = 'logs';
 
 type AgentFlags = SourceFlags &
   Pick<
@@ -170,7 +177,7 @@ async function agentSource(source: string | undefined, env: CommandEnv, config: 
   return source;
 }
 
-/** The task, notes, test results, reproduction, regions to hide, screenshots and recordings that the agent wrote into the work folder, as context flags. */
+/** The task, notes, test results, reproduction, regions to hide, screenshots, recordings and logs that the agent wrote into the work folder, as context flags. */
 async function contextFiles(dir: string): Promise<ContextFlags> {
   const flags: ContextFlags = {};
   const path = (name: string): string | undefined =>
@@ -194,6 +201,11 @@ async function contextFiles(dir: string): Promise<ContextFlags> {
   if (screenshots.length > 0) flags.screenshotFiles = screenshots;
   const recordings = await readCaptureFolder(join(dir, RECORDINGS_DIR), RECORDING_KIND);
   if (recordings.length > 0) flags.recordingFiles = recordings;
+  const logs = (await readCaptureFolder(join(dir, LOGS_DIR), LOG_KIND)).map(({ path, caption }) => ({
+    path,
+    caption,
+  }));
+  if (logs.length > 0) flags.logFiles = logs;
   return flags;
 }
 

@@ -976,3 +976,175 @@ describe('simulated visuals', () => {
     }
   });
 });
+
+describe('logs', () => {
+  const lines = Array.from({ length: 60 }, (_, i) => `line ${i + 1} of the run`);
+  const log = {
+    id: 'L1',
+    path: '/nonexistent/run.log',
+    caption: 'Run of the checks',
+    lines,
+  };
+  const visual = (extra: Json = {}): Json => ({
+    type: 'log',
+    logId: 'L1',
+    startLine: 10,
+    endLine: 20,
+    focus: [{ startLine: 12, endLine: 13, note: 'The count', beat: 0 }],
+    caption: null,
+    ...extra,
+  });
+  /** Validate a log visual in scene 2, then validate the accepted result again: nothing may change. */
+  async function check(extra: Json, narrationEvidence: string[] = ['L1.12-13']) {
+    const fx = retryFixture({ inputs: { logs: [log] } });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = visual(extra);
+    scene(sb, 2).narration = [
+      { text: 'The run printed the count.', evidence: narrationEvidence },
+      {
+        text: 'It matches the new function.',
+        evidence: [fx.id.hunk('src/http/retry.ts')],
+      },
+    ];
+    const result = await run(sb, fx);
+    if (result.storyboard) {
+      const again = await run(result.storyboard, fx);
+      expect(again.fixes).toEqual([]);
+      expect(again.warnings).toEqual([]);
+      expect(again.storyboard).toEqual(result.storyboard);
+    }
+    const shown = result.storyboard?.scenes[2]?.visual;
+    return { result, shown: shown?.type === 'log' ? shown : null };
+  }
+
+  it('accepts lines of a supplied log, and a line range of the log in the narration, with no fix', async () => {
+    const { result, shown } = await check({});
+    expect(result.errors).toEqual([]);
+    expect(result.fixes).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(shown).toMatchObject({ startLine: 10, endLine: 20 });
+    expect(shown?.focus).toHaveLength(1);
+  });
+
+  it('rejects an id that was not supplied, and lists the ones that were', async () => {
+    const { result } = await check({ logId: 'L9' });
+    expect(result.storyboard).toBeNull();
+    const issue = result.errors.find((e) => e.code === 'log-unknown')!;
+    expect(issue.path).toBe('scenes[2].visual.logId');
+    expect(issue.message).toBe('"L9" is not a supplied log; use one of L1');
+    const none = retryFixture();
+    const sb = baseStoryboard(none);
+    scene(sb, 2).visual = visual();
+    expect((await run(sb, none)).errors.find((e) => e.code === 'log-unknown')?.message).toContain(
+      'no logs were supplied',
+    );
+  });
+
+  it('puts the start and the end in order, with a fix and no warning', async () => {
+    const { result, shown } = await check({ startLine: 20, endLine: 10 });
+    expect(shown).toMatchObject({ startLine: 10, endLine: 20 });
+    expect(result.warnings).toEqual([]);
+    expect(result.fixes).toEqual(['scenes[2].visual: put startLine and endLine in order']);
+  });
+
+  it('cuts a range that sticks out of the log, with a warning and a fix', async () => {
+    const { result, shown } = await check({
+      startLine: -3,
+      endLine: 70,
+      focus: [],
+    });
+    expect(shown).toMatchObject({ startLine: 1, endLine: 18 });
+    // -3 to 70 is cut to the log (1 to 60) first, then to 18 lines.
+    expect(codes(result.warnings)).toEqual(['log-range-out-of-range', 'log-too-long']);
+    const edge = await check({ startLine: 55, endLine: 70, focus: [] });
+    expect(edge.shown).toMatchObject({ startLine: 55, endLine: 60 });
+    expect(codes(edge.result.warnings)).toEqual(['log-range-out-of-range']);
+    expect(edge.result.fixes).toEqual(['scenes[2].visual: cut the lines to 55 to 60, inside the log']);
+  });
+
+  it('refuses a range that lies fully outside the log', async () => {
+    for (const range of [
+      { startLine: 61, endLine: 70 },
+      { startLine: -5, endLine: 0 },
+    ]) {
+      const { result } = await check({ ...range, focus: [] });
+      expect(result.storyboard).toBeNull();
+      expect(codes(result.errors)).toEqual(['log-range-out-of-range']);
+      expect(result.errors[0]?.path).toBe('scenes[2].visual.startLine');
+      expect(result.errors[0]?.message).toContain('which has 60 lines');
+    }
+  });
+
+  it('shortens a range of more than 18 lines from its end, and cuts the focus to what is left', async () => {
+    const { result, shown } = await check({
+      startLine: 10,
+      endLine: 40,
+      focus: [
+        { startLine: 12, endLine: 13, note: null, beat: 0 },
+        { startLine: 30, endLine: 35, note: null, beat: 1 },
+        { startLine: 25, endLine: 40, note: null, beat: 1 },
+      ],
+    });
+    expect(shown).toMatchObject({ startLine: 10, endLine: 27 });
+    expect(codes(result.warnings)).toEqual(['log-too-long']);
+    expect(shown?.focus.map((f) => [f.startLine, f.endLine])).toEqual([
+      [12, 13],
+      [25, 27],
+    ]);
+    expect(result.fixes).toEqual([
+      'scenes[2].visual: shortened the lines from the end to 10 to 27 (the limit is 18 lines)',
+      'scenes[2].visual.focus[1]: dropped the focus range 30-35 because it is outside the lines shown (10-27)',
+      'scenes[2].visual.focus[2]: focus range 25-40 was changed to 25-27 to fit the lines shown',
+    ]);
+  });
+
+  it('accepts exactly 18 lines', async () => {
+    const { result } = await check({ startLine: 10, endLine: 27, focus: [] });
+    expect(result.fixes).toEqual([]);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('cleans the notes and the caption like those of code', async () => {
+    const { result, shown } = await check({
+      caption: 'See https://phish.attacker.dev/x for this.',
+      focus: [
+        {
+          startLine: 12,
+          endLine: 13,
+          note: 'Visit https://phish.attacker.dev/x now',
+          beat: 0,
+        },
+      ],
+    });
+    expect(shown?.caption).toBeNull();
+    expect(shown?.focus[0]?.note).toBeNull();
+    expect(codes(result.warnings)).toContain('url-in-text');
+  });
+
+  it('does not mask the id of the log: an id is matched exactly, as the other ids are', async () => {
+    const { result } = await check({ logId: 'jane.doe@example.com' });
+    expect(result.errors.find((e) => e.code === 'log-unknown')?.message).toContain(
+      '"jane.doe@example.com" is not a supplied log',
+    );
+  });
+
+  it('removes a cited range that is outside the log, with the usual fix text', async () => {
+    const { result } = await check({ focus: [] }, ['L1.12-13', 'L1.50-70', 'L1.0-2']);
+    expect(result.storyboard?.scenes[2]?.narration[0]?.evidence).toEqual(['L1.12-13']);
+    expect(result.fixes).toContain(
+      'scenes[2].narration[0].evidence: removed unknown evidence ids "L1.50-70", "L1.0-2"',
+    );
+  });
+
+  it('is not backing evidence for a simulated visual', async () => {
+    const fx = retryFixture({ inputs: { logs: [log] } });
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).visual = {
+      type: 'terminal',
+      title: 'Run',
+      lines: [{ kind: 'command', text: 'npm test', beat: 0 }],
+    };
+    scene(sb, 2).narration = [{ text: 'The run printed the count.', evidence: ['L1', 'L1.12-13'] }];
+    expect(codes((await run(sb, fx)).errors)).toContain('simulated-unbacked');
+  });
+});

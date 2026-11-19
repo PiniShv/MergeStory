@@ -1,1 +1,9 @@
-[{ "command": "npm test", "passed": true, "summary": "3 tests passed, 0 failed (node --test)" }]
+[
+  { "command": "npm test", "passed": true, "summary": "3 tests passed, 0 failed (node --test)" },
+  {
+    "command": "node check.js",
+    "passed": true,
+    "summary": "2 and 3 give 5 items, 10 and 4 give 14 items",
+    "log": "L1.1-3"
+  }
+]

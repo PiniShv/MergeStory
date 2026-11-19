@@ -18,12 +18,12 @@ import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
 import { isLoopbackAddress } from '../core/net.ts';
 import { isInside } from '../core/posix.ts';
-import { maskSecrets } from '../core/secrets.ts';
+import { maskPrivate, maskSecrets } from '../core/secrets.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import type { JobOptions } from '../jobs/model.ts';
 import { maskContext } from '../jobs/view.ts';
 import { LIMITS, readJsonFile } from './files.ts';
-import { buildContext, type ContextFlags, parseScreenshotSpec } from './inputs.ts';
+import { buildContext, type ContextFlags, parseLogSpec, parseScreenshotSpec } from './inputs.ts';
 
 // ---------------------------------------------------------------------------
 // Flag parsers
@@ -165,7 +165,7 @@ export function addContextFlags(command: Command): Command {
     .option('--notes-file <file>', 'implementation notes or design decisions (max 64 KB)')
     .option(
       '--tests-file <file>',
-      'JSON array of test results: {command, passed, summary, source?: agent|ci|user} (max 256 KB). They are shown as reported, never run',
+      'JSON array of test results: {command, passed, summary, source?: agent|ci|user, log?: L1.120-140} (max 256 KB). They are shown as reported, never run',
     )
     .option(
       '--repro-file <file>',
@@ -198,6 +198,11 @@ export function addContextFlags(command: Command): Command {
           throw new InvalidArgumentError('Give --redact once, with one file of all regions.');
         return value;
       },
+    )
+    .option(
+      '--log <spec>',
+      'a real log, UTF-8 text up to 256 KB, at most 4: <file>[:<caption>]. Cite lines as L1.120-140 (repeatable)',
+      collect,
     );
 }
 
@@ -478,7 +483,7 @@ export async function buildCommonOptions(
 /**
  * The source and flags of an `analyze` command line as raw words, for the commands that AUTHORING.md
  * shows. Files are made absolute, so the commands work from the run folder as well. The flags are
- * the ones that decide the evidence ids (refs, task, notes, tests, screenshots, recordings).
+ * the ones that decide the evidence ids (refs, task, notes, tests, screenshots, recordings, logs).
  */
 export function followUpFor(
   source: string,
@@ -489,6 +494,9 @@ export function followUpFor(
   if (flags.base) refs.push('--base', flags.base);
   if (flags.head) refs.push('--head', flags.head);
   const contextArgs: string[] = [];
+  // The file becomes absolute. The caption is masked, secrets and e-mail addresses: the commands are written to AUTHORING.md.
+  const withCaption = (path: string, spec: string): string =>
+    `${resolve(cwd, path)}${maskPrivate(spec.slice(path.length), { maskEmails: true })}`;
   if (flags.task !== undefined) contextArgs.push('--task', flags.task);
   if (flags.taskFile !== undefined) contextArgs.push('--task-file', resolve(cwd, flags.taskFile));
   if (flags.notesFile !== undefined) contextArgs.push('--notes-file', resolve(cwd, flags.notesFile));
@@ -496,14 +504,18 @@ export function followUpFor(
   if (flags.reproFile !== undefined) contextArgs.push('--repro-file', resolve(cwd, flags.reproFile));
   for (const spec of flags.screenshot ?? []) {
     const { path } = parseScreenshotSpec(spec);
-    contextArgs.push('--screenshot', `${resolve(cwd, path)}${spec.slice(path.length)}`);
+    contextArgs.push('--screenshot', withCaption(path, spec));
   }
   if (flags.screenshotsDir !== undefined) {
     contextArgs.push('--screenshots-dir', resolve(cwd, flags.screenshotsDir));
   }
   for (const spec of flags.recording ?? []) {
     const { path } = parseScreenshotSpec(spec);
-    contextArgs.push('--recording', `${resolve(cwd, path)}${spec.slice(path.length)}`);
+    contextArgs.push('--recording', withCaption(path, spec));
+  }
+  for (const spec of flags.log ?? []) {
+    const { path } = parseLogSpec(spec);
+    contextArgs.push('--log', withCaption(path, spec));
   }
   if (flags.redact !== undefined) contextArgs.push('--redact', resolve(cwd, flags.redact));
   return { source, args: [...refs, ...contextArgs], contextArgs };

@@ -164,7 +164,7 @@ See [Privacy options](#privacy-options) for what these do.
 |---|---|---|---|
 | `privacy.maskEmails` | `true` | Mask e-mail addresses on screen, in narration, in captions, on the watch page and in what goes to a model. | none, none |
 | `privacy.excludePaths` | `[]` | A list of path patterns whose content is never shown or sent anywhere. | none, none |
-| `privacy.llmContext` | `full` | What a model receives: `full` (key hunks of code) or `minimal` (metadata, paths and symbol names only). | none, none |
+| `privacy.llmContext` | `full` | What a model receives: `full` (key hunks of code, and masked excerpts of logs) or `minimal` (metadata, paths and symbol names only, and no log excerpts). | none, none |
 
 ### Rendering (`render`)
 
@@ -287,7 +287,8 @@ These settings change what else is hidden:
 - `privacy.maskEmails` keeps e-mail addresses out of captions, narration, code and logs. It is on by default.
   Screenshots and recordings are shown as they are, apart from the regions you ask to hide (`--redact`).
 - `privacy.llmContext` set to `minimal` keeps code away from a model. The model then gets only metadata,
-  paths and symbol names, and writes a storyboard without code scenes.
+  paths and symbol names, and no excerpts of logs, and writes a storyboard without code scenes. With
+  `full`, a model also gets masked excerpts of the logs you supply.
 
 See [SECURITY.md](../SECURITY.md) for the whole picture.
 

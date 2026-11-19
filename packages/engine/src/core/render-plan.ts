@@ -320,6 +320,15 @@ export interface ReproResolved {
   }[];
 }
 
+/** Real lines of a supplied log, already masked and cut. Drawn like code, without syntax colours. */
+export interface LogResolved {
+  type: 'log';
+  /** The lines as a code view holds them: the log's caption as the path, the log's own line numbers. */
+  code: ResolvedCode;
+  focus: CodeResolved['focus'];
+  caption: string | null;
+}
+
 export interface SummaryResolved {
   type: 'summary';
   points: TextBeat[];
@@ -341,6 +350,7 @@ export type ResolvedVisual =
   | ScreenshotResolved
   | RecordingResolved
   | ReproResolved
+  | LogResolved
   | SummaryResolved;
 
 // ---------------------------------------------------------------------------

@@ -105,7 +105,16 @@ describe('analyze: evidence index', () => {
       emptyInputs({
         task: 'Add retry',
         notes: 'Chose exponential backoff.',
-        tests: [{ id: 'T1', command: 'npm test', passed: true, summary: '12 passed', source: 'agent' }],
+        tests: [
+          {
+            id: 'T1',
+            command: 'npm test',
+            passed: true,
+            summary: '12 passed',
+            source: 'agent',
+            log: null,
+          },
+        ],
         screenshots: [
           { id: 'SS1', path: '/tmp/a.png', caption: 'Settings page after the change', moment: 'after' },
         ],
