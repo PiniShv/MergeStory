@@ -20,6 +20,13 @@ describe('compressIds', () => {
   it('does not join ids with different prefixes or gaps', () => {
     expect(compressIds(['F1', 'S2', 'F3'])).toBe('F1, S2, F3');
   });
+
+  it('keeps the letter of a source and never joins ids of two sources', () => {
+    expect(compressIds(['A.F1', 'A.F2', 'A.F3', 'B.F1', 'B.F2', 'A.PR', 'B.REPO', 'TASK'])).toBe(
+      'A.F1-A.F3, B.F1-B.F2, A.PR, B.REPO, TASK',
+    );
+    expect(compressIds(['A.F3', 'B.F4'])).toBe('A.F3, B.F4');
+  });
 });
 
 describe('compressHunkIds', () => {
@@ -42,6 +49,21 @@ describe('compressHunkIds', () => {
 
   it('keeps an id of another shape instead of dropping it', () => {
     expect(compressHunkIds(['F1.H1', 'F1.H2', 'H9', 'F3'])).toBe('F1.H1-H2, H9, F3');
+  });
+
+  it('collapses the hunks of each source on its own, with its letter', () => {
+    expect(
+      compressHunkIds([
+        'A.F1.H1',
+        'A.F1.H2',
+        'A.F2.H1',
+        'A.F3.H1',
+        'B.F1.H1',
+        'B.F1.H2',
+        'B.F2.H1',
+        'A.F5.H1',
+      ]),
+    ).toBe('A.F1.H1-H2, A.F2.H1-A.F3.H1, A.F5.H1, B.F1.H1-H2, B.F2.H1');
   });
 
   it('keeps gaps inside one file', () => {

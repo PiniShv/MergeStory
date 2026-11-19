@@ -357,6 +357,15 @@ ${JSON.stringify(EXAMPLE_STORYBOARD, null, 2)}
 ${FENCE}
 `;
 
+/**
+ * The one extra paragraph of a run with several sources. It is added to the guide only then, so a
+ * run with one source reads exactly the guide above.
+ */
+export const SEVERAL_SOURCES_GUIDE = `## Several sources
+
+This change comes from several repositories. The top of the evidence pack lists them, each with a letter and a folder. An id of a repository starts with its letter (A.F1, B.S2, A.PR) and a path starts with its folder (orders-api/src/total.js). Use ids and paths exactly as the pack writes them. One narration line may cite ids of several sources. The title card must name every pull request: its repository name and its number. An architecture visual may show components of all sources: say in each node's detail which repository it is in.
+`;
+
 const values = (schema: { options: readonly string[] }): string => schema.options.join(', ');
 const rule = (schema: { description?: string }): string => schema.description ?? '';
 

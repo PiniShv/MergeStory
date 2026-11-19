@@ -209,6 +209,8 @@ export interface AuthoringContext {
   source: string;
   base?: string | undefined;
   head?: string | undefined;
+  /** The `--source` texts, when they were used: the commands repeat them in place of the source. */
+  sources?: string[] | null;
 }
 
 /** The block printed by `analyze`: the files and the next steps. */
@@ -222,7 +224,9 @@ export function formatAuthoring(
   const { summary } = result;
   const storyboardPath = `${result.runDir.replace(/[\\/]+$/, '')}/storyboard.json`;
   const refs = `${context.base ? ` --base ${shellQuote(context.base)}` : ''}${context.head ? ` --head ${shellQuote(context.head)}` : ''}`;
-  const source = shellQuote(context.source);
+  const source = context.sources
+    ? context.sources.map((spec) => `--source ${shellQuote(spec)}`).join(' ')
+    : shellQuote(context.source);
   const lines = [
     `${style.green('Analysis ready')}: ${summary.title}`,
     '',

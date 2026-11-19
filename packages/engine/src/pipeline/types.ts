@@ -32,6 +32,12 @@ export interface ContextOptions {
 export interface GenerateOptions {
   /** PR URL, "owner/repo#123", a local repository path, or an explicit SourceInput. */
   source: string | SourceInput;
+  /**
+   * Several sources for one video (at most four): each a source input, or text like the CLI's
+   * `--source`: `<repo>[:<base>..<head>]`. When it is given it lists every source: `source` is not
+   * read (pass the first one) and `base` and `head` must not be set.
+   */
+  sources?: Array<string | SourceInput>;
   /** Local sources only: base and head refs (defaults: merge base with the default branch, and HEAD). */
   base?: string | null;
   head?: string | null;

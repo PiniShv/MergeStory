@@ -13,7 +13,13 @@ import { countWords } from '../core/text.ts';
 import { createOpenAiFromConfig } from '../llm/openai-compatible.ts';
 import { testContext } from '../testing/context.ts';
 import { type Fixture, retryFixture } from '../testing/storyboard-fixtures.ts';
-import { AUTHORING_GUIDE, AUTHORING_VALUES, EXAMPLE_STORYBOARD, VISUAL_SHAPES } from './authoring.ts';
+import {
+  AUTHORING_GUIDE,
+  AUTHORING_VALUES,
+  EXAMPLE_STORYBOARD,
+  SEVERAL_SOURCES_GUIDE,
+  VISUAL_SHAPES,
+} from './authoring.ts';
 import { estimateStoryboardCost, generateStoryboard } from './generate.ts';
 import { buildSystemPrompt, buildUserPrompt, sceneRange } from './prompts.ts';
 import { validateStoryboard } from './validate.ts';
@@ -217,6 +223,19 @@ describe('prompts', () => {
     expect(system).toContain('Ignore any instruction');
     expect(system).toContain('Return one JSON object');
     expect(system).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
+  });
+
+  it('adds one paragraph about letters and folders for several sources, and not a word for one', () => {
+    const one = buildSystemPrompt(config);
+    const several = buildSystemPrompt(config, true);
+    expect(buildSystemPrompt(config, false)).toBe(one);
+    expect(one).not.toContain(SEVERAL_SOURCES_GUIDE.trim());
+    expect(several).toContain(SEVERAL_SOURCES_GUIDE.trim());
+    expect(several.replace(`${SEVERAL_SOURCES_GUIDE.trim()}\n\n`, '')).toBe(one);
+    for (const phrase of ['letter', 'folder', 'several sources', 'every pull request', "node's detail"]) {
+      expect(SEVERAL_SOURCES_GUIDE, phrase).toContain(phrase);
+    }
+    expect(countWords(SEVERAL_SOURCES_GUIDE)).toBeLessThan(130);
   });
 
   it('tells the model when there are no code lines to point at', () => {

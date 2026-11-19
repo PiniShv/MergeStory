@@ -15,6 +15,10 @@
  *   RC<n>     screen recording supplied by the caller
  *   REPRO     reproduction steps from the caller        REPRO.<n>  step n of the reproduction
  *   L<n>      log file supplied by the caller; L<n>.<a>-<b> is lines a to b of it
+ *
+ * With several sources, every id that comes from a repository has the letter of that repository in
+ * front ("A.F1", "B.S3", "A.PR"). TASK, NOTES, T<n>, REPRO, SS<n>, RC<n> and L<n> come from the caller and
+ * stay as they are.
  */
 
 export type Side = 'base' | 'head';
@@ -132,6 +136,22 @@ export interface RepoContext {
   manifests: { path: string; excerpt: string }[];
 }
 
+/** One of the sources of a change that spans several repositories, as it was loaded (before the join). */
+export interface ChangeSetPart {
+  /** "A", "B", ...: the letter in front of every evidence id of this source. */
+  label: string;
+  /** The folder in front of every path of this source. */
+  folder: string;
+  source: 'github' | 'local';
+  repo: RepoInfo;
+  base: { ref: string; sha: string };
+  head: { ref: string; sha: string };
+  pr: PullRequestInfo | null;
+  stats: { files: number; additions: number; deletions: number };
+  /** The README excerpt of this repository, whole. */
+  readmeExcerpt: string | null;
+}
+
 export interface ChangeSet {
   source: 'github' | 'local';
   repo: RepoInfo;
@@ -145,6 +165,12 @@ export interface ChangeSet {
   /** Set when the source capped what it collected. */
   limits: { filesCapped: boolean; commitsCapped: boolean; note: string | null };
   repoContext: RepoContext;
+  /**
+   * Only on a change that was joined from several sources: the sources in the order of their letters.
+   * Then ids start with the letter ("A.F1") and paths with the folder ("orders-api/src/x.ts"), `pr` is
+   * null and `repo` names every repository.
+   */
+  parts?: ChangeSetPart[];
 }
 
 /** Read-only access to file contents at the two sides of the change. Implementations never write. */

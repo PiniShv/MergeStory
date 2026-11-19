@@ -72,7 +72,7 @@ that is not listed here is an error, so a typo is never ignored.
 
 | Field | Type | What it is |
 |---|---|---|
-| `source` | string, required | A pull request URL, `owner/repo#123`, or the path of a local repository. At most 2048 characters. |
+| `source` | string, required | A pull request URL, `owner/repo#123`, or the path of a local repository. At most 2048 characters. One source only: the API cannot join several repositories into one video (the library and the command line can). |
 | `base`, `head` | string | The refs of a local repository. Not allowed with a pull request. At most 256 characters, no spaces, and they must not start with `-`. |
 | `context.task`, `context.notes` | string | The task and the notes, at most 64 KB each. They become the evidence `TASK` and `NOTES`. |
 | `context.tests` | array | Up to 100 results: `{"command", "passed", "summary", "source"?}`. `source` is `agent`, `ci` or `user`. Only the first 10 are used. |
@@ -248,6 +248,7 @@ if ('dryRun' in result) {
 | Option | What it is |
 |---|---|
 | `source` | A pull request URL, `owner/repo#123` or a path (or a `SourceInput` object). |
+| `sources` | Several sources for one video, at most 4: each a `SourceInput`, or text such as the flag `--source` takes, `<repo>[:<base>..<head>]`. It lists every source, so pass the first one as `source` too and leave `base` and `head` out. Ids then start with the letter of the source (`A.F1`) and paths with its folder. A storyboard is needed unless a model is set up. See [cli.md](cli.md#several-sources). |
 | `base`, `head` | The refs of a local repository. |
 | `context` | `{task, notes, tests, repro, screenshots, recordings, logs, redact}`. A test is `{command, passed, summary, source, log}`, with `source` set to `agent`, `ci` or `user`, and `log` a log id such as `L1.120-140` or `null`. A reproduction is `{title, environment?, steps}`, where a step is `{text, screenshot?, recording?, result?}`, with the limits of `--repro-file` (see [cli.md](cli.md#context-flags)); a step names a screenshot or recording of the same call by its id (`SS1`, `RC1`). A screenshot is `{path, caption, moment}`; one wider than 2560 pixels is made smaller by FFmpeg when the video is made. A recording is `{path, caption, moment}` too: a library call reads the file from its path, and FFmpeg must be installed. `redact` is the parsed content of a `--redact` file (see "Hidden regions" in [cli.md](cli.md#context-flags)); a region of a recording is hidden in every frame of the clip, and it also covers the pictures of a reproduction step. A log is `{path, caption}`: the file is read from its path, as UTF-8 text of at most 256 KB, and at most 4 are used. The HTTP API still takes no file. |
 | `storyboard` | A storyboard that you wrote. It is checked like every storyboard. |

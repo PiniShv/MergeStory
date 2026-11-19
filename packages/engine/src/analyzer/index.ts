@@ -6,7 +6,7 @@
 import { type Config, DURATION_LIMITS } from '../core/config.ts';
 import type { Analysis } from '../core/types.ts';
 
-export { analyze } from './analyze.ts';
+export { analyze, isMeaningfulFile, paceOf, sortLanguages } from './analyze.ts';
 export { hunkRange } from './hunks.ts';
 export type { EvidencePack, EvidencePackOptions } from './pack.ts';
 export { buildEvidencePack } from './pack.ts';

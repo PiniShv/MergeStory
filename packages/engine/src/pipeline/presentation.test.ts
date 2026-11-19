@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { EvidenceItem } from '../core/types.ts';
 import { buildPrComment, buildWatchPage } from '../publish/index.ts';
+import { joinSources } from '../sources/join.ts';
+import { orders, store } from '../testing/joined.ts';
 import { makeStoryboard } from '../testing/narration.ts';
 import { retryFixture } from '../testing/storyboard-fixtures.ts';
 import { buildCommentData, buildWatchPageData, reviewChecklist } from './presentation.ts';
@@ -126,5 +128,24 @@ describe('labels of code references', () => {
       expect(text).toContain('src/http/client.ts:10-15');
       expect(text).not.toContain('retry.ts:8-8');
     }
+  });
+});
+
+describe('the watch page of a change in several repositories', () => {
+  it('has no link to the change, though each source has a pull request', async () => {
+    const joined = joinSources([await orders(), await store()]);
+    expect(joined.changeSet.parts?.every((p) => p.pr?.url)).toBe(true);
+    const watch = buildWatchPageData({
+      storyboard: makeStoryboard({ s1: ['The total is in cents.'] }),
+      storyboardSource: 'agent',
+      changeSet: joined.changeSet,
+      analysis: joined.analysis,
+      chapters: [{ title: 'Why', startSec: 0 }],
+      durationSec: 90,
+      generator: { llm: null, tts: 'none' },
+      generatedAt: NOW,
+      captionsBurnedIn: true,
+    });
+    expect(watch.changeUrl).toBeNull();
   });
 });

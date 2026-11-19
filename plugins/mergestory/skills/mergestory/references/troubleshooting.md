@@ -63,9 +63,24 @@ wanted is gone:
 | `repro-step-unknown` | A `repro` visual lists a step that the reproduction does not have. The step was dropped. | List only steps from `REPRO.1` up to the last step. |
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. | Check the lines that are shown. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. | Show fewer lines, and mark the ones you discuss in `focus`. |
+| `title-missing-source` | Several sources: the first title card does not name every pull request (repository name and `#<number>`). The kicker was set to the names of all the changes when they fit. | Write the names on the title card yourself. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory
 repository.
+
+## Several sources (exit code 2)
+
+- "needs a storyboard": with several `--source` flags and no model, MergeStory writes no storyboard. Run
+  `mergestory analyze` with the same `--source` flags, write the storyboard, and give it to
+  `generate --storyboard`.
+- "--source cannot be used together": give every source as `--source <repo>[:<base>..<head>]`, with no
+  source argument, `--base` or `--head`.
+- "at most 4", "the same source was given more than once", "--out is inside the repository": use up to 4
+  different sources, and an `--out` outside every local repository.
+- "nothing is posted to a pull request": remove `--comment` and `--update-description`, and ask the user to
+  post the link on each pull request. A setting in the config file only adds a warning.
+- An id such as `F1` or a path such as `src/total.js` that is "removed" or "unknown": use the form with the
+  letter (`A.F1`) or the folder (`orders-api/src/total.js`) that the message names.
 
 ## Nothing to explain
 

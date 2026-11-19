@@ -5,9 +5,11 @@
 
 import { findEvidence } from '../analyzer/evidence.ts';
 import type { Config } from '../core/config.ts';
+import { changeLabelOf } from '../core/labels.ts';
 import { isShowable } from '../core/path-policy.ts';
 import { truncate } from '../core/text.ts';
 import type {
+  ChangeSetPart,
   EvidenceItem,
   LogInput,
   RecordingInput,
@@ -77,14 +79,22 @@ function buildKnownCorpus(deps: ValidationDeps): KnownCorpus {
   const prose = (id: string, text: string | null | undefined): void => {
     if (text) addProseText(corpus, id, text);
   };
-  code(changeSet.repo.name);
-  code(changeSet.repo.owner);
-  if (changeSet.pr) {
-    prose('PR', changeSet.pr.title);
-    prose('PR', changeSet.pr.body);
-    prose('PR', changeSet.pr.headRef);
-    prose('PR', changeSet.pr.baseRef);
-    for (const label of changeSet.pr.labels) prose('PR', label);
+  // With several sources the names and the texts of every one of them count, each under its own ids.
+  for (const part of changeSet.parts ?? [{ repo: changeSet.repo, pr: changeSet.pr, label: '', folder: '' }]) {
+    code(part.repo.name);
+    code(part.repo.owner);
+    code(part.folder);
+    // The title card may name a local change by its branch (see the title rule).
+    if ('head' in part) code(part.head.ref);
+    const pr = part.pr;
+    const id = part.label ? `${part.label}.PR` : 'PR';
+    if (pr) {
+      prose(id, pr.title);
+      prose(id, pr.body);
+      prose(id, pr.headRef);
+      prose(id, pr.baseRef);
+      for (const label of pr.labels) prose(id, label);
+    }
   }
   for (const commit of changeSet.commits) {
     prose(commit.id, commit.subject);
@@ -94,7 +104,8 @@ function buildKnownCorpus(deps: ValidationDeps): KnownCorpus {
     prose(issue.id, issue.title);
     prose(issue.id, issue.body);
   }
-  prose('REPO', changeSet.repoContext.readmeExcerpt);
+  if (changeSet.parts) for (const part of changeSet.parts) prose(`${part.label}.REPO`, part.readmeExcerpt);
+  else prose('REPO', changeSet.repoContext.readmeExcerpt);
   for (const manifest of changeSet.repoContext.manifests) code(manifest.excerpt);
   prose('TASK', inputs.task);
   prose('NOTES', inputs.notes);
@@ -180,11 +191,19 @@ export class Run {
   readonly refs: RefResolver;
   /** The storyboard is the offline one, written in English by MergeStory itself. */
   readonly offline: boolean;
+  /** The sources of a change that was joined from several, else null. */
+  readonly parts: readonly ChangeSetPart[] | null;
+  /** The words that name every change of a joined change set ("orders-api #3 + storefront #7"), else null. */
+  readonly changeLabel: string | null;
+  private readonly filePaths: ReadonlySet<string>;
   /** An agent or a person wrote the storyboard and reads the result (see ValidationDeps.authored). */
   readonly authored: boolean;
 
   constructor(deps: ValidationDeps) {
     this.config = deps.config;
+    this.parts = deps.changeSet.parts ?? null;
+    this.changeLabel = this.parts ? changeLabelOf(deps.changeSet) : null;
+    this.filePaths = new Set(deps.changeSet.files.map((f) => f.path));
     this.offline = deps.offline ?? false;
     this.authored = deps.authored ?? false;
     this.evidence = new Map(deps.analysis.evidence.map((item) => [item.id, item]));
@@ -199,7 +218,7 @@ export class Run {
       deps.changeSet.files,
       deps.analysis.symbols.map((symbol) => symbol.name),
     );
-    this.refs = createRefResolver(deps.changeSet.files, deps.reader);
+    this.refs = createRefResolver(deps.changeSet.files, deps.reader, (path) => this.pathHint(path));
   }
 
   error(path: string, code: IssueCode, message: string): void {
@@ -213,6 +232,22 @@ export class Run {
   /** Record an automatic fix. The path is part of the text so the list reads on its own. */
   fix(path: string, message: string): void {
     this.fixes.push(`${path}: ${message}`);
+  }
+
+  /** With several sources: the forms with a folder in front that do exist, as a hint to add to a message. */
+  pathHint(path: string): string {
+    const forms = (this.parts ?? []).map((p) => `${p.folder}/${path}`).filter((x) => this.filePaths.has(x));
+    return forms.length > 0
+      ? ` (a path starts with the folder of its source: did you mean ${forms.join(' or ')}?)`
+      : '';
+  }
+
+  /** With several sources: the forms with a letter in front that do exist ("A.F1 or B.F1"). */
+  private idHint(id: string): string {
+    const forms = (this.parts ?? []).map((p) => `${p.label}.${id}`).filter((x) => this.evidence.has(x));
+    return forms.length > 0
+      ? ` (an id of a repository starts with its letter: did you mean ${forms.join(' or ')}?)`
+      : '';
   }
 
   /** Cited ids that exist in the evidence index, without duplicates. Unknown ids are reported as fixes. */
@@ -230,7 +265,7 @@ export class Run {
     if (unknown.length > 0) {
       this.fix(
         path,
-        `removed unknown evidence id${unknown.length > 1 ? 's' : ''} ${unknown.map((id) => `"${id}"`).join(', ')}`,
+        `removed unknown evidence id${unknown.length > 1 ? 's' : ''} ${unknown.map((id) => `"${id}"${this.idHint(id)}`).join(', ')}`,
       );
     }
     return valid;

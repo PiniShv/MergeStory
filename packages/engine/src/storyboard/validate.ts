@@ -645,6 +645,35 @@ function checkSimulatedEvidence(scene: Scene, p: string, run: Run): void {
   }
 }
 
+/** The most characters a repaired kicker may have: it is one line of small, spaced capitals. */
+const MAX_KICKER_LENGTH = 60;
+
+/**
+ * A change in several repositories: the first title card must name every pull request (its
+ * repository name and its number). When it does not, say so, and set the kicker to the names of
+ * all the changes if they fit.
+ */
+function checkTitleNamesEverySource(storyboard: Storyboard, run: Run): void {
+  if (!run.parts) return;
+  const index = storyboard.scenes.findIndex((scene) => scene.visual.type === 'title');
+  const visual = storyboard.scenes[index]?.visual;
+  if (visual?.type !== 'title') return;
+  const text = [visual.kicker, visual.heading, visual.subheading, ...visual.chips].join('\n').toLowerCase();
+  const missing = run.parts.filter(
+    (part) =>
+      part.pr &&
+      !(text.includes(part.repo.name.toLowerCase()) && new RegExp(`#${part.pr.number}(?!\\d)`).test(text)),
+  );
+  if (missing.length === 0) return;
+  const path = `scenes[${index}].visual`;
+  const names = missing.map((part) => `${part.repo.name} #${part.pr?.number}`).join(', ');
+  run.warn(path, 'title-missing-source', `the title card does not name every pull request: ${names}`);
+  if (run.changeLabel !== null && run.changeLabel.length <= MAX_KICKER_LENGTH) {
+    visual.kicker = run.changeLabel;
+    run.fix(`${path}.kicker`, `set to "${run.changeLabel}" so that the title names every pull request`);
+  }
+}
+
 async function validateParsed(parsed: Storyboard, run: Run): Promise<Storyboard> {
   // Secrets and personal data first, so every later step sees the masked text.
   const counters: MaskCounters = { secrets: 0, emails: 0, hidden: 0 };
@@ -729,6 +758,7 @@ async function validateParsed(parsed: Storyboard, run: Run): Promise<Storyboard>
     checkSimulatedEvidence(scene, p, run);
     clampBeats(scene, p, run);
   }
+  checkTitleNamesEverySource(storyboard, run);
 
   const everything = new TextCleaner(run, [...new Set(storyboard.scenes.flatMap(narrationEvidence))]);
   storyboard.title = everything.required(storyboard.title, 'title');

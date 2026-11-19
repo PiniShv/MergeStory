@@ -40,7 +40,7 @@ import { planResult } from './plan.ts';
 import { type Prepared, prepare } from './prepare.ts';
 import { buildWatchPageData } from './presentation.ts';
 import { type PublishOutcome, publishAndNotify, saveResult } from './publish-run.ts';
-import { chooseStoryboard, fitStoryboard } from './storyboard-choice.ts';
+import { assertStoryboardPossible, chooseStoryboard, fitStoryboard } from './storyboard-choice.ts';
 import type { GenerateHooks, GenerateOptions } from './types.ts';
 
 /**
@@ -195,6 +195,7 @@ async function produce(
     },
   });
 
+  assertStoryboardPossible(p, options.storyboard);
   const renderer = createRenderer(config);
   const tts = ctx.dryRun ? null : await readyToRender(ctx, renderer);
 
@@ -344,6 +345,7 @@ async function produce(
     prUrl: changeSet.pr?.url ?? null,
     repoIsPrivate: changeSet.repo.isPrivate,
     headSha: changeSet.head.sha,
+    ...(changeSet.parts ? { sources: changeSet.parts.length } : {}),
     language: storyboard.language,
     watch: localWatchData,
   };

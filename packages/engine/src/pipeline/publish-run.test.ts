@@ -397,6 +397,47 @@ describe('a pull request update that fails', () => {
   });
 });
 
+describe('a run that joined several repositories', () => {
+  const several = (more: Partial<StoredPublishInput> = {}) =>
+    storedInput({
+      sources: 2,
+      prUrl: null,
+      watch: { ...watchData(), changeLabel: 'orders-api #3 + storefront #7', changeUrl: null },
+      ...more,
+    });
+
+  it('posts nothing to any pull request and says so once, naming the pull requests', async () => {
+    await writeRun(several());
+    const result = await publish({ ...S3, github: { comment: true, updateDescription: true } });
+    // The fake GitHub client and both writes fail the test when they are used at all.
+    expect(clientMock).not.toHaveBeenCalled();
+    expect(commentMock).not.toHaveBeenCalled();
+    expect(descriptionMock).not.toHaveBeenCalled();
+    expect(result.notify).toBeNull();
+    const notes = result.warnings.filter((w) => w.startsWith('Skipped the PR update:'));
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('orders-api #3 + storefront #7');
+    expect(notes[0]).toContain('Post the link on each pull request yourself');
+    expect(received[0]?.meta?.changeUrl).toBeNull();
+  });
+
+  it('is silent when no comment was asked for, and the link is not made public on its own word', async () => {
+    await writeRun(several({ repoIsPrivate: false }));
+    const result = await publish(PUBLIC);
+    expect(result.warnings).toEqual(['Earlier warning']);
+    // "Every source is public" is what the file says, but no pull request is there to confirm it.
+    expect(received.at(-1)?.repoIsPrivate).toBeNull();
+    expect(clientMock).not.toHaveBeenCalled();
+  });
+
+  it('is told apart from a run of one pull request by the sources it stores', () => {
+    const config = resolveConfig({ skipFile: true, env: {}, overrides: { github: { comment: true } } });
+    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, sources: 2 }, 's3')).toEqual({
+      kind: 'several-sources',
+    });
+  });
+});
+
 describe('an upload that fails', () => {
   it('is reported as it is, and what was sent before it failed is saved', async () => {
     await writeRun();

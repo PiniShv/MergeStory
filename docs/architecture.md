@@ -85,7 +85,8 @@ learns what happened.
 
 `src/pipeline` has one file for each job, and `run.ts` only connects them:
 
-- `prepare.ts`: read the change, check the context, analyse (the first half of every run);
+- `prepare.ts`: read the change, check the context, analyse (the first half of every run). With several
+  sources it loads and analyses each one alone, then joins them (see [Several sources](#several-sources));
 - `storyboard-choice.ts`: use the caller's storyboard, ask the model, or build the offline one, then
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
@@ -142,7 +143,46 @@ the caller), `IS1` (linked issue), `CM1` (commit), `F2` (file), `F2.H1` (diff hu
 `M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen
 recording), `REPRO` and `REPRO.1` (the reproduction and its steps), `L1` (log) and `L1.120-140` (lines of a
 log), `REPO`.
+With several sources, every id that comes from a repository has the letter of its source in front (`A.F2`, `B.S3`, `A.PR`).
 Storyboards cite these ids. The watch page lists every claim with links to the cited code.
+
+### Several sources
+
+One video can explain a change in several repositories (`--source`, up to 4). Every stage after
+`prepare.ts` still works on ONE change set, ONE reader and ONE analysis, so none of them loops over sources.
+`src/sources/join.ts` makes that possible. `prepare` loads and analyses each source exactly as for a single
+source, with its own reader and its own caches. Then `joinSources` joins them into a change that looks like one
+repository with a top folder for each source:
+
+- The sources are sorted by host, owner, name, pull request number and head commit. The first is `A`, then
+  `B`, `C`, `D`, so the order of the flags never changes a letter. The folder of a source is its repository
+  name made safe (`-2`, `-3` when a name is taken).
+- Every id that a repository made gets `<letter>.` in front, in every field that holds one. Every path gets
+  `<folder>/` in front. Ids that the caller supplied (`TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1`, `L1`) are taken once. One
+  table typed `Record<EvidenceItem['kind'], 'source' | 'run'>` says which kind is which, so a new kind does
+  not compile until it is placed there.
+- The joined reader sends `<folder>/<rest>` to the reader of that source with `<rest>`, and reads nothing for
+  any other path. Each source keeps its own guard: a path that leaves its folder, a sensitive file and a file
+  that is too large read as missing. The rules that look at a path (sensitive, excluded, binary, language, role)
+  were applied before the join, so they never see a folder name.
+- `size` and `suggestedDurationSec` come from the summed lines and components, with the functions of the
+  analyzer (`paceOf`). The sums of the stats, the languages and the limits are joined. `ChangeSet.parts`
+  keeps what each source looked like when it was loaded. `pr` is `null` on a joined change.
+- The evidence pack lists every source and writes the sections about the pull request, the issues, the
+  commits and the repository once for each source. A check after the join throws `INTERNAL` when an evidence
+  id exists twice.
+
+`src/core/labels.ts` answers "which repository, which change, which commit" for everything that prints it:
+the closing card, the watch page and what the publishers get. One source gives the strings it always gave.
+Several sources give `owner/name` of each joined with ` + `, `<name> #<n>` (or `<name> <head ref>` for a local
+change) of each, and the short commits joined with ` · `. A link to code takes the source from the folder at
+the start of the path and uses that source's web address and commit. The watch page has no link to "the"
+change. Nothing is posted to a pull request: `publish-input.json` of such a run holds no pull request
+address, the joined privacy value (private when any source is private) and the commit of `A`.
+
+Checking a storyboard takes the known names and the texts behind `PR`, `REPO`, commit and issue ids from
+every source. The offline storyboard knows one repository, so a run with several sources needs a storyboard
+from a model or from the caller. The `agent` commands and the HTTP API keep one source.
 
 ### Storyboard
 

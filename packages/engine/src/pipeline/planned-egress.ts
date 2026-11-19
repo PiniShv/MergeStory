@@ -15,7 +15,7 @@ import { decidePullRequestUpdate } from './publish-run.ts';
 
 export interface EgressPlanInput {
   ctx: RunContext;
-  changeSet: Pick<ChangeSet, 'source' | 'pr'>;
+  changeSet: Pick<ChangeSet, 'source' | 'pr' | 'parts'>;
   /** The model that would write the storyboard, or null when none is called. */
   llm: { host: string; promptBytes: number } | null;
   tts: Pick<TtsProvider, 'plannedEgress'>;
@@ -53,10 +53,18 @@ export async function planEgress(
 
   const update = decidePullRequestUpdate(
     config,
-    { source: changeSet.source, prUrl: changeSet.pr?.url ?? null },
+    {
+      source: changeSet.source,
+      prUrl: changeSet.pr?.url ?? null,
+      ...(changeSet.parts ? { sources: changeSet.parts.length } : {}),
+    },
     publisher?.id ?? null,
   );
-  if (update.kind === 'not-a-pull-request') {
+  if (update.kind === 'several-sources') {
+    warnings.push(
+      'Nothing would be posted to a pull request: this video explains a change in several repositories. Post the link on each pull request yourself.',
+    );
+  } else if (update.kind === 'not-a-pull-request') {
     warnings.push(
       'The pull request would not be updated: this change does not come from a GitHub pull request.',
     );

@@ -10,6 +10,7 @@ import { storyboardJsonSchema } from '../core/storyboard-schema.ts';
 import {
   AUTHORING_GUIDE,
   AUTHORING_VALUES,
+  SEVERAL_SOURCES_GUIDE,
   type ValidationResult,
   validateStoryboard,
 } from '../storyboard/index.ts';
@@ -56,7 +57,10 @@ export async function prepareAuthoring(
     files,
     summary: {
       title: p.changeSet.pr?.title ?? p.changeSet.commits[0]?.subject ?? changeLabel(p.changeSet),
-      changeLabel: `${repoLabel(p.changeSet)} ${changeLabel(p.changeSet)}`,
+      // The label of a joined change already names every repository.
+      changeLabel: p.changeSet.parts
+        ? changeLabel(p.changeSet)
+        : `${repoLabel(p.changeSet)} ${changeLabel(p.changeSet)}`,
       size: p.analysis.size,
       files: p.changeSet.stats.files,
       suggestedDurationSec: p.targetSec,
@@ -73,23 +77,18 @@ export async function prepareAuthoring(
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
   const agent = followUp?.agent === true;
+  // With --source there is no source argument: the flags are in `args`.
+  const source = followUp?.source ? [followUp.source] : [];
   const validate = !followUp
     ? 'mergestory validate storyboard.json <source>'
     : agent
-      ? commandLine(['mergestory', 'agent', 'validate', followUp.source, ...followUp.args])
-      : commandLine(['mergestory', 'validate', storyboard, followUp.source, ...followUp.args]);
+      ? commandLine(['mergestory', 'agent', 'validate', ...source, ...followUp.args])
+      : commandLine(['mergestory', 'validate', storyboard, ...source, ...followUp.args]);
   const generate = !followUp
     ? 'mergestory generate <source> --storyboard storyboard.json'
     : agent
-      ? commandLine(['mergestory', 'agent', 'render', followUp.source, ...followUp.args])
-      : commandLine([
-          'mergestory',
-          'generate',
-          followUp.source,
-          ...followUp.args,
-          '--storyboard',
-          storyboard,
-        ]);
+      ? commandLine(['mergestory', 'agent', 'render', ...source, ...followUp.args])
+      : commandLine(['mergestory', 'generate', ...source, ...followUp.args, '--storyboard', storyboard]);
   return [
     '# Writing the storyboard',
     '',
@@ -124,6 +123,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
       : []),
     '',
     AUTHORING_GUIDE,
+    ...(p.changeSet.parts ? [SEVERAL_SOURCES_GUIDE] : []),
     AUTHORING_VALUES,
   ].join('\n');
 }

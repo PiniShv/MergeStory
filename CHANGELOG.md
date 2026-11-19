@@ -6,6 +6,20 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Added:** one video for a change in several repositories, for example a fix that works only when two pull
+  requests are merged together. `analyze`, `validate` and `generate` take `--source <repo>[:<base>..<head>]`,
+  up to 4 times, for local repositories and pull requests. The ids of each repository get a letter in front
+  (`A.F1`, `B.S2`) and its paths get its folder in front (`orders-api/src/total.js`), and the letters do not
+  depend on the order of the flags. One line of narration may cite ids of several repositories, an
+  `architecture` visual may show components of all of them, and the title card must name every pull request
+  (the check `title-missing-source` warns, and repairs the kicker when the names fit). The closing card, the
+  watch page and the upload titles name every repository, and a link to code goes to the repository and
+  commit of its own source. With several sources you write the storyboard yourself: MergeStory writes none on
+  its own. Nothing is posted to a pull request, and `--comment` and `--update-description` are refused with
+  several sources. A request to a model with one source does not change; with several it gets one extra
+  paragraph of about 160 tokens. The `agent` commands and the HTTP API keep one source. The reproduction, the
+  logs, the hidden regions and the screenshots are not tied to a repository and work with several sources. It
+  needs an engine newer than 1.7.0. See `examples/two-repos-demo` and "Several sources" in `docs/cli.md`.
 - **Added:** real logs in the video. `--log <file>[:<caption>]` passes the output of a run, a test or a
   command as context to `analyze`, `validate` and `generate`. You can repeat it up to 4 times. A log must be
   UTF-8 text of at most 256 KB. Its lines are numbered from 1, and the colour codes of a terminal are

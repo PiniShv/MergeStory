@@ -82,6 +82,12 @@ built so that nothing from your code or the change leaves your machine unless yo
   set in front of it, such as `MERGESTORY_CONFIG=<file>`, changes what it does, so do not pre-approve
   that form. The general commands (`analyze`, `validate`, `generate`, `publish`) have flags that name
   files, folders and hosts, so approve each of them when it runs.
+- **Several sources read only what you name.** `analyze`, `validate` and `generate` take `--source` more
+  than once. A run reads each local repository and each pull request that was named, and nothing else. A
+  path in a storyboard is looked up in the joined files of those sources, and each source keeps its own
+  rules for files it never shows (hidden, sensitive or too large files). Nothing is posted to a pull
+  request when there are several sources. The `agent` commands take no `--source` and are unchanged: the
+  promise above holds word for word.
 - **Tokens go only where they belong.** A GitHub token from the environment is only sent to
   `api.github.com` or to the host you set in `github.apiUrl`, so a pull request URL can never send it to
   another server. A model address with a user name or password in it is refused, and so is plain `http`

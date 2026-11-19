@@ -59,8 +59,9 @@ export function estimateStoryboardCost(
   pack: EvidencePack,
   config: Config,
   ctx: RunContext,
+  severalSources = false,
 ): { inputTokens: number; outputTokens: number; costUsd: number | null } {
-  const system = buildSystemPrompt(config);
+  const system = buildSystemPrompt(config, severalSources);
   const prompt = buildUserPrompt(pack, config.targetDurationSec ?? config.maxDurationSec, config);
   const firstInput = estimateTokens(system + prompt);
   // The answer may be as long as the limit, so the estimate stays high.
@@ -243,7 +244,7 @@ export async function generateStoryboard(
 ): Promise<GenerateStoryboardOutput> {
   const { provider, pack, deps, targetSec } = input;
   const config = ctx.config;
-  const system = buildSystemPrompt(config);
+  const system = buildSystemPrompt(config, deps.changeSet.parts !== undefined);
   const prompt = buildUserPrompt(pack, targetSec, config);
   const jsonSchema = storyboardJsonSchemaForLlm();
   const maxAttempts = 1 + config.llm.repairAttempts;

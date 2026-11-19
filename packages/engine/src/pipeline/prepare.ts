@@ -1,4 +1,5 @@
 /** The first half of every run: read the change, check the context and analyse it. */
+import { basename } from 'node:path';
 import { analyze, buildEvidencePack, targetDuration } from '../analyzer/index.ts';
 import { type Config, resolveConfig } from '../core/config.ts';
 import { createRunContext, type RunContext } from '../core/context.ts';
@@ -9,7 +10,9 @@ import type { SourceInput } from '../core/providers.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import type { Analysis, ChangeSet, ContextInputs, RepoReader } from '../core/types.ts';
 import { createPublisher } from '../publish/index.ts';
-import { createSourceProvider, detectSourceInput } from '../sources/index.ts';
+import { createSourceProvider } from '../sources/index.ts';
+import { joinedPrivacy, joinSources, type LoadedSource } from '../sources/join.ts';
+import { sourceInputsOf } from '../sources/spec.ts';
 import { buildContextInputs } from './inputs.ts';
 import { changeLabel } from './presentation.ts';
 import type { GenerateHooks, GenerateOptions } from './types.ts';
@@ -35,15 +38,11 @@ export interface PrepareSettings {
   runFolder?: boolean;
 }
 
-function sourceInputFrom(options: GenerateOptions, cwd: string): SourceInput {
-  if (typeof options.source !== 'string') return options.source;
-  return detectSourceInput(options.source, { base: options.base ?? null, head: options.head ?? null, cwd });
-}
-
-function describeSource(input: SourceInput): string {
-  return input.kind === 'github'
-    ? input.url
-    : `local repository (${input.base ?? 'merge base'}..${input.head ?? 'HEAD'})`;
+function describeSource(input: SourceInput, several = false): string {
+  if (input.kind === 'github') return input.url;
+  const range = `${input.base ?? 'merge base'}..${input.head ?? 'HEAD'}`;
+  // With several sources the message must say which one it means.
+  return several ? `local repository ${basename(input.repoPath)} (${range})` : `local repository (${range})`;
 }
 
 /** Read the change, check the context, analyse, and write analysis.json into the run folder. */
@@ -70,24 +69,45 @@ export async function prepare(
     ...(hooks.onProgress ? { onProgress: hooks.onProgress } : {}),
   });
 
-  const input = sourceInputFrom(options as GenerateOptions, cwd);
-  ctx.progress({ stage: 'source', status: 'start', message: `Reading ${describeSource(input)}` });
-  const { changeSet, reader } = await createSourceProvider(input).load(input, ctx);
-  ctx.progress({
-    stage: 'source',
-    status: 'done',
-    message: `${changeLabel(changeSet)}: ${changeSet.stats.files} files, +${changeSet.stats.additions} -${changeSet.stats.deletions}`,
-  });
-  if (changeSet.files.length === 0) {
-    throw new MergeStoryError('SOURCE_INVALID', 'There are no changes to explain.', {
-      hint: 'Check the base and head refs. Only committed changes are included for local repositories.',
+  const sourceInputs = sourceInputsOf(options as GenerateOptions, cwd);
+  const several = sourceInputs.length > 1;
+  const loaded: Pick<LoadedSource, 'changeSet' | 'reader'>[] = [];
+  for (const input of sourceInputs) {
+    ctx.progress({ stage: 'source', status: 'start', message: `Reading ${describeSource(input, several)}` });
+    const one = await createSourceProvider(input)
+      .load(input, ctx)
+      .catch((error: unknown) => {
+        // With several sources a failure must say which one it came from.
+        if (!several || !(error instanceof MergeStoryError) || error.code === 'ABORTED') throw error;
+        throw new MergeStoryError(error.code, `${describeSource(input, true)}: ${error.message}`, {
+          ...(error.hint === undefined ? {} : { hint: error.hint }),
+          ...(error.details === undefined ? {} : { details: error.details }),
+          retryable: error.retryable,
+          cause: error,
+        });
+      });
+    ctx.progress({
+      stage: 'source',
+      status: 'done',
+      message: `${changeLabel(one.changeSet)}: ${one.changeSet.stats.files} files, +${one.changeSet.stats.additions} -${one.changeSet.stats.deletions}`,
     });
+    if (one.changeSet.files.length === 0) {
+      throw new MergeStoryError(
+        'SOURCE_INVALID',
+        several
+          ? `There are no changes to explain in ${describeSource(input, true)}.`
+          : 'There are no changes to explain.',
+        { hint: 'Check the base and head refs. Only committed changes are included for local repositories.' },
+      );
+    }
+    loaded.push(one);
   }
   assertNotAborted(ctx.signal);
 
   // A setting that would make the upload fail is found now, before anything is written, spent or rendered.
   const publishProblem = settings.checkPublishing
-    ? ((await createPublisher(config)?.check(ctx, changeSet.repo.isPrivate)) ?? null)
+    ? ((await createPublisher(config)?.check(ctx, joinedPrivacy(loaded.map((l) => l.changeSet.repo)))) ??
+      null)
     : null;
   if (publishProblem && !ctx.dryRun) throw publishProblem;
 
@@ -95,7 +115,10 @@ export async function prepare(
     ctx.progress({ stage: 'source', status: 'warn', message }),
   );
   ctx.progress({ stage: 'analyze', status: 'start', message: 'Analysing the change' });
-  const analysis = await analyze(changeSet, reader, inputs, ctx);
+  const analysed: LoadedSource[] = [];
+  for (const one of loaded)
+    analysed.push({ ...one, analysis: await analyze(one.changeSet, one.reader, inputs, ctx) });
+  const { changeSet, reader, analysis } = several ? joinSources(analysed) : (analysed[0] as LoadedSource);
   const targetSec = targetDuration(analysis, config);
   ctx.progress({
     stage: 'analyze',

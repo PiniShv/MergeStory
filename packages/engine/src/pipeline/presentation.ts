@@ -1,6 +1,7 @@
 /** Builds the data for the watch page and the PR comment from a validated storyboard. */
 
 import { findEvidence } from '../analyzer/evidence.ts';
+import { changeLabelOf, codeRefUrl, repoLabelOf } from '../core/labels.ts';
 import { isSimulated } from '../core/storyboard-facts.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { collapseLineRange } from '../core/text.ts';
@@ -9,19 +10,13 @@ import type { CommentData, EvidenceLink, WatchPageData } from '../publish/index.
 import { ENGINE_VERSION } from '../version.ts';
 
 export function changeLabel(changeSet: ChangeSet): string {
+  if (changeSet.parts) return changeLabelOf(changeSet);
   return changeSet.pr ? `PR #${changeSet.pr.number}` : changeSet.head.ref;
 }
 
 export function repoLabel(changeSet: ChangeSet): string {
+  if (changeSet.parts) return repoLabelOf(changeSet);
   return changeSet.repo.owner ? `${changeSet.repo.owner}/${changeSet.repo.name}` : changeSet.repo.name;
-}
-
-/** Link to a line range at the exact commit, when the repository has a known web URL. */
-export function codeRefUrl(changeSet: ChangeSet, ref: CodeRef): string | null {
-  if (!changeSet.repo.webUrl) return null;
-  const sha = ref.side === 'head' ? changeSet.head.sha : changeSet.base.sha;
-  const path = ref.path.split('/').map(encodeURIComponent).join('/');
-  return `${changeSet.repo.webUrl}/blob/${sha}/${path}#L${ref.startLine}-L${ref.endLine}`;
 }
 
 function refLink(changeSet: ChangeSet, ref: CodeRef | null): EvidenceLink | null {
@@ -96,6 +91,7 @@ export function buildWatchPageData(input: PresentationInput): WatchPageData {
     summary: storyboard.summary,
     repoLabel: repoLabel(changeSet),
     changeLabel: changeLabel(changeSet),
+    // A joined change has no pull request of its own: there is no single link to "the" change.
     changeUrl: changeSet.pr?.url ?? null,
     headSha: changeSet.head.sha,
     durationSec: input.durationSec,

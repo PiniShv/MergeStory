@@ -133,6 +133,8 @@ export const PublishInputSchema = z.looseObject(
     prUrl: z.string({ error: 'bad pull request link' }).nullable(),
     repoIsPrivate: z.boolean({ error: 'bad repository privacy' }).nullable(),
     headSha: z.string({ error: 'no commit or language' }),
+    /** How many sources a change joined from several repositories has; absent for one source. */
+    sources: z.number().int().min(2).max(8).optional(),
     /** Narration language (BCP 47). */
     language: z.string({ error: 'no commit or language' }),
     watch: z.custom<WatchPageData>(isWatchData, { error: 'no watch page data' }),

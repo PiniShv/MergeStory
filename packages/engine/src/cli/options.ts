@@ -18,10 +18,12 @@ import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
 import { isLoopbackAddress } from '../core/net.ts';
 import { isInside } from '../core/posix.ts';
+import type { SourceInput } from '../core/providers.ts';
 import { maskPrivate, maskSecrets } from '../core/secrets.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import type { JobOptions } from '../jobs/model.ts';
 import { maskContext } from '../jobs/view.ts';
+import { sourceInputsOf } from '../sources/spec.ts';
 import { LIMITS, readJsonFile } from './files.ts';
 import { buildContext, type ContextFlags, parseLogSpec, parseScreenshotSpec } from './inputs.ts';
 
@@ -108,6 +110,11 @@ export interface SourceFlags {
   head?: string;
 }
 
+/** `--source`, which generate, analyze and validate take (the agent commands do not). */
+export interface SeveralSourcesFlag {
+  source?: string[];
+}
+
 /** Flags that map to settings, as commander delivers them. */
 export interface ConfigFlags {
   style?: Config['style'];
@@ -139,7 +146,7 @@ export interface ConfigFlags {
 }
 
 /** Every flag of `generate`. */
-export interface GenerateFlags extends SourceFlags, ContextFlags, ConfigFlags {
+export interface GenerateFlags extends SourceFlags, SeveralSourcesFlag, ContextFlags, ConfigFlags {
   storyboard?: string;
   dryRun?: boolean;
   async?: boolean;
@@ -148,12 +155,20 @@ export interface GenerateFlags extends SourceFlags, ContextFlags, ConfigFlags {
 /** Every flag of `publish`. */
 export type PublishFlags = Pick<ConfigFlags, 'publish' | 'visibility' | 'comment' | 'updateDescription'>;
 
-/** Add --base and --head. */
-export function addSourceFlags(command: Command): Command {
-  return command
+/** Add --base and --head, and with `several` also --source. */
+export function addSourceFlags(command: Command, several = false): Command {
+  command
     .optionsGroup('Source:')
     .option('--base <ref>', 'local repository: base ref (default: merge base with the default branch)')
     .option('--head <ref>', 'local repository: head ref (default: HEAD)');
+  if (several) {
+    command.option(
+      '--source <repo>[:<base>..<head>]',
+      'one video for a change in several repositories: a local repository (with an optional range) or a pull request; repeat it, up to 4 times. Not together with a source argument, --base or --head',
+      collect,
+    );
+  }
+  return command;
 }
 
 /** Add the flags that supply task, notes, test results and screenshots. */
@@ -447,15 +462,38 @@ export type CommonOptions = Omit<JobOptions, 'storyboard' | 'dryRun' | 'runId'>;
  */
 export async function buildCommonOptions(
   sourceArg: string | undefined,
-  flags: SourceFlags & ContextFlags & ConfigFlags,
+  flags: SourceFlags & SeveralSourcesFlag & ContextFlags & ConfigFlags,
   env: BuildEnv,
 ): Promise<CommonOptions> {
-  const source = await normalizeSource(sourceArg ?? '.', env.cwd);
-  const options: CommonOptions = { source };
-  const base = checkRef('--base', flags.base);
-  const head = checkRef('--head', flags.head);
-  if (base) options.base = base;
-  if (head) options.head = head;
+  const options: CommonOptions = { source: '.' };
+  const specs = flags.source ?? [];
+  if (specs.length > 0) {
+    if (sourceArg !== undefined || flags.base !== undefined || flags.head !== undefined) {
+      throw new MergeStoryError(
+        'USAGE',
+        '--source cannot be used together with a source argument, --base or --head.',
+        { hint: 'Give every source as --source <repo>[:<base>..<head>].' },
+      );
+    }
+    const inputs = sourceInputsOf({ source: '.', sources: specs }, env.cwd);
+    options.source = inputs[0] as SourceInput;
+    if (inputs.length > 1) {
+      if (flags.comment || flags.updateDescription) {
+        throw new MergeStoryError(
+          'USAGE',
+          '--comment and --update-description cannot be used with several sources: nothing is posted to a pull request.',
+          { hint: 'Remove the flag and post the link on each pull request yourself.' },
+        );
+      }
+      options.sources = inputs;
+    }
+  } else {
+    options.source = await normalizeSource(sourceArg ?? '.', env.cwd);
+    const base = checkRef('--base', flags.base);
+    const head = checkRef('--head', flags.head);
+    if (base) options.base = base;
+    if (head) options.head = head;
+  }
 
   const rawContext = await buildContext(flags, env.cwd);
   if (rawContext) {
@@ -471,8 +509,12 @@ export async function buildCommonOptions(
   const config = await configFromFlags(flags, env.cwd);
   if (Object.keys(config).length > 0) options.config = config;
 
-  // Run files must stay out of the repository being explained.
-  if (config.outDir && isAbsolute(source) && isInside(source, config.outDir)) {
+  // Run files must stay out of every repository being explained.
+  const repos = (options.sources ?? [options.source]).flatMap((input) => {
+    const path = typeof input === 'string' ? input : input.kind === 'local' ? input.repoPath : '';
+    return isAbsolute(path) ? [path] : [];
+  });
+  if (config.outDir && repos.some((repo) => isInside(repo, config.outDir as string))) {
     throw new MergeStoryError('USAGE', '--out is inside the repository being explained.', {
       hint: 'MergeStory never writes into the repository. Choose a folder outside it.',
     });
@@ -489,8 +531,10 @@ export function followUpFor(
   source: string,
   flags: SourceFlags & ContextFlags,
   cwd: string,
+  /** The `--source` texts, when they were used: then the commands repeat them and take no source argument. */
+  sources: string[] | null = null,
 ): { source: string; args: string[]; contextArgs: string[] } {
-  const refs: string[] = [];
+  const refs: string[] = sources ? sources.flatMap((spec) => ['--source', spec]) : [];
   if (flags.base) refs.push('--base', flags.base);
   if (flags.head) refs.push('--head', flags.head);
   const contextArgs: string[] = [];
@@ -518,7 +562,7 @@ export function followUpFor(
     contextArgs.push('--log', withCaption(path, spec));
   }
   if (flags.redact !== undefined) contextArgs.push('--redact', resolve(cwd, flags.redact));
-  return { source, args: [...refs, ...contextArgs], contextArgs };
+  return { source: sources ? '' : source, args: [...refs, ...contextArgs], contextArgs };
 }
 
 /** Read a storyboard file. `label` names it in error messages ("--storyboard" or "storyboard file"). */
@@ -535,4 +579,21 @@ export async function readStoryboard(path: string, cwd: string, label: string): 
     });
   }
   return value;
+}
+
+/** A source input as the text of `--source`, with the folder of a local repository absolute. */
+export function sourceSpecOf(input: string | SourceInput): string {
+  if (typeof input === 'string') return input;
+  if (input.kind === 'github') return input.url;
+  return input.base || input.head
+    ? `${input.repoPath}:${input.base ?? ''}..${input.head ?? ''}`
+    : input.repoPath;
+}
+
+/** The `--source` texts of a run that was given `--source`, for the commands that follow it; null otherwise. */
+export function sourceSpecsOf(
+  common: Pick<CommonOptions, 'source' | 'sources'>,
+  flags: SeveralSourcesFlag,
+): string[] | null {
+  return flags.source?.length ? (common.sources ?? [common.source]).map(sourceSpecOf) : null;
 }

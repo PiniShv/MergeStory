@@ -72,7 +72,8 @@ export function numberedLine(number: number | null, marker: '+' | '-' | ' ', tex
   return `${String(number ?? '').padStart(4)} ${marker} ${text}`;
 }
 
-const SIMPLE_ID = /^([A-Z]+)(\d+)$/;
+/** An id such as S3 or A.S3: the letters (with the letter of a source in front, if any) and the number. */
+const SIMPLE_ID = /^((?:[A-Z]\.)?[A-Z]+)(\d+)$/;
 
 /** Collapse runs of consecutive ids with the same prefix: S1 S2 S3 -> "S1-S3". Other ids stay as they are. */
 export function compressIds(ids: readonly string[]): string {
@@ -105,22 +106,31 @@ export function compressIds(ids: readonly string[]): string {
  * shape is kept as it is, after the collapsed ones.
  */
 export function compressHunkIds(ids: readonly string[]): string {
-  const byFile = new Map<number, number[]>();
+  // One group for each letter of a source ("" for one source), in order of first appearance.
+  const groups = new Map<string, Map<number, number[]>>();
   const others: string[] = [];
   for (const id of ids) {
-    const m = /^F(\d+)\.H(\d+)$/.exec(id);
+    const m = /^(?:([A-Z])\.)?F(\d+)\.H(\d+)$/.exec(id);
     if (!m) {
       others.push(id);
       continue;
     }
-    const file = Number(m[1]);
-    byFile.set(file, [...(byFile.get(file) ?? []), Number(m[2])]);
+    const byFile = groups.get(m[1] ?? '') ?? new Map<number, number[]>();
+    groups.set(m[1] ?? '', byFile);
+    const file = Number(m[2]);
+    byFile.set(file, [...(byFile.get(file) ?? []), Number(m[3])]);
   }
+  const parts: string[] = [];
+  for (const [letter, byFile] of groups) parts.push(...compressFiles(byFile, letter ? `${letter}.` : ''));
+  return [...parts, ...others].join(', ');
+}
+
+function compressFiles(byFile: ReadonlyMap<number, number[]>, p: string): string[] {
   const parts: string[] = [];
   let run: number[] = [];
   const flushRun = (): void => {
-    if (run.length === 1) parts.push(`F${run[0]}.H1`);
-    else if (run.length > 1) parts.push(`F${run[0]}.H1-F${run[run.length - 1]}.H1`);
+    if (run.length === 1) parts.push(`${p}F${run[0]}.H1`);
+    else if (run.length > 1) parts.push(`${p}F${run[0]}.H1-${p}F${run[run.length - 1]}.H1`);
     run = [];
   };
   for (const [file, hunks] of byFile) {
@@ -134,7 +144,7 @@ export function compressHunkIds(ids: readonly string[]): string {
     let start = hunks[0] as number;
     let prev = start;
     const emit = (): void => {
-      parts.push(start === prev ? `F${file}.H${start}` : `F${file}.H${start}-H${prev}`);
+      parts.push(start === prev ? `${p}F${file}.H${start}` : `${p}F${file}.H${start}-H${prev}`);
     };
     for (const n of hunks.slice(1)) {
       if (n === prev + 1) prev = n;
@@ -147,5 +157,5 @@ export function compressHunkIds(ids: readonly string[]): string {
     emit();
   }
   flushRun();
-  return [...parts, ...others].join(', ');
+  return parts;
 }

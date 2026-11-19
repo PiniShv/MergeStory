@@ -101,6 +101,8 @@ type PullRequestUpdate =
   /** Neither a comment nor a description update was asked for. */
   | { kind: 'not-requested' }
   | { kind: 'not-a-pull-request' }
+  /** The video explains a change in several repositories: nothing is posted to any pull request. */
+  | { kind: 'several-sources' }
   /** A link to a file on this machine is useless to reviewers and would expose a local path. */
   | { kind: 'video-stays-local' };
 
@@ -110,10 +112,11 @@ type PullRequestUpdate =
  */
 export function decidePullRequestUpdate(
   config: Pick<Config, 'github'>,
-  change: { source: 'github' | 'local'; prUrl: string | null },
+  change: { source: 'github' | 'local'; prUrl: string | null; sources?: number },
   publishedWith: string | null,
 ): PullRequestUpdate {
   if (!config.github.comment && !config.github.updateDescription) return { kind: 'not-requested' };
+  if (change.sources !== undefined) return { kind: 'several-sources' };
   if (change.source !== 'github' || !change.prUrl) return { kind: 'not-a-pull-request' };
   if (publishedWith === null || publishedWith === 'local') return { kind: 'video-stays-local' };
   return { kind: 'update', prUrl: change.prUrl };
@@ -172,10 +175,18 @@ export async function publishAndNotify(
   let notify: GenerateResult['notify'] = null;
   const update = decidePullRequestUpdate(
     config,
-    { source: stored.source, prUrl: stored.prUrl },
+    {
+      source: stored.source,
+      prUrl: stored.prUrl,
+      ...(stored.sources === undefined ? {} : { sources: stored.sources }),
+    },
     publish?.provider ?? null,
   );
-  if (update.kind === 'not-a-pull-request') {
+  if (update.kind === 'several-sources') {
+    warnings.push(
+      `Skipped the PR update: this video explains a change in several repositories (${stored.watch.changeLabel}). Post the link on each pull request yourself.`,
+    );
+  } else if (update.kind === 'not-a-pull-request') {
     warnings.push('Skipped the PR update: this run was not made from a GitHub pull request.');
   } else if (update.kind === 'video-stays-local') {
     warnings.push(

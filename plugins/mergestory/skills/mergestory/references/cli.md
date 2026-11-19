@@ -39,6 +39,25 @@ local path, which works with every git host. For a local path, `--base <ref>` an
 choose the range (default: the merge base with the default branch, and `HEAD`). Only committed changes
 are included.
 
+## Several sources (analyze, validate and generate)
+
+One video for a change in several repositories, for example a fix that works only when two pull requests are
+merged together. Needs an engine newer than 1.7.0. The `agent` commands cannot do it: they refuse `--source`.
+Give `--source <repo>[:<base>..<head>]` once for each source (at most 4) in place of `<source>`, `--base`
+and `--head`, which are refused together with it. `<repo>` is a local path or a pull request; the range is for
+a local path (`main..` and `..fix/x` are fine). Give the same `--source` flags to `analyze`, `validate` and
+`generate`.
+
+- Ids of a repository start with its letter (`A.F1`, `B.S3`, `A.PR`), and paths start with its folder
+  (`orders-api/src/total.js`). The letters follow the repository, not the order of the flags. `evidence.md`
+  lists them. `TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1` and `L1` keep their names. The context flags
+  (`--repro-file`, `--redact`, `--log`, `--screenshot`, `--recording`, and the others) belong to the run, not
+  to a repository.
+- You write the storyboard yourself: with no model set up, `generate` stops with exit code 2 and does not
+  write an offline one. `analyze` prints the exact `validate` and `generate` commands, with every `--source`.
+- Nothing is posted to a pull request: `--comment` and `--update-description` are refused with two or more `--source` flags.
+- The same source twice, more than 4 sources, and `--out` inside any of the repositories are exit code 2.
+
 ## Context flags (analyze, validate and generate)
 
 The `agent` commands take no context flags: they read `task.md`, `notes.md`, `tests.json`, `repro.json`, `redact.json`, `screenshots/`, `recordings/`
