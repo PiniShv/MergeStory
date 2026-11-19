@@ -117,4 +117,12 @@ describe('detectSourceInput limits', () => {
       if (isMergeStoryError(error)) expect(error.code).toBe('SOURCE_INVALID');
     }
   });
+
+  it('stays fast on a long run of dots that is within the limit', () => {
+    const text = `a${'.'.repeat(4_000)}`;
+    expect(detectSourceInput(text, { cwd }).kind).toBe('local');
+    const started = performance.now();
+    for (let i = 0; i < 300; i += 1) detectSourceInput(text, { cwd });
+    expect(performance.now() - started).toBeLessThan(500);
+  });
 });

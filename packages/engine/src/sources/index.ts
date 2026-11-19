@@ -26,7 +26,9 @@ const MAX_ARGUMENT_LENGTH = 4096;
 // the host name) and "o/r#1".
 const SCHEME_URL = /^[a-z][a-z0-9+.-]*:\/\//i;
 const SHORTHAND = /^[^\s/#@:]+\/[^\s/#@:]+#\d+$/;
-const SCHEMELESS_PR_URL = /^[^/\s@:]+\.[^/\s@:]+\/[^\s]*\/pull\/\d+/;
+// The host name needs a dot with a character on each side. Only the first dot after the first character
+// can be that dot: a pattern that may split at any dot is slow on a long run of dots.
+const SCHEMELESS_PR_URL = /^[^/\s@:][^/\s@:.]*\.[^/\s@:]+\/[^\s]*\/pull\/\d+/;
 
 /**
  * Decide which source an argument refers to.
