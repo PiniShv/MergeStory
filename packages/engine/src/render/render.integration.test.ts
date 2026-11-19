@@ -6,7 +6,7 @@
  * the scene templates. One test renders with the real runtime.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -42,6 +42,15 @@ import { buildPageHtml, PlanPage } from './page.ts';
 const tools = await resolveFfmpeg(testConfig()).catch(() => null);
 const browser = await locateBrowser(testConfig()).catch(() => null);
 const available = tools !== null && browser !== null;
+/**
+ * A browser of the system (Chrome, Chromium or Edge), when it is not the browser above. Such a browser
+ * draws pages on the GPU if it may; the headless shell, which is found first, never does.
+ */
+const systemBrowser = await locateBrowser(testConfig(), {
+  env: {},
+  homeDir: null,
+  playwrightChromium: null,
+}).catch(() => null);
 
 /** The gray level the stand-in runtime draws for a frame; frames 20 to 39 look the same. */
 const shownFrame = (frame: number): number => (frame >= 20 && frame < 40 ? 20 : frame);
@@ -705,11 +714,15 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
     describe('a recording', () => {
       const FPS = 12;
       const SECONDS = 10;
-      /** A clip of six seconds whose picture changes all the time, cut into frames, and a plan that shows it from 0.5 s. */
-      async function recordingRun() {
+      /**
+       * A clip of six seconds whose picture changes all the time, cut into frames, and a plan that shows it
+       * from 0.5 s. `times` makes the clip and the video that many times larger.
+       */
+      async function recordingRun(times = 1) {
+        const [width, height] = [640 * times, 360 * times];
         const out = await outDir();
         const clip = join(dir, `clip-${n}.mp4`);
-        expect(await makeClip(tools!.ffmpeg, clip, { seconds: 6, size: '640x360' })).toBe(true);
+        expect(await makeClip(tools!.ffmpeg, clip, { seconds: 6, size: `${width}x${height}` })).toBe(true);
         const dirName = 'recording-frames/s-1';
         const made = await extractFrames(tools!.ffmpeg, {
           recording: {
@@ -718,16 +731,16 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
             caption: '',
             moment: 'other',
             durationSec: 6,
-            width: 640,
-            height: 360,
+            width,
+            height,
             codec: 'h264',
           },
           trim: { start: 0, end: 6 },
           zoom: null,
-          box: { width: 640, height: 300 },
+          box: { width, height: 300 * times },
           outDir: join(out, dirName),
         });
-        const base = minimalPlan(SECONDS, 640, 360, FPS);
+        const base = minimalPlan(SECONDS, width, height, FPS);
         const plan: RenderPlan = {
           ...base,
           scenes: [
@@ -745,15 +758,50 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
         return { out, plan, made };
       }
 
-      const renderWith = async (plan: RenderPlan, out: string, workers: number) =>
+      const renderWith = async (plan: RenderPlan, out: string, workers: number, cfg = config) =>
         readFile(
           (
-            await new ChromiumRenderer(config, { workers }).render(
+            await new ChromiumRenderer(cfg, { workers }).render(
               { plan, audioPath: null, outDir: out, quality: 'draft' },
-              testContext({ config, home: out, runDir: out }).ctx,
+              testContext({ config: cfg, home: out, runDir: out }).ctx,
             )
           ).videoPath,
         );
+
+      /**
+       * The next scene slides in at 5.7 s, while the clip still plays, so the recording moves and fades in
+       * the second segment (4 to 8 s). One browser draws that segment after it drew the first one; with
+       * three browsers, one that has drawn nothing draws it. Then three renders run at the same time.
+       * The video is 1280 pixels wide: a smaller one did not show the difference.
+       */
+      async function slidesAwayTheSame(cfg = config): Promise<void> {
+        const { out, plan: base } = await recordingRun(2);
+        const [recording, title] = [base.scenes[0]!, minimalPlan(SECONDS, 1280, 720, FPS).scenes[0]!];
+        const plan: RenderPlan = {
+          ...base,
+          scenes: [
+            { ...recording, durationSec: 6.3 },
+            {
+              ...title,
+              id: 's2',
+              startSec: 5.7,
+              durationSec: 3.8,
+              transitionIn: { type: 'slide', durationSec: 0.6 },
+              beats: [{ index: 0, startSec: 6.3, durationSec: 1, text: 'The next scene.' }],
+            },
+          ],
+        };
+        const single = await renderWith(plan, out, 1, cfg);
+        expect((await renderWith(plan, out, 3, cfg)).equals(single)).toBe(true);
+        const together = await Promise.all(
+          [1, 2, 3].map(async () => {
+            const copy = await outDir();
+            await cp(join(out, 'recording-frames'), join(copy, 'recording-frames'), { recursive: true });
+            return renderWith(plan, copy, 3, cfg);
+          }),
+        );
+        for (const bytes of together) expect(bytes.equals(single)).toBe(true);
+      }
 
       it('shows different pictures of the clip over time, and sends each page only the frames it can show', async () => {
         const { out, plan, made } = await recordingRun();
@@ -816,6 +864,20 @@ describe.skipIf(!available)('rendering with a real browser and FFmpeg', () => {
         const parallel = await renderWith(plan, out, 3);
         expect(parallel.equals(single)).toBe(true);
       }, 120_000);
+
+      it('gives the same video when the recording slides away in the middle of a segment, also for renders at the same time', async () => {
+        await slidesAwayTheSame();
+      }, 300_000);
+
+      it.skipIf(systemBrowser === null || systemBrowser.path === browser?.path)(
+        'does so with a browser of the system too, which draws pages on the GPU if it may',
+        async () => {
+          await slidesAwayTheSame(
+            testConfig({ quality: 'draft', render: { browserPath: systemBrowser!.path } }),
+          );
+        },
+        300_000,
+      );
 
       it('names a frame file that is missing', async () => {
         const { out, plan } = await recordingRun();
