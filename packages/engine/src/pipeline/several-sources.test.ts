@@ -339,6 +339,19 @@ describe('validate and generate with two sources', () => {
     expect(shown[1]?.text).not.toContain('priceCents');
   });
 
+  it('stores no single commit for the change: publish-input.json and the watch page have none', async () => {
+    const result = (await generate({
+      source: api,
+      sources: both(),
+      storyboard: storyboard(),
+      config: config(),
+    })) as GenerateResult;
+    const stored = JSON.parse(await readFile(join(result.runDir, 'publish-input.json'), 'utf8'));
+    expect(stored.headSha).toBe('');
+    expect(stored.watch.headSha).toBe('');
+    expect(await readFile(join(result.runDir, 'watch.html'), 'utf8')).not.toContain('<dt>Commit</dt>');
+  });
+
   it('stops with a usage error and says what to do when there is no storyboard and no model', async () => {
     const error = await generate({ source: api, sources: both(), config: config() }).catch((e: unknown) => e);
     expect(error).toMatchObject({ code: 'USAGE', exitCode: 2 });

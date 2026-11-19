@@ -7,8 +7,16 @@
  * Ids that a repository made get the letter of the source in front ("A.F1", "A.F1.H2", "A.PR");
  * paths get its folder in front ("orders-api/src/total.js"). Ids that the caller supplied (TASK,
  * NOTES, T<n>, REPRO, REPRO.<n>, SS<n>, RC<n>, L<n>) are taken once and keep their ids.
+ *
+ * The evidence pack cuts lists by position, so a list that a source ranks (key hunks, risks, components,
+ * relationships) is ranked across the sources with the comparison of the analyzer, and equal items keep the
+ * order of the letters. A list with no rank (symbols, dependencies, architecture signals) is taken in turns.
  */
 import { isMeaningfulFile, paceOf, sortLanguages } from '../analyzer/analyze.ts';
+import { compareChurn } from '../analyzer/components.ts';
+import { compareScores } from '../analyzer/hunks.ts';
+import { compareRelationships } from '../analyzer/relationships.ts';
+import { compareRiskClass } from '../analyzer/risks.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import type {
   Analysis,
@@ -27,7 +35,7 @@ import { README_MAX_CHARS } from './limits.ts';
 const LETTERS = 'ABCD';
 
 /** Where an evidence item comes from. A new kind does not compile until it is placed here. */
-export const EVIDENCE_ORIGIN: Record<EvidenceItem['kind'], 'source' | 'run'> = {
+const EVIDENCE_ORIGIN: Record<EvidenceItem['kind'], 'source' | 'run'> = {
   pr: 'source',
   task: 'run',
   notes: 'run',
@@ -199,6 +207,14 @@ function sum(values: readonly number[]): number {
   return values.reduce((a, b) => a + b, 0);
 }
 
+/** The first item of each list, then the second of each, and so on: for lists that have no rank across sources. */
+function inTurns<T>(lists: readonly (readonly T[])[]): T[] {
+  const out: T[] = [];
+  const rows = Math.max(0, ...lists.map((l) => l.length));
+  for (let i = 0; i < rows; i++) for (const list of lists) if (i < list.length) out.push(list[i] as T);
+  return out;
+}
+
 /** The README excerpts of the sources under their folder names, short enough that the total is what one source may have. */
 function joinedReadme(parts: readonly ChangeSetPart[]): string | null {
   const room = Math.floor(README_MAX_CHARS / parts.length);
@@ -281,7 +297,19 @@ export function joinSources(loaded: readonly LoadedSource[]): LoadedSource {
 
   const analyses = renamed.map((r) => r.analysis);
   const files = analyses.flatMap((a) => a.files);
-  const components = analyses.flatMap((a) => a.components);
+  const churn = new Map(
+    renamed.flatMap(({ changeSet: cs, analysis: a }) => {
+      const trivial = new Set(a.files.filter((f) => f.trivial).map((f) => f.fileId));
+      const lines = new Map(cs.files.map((f) => [f.id, f.additions + f.deletions]));
+      return a.components.map((m): [string, number] => [
+        m.id,
+        sum(m.fileIds.filter((id) => !trivial.has(id)).map((id) => lines.get(id) ?? 0)),
+      ]);
+    }),
+  );
+  const components = analyses
+    .flatMap((a) => a.components)
+    .sort((a, b) => compareChurn(churn.get(a.id) ?? 0, churn.get(b.id) ?? 0));
   const meaningfulLines = sum(analyses.map((a) => a.meaningfulLines));
   const insightById = new Map(files.map((f) => [f.fileId, f]));
   const meaningfulComponents = components.filter((m) =>
@@ -312,18 +340,18 @@ export function joinSources(loaded: readonly LoadedSource[]): LoadedSource {
     meaningfulLines,
     files,
     components,
-    relationships: analyses.flatMap((a) => a.relationships),
-    symbols: analyses.flatMap((a) => a.symbols),
-    keyHunks: analyses.flatMap((a) => a.keyHunks),
-    risks: analyses.flatMap((a) => a.risks),
-    dependencies: analyses.flatMap((a) => a.dependencies),
+    relationships: analyses.flatMap((a) => a.relationships).sort(compareRelationships),
+    symbols: inTurns(analyses.map((a) => a.symbols)),
+    keyHunks: analyses.flatMap((a) => a.keyHunks).sort(compareScores),
+    risks: analyses.flatMap((a) => a.risks).sort(compareRiskClass),
+    dependencies: inTurns(analyses.map((a) => a.dependencies)),
     tests: {
       added: analyses.flatMap((a) => a.tests.added),
       modified: analyses.flatMap((a) => a.tests.modified),
       removed: analyses.flatMap((a) => a.tests.removed),
     },
     languages: sortLanguages(languages),
-    architectureSignals: analyses.flatMap((a) => a.architectureSignals),
+    architectureSignals: inTurns(analyses.map((a) => a.architectureSignals)),
     evidence,
   };
   return {
@@ -332,78 +360,3 @@ export function joinSources(loaded: readonly LoadedSource[]): LoadedSource {
     reader: joinedReader(sorted.map((s, i) => ({ folder: folders[i] as string, reader: s.reader }))),
   };
 }
-
-/**
- * What is wrong with a joined analysis: an id that something points at and that is not in the
- * evidence, an id of a repository without its letter, a path that is neither a file of the change
- * nor inside a folder of a source. Empty when it is complete.
- */
-export function joinProblems(changeSet: ChangeSet, analysis: Analysis): string[] {
-  const parts = changeSet.parts ?? [];
-  const known = new Set(analysis.evidence.map((e) => e.id));
-  const problems: string[] = [];
-  const letters = new RegExp(`^(?:${parts.map((p) => p.label).join('|')})\\.`);
-  const id = (where: string, value: string): void => {
-    if (!known.has(value)) problems.push(`${where}: ${value} is not in the evidence`);
-    if (!letters.test(value) && !EVIDENCE_ORIGIN_RUN_ID.test(value))
-      problems.push(`${where}: ${value} has no letter`);
-  };
-  const files = new Set(changeSet.files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path])));
-  const folders = parts.map((p) => `${p.folder}/`);
-  const path = (where: string, value: string): void => {
-    if (
-      !files.has(value) &&
-      !folders.some((f) => value.startsWith(f)) &&
-      !parts.some((p) => p.folder === value)
-    )
-      problems.push(`${where}: ${value} is not in a folder of a source`);
-  };
-  for (const f of changeSet.files) {
-    id('file', f.id);
-    path('file', f.path);
-    for (const h of f.hunks) id('hunk', h.id);
-  }
-  for (const c of changeSet.commits) id('commit', c.id);
-  for (const i of changeSet.linkedIssues) id('issue', i.id);
-  for (const f of analysis.files) {
-    id('insight', f.fileId);
-    id('insight', f.componentId);
-    f.symbolIds.forEach((s) => id('insight', s));
-    path('insight', f.path);
-  }
-  for (const m of analysis.components) {
-    id('component', m.id);
-    m.fileIds.forEach((x) => id('component', x));
-    path('component', m.path);
-  }
-  for (const r of analysis.relationships) [r.from, r.to, r.evidence].forEach((x) => id('relationship', x));
-  for (const s of analysis.symbols) {
-    id('symbol', s.id);
-    id('symbol', s.fileId);
-    path('symbol', s.path);
-  }
-  for (const k of analysis.keyHunks) {
-    id('key hunk', k.id);
-    id('key hunk', k.fileId);
-    path('key hunk', k.path);
-  }
-  for (const r of analysis.risks) {
-    id('risk', r.id);
-    r.evidence.forEach((x) => id('risk', x));
-    if (r.ref) path('risk', r.ref.path);
-  }
-  for (const d of analysis.dependencies) {
-    id('dependency', d.id);
-    id('dependency', d.fileId);
-  }
-  for (const t of [...analysis.tests.added, ...analysis.tests.modified, ...analysis.tests.removed])
-    path('test', t);
-  for (const e of analysis.evidence) {
-    if (e.ref) path('evidence', e.ref.path);
-    if (!known.has(e.id)) problems.push(`evidence ${e.id} is missing`);
-  }
-  return problems;
-}
-
-/** An id the caller supplied (TASK, NOTES, T1, REPRO, REPRO.1, SS1, RC1, L1) has no letter. */
-const EVIDENCE_ORIGIN_RUN_ID = /^(?:TASK|NOTES|T\d+|REPRO(?:\.\d+)?|SS\d+|RC\d+|L\d+)$/;

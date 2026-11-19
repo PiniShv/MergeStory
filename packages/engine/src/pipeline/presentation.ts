@@ -93,7 +93,8 @@ export function buildWatchPageData(input: PresentationInput): WatchPageData {
     changeLabel: changeLabel(changeSet),
     // A joined change has no pull request of its own: there is no single link to "the" change.
     changeUrl: changeSet.pr?.url ?? null,
-    headSha: changeSet.head.sha,
+    // A joined change has no single commit: the watch page and the comment skip an empty one.
+    headSha: changeSet.parts ? '' : changeSet.head.sha,
     durationSec: input.durationSec,
     chapters: input.chapters,
     checklist: reviewChecklist(storyboard, changeSet),

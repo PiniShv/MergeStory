@@ -21,6 +21,11 @@ export interface ComponentGrouping {
   componentForPath(path: string): string | null;
 }
 
+/** Components with the most changed lines (trivial files not counted) first. Also how the sources of a joined change are merged. */
+export function compareChurn(a: number, b: number): number {
+  return b - a;
+}
+
 interface Located {
   key: string;
   name: string;
@@ -218,7 +223,7 @@ export function groupComponents(inputs: readonly ComponentInput[]): ComponentGro
   const churn = (b: Bucket): number =>
     b.inputs.reduce((n, i) => n + (i.trivial ? 0 : i.file.additions + i.file.deletions), 0);
   const ordered = [...buckets.values()].sort(
-    (a, b) => churn(b) - churn(a) || a.located.path.localeCompare(b.located.path),
+    (a, b) => compareChurn(churn(a), churn(b)) || a.located.path.localeCompare(b.located.path),
   );
 
   const components: Component[] = [];

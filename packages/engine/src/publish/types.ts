@@ -25,6 +25,7 @@ export interface WatchPageData {
   changeLabel: string;
   /** Link to the pull request, when known. */
   changeUrl: string | null;
+  /** Empty for a change in several repositories, which has no single commit. */
   headSha: string;
   durationSec: number;
   chapters: Chapter[];

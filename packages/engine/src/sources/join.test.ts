@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { paceOf } from '../analyzer/index.ts';
-import { loadSource, orders, store, TOTAL_BASE } from '../testing/joined.ts';
-import { folderNames, joinedPrivacy, joinProblems, joinSources, type LoadedSource } from './join.ts';
+import type { KeyHunk, RiskCategory, RiskSeverity, RiskSignal } from '../core/types.ts';
+import { joinProblems, loadSource, orders, store, TOTAL_BASE } from '../testing/joined.ts';
+import { folderNames, joinedPrivacy, joinSources, type LoadedSource } from './join.ts';
 
 describe('joinSources', () => {
   it('gives every id a letter and every path a folder, and points nowhere else', async () => {
@@ -160,6 +161,103 @@ describe('joinSources', () => {
   it('leaves the owner empty when the repositories have different owners', async () => {
     const { changeSet } = joinSources([await orders(), await store({ owner: 'other' })]);
     expect(changeSet.repo.owner).toBe('');
+  });
+});
+
+describe('the order of the joined lists', () => {
+  const risk = (id: string, severity: RiskSeverity, category: RiskCategory = 'tests'): RiskSignal => ({
+    id,
+    severity,
+    category,
+    title: `Risk ${id}`,
+    detail: 'detail',
+    evidence: [],
+    ref: null,
+  });
+  /** Source A has many items of low rank, source B has the best ones. */
+  async function sources() {
+    const [a, b] = [await orders(), await store()];
+    const hunk = a.analysis.keyHunks[0] as KeyHunk;
+    a.analysis.keyHunks = Array.from({ length: 8 }, (_, i) => ({ ...hunk, id: `F1.H${i + 1}`, score: 0.2 }));
+    b.analysis.keyHunks.forEach((k, i) => {
+      k.score = i === 0 ? 0.9 : 0.2;
+    });
+    a.analysis.risks = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'].map((id) => risk(id, 'low'));
+    b.analysis.risks = [risk('R1', 'high', 'security'), risk('R2', 'low')];
+    a.analysis.architectureSignals = ['a1', 'a2', 'a3'];
+    b.analysis.architectureSignals = ['b1', 'b2'];
+    a.analysis.relationships = [
+      { from: 'M1', to: 'M2', kind: 'imports', evidence: 'F1' },
+      { from: 'M2', to: 'M3', kind: 'imports', evidence: 'F1' },
+    ];
+    b.analysis.relationships = [{ from: 'M1', to: 'M3', kind: 'imports', evidence: 'F1' }];
+    return { a, b };
+  }
+
+  it('puts the key hunk with the highest score first, whatever the source, and keeps the letters for equal scores', async () => {
+    const { a, b } = await sources();
+    const { keyHunks } = joinSources([a, b]).analysis;
+    expect(keyHunks[0]?.id).toBe(`B.${b.analysis.keyHunks[0]?.id}`);
+    expect(keyHunks.map((k) => k.score)).toEqual([...keyHunks.map((k) => k.score)].sort((x, y) => y - x));
+    expect(keyHunks.slice(1).map((k) => k.id[0])).toEqual([
+      ...'A'.repeat(8),
+      ...'B'.repeat(b.analysis.keyHunks.length - 1),
+    ]);
+  });
+
+  it('puts a risk of the highest severity before a low one, and keeps it among the first four', async () => {
+    const { a, b } = await sources();
+    const { risks } = joinSources([a, b]).analysis;
+    expect(risks.slice(0, 4).map((r) => r.id)).toEqual(['B.R1', 'A.R1', 'A.R2', 'A.R3']);
+    expect(risks.map((r) => r.id).slice(-1)).toEqual(['B.R2']);
+  });
+
+  it('takes the first architecture signal of each source, then the second of each', async () => {
+    const { a, b } = await sources();
+    expect(joinSources([a, b]).analysis.architectureSignals).toEqual([
+      'orders-api: a1',
+      'storefront: b1',
+      'orders-api: a2',
+      'storefront: b2',
+      'orders-api: a3',
+    ]);
+  });
+
+  it('takes the symbols and the dependencies in turns, and the relationships by the rank of their components', async () => {
+    const { a, b } = await sources();
+    const { symbols, relationships } = joinSources([a, b]).analysis;
+    expect(symbols.slice(0, 2).map((s) => s.id)).toEqual([
+      `A.${a.analysis.symbols[0]?.id}`,
+      `B.${b.analysis.symbols[0]?.id}`,
+    ]);
+    expect(relationships.map((r) => `${r.from}>${r.to}`)).toEqual(['A.M1>A.M2', 'B.M1>B.M3', 'A.M2>A.M3']);
+  });
+
+  it('puts the component with the most changed lines first, whatever the source', async () => {
+    const lines = (prefix: string, n: number) =>
+      Array.from({ length: n }, (_, i) => `${prefix}${i}\n`).join('');
+    const small = await loadSource([{ path: 'p/x.js', base: lines('a', 1), head: lines('b', 1) }], {
+      name: 'one',
+    });
+    const big = await loadSource([{ path: 'q/x.js', base: lines('a', 10), head: lines('b', 10) }], {
+      name: 'two',
+    });
+    const { components } = joinSources([small, big]).analysis;
+    expect(components.map((m) => m.id)).toEqual(['B.M1', 'A.M1']);
+  });
+
+  it('gives the same lists whatever the order of the sources', async () => {
+    const { a, b } = await sources();
+    const [one, two] = [joinSources([a, b]).analysis, joinSources([b, a]).analysis];
+    for (const key of [
+      'keyHunks',
+      'risks',
+      'architectureSignals',
+      'symbols',
+      'relationships',
+      'components',
+    ] as const)
+      expect(two[key], key).toEqual(one[key]);
   });
 });
 

@@ -147,5 +147,21 @@ describe('the watch page of a change in several repositories', () => {
       captionsBurnedIn: true,
     });
     expect(watch.changeUrl).toBeNull();
+    // No single commit for the whole change: the page has no "Commit" row and no commit in its facts.
+    expect(watch.headSha).toBe('');
+    const page = buildWatchPage(watch, {
+      video: 'https://media.example.com/v/video.mp4',
+      poster: null,
+      captions: null,
+      linkExpiresAt: null,
+    });
+    expect(page).not.toContain('<dt>Commit</dt>');
+    expect(page).not.toContain('<li>Commit');
+  });
+
+  it('keeps the head commit for one source', () => {
+    const { fx, watch } = setup();
+    expect(watch.headSha).toBe(fx.changeSet.head.sha);
+    expect(watch.headSha).not.toBe('');
   });
 });

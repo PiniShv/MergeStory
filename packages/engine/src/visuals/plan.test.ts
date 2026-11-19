@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
+import { changeLabelFor, repoLabelFor } from '../core/labels.ts';
 import {
   frameDirFor,
   frameDirForStep,
@@ -21,13 +22,7 @@ import { averageColor, ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import {
-  buildRenderPlan,
-  changeLabelFor,
-  loadStoryboardScreenshots,
-  MAX_FILE_ROWS,
-  repoLabelFor,
-} from './plan.ts';
+import { buildRenderPlan, loadStoryboardScreenshots, MAX_FILE_ROWS } from './plan.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
 import { buildTimeline } from './timeline.ts';
 

@@ -1,7 +1,8 @@
 /** The evidence pack of a change that was joined from several sources, and the same pack for one source. */
 import { describe, expect, it } from 'vitest';
+import type { RiskSignal } from '../core/types.ts';
 import { joinSources } from '../sources/join.ts';
-import { JOINED_INPUTS, orders, store } from '../testing/joined.ts';
+import { JOINED_INPUTS, loadSource, orders, store } from '../testing/joined.ts';
 import { buildEvidencePack, type EvidencePackOptions } from './pack.ts';
 
 const OPTIONS: EvidencePackOptions = {
@@ -82,6 +83,78 @@ describe('the pack of two sources', () => {
     });
     expect(section(markdown, 'Evidence ids')).toMatch(/A\.F1-A\.F4/);
     expect(section(markdown, 'Evidence ids')).toContain('Each id keeps its letter');
+  });
+});
+
+describe('the pack of two sources when space is tight', () => {
+  const lines = (n: number, text: (i: number) => string): string =>
+    `${Array.from({ length: n }, (_, i) => text(i)).join('\n')}\n`;
+
+  it('still shows the key hunk with the highest score, though it is in the second source', async () => {
+    const many = await loadSource(
+      Array.from({ length: 12 }, (_, i) => ({
+        path: `src/m${i}.js`,
+        language: 'javascript',
+        base: null,
+        head: lines(40, (j) => `const v${j} = ${j};`),
+      })),
+      { name: 'aaa-many' },
+    );
+    const best = await loadSource(
+      [
+        {
+          path: 'src/best.js',
+          language: 'javascript',
+          base: null,
+          head: lines(40, (j) => `export function w${j}() {}`),
+        },
+      ],
+      { name: 'zzz-best' },
+    );
+    const { changeSet, analysis } = joinSources([many, best]);
+    expect(analysis.keyHunks[0]?.id).toBe('B.F1.H1');
+    const { markdown, includedHunks, omittedHunks } = buildEvidencePack(changeSet, analysis, JOINED_INPUTS, {
+      ...OPTIONS,
+      maxTokens: 3500,
+    });
+    expect(omittedHunks.length).toBeGreaterThan(0);
+    expect(includedHunks[0]).toBe('B.F1.H1');
+    expect(section(markdown, 'Key hunks (most important first)')).toMatch(/^### B\.F1\.H1 /m);
+  });
+
+  it('keeps a risk of the highest severity of the second source among the fewest risks it ever keeps', async () => {
+    const [a, b] = [await orders(), await store()];
+    const risk = (id: string, severity: RiskSignal['severity']): RiskSignal => ({
+      id,
+      severity,
+      category: 'tests',
+      title: `Risk ${id}`,
+      detail: 'detail',
+      evidence: [],
+      ref: null,
+    });
+    a.analysis.risks = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6'].map((id) => risk(id, 'low'));
+    b.analysis.risks = [risk('R1', 'high')];
+    const { changeSet, analysis } = joinSources([a, b]);
+    const { markdown } = buildEvidencePack(changeSet, analysis, JOINED_INPUTS, {
+      ...OPTIONS,
+      maxTokens: 450,
+    });
+    const risks = section(markdown, 'Risks');
+    expect(risks).toContain('- B.R1 [high]');
+    expect(risks.match(/^- [AB]\.R\d/gm)).toHaveLength(4);
+  });
+
+  it('shows the first architecture signal of each source', async () => {
+    const [a, b] = [await orders(), await store()];
+    a.analysis.architectureSignals = Array.from({ length: 20 }, (_, i) => `a signal ${i}`);
+    b.analysis.architectureSignals = ['b signal'];
+    const { changeSet, analysis } = joinSources([a, b]);
+    const { markdown } = buildEvidencePack(changeSet, analysis, JOINED_INPUTS, {
+      ...OPTIONS,
+      maxTokens: 450,
+    });
+    expect(section(markdown, 'Components')).toContain('storefront: b signal');
   });
 });
 

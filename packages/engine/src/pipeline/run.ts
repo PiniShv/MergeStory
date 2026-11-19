@@ -344,7 +344,7 @@ async function produce(
     source: changeSet.source,
     prUrl: changeSet.pr?.url ?? null,
     repoIsPrivate: changeSet.repo.isPrivate,
-    headSha: changeSet.head.sha,
+    headSha: localWatchData.headSha,
     ...(changeSet.parts ? { sources: changeSet.parts.length } : {}),
     language: storyboard.language,
     watch: localWatchData,

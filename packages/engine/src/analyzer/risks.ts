@@ -161,6 +161,18 @@ const CATEGORY_ORDER: RiskCategory[] = [
   'complexity',
   'performance',
 ];
+
+/** Risks with the highest severity first, then by category. Also how the sources of a joined change are merged. */
+export function compareRiskClass(
+  a: { severity: RiskSeverity; category: RiskCategory },
+  b: { severity: RiskSeverity; category: RiskCategory },
+): number {
+  return (
+    SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
+    CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
+  );
+}
+
 const MAX_RISKS = 10;
 const MAX_LOCS = 8;
 /** Longer lines are minified or generated text; patterns are not run on them. */
@@ -429,13 +441,7 @@ export function detectRisks(input: RiskInputs): RiskResult {
   if (envList.length > 0) findings.set('env-vars', envVarFinding(envList, symbolAt));
 
   const risks = [...findings.values()]
-    .sort(
-      (a, b) =>
-        SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] ||
-        CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category) ||
-        b.locs.length - a.locs.length ||
-        a.key.localeCompare(b.key),
-    )
+    .sort((a, b) => compareRiskClass(a, b) || b.locs.length - a.locs.length || a.key.localeCompare(b.key))
     .slice(0, MAX_RISKS)
     .map((f, i) => toSignal(f, i + 1));
   return { risks, envVars: envList, cliCommands: [...sites.cliCommands.values()] };

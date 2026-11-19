@@ -168,6 +168,13 @@ repository with a top folder for each source:
 - `size` and `suggestedDurationSec` come from the summed lines and components, with the functions of the
   analyzer (`paceOf`). The sums of the stats, the languages and the limits are joined. `ChangeSet.parts`
   keeps what each source looked like when it was loaded. `pr` is `null` on a joined change.
+- The evidence pack cuts some lists by position: key hunks, risks, components, relationships, symbols,
+  dependencies and architecture signals. So the joined lists are not the lists of the sources one after
+  the other. Key hunks, risks and components are ordered across the sources with the comparison that the
+  analyzer uses for one source (by score, by severity and category, by changed lines), relationships by the
+  number of their components, and equal items keep the order of the letters. Symbols, dependencies and
+  architecture signals have no rank across sources: they are taken in turns, the first of each source, then
+  the second of each. So a tight budget does not cut one repository before the other.
 - The evidence pack lists every source and writes the sections about the pull request, the issues, the
   commits and the repository once for each source. A check after the join throws `INTERNAL` when an evidence
   id exists twice.
@@ -178,7 +185,8 @@ Several sources give `owner/name` of each joined with ` + `, `<name> #<n>` (or `
 change) of each, and the short commits joined with ` · `. A link to code takes the source from the folder at
 the start of the path and uses that source's web address and commit. The watch page has no link to "the"
 change. Nothing is posted to a pull request: `publish-input.json` of such a run holds no pull request
-address, the joined privacy value (private when any source is private) and the commit of `A`.
+address, the joined privacy value (private when any source is private) and no commit: a change in several
+repositories has no single one, so the watch page shows no "Commit" row.
 
 Checking a storyboard takes the known names and the texts behind `PR`, `REPO`, commit and issue ids from
 every source. The offline storyboard knows one repository, so a run with several sources needs a storyboard

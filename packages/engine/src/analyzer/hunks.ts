@@ -49,6 +49,11 @@ export interface RankFile {
   hidden: boolean;
 }
 
+/** Key hunks with the highest score first. Also how the sources of a joined change are merged. */
+export function compareScores(a: { score: number }, b: { score: number }): number {
+  return b.score - a.score;
+}
+
 /** Score hunks by size, role and bonuses, and keep the best ones. */
 export function rankKeyHunks(
   files: readonly RankFile[],
@@ -110,7 +115,7 @@ export function rankKeyHunks(
     }
   }
   return out
-    .sort((a, b) => b.score - a.score || a.order - b.order)
+    .sort((a, b) => compareScores(a, b) || a.order - b.order)
     .slice(0, MAX_KEY_HUNKS)
     .map(({ order: _order, ...hunk }) => hunk);
 }

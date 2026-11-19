@@ -7,7 +7,7 @@ import { findEvidence } from '../analyzer/evidence.ts';
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
-import { changeLabelFor, changeLabelOf, commitTextOf, repoLabelFor, repoLabelOf } from '../core/labels.ts';
+import { changeLabelOf, commitTextOf, repoLabelOf } from '../core/labels.ts';
 import { shownName } from '../core/media-probe.ts';
 import {
   frameDirFor,
@@ -115,8 +115,6 @@ const beatIndex = (value: number): number => (Number.isFinite(value) ? Math.max(
 // ---------------------------------------------------------------------------
 // Labels
 // ---------------------------------------------------------------------------
-
-export { changeLabelFor, repoLabelFor };
 
 /** "src/a.ts:8-12" for a code reference. A path is on-screen text too, so it is masked. */
 const codeLabel = (ref: CodeRefInput, scrub: Scrubber): string =>

@@ -296,6 +296,10 @@ describe('a file that is not a MergeStory run file', () => {
       ).toThrow(/publish-input.json is not a MergeStory run file/);
     }
     expect(parseRunJson(storedInput(), PublishInputSchema, 'publish-input.json').runId).toBe(RUN_ID);
+    // A change joined from several repositories has no single commit.
+    expect(parseRunJson(storedInput({ headSha: '' }), PublishInputSchema, 'publish-input.json').headSha).toBe(
+      '',
+    );
     await writeRun({ ...storedInput(), version: 2 });
     expect((await failure(publish())).code).toBe('SOURCE_INVALID');
   });
