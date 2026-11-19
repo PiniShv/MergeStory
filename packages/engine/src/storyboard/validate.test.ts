@@ -21,6 +21,27 @@ describe('a grounded storyboard', () => {
     expect(result.storyboard).toEqual(baseStoryboard(fx));
   });
 
+  it('warns about a line that repeats an earlier one, but not about lines that name other things', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    const hunk = fx.id.hunk('src/http/retry.ts');
+    const last = scene(sb, sb.scenes.length - 1);
+    last.narration.push(
+      { text: 'This pull request adds retries to the HTTP client!', evidence: ['PR'] },
+      { text: 'It stops after the attempt limit or on a response below 600.', evidence: [hunk] },
+    );
+    const result = await run(sb, fx);
+    expect(result.warnings.filter((w) => w.code === 'repeated-line')).toEqual([
+      {
+        path: `scenes[${sb.scenes.length - 1}].narration[2]`,
+        code: 'repeated-line',
+        message: 'this line repeats scenes[0].narration[0]: every line should add a new fact',
+      },
+    ]);
+    const offline = await validateStoryboard(sb, { ...fx.deps, offline: true });
+    expect(codes(offline.warnings)).not.toContain('repeated-line');
+  });
+
   it('does not change the input object', async () => {
     const fx = retryFixture();
     const input = baseStoryboard(fx);

@@ -63,6 +63,7 @@ wanted is gone:
 | `repro-step-unknown` | A `repro` visual lists a step that the reproduction does not have. The step was dropped. | List only steps from `REPRO.1` up to the last step. |
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. | Check the lines that are shown. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. | Show fewer lines, and mark the ones you discuss in `focus`. |
+| `repeated-line` | A narration line repeats an earlier one. | Cut the line, or replace it with a fact the video has not said yet. |
 | `title-missing-source` | Several sources: the first title card does not name every pull request (repository name and `#<number>`). The kicker was set to the names of all the changes when they fit. | Write the names on the title card yourself. |
 
 All the codes, and every automatic fix, are explained in `docs/storyboard.md` in the MergeStory

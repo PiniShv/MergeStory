@@ -56,19 +56,22 @@ range limits, so that one schema works for every model provider. The checker enf
 **A review item** has `title`, `detail`, `severity` (`info`, `low`, `medium` or `high`), `ref` (a
 [code reference](#code-references) or `null`) and `evidence`.
 
-A good story uses these scenes in this order. Skip a scene that has nothing real to show. A small change
-needs few scenes.
+A good story leads with why the change exists and its key change, and the details come after. It uses these
+scenes in this order. Skip a scene that has nothing real to show. A small change needs few scenes: why, the
+key change, where to look.
 
-1. `mission`: what the change is about, and the problem it solves.
+1. `mission`: why the change exists and who it helps. If the PR text does not say why, the video says so.
 2. `reproduction`: only when a reproduction or a capture of the bug (a "before" screenshot or recording) was
    supplied. It shows the bug happening, before any code.
-3. `big-picture`: which components changed and how they relate.
-4. `under-the-hood`: one to three scenes on how the key lines work.
-5. `before-after`: only when behaviour really changes.
-6. `proof`: only when a capture of the fix working (an "after" screenshot or recording, or a reproduction
+3. `under-the-hood`: one to three scenes on how the key lines work, the most important hunk first.
+4. `before-after`: only when behaviour really changes: what goes in, and what came out before and now.
+5. `proof`: only when a capture of the fix working (an "after" screenshot or recording, or a reproduction
    step marked `fixed`) or a test result was supplied. It shows the fix working, after the code.
-7. `review`: the real risks.
-8. `conclusion`: a short recap.
+6. `big-picture`: only when two or more components changed: how they relate.
+7. `review`: two or three places to read closely, each with its file and lines, and why each matters.
+
+There is no recap at the end: the end card closes the video. Every line adds a new fact. The `conclusion`
+role still exists for older storyboards.
 
 Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that
 were supplied.
@@ -381,6 +384,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
+| `repeated-line` | A narration line says again what an earlier line said, with almost the same words and the same names. Cut it or say something new. Not checked for the offline storyboard. |
 | `title-missing-source` | Several sources: the first title card does not hold the repository name and `#<number>` of every source that is a pull request. The kicker was set to the names of all the changes when they fit in 60 characters. Otherwise write the names yourself. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the

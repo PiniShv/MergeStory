@@ -166,9 +166,12 @@ export const EXAMPLE_STORYBOARD = {
     {
       id: 's1',
       role: 'mission',
-      title: 'What changed',
+      title: 'Why it changed',
       narration: [
-        { text: 'This pull request adds retries to the HTTP client.', evidence: ['PR'] },
+        {
+          text: 'A short server error made every request fail, so the HTTP client now tries again.',
+          evidence: ['PR'],
+        },
         {
           text: 'The new function fetchWithBackoff wraps the fetch call and tries again after a server error.',
           evidence: ['F1', 'S1'],
@@ -216,20 +219,28 @@ export const EXAMPLE_STORYBOARD = {
     },
     {
       id: 's3',
-      role: 'conclusion',
-      title: 'Wrap up',
+      role: 'review',
+      title: 'Where to look',
       narration: [
         {
-          text: 'Review the retry rule first: fetchWithBackoff retries every response with a status of 500 or above.',
+          text: 'Read the retry rule closely: fetchWithBackoff retries every response with a status of 500 or above.',
           evidence: ['R1', 'S1'],
         },
       ],
       visual: {
-        type: 'summary',
-        points: [{ text: 'Server errors are retried with a growing delay', beat: 0 }],
-        closing: null,
+        type: 'checklist',
+        items: [
+          {
+            title: 'Retries on every server error',
+            detail: 'A request that is not safe to send twice is retried too.',
+            severity: 'medium',
+            ref: REF,
+            beat: 0,
+            evidence: ['R1'],
+          },
+        ],
       },
-      visualDescription: 'A short list of what changed.',
+      visualDescription: 'The place to read closely, with its file and lines.',
       transition: 'fade',
       targetSeconds: null,
     },
@@ -255,20 +266,21 @@ Accuracy comes first. Every claim and every line of code in the video must come 
 
 ## Story arc
 
-Use these scenes in this order. Skip any scene that has nothing real to show.
+Lead with why, then the key change; details come after. Use these scenes in this order. Skip any scene that has nothing real to show.
 
-1. mission: what the change is about, in the words of the PR title, the task or the description, and the problem it solves.
+1. mission: why the change exists: the problem, and who it helps. Take it from the PR description, the task, the notes or an issue, and cite them. If none says why, say so in one line ("The pull request does not say why."). Never guess a reason.
 2. reproduction: only when a reproduction (REPRO) or a capture of the bug (a "before" screenshot or recording) was supplied. Show the bug happening.
-3. big-picture: the components or files that changed and how they relate.
-4. under-the-hood: one to three scenes on the most important hunks of code. Explain how the key lines work.
-5. before-after: only when the change alters behaviour that a user or the system would notice, or when a changed function is small enough to show both versions.
-6. proof: only when a capture of the fix working (an "after" screenshot or recording, or a step marked "fixed") or a reported test result was supplied. Show the fix working.
-7. review: the real risks. Take them from the risk signals, the notes and the largest or most sensitive changes.
-8. conclusion: a short recap.
+3. under-the-hood: one to three scenes, most important hunk first (see "Key hunks", unless the task or notes point elsewhere). Explain how the key lines work.
+4. before-after: the impact: what goes in, what came out before, what comes out now. Only when behaviour changes in a way a user or the system would notice, or when a changed function is small enough to show both versions.
+5. proof: only when a capture of the fix working (an "after" screenshot or recording, or a step marked "fixed") or a reported test result was supplied. Show the fix working.
+6. big-picture: only when two or more components changed: how they relate.
+7. review: two or three places to read closely, each with its file and lines (checklist items with a "ref"), and why each matters. Take them from the risk signals, the notes and the largest or most sensitive changes.
+
+No conclusion or recap scene: the end card closes the video.
 
 Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that were supplied.
 
-Match the number of scenes to the target length in the task line. A small change needs few scenes.
+Match the number of scenes to the target length in the task line. A small change needs few scenes: why, the key change, where to look.
 
 ## Visuals
 
@@ -328,6 +340,8 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Be explicit. Name the real functions, types and constants. State the real values from the code. Say how the important lines work and why they are there. "This function changed" teaches nothing.
 - Say names naturally: function and constant names are fine to say. Never read a file path out loud character by character, because the screen shows it. Say "in the retry module" or just the file name. Write numbers without underscores.
 - Keep sentences short. One idea per sentence.
+- Every line adds a new fact. No introduction, no closing words, no summary. The engine warns about a repeated line.
+- Do not say the pull request number or counts that teach nothing ("seven files changed").
 - Use the review scene for real risks: what could go wrong, where to look (a function, a value, a signature) and why. Take them from the risk ids and from what the notes ask a reviewer to check.
 - No filler and no hype. Avoid words such as "powerful", "seamless", "robust" and "simply".
 - Say what the change does, not what it might do.
