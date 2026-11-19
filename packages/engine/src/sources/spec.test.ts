@@ -12,8 +12,15 @@ describe('splitSourceRange', () => {
     ['./api:..', './api', null, null],
     ['./api:v1.2..origin/main~3', './api', 'v1.2', 'origin/main~3'],
     ['/a:b/c:main..x', '/a:b/c', 'main', 'x'],
+    // Of three dots in a row, the last two are the mark.
+    ['./api:main...x', './api', 'main.', 'x'],
   ])('splits %s', (text, repo, base, head) => {
     expect(splitSourceRange(text)).toEqual({ repo, base, head });
+  });
+
+  it('answers at once for a very long text that is almost a range', () => {
+    const text = `./api:${'.'.repeat(200_000)}!`;
+    expect(splitSourceRange(text)).toEqual({ repo: text, base: null, head: null });
   });
 
   it.each([

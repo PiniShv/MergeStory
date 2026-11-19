@@ -5,17 +5,25 @@ import { MAX_SOURCES, sameSourceError } from '../core/source-views.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import { detectSourceInput } from './index.ts';
 
-/** What a ref may be made of. A URL never matches a range, so it is never split. */
-const RANGE = /^([A-Za-z0-9._/@^~+-]*)\.\.([A-Za-z0-9._/@^~+-]*)$/;
+/** What a range may be made of: the characters of two refs and the dots between them. A URL has others, so it is never split. */
+const RANGE_TEXT = /^[A-Za-z0-9._/@^~+-]*$/;
 
 /** Split `<repo>[:<base>..<head>]`. The range is the text after the LAST colon, when it has the form `<base>..<head>`. A Windows drive letter is never that colon. */
 export function splitSourceRange(spec: string): { repo: string; base: string | null; head: string | null } {
+  const whole = { repo: spec, base: null, head: null };
   const colon = spec.lastIndexOf(':');
-  const drive = colon === 1 && /^[A-Za-z]:[\\/]/.test(spec);
-  const match = colon < 0 || drive ? null : RANGE.exec(spec.slice(colon + 1));
+  if (colon < 0 || (colon === 1 && /^[A-Za-z]:[\\/]/.test(spec))) return whole;
+  const range = spec.slice(colon + 1);
+  const first = range.indexOf('..');
   // A ref has no "..", so a second one means this is not a range.
-  if (!match || spec.slice(colon + 1).split('..').length !== 2) return { repo: spec, base: null, head: null };
-  return { repo: spec.slice(0, colon), base: match[1] || null, head: match[2] || null };
+  if (first < 0 || range.indexOf('..', first + 2) >= 0 || !RANGE_TEXT.test(range)) return whole;
+  // Of three dots in a row, the last two are the mark.
+  const mark = range.lastIndexOf('..');
+  return {
+    repo: spec.slice(0, colon),
+    base: range.slice(0, mark) || null,
+    head: range.slice(mark + 2) || null,
+  };
 }
 
 /** One `--source` text as a source input. A range goes with a local repository only. */
