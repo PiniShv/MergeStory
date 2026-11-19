@@ -149,6 +149,10 @@ describe('posterTimeFor', () => {
 });
 
 describe('BROWSER_ARGS', () => {
+  it('draws pages on the CPU so that a frame does not depend on what the browser drew before', () => {
+    expect(BROWSER_ARGS).toContain('--disable-gpu-rasterization');
+  });
+
   it('turns partial raster off so frames do not depend on the order of seeks', () => {
     expect(BROWSER_ARGS).toContain('--disable-partial-raster');
   });

@@ -29,6 +29,12 @@ function getHighlighter(): Promise<Highlighter> {
 
 const PLAIN_LANGUAGES = new Set(['', 'text', 'plaintext', 'plain', 'txt']);
 
+/**
+ * A line of this length or more gets no colours. It replaces Shiki's own guard, a limit of half a
+ * second for a line: that one is measured on the clock, so a busy machine coloured less of a line.
+ */
+export const MAX_HIGHLIGHT_LINE_CHARS = 20_000;
+
 /** The Shiki grammar id for a language name, or null when the text should be shown without colours. */
 export function resolveLanguage(language: string | null | undefined): string | null {
   const id = (language ?? '').trim().toLowerCase();
@@ -76,6 +82,8 @@ export async function highlightText(text: string, options: HighlightOptions): Pr
     const result = highlighter.codeToTokens(text, {
       lang: language as BundledLanguage,
       theme: options.theme,
+      tokenizeTimeLimit: 0,
+      tokenizeMaxLineLength: MAX_HIGHLIGHT_LINE_CHARS,
     });
     const foreground = result.fg?.toLowerCase() ?? null;
     const lines = result.tokens.map((line) => {

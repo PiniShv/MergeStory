@@ -10,7 +10,8 @@
  * every segment is drawn in ascending order by a page that has not drawn anything before. Chromium
  * can draw a frame slightly differently depending on the frames drawn before it (layer raster
  * scale), so reusing a page across segments would make the bytes depend on which worker got which
- * segment. Partial raster is off for the same reason.
+ * segment. Partial raster is off for the same reason, and so is drawing on the GPU: the pages of
+ * one browser share it, so a new page alone did not make a frame independent of the pages before it.
  */
 import { mkdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { cpus, totalmem } from 'node:os';
@@ -35,11 +36,15 @@ import { loadPlaywright } from './playwright.ts';
 import { loadRuntimeBundle } from './runtime-bundle.ts';
 
 /**
- * Browser flags. Partial raster is off so pixels no longer depend on the order of seeks; text hinting
- * and subpixel text are off so glyphs look the same on every platform; name lookups are refused so
- * a browser that is not a headless shell cannot reach out in the background.
+ * Browser flags. Pages are drawn on the CPU, as the headless shell always draws them: a full browser
+ * that draws on the GPU draws a page a little differently after it has drawn another page. The GPU
+ * still puts the drawn layers together: with the GPU off altogether, Chrome on macOS sometimes gave a
+ * first page that was too short. Partial raster is off so pixels no longer depend on the order of
+ * seeks; text hinting and subpixel text are off so glyphs look the same on every platform; name
+ * lookups are refused so a browser that is not a headless shell cannot reach out in the background.
  */
 export const BROWSER_ARGS = [
+  '--disable-gpu-rasterization',
   '--disable-partial-raster',
   '--font-render-hinting=none',
   '--disable-lcd-text',
