@@ -34,6 +34,7 @@ import type {
   ScreenshotResolved,
 } from '../core/render-plan.ts';
 import { maskPrivateReport } from '../core/secrets.ts';
+import { isJoined } from '../core/source-views.ts';
 import { BACKING_EVIDENCE_KINDS } from '../core/storyboard-facts.ts';
 import {
   type CodeRefInput,
@@ -927,7 +928,7 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
       tagline: OUTRO_TAGLINE,
       lines: [
         `${repoLabel} · ${changeLabel}`,
-        `${changeSet.parts ? 'Commits' : 'Commit'} ${headShort}`,
+        `${isJoined(changeSet) ? 'Commits' : 'Commit'} ${headShort}`,
         OUTRO_DISCLAIMER,
       ],
     },

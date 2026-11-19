@@ -1,53 +1,30 @@
 /** The inputs of the caller (reproduction, logs, hidden regions, pictures) belong to the run, not to a repository. */
-import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makePng } from '../testing/png.ts';
+import { isolateGitConfig, makeRepo } from '../testing/repos.ts';
 import { checkStoryboard, generate, prepareAuthoring } from './index.ts';
 import type { ContextOptions } from './types.ts';
 
-const original = {
-  GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL,
-  GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM,
-};
+let restoreGit: () => void;
 let base: string;
 let api: string;
 let web: string;
 let context: ContextOptions;
 
-function git(repo: string, ...args: string[]): void {
-  execFileSync('git', ['-C', repo, ...args], { stdio: 'pipe' });
-}
-
-async function makeRepo(name: string, before: string, after: string): Promise<string> {
-  const repo = join(base, name);
-  await mkdir(join(repo, 'src'), { recursive: true });
-  git(repo, 'init', '-q', '-b', 'main');
-  git(repo, 'config', 'user.name', 'Demo');
-  git(repo, 'config', 'user.email', 'demo@example.com');
-  git(repo, 'config', 'commit.gpgsign', 'false');
-  await writeFile(join(repo, 'README.md'), `# ${name}\n`);
-  await writeFile(join(repo, 'src', 'total.js'), before);
-  git(repo, 'add', '-A');
-  git(repo, 'commit', '-q', '-m', `Add ${name}`);
-  git(repo, 'checkout', '-q', '-b', 'fix/total');
-  await writeFile(join(repo, 'src', 'total.js'), after);
-  git(repo, 'commit', '-q', '-am', `Use cents in ${name}`);
-  return repo;
-}
-
 beforeAll(async () => {
-  process.env.GIT_CONFIG_GLOBAL = '/dev/null';
-  process.env.GIT_CONFIG_NOSYSTEM = '1';
+  restoreGit = isolateGitConfig();
   base = await mkdtemp(join(tmpdir(), 'mergestory-several-inputs-'));
   api = await makeRepo(
+    base,
     'orders-api',
     'export const total = (o) => o.sum;\n',
     'export const total = (o) => ({ cents: o.cents });\n',
   );
   web = await makeRepo(
+    base,
     'storefront',
     'export const show = (o) => o.total;\n',
     'export const show = (o) => o.total.cents / 100;\n',
@@ -68,10 +45,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  for (const [key, value] of Object.entries(original)) {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
-  }
+  restoreGit();
   await rm(base, { recursive: true, force: true });
 });
 

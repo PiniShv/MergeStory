@@ -2,8 +2,7 @@
  * One video for a change in two repositories, on real local git repositories. The renderer is a
  * stand-in that keeps the plan it was given; everything before it is the real thing.
  */
-import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -15,6 +14,7 @@ import type { GenerateResult } from '../core/types.ts';
 import { ensureKokoroInstalled } from '../narration/kokoro-install.ts';
 import { createRenderer } from '../render/index.ts';
 import { createSourceProvider } from '../sources/index.ts';
+import { isolateGitConfig, makeRepo } from '../testing/repos.ts';
 import { checkStoryboard, generate, prepareAuthoring } from './index.ts';
 
 vi.mock('../render/index.ts', async (importOriginal) => ({
@@ -34,59 +34,36 @@ vi.mock('../narration/kokoro-install.ts', async (importOriginal) => ({
   }),
 }));
 
-const original = {
-  GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL,
-  GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM,
-};
+let restoreGit: () => void;
 let base: string;
 let home: string;
 let api: string;
 let web: string;
 let plans: RenderPlan[];
 
-function git(repo: string, ...args: string[]): void {
-  execFileSync('git', ['-C', repo, ...args], { stdio: 'pipe' });
-}
-
-/** A repository with a `main` branch and a `fix/total` branch. Both branches have `src/total.js`. */
-async function makeRepo(name: string, before: string, after: string): Promise<string> {
-  const repo = join(base, name);
-  await mkdir(join(repo, 'src'), { recursive: true });
-  git(repo, 'init', '-q', '-b', 'main');
-  git(repo, 'config', 'user.name', 'Demo');
-  git(repo, 'config', 'user.email', 'demo@example.com');
-  git(repo, 'config', 'commit.gpgsign', 'false');
-  await writeFile(join(repo, 'README.md'), `# ${name}\n\nA small part of a shop.\n`);
-  await writeFile(join(repo, 'src', 'total.js'), before);
-  git(repo, 'add', '-A');
-  git(repo, 'commit', '-q', '-m', `Add ${name}`);
-  git(repo, 'checkout', '-q', '-b', 'fix/total');
-  await writeFile(join(repo, 'src', 'total.js'), after);
-  git(repo, 'commit', '-q', '-am', `Use cents in ${name}`);
-  return repo;
-}
+const readmeMore = '\nA small part of a shop.\n';
 
 beforeAll(async () => {
-  process.env.GIT_CONFIG_GLOBAL = '/dev/null';
-  process.env.GIT_CONFIG_NOSYSTEM = '1';
+  restoreGit = isolateGitConfig();
   base = await mkdtemp(join(tmpdir(), 'mergestory-several-'));
   api = await makeRepo(
+    base,
     'orders-api',
     'export function orderTotal(order) {\n  return order.lines.reduce((sum, line) => sum + line.price, 0);\n}\n',
     'export function orderTotal(order) {\n  const cents = order.lines.reduce((sum, line) => sum + line.priceCents, 0);\n  return { cents };\n}\n',
+    readmeMore,
   );
   web = await makeRepo(
+    base,
     'storefront',
     'export function showTotal(order) {\n  return order.total;\n}\n',
     'export function showTotal(order) {\n  return order.total.cents / 100;\n}\n',
+    readmeMore,
   );
 });
 
 afterAll(async () => {
-  for (const [key, value] of Object.entries(original)) {
-    if (value === undefined) delete process.env[key];
-    else process.env[key] = value;
-  }
+  restoreGit();
   await rm(base, { recursive: true, force: true });
 });
 

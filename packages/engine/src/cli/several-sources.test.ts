@@ -177,7 +177,6 @@ describe('--source', () => {
       `mergestory generate ${api} --storyboard ${join(dir, 'run', 'storyboard.json')}`,
     );
     expect(analyzeMock.mock.calls[0]?.[0].followUp).toEqual({
-      source: '',
       args: ['--source', `${join(dir, 'api')}:main..x`, '--source', join(dir, 'web'), '--task', 'T'],
     });
     await writeFile(join(dir, 'sb.json'), '{}');

@@ -7,6 +7,7 @@
 import type { Config } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import type { TtsProvider } from '../core/providers.ts';
+import { isJoined } from '../core/source-views.ts';
 import type { ChangeSet, EgressRecord } from '../core/types.ts';
 import { parsePullRequestUrl } from '../github/pr-url.ts';
 import { createPublisher } from '../publish/index.ts';
@@ -56,7 +57,7 @@ export async function planEgress(
     {
       source: changeSet.source,
       prUrl: changeSet.pr?.url ?? null,
-      ...(changeSet.parts ? { sources: changeSet.parts.length } : {}),
+      joined: isJoined(changeSet),
     },
     publisher?.id ?? null,
   );

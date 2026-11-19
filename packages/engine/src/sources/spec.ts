@@ -1,11 +1,9 @@
 /** The sources of a run: one, or several (`--source <repo>[:<base>..<head>]`, repeatable). */
 import { MergeStoryError } from '../core/errors.ts';
 import type { SourceInput } from '../core/providers.ts';
+import { MAX_SOURCES, sameSourceError } from '../core/source-views.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import { detectSourceInput } from './index.ts';
-
-/** The most sources one video may join. */
-export const MAX_SOURCES = 4;
 
 /** What a ref may be made of. A URL never matches a range, so it is never split. */
 const RANGE = /^([A-Za-z0-9._/@^~+-]*)\.\.([A-Za-z0-9._/@^~+-]*)$/;
@@ -45,6 +43,15 @@ export function parseSourceSpec(spec: string, cwd: string): SourceInput {
   return detectSourceInput(repo, { base, head, cwd });
 }
 
+/** A source input as the text of `--source`, with the folder of a local repository absolute. */
+export function sourceSpecOf(input: string | SourceInput): string {
+  if (typeof input === 'string') return input;
+  if (input.kind === 'github') return input.url;
+  return input.base || input.head
+    ? `${input.repoPath}:${input.base ?? ''}..${input.head ?? ''}`
+    : input.repoPath;
+}
+
 interface SourceOptions {
   source: string | SourceInput;
   sources?: ReadonlyArray<string | SourceInput> | undefined;
@@ -53,7 +60,7 @@ interface SourceOptions {
 }
 
 /** Every source of a run, as inputs. With `sources` the positional `source`, `base` and `head` are not used. */
-export function sourceInputsOf(options: SourceOptions, cwd: string): SourceInput[] {
+export function sourceInputsOf(options: SourceOptions, cwd: string): [SourceInput, ...SourceInput[]] {
   if (options.sources === undefined) {
     if (typeof options.source !== 'string') return [options.source];
     return [
@@ -65,18 +72,17 @@ export function sourceInputsOf(options: SourceOptions, cwd: string): SourceInput
       hint: 'Give the range inside each source: --source <repo>:<base>..<head>',
     });
   }
-  if (options.sources.length === 0) throw new MergeStoryError('USAGE', 'There is no source to explain.');
+  const [first, ...rest] = options.sources;
+  if (first === undefined) throw new MergeStoryError('USAGE', 'There is no source to explain.');
   if (options.sources.length > MAX_SOURCES) {
     throw new MergeStoryError('USAGE', `A video can join at most ${MAX_SOURCES} sources.`, {
       hint: `You gave ${options.sources.length}. Make one video for each group of ${MAX_SOURCES} or fewer.`,
     });
   }
-  const inputs = options.sources.map((s) => (typeof s === 'string' ? parseSourceSpec(s, cwd) : s));
+  const toInput = (s: string | SourceInput): SourceInput =>
+    typeof s === 'string' ? parseSourceSpec(s, cwd) : s;
+  const inputs: [SourceInput, ...SourceInput[]] = [toInput(first), ...rest.map(toInput)];
   const keys = new Set(inputs.map((input) => JSON.stringify(input)));
-  if (keys.size !== inputs.length) {
-    throw new MergeStoryError('USAGE', 'The same source was given more than once.', {
-      hint: 'Give each repository or pull request once.',
-    });
-  }
+  if (keys.size !== inputs.length) throw sameSourceError();
   return inputs;
 }

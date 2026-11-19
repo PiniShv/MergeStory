@@ -6,7 +6,7 @@
 import { analyze } from '../analyzer/index.ts';
 import { createPathPolicy } from '../core/path-policy.ts';
 import type { Analysis, ChangeSet } from '../core/types.ts';
-import type { LoadedSource } from '../sources/join.ts';
+import { EVIDENCE_ORIGIN, type LoadedSource } from '../sources/join.ts';
 import { createGuardedReader } from '../sources/reader.ts';
 import { buildChange, type ChangeOptions, emptyInputs, type FixtureFile } from './change.ts';
 import { testContext } from './context.ts';
@@ -50,9 +50,6 @@ export const STORE_FILES: FixtureFile[] = [
   },
 ];
 
-/** An id the caller supplied (TASK, NOTES, T1, REPRO, REPRO.1, SS1, RC1, L1) has no letter. */
-const EVIDENCE_ORIGIN_RUN_ID = /^(?:TASK|NOTES|T\d+|REPRO(?:\.\d+)?|SS\d+|RC\d+|L\d+)$/;
-
 /**
  * What is wrong with a joined analysis: an id that something points at and that is not in the
  * evidence, an id of a repository without its letter, a path that is neither a file of the change
@@ -62,11 +59,14 @@ export function joinProblems(changeSet: ChangeSet, analysis: Analysis): string[]
   const parts = changeSet.parts ?? [];
   const known = new Set(analysis.evidence.map((e) => e.id));
   const problems: string[] = [];
+  // An id the caller supplied (the task, notes, tests, reproduction, pictures, logs) has no letter.
+  const fromRun = new Set(
+    analysis.evidence.filter((e) => EVIDENCE_ORIGIN[e.kind] === 'run').map((e) => e.id),
+  );
   const letters = new RegExp(`^(?:${parts.map((p) => p.label).join('|')})\\.`);
   const id = (where: string, value: string): void => {
     if (!known.has(value)) problems.push(`${where}: ${value} is not in the evidence`);
-    if (!letters.test(value) && !EVIDENCE_ORIGIN_RUN_ID.test(value))
-      problems.push(`${where}: ${value} has no letter`);
+    if (!letters.test(value) && !fromRun.has(value)) problems.push(`${where}: ${value} has no letter`);
   };
   const files = new Set(changeSet.files.flatMap((f) => (f.oldPath ? [f.path, f.oldPath] : [f.path])));
   const folders = parts.map((p) => `${p.folder}/`);

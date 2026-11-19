@@ -311,7 +311,9 @@ function mustFixUnreadable(outcome: RefFailureOutcome, run: Run): boolean {
   return run.authored && outcome.reason === 'unreadable';
 }
 
-function refFailureMessage(outcome: RefFailureOutcome, run: Run): string {
+/** The message of a failed reference for the author of the storyboard. */
+function refFailureMessage(outcome: RefFailureOutcome, ref: CodeRefInput, run: Run): string {
+  if (outcome.reason === 'unknown-path') return `${outcome.message}${run.pathHint(ref.path)}`;
   return mustFixUnreadable(outcome, run)
     ? `${outcome.message}. Show a file that can be read, or use a visual without code and do not walk through the code of this file`
     : outcome.message;
@@ -339,7 +341,7 @@ async function resolveOptionalRef(ref: CodeRefInput, path: string, run: Run): Pr
     run.fix(path, 'removed the code reference');
     return null;
   }
-  run.error(path, FAILURE_CODES[outcome.reason], outcome.message);
+  run.error(path, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, ref, run));
   return ref;
 }
 
@@ -444,7 +446,7 @@ async function resolveCodeRefs(scene: Scene, visual: VisualOf<'code'>, vp: strin
   if (!outcome.ok) {
     if (isSoftFailure(outcome) && !mustFixUnreadable(outcome, run))
       fallbackToFiles(scene, vp, outcome.message, run, [visual.ref.path], FAILURE_CODES[outcome.reason]);
-    else run.error(`${vp}.ref`, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, run));
+    else run.error(`${vp}.ref`, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, visual.ref, run));
     return;
   }
   for (const note of outcome.notes) run.fix(`${vp}.ref`, note);
@@ -557,7 +559,11 @@ async function resolveBeforeAfterRefs(
         soft ??= outcome;
         paths.push(panel.codeRef.path);
       } else {
-        run.error(`${panelPath}.codeRef`, FAILURE_CODES[outcome.reason], refFailureMessage(outcome, run));
+        run.error(
+          `${panelPath}.codeRef`,
+          FAILURE_CODES[outcome.reason],
+          refFailureMessage(outcome, panel.codeRef, run),
+        );
       }
       continue;
     }
@@ -654,12 +660,12 @@ const MAX_KICKER_LENGTH = 60;
  * all the changes if they fit.
  */
 function checkTitleNamesEverySource(storyboard: Storyboard, run: Run): void {
-  if (!run.parts) return;
+  if (!run.joined) return;
   const index = storyboard.scenes.findIndex((scene) => scene.visual.type === 'title');
   const visual = storyboard.scenes[index]?.visual;
   if (visual?.type !== 'title') return;
   const text = [visual.kicker, visual.heading, visual.subheading, ...visual.chips].join('\n').toLowerCase();
-  const missing = run.parts.filter(
+  const missing = run.sources.filter(
     (part) =>
       part.pr &&
       !(text.includes(part.repo.name.toLowerCase()) && new RegExp(`#${part.pr.number}(?!\\d)`).test(text)),
@@ -668,7 +674,7 @@ function checkTitleNamesEverySource(storyboard: Storyboard, run: Run): void {
   const path = `scenes[${index}].visual`;
   const names = missing.map((part) => `${part.repo.name} #${part.pr?.number}`).join(', ');
   run.warn(path, 'title-missing-source', `the title card does not name every pull request: ${names}`);
-  if (run.changeLabel !== null && run.changeLabel.length <= MAX_KICKER_LENGTH) {
+  if (run.changeLabel.length <= MAX_KICKER_LENGTH) {
     visual.kicker = run.changeLabel;
     run.fix(`${path}.kicker`, `set to "${run.changeLabel}" so that the title names every pull request`);
   }

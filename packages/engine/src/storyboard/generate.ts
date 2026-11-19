@@ -13,7 +13,7 @@ import { hashKey } from '../core/ids.ts';
 import { isLoopbackHost } from '../core/net.ts';
 import type { LlmProvider, LlmRequest, LlmResponse } from '../core/providers.ts';
 import { storyboardJsonSchemaForLlm } from '../core/storyboard-schema.ts';
-import type { EgressRecord } from '../core/types.ts';
+import type { ChangeSet, EgressRecord } from '../core/types.ts';
 import { buildSystemPrompt, buildUserPrompt } from './prompts.ts';
 import type {
   GenerateStoryboardInput,
@@ -59,9 +59,9 @@ export function estimateStoryboardCost(
   pack: EvidencePack,
   config: Config,
   ctx: RunContext,
-  severalSources = false,
+  changeSet: Pick<ChangeSet, 'parts'>,
 ): { inputTokens: number; outputTokens: number; costUsd: number | null } {
-  const system = buildSystemPrompt(config, severalSources);
+  const system = buildSystemPrompt(config, changeSet);
   const prompt = buildUserPrompt(pack, config.targetDurationSec ?? config.maxDurationSec, config);
   const firstInput = estimateTokens(system + prompt);
   // The answer may be as long as the limit, so the estimate stays high.
@@ -244,7 +244,7 @@ export async function generateStoryboard(
 ): Promise<GenerateStoryboardOutput> {
   const { provider, pack, deps, targetSec } = input;
   const config = ctx.config;
-  const system = buildSystemPrompt(config, deps.changeSet.parts !== undefined);
+  const system = buildSystemPrompt(config, deps.changeSet);
   const prompt = buildUserPrompt(pack, targetSec, config);
   const jsonSchema = storyboardJsonSchemaForLlm();
   const maxAttempts = 1 + config.llm.repairAttempts;

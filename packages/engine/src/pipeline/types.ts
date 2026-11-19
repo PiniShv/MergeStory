@@ -87,12 +87,13 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
   /** Write the files here instead of under the MergeStory home. */
   outDir?: string | null;
   /**
-   * The source and the flags (task, notes, tests, screenshots, recordings, logs, refs) of the command line, as raw
-   * words. AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
+   * The flags (task, notes, tests, screenshots, recordings, logs, refs) of the command line, as raw
+   * words, and the source in `source` or at the front of `args` (for example `--source a --source b`).
+   * AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
    * same evidence ids as the analysis did. Without it the document says to repeat them. With `agent`,
    * it shows `mergestory agent validate` and `mergestory agent render`, which find the files by name.
    */
-  followUp?: { source: string; args: string[]; agent?: boolean };
+  followUp?: { source?: string; args: string[]; agent?: boolean };
 }
 
 /** Starts the warning that publish adds when it rebuilds a result because the earlier result.json is missing. */

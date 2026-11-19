@@ -151,11 +151,14 @@ describe('joinSources', () => {
     });
     expect(changeSet.repoContext.tree).toContain('orders-api/src/total.js');
     expect(changeSet.repoContext.manifests[0]?.path).toBe('orders-api/package.json');
-    // Each README is cut so that all of them together are no longer than one README may be.
-    expect(changeSet.repoContext.readmeExcerpt?.length).toBeLessThanOrEqual(4096);
-    expect(changeSet.repoContext.readmeExcerpt).toMatch(
-      /\[orders-api\]\n# Orders[\s\S]*\[storefront\]\n# Store/,
-    );
+  });
+
+  it('returns a lone source as it is: no letter, no folder, no parts', async () => {
+    const lone = await orders();
+    const joined = joinSources([lone]);
+    expect(joined.changeSet).toBe(lone.changeSet);
+    expect(joined.reader).toBe(lone.reader);
+    expect(joined.analysis).toBe(lone.analysis);
   });
 
   it('leaves the owner empty when the repositories have different owners', async () => {

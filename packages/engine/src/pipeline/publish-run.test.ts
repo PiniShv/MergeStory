@@ -425,6 +425,15 @@ describe('a run that joined several repositories', () => {
     expect(received[0]?.meta?.changeUrl).toBeNull();
   });
 
+  it('posts nothing even when its stored record names a pull request', async () => {
+    await writeRun(several({ prUrl: PR_URL }));
+    const result = await publish({ ...S3, github: { comment: true, updateDescription: true } });
+    expect(commentMock).not.toHaveBeenCalled();
+    expect(descriptionMock).not.toHaveBeenCalled();
+    expect(result.notify).toBeNull();
+    expect(result.warnings.filter((w) => w.startsWith('Skipped the PR update:'))).toHaveLength(1);
+  });
+
   it('is silent when no comment was asked for, and the link is not made public on its own word', async () => {
     await writeRun(several({ repoIsPrivate: false }));
     const result = await publish(PUBLIC);
@@ -436,7 +445,7 @@ describe('a run that joined several repositories', () => {
 
   it('is told apart from a run of one pull request by the sources it stores', () => {
     const config = resolveConfig({ skipFile: true, env: {}, overrides: { github: { comment: true } } });
-    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, sources: 2 }, 's3')).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, joined: true }, 's3')).toEqual({
       kind: 'several-sources',
     });
   });
@@ -494,7 +503,21 @@ describe('the time a run took', () => {
 describe('decidePullRequestUpdate', () => {
   const asked = (github: NonNullable<ConfigInput['github']>) =>
     resolveConfig({ skipFile: true, env: {}, overrides: { github } });
-  const change = { source: 'github' as const, prUrl: PR_URL };
+  const change = { source: 'github' as const, prUrl: PR_URL, joined: false };
+
+  it('posts nothing for a joined change, for every publisher, whenever something was asked for', () => {
+    for (const github of [
+      { comment: true },
+      { updateDescription: true },
+      { comment: true, updateDescription: true },
+    ]) {
+      for (const where of ['s3', 'youtube', 'local', null]) {
+        expect(decidePullRequestUpdate(asked(github), { ...change, joined: true }, where)).toEqual({
+          kind: 'several-sources',
+        });
+      }
+    }
+  });
 
   it('updates the pull request when a comment or a description was asked for, and the video is shared', () => {
     for (const github of [
@@ -514,7 +537,7 @@ describe('decidePullRequestUpdate', () => {
     const quiet = asked({ comment: false, updateDescription: false });
     for (const where of ['s3', 'local', null]) {
       expect(decidePullRequestUpdate(quiet, change, where)).toEqual({ kind: 'not-requested' });
-      expect(decidePullRequestUpdate(quiet, { source: 'local', prUrl: null }, where)).toEqual({
+      expect(decidePullRequestUpdate(quiet, { source: 'local', prUrl: null, joined: false }, where)).toEqual({
         kind: 'not-requested',
       });
     }
@@ -522,13 +545,13 @@ describe('decidePullRequestUpdate', () => {
 
   it('says so when the change does not come from a pull request, before it looks at the video', () => {
     const config = asked({ comment: true });
-    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: null }, 's3')).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: null, joined: false }, 's3')).toEqual({
       kind: 'not-a-pull-request',
     });
-    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null }, 's3')).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, joined: false }, 's3')).toEqual({
       kind: 'not-a-pull-request',
     });
-    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: PR_URL }, null)).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: PR_URL, joined: false }, null)).toEqual({
       kind: 'not-a-pull-request',
     });
   });

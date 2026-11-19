@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { MergeStoryError, toMergeStoryError } from '../core/errors.ts';
 import type { LlmProvider } from '../core/providers.ts';
 import { RUN_FILE } from '../core/run-folder.ts';
+import { isJoined } from '../core/source-views.ts';
 import { BACKING_EVIDENCE_KINDS } from '../core/storyboard-facts.ts';
 import { type Storyboard, storyboardJsonSchemaForLlm } from '../core/storyboard-schema.ts';
 import type { Analysis } from '../core/types.ts';
@@ -97,8 +98,7 @@ async function modelStoryboard(p: Prepared, provider: LlmProvider): Promise<Stor
   const pack = packFor(p, p.config.llm.maxInputTokens);
   await writeFile(join(ctx.runDir, RUN_FILE.evidence), pack.markdown, { mode: 0o600 });
   if (ctx.dryRun) {
-    const several = p.changeSet.parts !== undefined;
-    const estimate = estimateStoryboardCost(provider, pack, p.config, ctx, several);
+    const estimate = estimateStoryboardCost(provider, pack, p.config, ctx, p.changeSet);
     // Only a stand-in that sizes the plan: it is never rendered, so it is fine for several sources too.
     const out = await offlineStoryboard(p);
     ctx.progress({
@@ -115,7 +115,7 @@ async function modelStoryboard(p: Prepared, provider: LlmProvider): Promise<Stor
         // The model receives the system prompt and the schema as well as the evidence pack.
         promptBytes:
           Buffer.byteLength(pack.markdown) +
-          Buffer.byteLength(buildSystemPrompt(p.config, several)) +
+          Buffer.byteLength(buildSystemPrompt(p.config, p.changeSet)) +
           Buffer.byteLength(JSON.stringify(storyboardJsonSchemaForLlm())),
       },
     };
@@ -142,7 +142,7 @@ async function modelStoryboard(p: Prepared, provider: LlmProvider): Promise<Stor
     if (error.code === 'BUDGET_EXCEEDED' || error.code === 'ABORTED' || error.code === 'CONFIG_INVALID')
       throw error;
     // The offline storyboard knows one repository only, so with several there is nothing to fall back to.
-    if (p.changeSet.parts) throw error;
+    if (isJoined(p.changeSet)) throw error;
     ctx.progress({
       stage: 'storyboard',
       status: 'warn',
@@ -157,7 +157,7 @@ async function modelStoryboard(p: Prepared, provider: LlmProvider): Promise<Stor
  * or a model. Called before anything is spent or installed, and again by `chooseStoryboard`.
  */
 export function assertStoryboardPossible(p: Prepared, supplied: unknown): void {
-  if (!p.changeSet.parts || supplied !== undefined || createLlmProvider(p.config, p.ctx.secrets)) return;
+  if (!isJoined(p.changeSet) || supplied !== undefined || createLlmProvider(p.config, p.ctx.secrets)) return;
   throw new MergeStoryError(
     'USAGE',
     'A video for several sources needs a storyboard, and no model is set up to write one.',

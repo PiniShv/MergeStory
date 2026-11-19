@@ -16,6 +16,7 @@ import {
   WATCH_PAGE_FILE,
   writeRunJson,
 } from '../core/run-folder.ts';
+import { isJoined, sourcesOf } from '../core/source-views.ts';
 import { groundedLines } from '../core/storyboard-facts.ts';
 import { plural } from '../core/text.ts';
 import { loadTheme } from '../core/theme.ts';
@@ -345,7 +346,7 @@ async function produce(
     prUrl: changeSet.pr?.url ?? null,
     repoIsPrivate: changeSet.repo.isPrivate,
     headSha: localWatchData.headSha,
-    ...(changeSet.parts ? { sources: changeSet.parts.length } : {}),
+    ...(isJoined(changeSet) ? { sources: sourcesOf(changeSet).length } : {}),
     language: storyboard.language,
     watch: localWatchData,
   };

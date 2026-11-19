@@ -18,6 +18,7 @@ import { compareScores } from '../analyzer/hunks.ts';
 import { compareRelationships } from '../analyzer/relationships.ts';
 import { compareRiskClass } from '../analyzer/risks.ts';
 import { MergeStoryError } from '../core/errors.ts';
+import { sameSourceError } from '../core/source-views.ts';
 import type {
   Analysis,
   ChangedFile,
@@ -29,13 +30,12 @@ import type {
   RepoReader,
   Side,
 } from '../core/types.ts';
-import { README_MAX_CHARS } from './limits.ts';
 
 /** The letters of the sources, in order. */
 const LETTERS = 'ABCD';
 
 /** Where an evidence item comes from. A new kind does not compile until it is placed here. */
-const EVIDENCE_ORIGIN: Record<EvidenceItem['kind'], 'source' | 'run'> = {
+export const EVIDENCE_ORIGIN: Record<EvidenceItem['kind'], 'source' | 'run'> = {
   pr: 'source',
   task: 'run',
   notes: 'run',
@@ -215,30 +215,16 @@ function inTurns<T>(lists: readonly (readonly T[])[]): T[] {
   return out;
 }
 
-/** The README excerpts of the sources under their folder names, short enough that the total is what one source may have. */
-function joinedReadme(parts: readonly ChangeSetPart[]): string | null {
-  const room = Math.floor(README_MAX_CHARS / parts.length);
-  const texts = parts.flatMap((p) => {
-    if (!p.readmeExcerpt) return [];
-    const head = `[${p.folder}]\n`;
-    return [head + p.readmeExcerpt.slice(0, Math.max(0, room - head.length))];
-  });
-  return texts.length > 0 ? texts.join('\n\n') : null;
-}
-
-/** Join two to four loaded sources into one change set, one reader and one analysis. */
+/** Join two to four loaded sources into one change set, one reader and one analysis. A lone source is returned as it is. */
 export function joinSources(loaded: readonly LoadedSource[]): LoadedSource {
+  if (loaded.length === 1) return loaded[0] as LoadedSource;
   const sorted = [...loaded].sort((a, b) => compareSources(a.changeSet, b.changeSet));
   const same = sorted.find((s, i) => {
     const o = sorted[i - 1]?.changeSet;
     const c = s.changeSet;
     return o !== undefined && compareSources(o, c) === 0;
   });
-  if (same) {
-    throw new MergeStoryError('USAGE', 'The same source was given more than once.', {
-      hint: 'Give each repository or pull request once.',
-    });
-  }
+  if (same) throw sameSourceError();
   const folders = folderNames(sorted.map((s) => s.changeSet.repo.name));
   const renamed = sorted.map((s, i) => renameSource(s, LETTERS[i] as string, folders[i] as string));
 
@@ -289,7 +275,8 @@ export function joinSources(loaded: readonly LoadedSource[]): LoadedSource {
     repoContext: {
       tree: changeSets.flatMap((c) => c.repoContext.tree),
       treeTruncated: changeSets.some((c) => c.repoContext.treeTruncated),
-      readmeExcerpt: joinedReadme(parts),
+      // Each source keeps its own README excerpt (see `parts`).
+      readmeExcerpt: null,
       manifests: changeSets.flatMap((c) => c.repoContext.manifests),
     },
     parts,

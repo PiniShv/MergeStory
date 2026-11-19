@@ -2,12 +2,7 @@
  * Storyboards: generation (LLM or heuristic) and the grounding validator that every
  * storyboard passes through, whoever wrote it.
  */
-export {
-  AUTHORING_GUIDE,
-  AUTHORING_VALUES,
-  EXAMPLE_STORYBOARD,
-  SEVERAL_SOURCES_GUIDE,
-} from './authoring.ts';
+export { AUTHORING_VALUES, EXAMPLE_STORYBOARD, guideFor } from './authoring.ts';
 export { estimateStoryboardCost, generateStoryboard } from './generate.ts';
 export { heuristicStoryboard } from './heuristic.ts';
 export { buildSystemPrompt, buildUserPrompt, sceneRange } from './prompts.ts';

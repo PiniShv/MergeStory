@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MergeStoryError } from '../core/errors.ts';
-import { MAX_SOURCES, parseSourceSpec, sourceInputsOf, splitSourceRange } from './spec.ts';
+import { MAX_SOURCES } from '../core/source-views.ts';
+import { parseSourceSpec, sourceInputsOf, sourceSpecOf, splitSourceRange } from './spec.ts';
 
 describe('splitSourceRange', () => {
   it.each([
@@ -48,6 +49,18 @@ describe('parseSourceSpec', () => {
     for (const text of ['acme/app#7:main..x', '-x', 'api:-a..b', '', 'api\u0000x']) {
       expect(() => parseSourceSpec(text, '/work'), text).toThrow(MergeStoryError);
     }
+  });
+});
+
+describe('sourceSpecOf', () => {
+  it('gives the text that parses back to the input', () => {
+    const inputs = [
+      { kind: 'local' as const, repoPath: '/work/api', base: null, head: null },
+      { kind: 'local' as const, repoPath: '/work/api', base: 'main', head: 'fix/x' },
+      { kind: 'local' as const, repoPath: '/work/api', base: null, head: 'fix/x' },
+      { kind: 'github' as const, url: 'https://github.com/acme/app/pull/7' },
+    ];
+    for (const input of inputs) expect(parseSourceSpec(sourceSpecOf(input), '/other')).toEqual(input);
   });
 });
 

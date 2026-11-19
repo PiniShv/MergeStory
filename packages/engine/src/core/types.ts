@@ -168,7 +168,8 @@ export interface ChangeSet {
   /**
    * Only on a change that was joined from several sources: the sources in the order of their letters.
    * Then ids start with the letter ("A.F1") and paths with the folder ("orders-api/src/x.ts"), `pr` is
-   * null and `repo` names every repository.
+   * null, `repo` names every repository and `repoContext.readmeExcerpt` is null (each source keeps its
+   * own). Written by `sources/join.ts`; other product code reads it through `sourcesOf` and `isJoined`.
    */
   parts?: ChangeSetPart[];
 }

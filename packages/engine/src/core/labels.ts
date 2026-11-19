@@ -1,10 +1,14 @@
 /**
  * The words that say which repository, which change and which commit a run is about, and the link
- * to a line of code. Every text that prints them (the closing card, the watch page, what publishers
- * get) goes through these functions. A run with one source gets the same strings it always got; a
- * change that was joined from several sources names every source.
+ * to a line of code. Every text that prints them goes through these functions. A run with one source
+ * gets the same strings it always got; a change that was joined from several sources names every source.
+ *
+ * Two families: the `...Of` labels are the words of the video (the closing card, the render plan):
+ * never a filesystem path, and a cleaned ref. `changeLabel` and `repoLabel` are the words of the watch
+ * page, the PR comment and the progress lines: owner, name and ref as they are.
  */
-import type { ChangeSet, ChangeSetPart, CodeRef, RepoInfo } from './types.ts';
+import { isJoined, sourcesOf } from './source-views.ts';
+import type { ChangeSet, CodeRef, RepoInfo } from './types.ts';
 
 /** The text that joins the sources of one run. */
 const SOURCE_SEPARATOR = ' + ';
@@ -30,51 +34,54 @@ export function changeLabelFor(changeSet: Pick<ChangeSet, 'pr' | 'head'>): strin
   return ref || 'working changes';
 }
 
-/** The sources of a change: one for an ordinary change, one for each source of a joined change. */
-function partsOf(changeSet: ChangeSet): readonly Pick<ChangeSetPart, 'repo' | 'pr' | 'head'>[] {
-  return changeSet.parts ?? [changeSet];
-}
-
-/** "owner/name" of the repository, or of each repository joined with " + ". */
+/** For the video: "owner/name" of the repository, or of each repository joined with " + ". */
 export function repoLabelOf(changeSet: ChangeSet): string {
-  return changeSet.parts
-    ? changeSet.parts.map((p) => repoLabelFor(p.repo)).join(SOURCE_SEPARATOR)
-    : repoLabelFor(changeSet.repo);
-}
-
-/** "PR #42" or the head branch; for several sources "<name> #<n>" or "<name> <head ref>" of each. */
-export function changeLabelOf(changeSet: Pick<ChangeSet, 'pr' | 'head' | 'parts'>): string {
-  if (!changeSet.parts) return changeLabelFor(changeSet);
-  return changeSet.parts
-    .map((p) => `${lastSegment(p.repo.name) || 'repository'} ${p.pr ? `#${p.pr.number}` : changeLabelFor(p)}`)
+  return sourcesOf(changeSet)
+    .map((s) => repoLabelFor(s.repo))
     .join(SOURCE_SEPARATOR);
 }
 
-/** The short head commit, or the short head commits of the sources. */
+/** For the video: "PR #42" or the head branch; for several sources "<name> #<n>" or "<name> <head ref>" of each. */
+export function changeLabelOf(changeSet: ChangeSet): string {
+  if (!isJoined(changeSet)) return changeLabelFor(changeSet);
+  return sourcesOf(changeSet)
+    .map((s) => `${lastSegment(s.repo.name) || 'repository'} ${s.pr ? `#${s.pr.number}` : changeLabelFor(s)}`)
+    .join(SOURCE_SEPARATOR);
+}
+
+/** For the video: the short head commit, or the short head commits of the sources. */
 export function commitTextOf(changeSet: ChangeSet): string {
-  return partsOf(changeSet)
-    .map((p) => p.head.sha.slice(0, 7))
+  return sourcesOf(changeSet)
+    .map((s) => s.head.sha.slice(0, 7))
     .join(COMMIT_SEPARATOR);
 }
 
+/** For the watch page, the PR comment and progress lines: "PR #42" or the head ref as it is; a joined change names each source. */
+export function changeLabel(changeSet: ChangeSet): string {
+  if (isJoined(changeSet)) return changeLabelOf(changeSet);
+  return changeSet.pr ? `PR #${changeSet.pr.number}` : changeSet.head.ref;
+}
+
+/** For the watch page and the PR comment: "owner/name" as it is; a joined change names each repository. */
+export function repoLabel(changeSet: ChangeSet): string {
+  if (isJoined(changeSet)) return repoLabelOf(changeSet);
+  return changeSet.repo.owner ? `${changeSet.repo.owner}/${changeSet.repo.name}` : changeSet.repo.name;
+}
+
+/** For the summary of an author: "<repo> <change>", or the label of a joined change, which already names every repository. */
+export function fullChangeLabel(changeSet: ChangeSet): string {
+  return isJoined(changeSet) ? changeLabel(changeSet) : `${repoLabel(changeSet)} ${changeLabel(changeSet)}`;
+}
+
 /**
- * Link to a line range at the exact commit, when the repository has a known web URL. For a joined
- * change the first folder of the path says which source the code is in; the link uses that source's
- * web address and commit and a path without the folder.
+ * Link to a line range at the exact commit, when the repository has a known web URL. The folder at the
+ * start of the path says which source the code is in (an ordinary change has no folder); the link uses
+ * that source's web address and commit and the path without the folder.
  */
 export function codeRefUrl(changeSet: ChangeSet, ref: CodeRef): string | null {
-  let repo = changeSet.repo;
-  let head = changeSet.head;
-  let base = changeSet.base;
-  let path = ref.path;
-  if (changeSet.parts) {
-    const part = changeSet.parts.find((p) => path.startsWith(`${p.folder}/`));
-    if (!part) return null;
-    ({ repo, head, base } = part);
-    path = path.slice(part.folder.length + 1);
-  }
-  if (!repo.webUrl) return null;
-  const sha = ref.side === 'head' ? head.sha : base.sha;
-  const encoded = path.split('/').map(encodeURIComponent).join('/');
-  return `${repo.webUrl}/blob/${sha}/${encoded}#L${ref.startLine}-L${ref.endLine}`;
+  const source = sourcesOf(changeSet).find((s) => ref.path.startsWith(s.pathPrefix));
+  if (!source?.repo.webUrl) return null;
+  const sha = ref.side === 'head' ? source.head.sha : source.base.sha;
+  const encoded = ref.path.slice(source.pathPrefix.length).split('/').map(encodeURIComponent).join('/');
+  return `${source.repo.webUrl}/blob/${sha}/${encoded}#L${ref.startLine}-L${ref.endLine}`;
 }

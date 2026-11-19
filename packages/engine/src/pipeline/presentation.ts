@@ -1,23 +1,14 @@
 /** Builds the data for the watch page and the PR comment from a validated storyboard. */
 
 import { findEvidence } from '../analyzer/evidence.ts';
-import { changeLabelOf, codeRefUrl, repoLabelOf } from '../core/labels.ts';
+import { changeLabel, codeRefUrl, repoLabel } from '../core/labels.ts';
+import { isJoined } from '../core/source-views.ts';
 import { isSimulated } from '../core/storyboard-facts.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { collapseLineRange } from '../core/text.ts';
 import type { Analysis, ChangeSet, Chapter, CodeRef, PublishResult } from '../core/types.ts';
 import type { CommentData, EvidenceLink, WatchPageData } from '../publish/index.ts';
 import { ENGINE_VERSION } from '../version.ts';
-
-export function changeLabel(changeSet: ChangeSet): string {
-  if (changeSet.parts) return changeLabelOf(changeSet);
-  return changeSet.pr ? `PR #${changeSet.pr.number}` : changeSet.head.ref;
-}
-
-export function repoLabel(changeSet: ChangeSet): string {
-  if (changeSet.parts) return repoLabelOf(changeSet);
-  return changeSet.repo.owner ? `${changeSet.repo.owner}/${changeSet.repo.name}` : changeSet.repo.name;
-}
 
 function refLink(changeSet: ChangeSet, ref: CodeRef | null): EvidenceLink | null {
   if (!ref) return null;
@@ -94,7 +85,7 @@ export function buildWatchPageData(input: PresentationInput): WatchPageData {
     // A joined change has no pull request of its own: there is no single link to "the" change.
     changeUrl: changeSet.pr?.url ?? null,
     // A joined change has no single commit: the watch page and the comment skip an empty one.
-    headSha: changeSet.parts ? '' : changeSet.head.sha,
+    headSha: isJoined(changeSet) ? '' : changeSet.head.sha,
     durationSec: input.durationSec,
     chapters: input.chapters,
     checklist: reviewChecklist(storyboard, changeSet),

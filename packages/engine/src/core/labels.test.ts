@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { joinSources } from '../sources/join.ts';
 import { orders, store } from '../testing/joined.ts';
 import { sampleChangeSet } from '../testing/sample-change.ts';
-import { changeLabelOf, codeRefUrl, commitTextOf, repoLabelOf } from './labels.ts';
+import {
+  changeLabel,
+  changeLabelOf,
+  codeRefUrl,
+  commitTextOf,
+  fullChangeLabel,
+  repoLabel,
+  repoLabelOf,
+} from './labels.ts';
 
 const REF = { path: 'src/total.js', side: 'head', startLine: 1, endLine: 3 } as const;
 
@@ -15,6 +23,20 @@ describe('labels of one source', () => {
     expect(commitTextOf(changeSet)).toBe(changeSet.head.sha.slice(0, 7));
     expect(codeRefUrl(changeSet, REF)).toBe(
       `https://github.com/example/weather/blob/${changeSet.head.sha}/src/total.js#L1-L3`,
+    );
+    expect(fullChangeLabel(changeSet)).toBe(`example/weather PR #${changeSet.pr?.number}`);
+  });
+
+  it('keep owner, name and ref as they are on the watch page', () => {
+    const changeSet = {
+      ...sampleChangeSet(),
+      pr: null,
+      head: { ref: 'refs/heads/fix', sha: 'c'.repeat(40) },
+    };
+    expect(changeLabel(changeSet)).toBe('refs/heads/fix');
+    expect(changeLabelOf(changeSet)).toBe('fix');
+    expect(repoLabel({ ...changeSet, repo: { ...changeSet.repo, owner: '', name: '/work/weather' } })).toBe(
+      '/work/weather',
     );
   });
 });
@@ -32,6 +54,10 @@ describe('labels of several sources', () => {
     // A pull request is "<name> #<n>", a local change "<name> <head ref>".
     expect(changeLabelOf(changeSet)).toBe(`orders-api ${changeSet.parts?.[0]?.head.ref} + storefront #7`);
     expect(commitTextOf(changeSet)).toBe('aaaaaaa · bbbbbbb');
+    // The watch page and the summary of an author use the same words for a joined change.
+    expect(changeLabel(changeSet)).toBe(changeLabelOf(changeSet));
+    expect(repoLabel(changeSet)).toBe(repoLabelOf(changeSet));
+    expect(fullChangeLabel(changeSet)).toBe(changeLabelOf(changeSet));
   });
 
   it('link a line of code to the repository and commit of its own source', async () => {

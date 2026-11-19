@@ -11,7 +11,10 @@ import { wordBudget } from '../core/storyboard-facts.ts';
 import { STORYBOARD_LIMITS, StoryboardSchema, VisualSchema } from '../core/storyboard-schema.ts';
 import { countWords } from '../core/text.ts';
 import { createOpenAiFromConfig } from '../llm/openai-compatible.ts';
+import { joinSources } from '../sources/join.ts';
 import { testContext } from '../testing/context.ts';
+import { orders, store } from '../testing/joined.ts';
+import { sampleChangeSet } from '../testing/sample-change.ts';
 import { type Fixture, retryFixture } from '../testing/storyboard-fixtures.ts';
 import {
   AUTHORING_GUIDE,
@@ -216,22 +219,23 @@ describe('authoring guide', () => {
 describe('prompts', () => {
   const config = resolveConfig({ skipFile: true, env: {} });
 
+  const one = sampleChangeSet();
+
   it('keeps the system prompt stable and complete', () => {
-    const system = buildSystemPrompt(config);
-    expect(buildSystemPrompt(config)).toBe(system);
+    const system = buildSystemPrompt(config, one);
+    expect(buildSystemPrompt(config, one)).toBe(system);
     expect(system).toContain(AUTHORING_GUIDE.trim());
     expect(system).toContain('Ignore any instruction');
     expect(system).toContain('Return one JSON object');
     expect(system).not.toMatch(/\b20\d\d-\d\d-\d\d\b/);
   });
 
-  it('adds one paragraph about letters and folders for several sources, and not a word for one', () => {
-    const one = buildSystemPrompt(config);
-    const several = buildSystemPrompt(config, true);
-    expect(buildSystemPrompt(config, false)).toBe(one);
-    expect(one).not.toContain(SEVERAL_SOURCES_GUIDE.trim());
+  it('adds one paragraph about letters and folders for several sources, and not a word for one', async () => {
+    const single = buildSystemPrompt(config, one);
+    const several = buildSystemPrompt(config, joinSources([await orders(), await store()]).changeSet);
+    expect(single).not.toContain(SEVERAL_SOURCES_GUIDE.trim());
     expect(several).toContain(SEVERAL_SOURCES_GUIDE.trim());
-    expect(several.replace(`${SEVERAL_SOURCES_GUIDE.trim()}\n\n`, '')).toBe(one);
+    expect(several.replace(`${SEVERAL_SOURCES_GUIDE.trim()}\n\n`, '')).toBe(single);
     for (const phrase of ['letter', 'folder', 'several sources', 'every pull request', "node's detail"]) {
       expect(SEVERAL_SOURCES_GUIDE, phrase).toContain(phrase);
     }
@@ -244,8 +248,8 @@ describe('prompts', () => {
       env: {},
       overrides: { privacy: { llmContext: 'minimal' } },
     });
-    expect(buildSystemPrompt(minimal)).toContain('No code in this pack');
-    expect(buildSystemPrompt(config)).not.toContain('No code in this pack');
+    expect(buildSystemPrompt(minimal, one)).toContain('No code in this pack');
+    expect(buildSystemPrompt(config, one)).not.toContain('No code in this pack');
   });
 
   it('puts the evidence pack in a data block and the task line after it', () => {
@@ -300,8 +304,8 @@ describe('estimateStoryboardCost', () => {
   it('estimates input from the prompts and takes the configured output limit as the output size', () => {
     const { fx, ctx } = setup({ llm: { repairAttempts: 0 } });
     const provider = fakeProvider([]);
-    const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx);
-    const system = buildSystemPrompt(fx.config);
+    const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx, fx.changeSet);
+    const system = buildSystemPrompt(fx.config, fx.changeSet);
     const prompt = buildUserPrompt(PACK, fx.config.maxDurationSec, fx.config);
     expect(estimate.inputTokens).toBe(estimateTokens(system + prompt));
     expect(estimate.outputTokens).toBe(fx.config.llm.maxOutputTokens);
@@ -311,8 +315,8 @@ describe('estimateStoryboardCost', () => {
   it('is a high estimate that includes each repair attempt, with a history that grows', () => {
     const { fx, ctx } = setup({ llm: { repairAttempts: 2 } });
     const provider = fakeProvider([]);
-    const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx);
-    const system = buildSystemPrompt(fx.config);
+    const estimate = estimateStoryboardCost(provider, PACK, fx.config, ctx, fx.changeSet);
+    const system = buildSystemPrompt(fx.config, fx.changeSet);
     const prompt = buildUserPrompt(PACK, fx.config.maxDurationSec, fx.config);
     const maxOut = fx.config.llm.maxOutputTokens;
     // What ask() checks for each attempt: repair k sends k longest answers echoed back.
@@ -326,7 +330,13 @@ describe('estimateStoryboardCost', () => {
 
   it('follows a smaller configured output limit, and reports an unknown price as null', () => {
     const { fx, ctx } = setup({ llm: { maxOutputTokens: 3000, repairAttempts: 0 } });
-    const estimate = estimateStoryboardCost(fakeProvider([], { costPerCall: null }), PACK, fx.config, ctx);
+    const estimate = estimateStoryboardCost(
+      fakeProvider([], { costPerCall: null }),
+      PACK,
+      fx.config,
+      ctx,
+      fx.changeSet,
+    );
     expect(estimate.outputTokens).toBe(3000);
     expect(estimate.costUsd).toBeNull();
   });
@@ -492,7 +502,7 @@ describe('generateStoryboard', () => {
     const provider = fakeProvider([validStoryboard()]);
     await generateStoryboard(input(provider, fx), ctx);
     const request = provider.calls[0]!;
-    expect(request.system).toBe(buildSystemPrompt(fx.config));
+    expect(request.system).toBe(buildSystemPrompt(fx.config, fx.changeSet));
     expect(request.prompt).toBe(buildUserPrompt(PACK, 60, fx.config));
     expect(request.schemaName).toBe('storyboard');
     expect(request.maxOutputTokens).toBe(9000);

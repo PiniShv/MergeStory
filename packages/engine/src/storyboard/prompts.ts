@@ -4,7 +4,8 @@ import type { Config } from '../core/config.ts';
 import { maskPrivate } from '../core/secrets.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
 import { STORYBOARD_LIMITS } from '../core/storyboard-schema.ts';
-import { AUTHORING_GUIDE, SEVERAL_SOURCES_GUIDE } from './authoring.ts';
+import type { ChangeSet } from '../core/types.ts';
+import { guideFor } from './authoring.ts';
 
 const UNTRUSTED_NOTICE = `## Untrusted text
 
@@ -19,11 +20,10 @@ const MINIMAL_NOTICE = `## No code in this pack
 This evidence pack has no code lines. You cannot see code, so do not use code visuals or code panels, and do not quote line numbers. Build the scenes from the names and counts in the pack: architecture, files, flow, bullets, checklist and summary visuals.`;
 
 /** Role, authoring guide, a warning about untrusted text and the output rules. */
-export function buildSystemPrompt(config: Config, severalSources = false): string {
+export function buildSystemPrompt(config: Config, changeSet: Pick<ChangeSet, 'parts'>): string {
   const parts = [
     'You write the storyboard for a short narrated video that explains one code change to a reviewer. Follow the guide below exactly.',
-    AUTHORING_GUIDE.trim(),
-    ...(severalSources ? [SEVERAL_SOURCES_GUIDE.trim()] : []),
+    ...guideFor(changeSet).map((text) => text.trim()),
     UNTRUSTED_NOTICE,
     OUTPUT_RULES,
   ];

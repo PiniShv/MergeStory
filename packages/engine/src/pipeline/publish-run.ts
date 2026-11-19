@@ -112,11 +112,11 @@ type PullRequestUpdate =
  */
 export function decidePullRequestUpdate(
   config: Pick<Config, 'github'>,
-  change: { source: 'github' | 'local'; prUrl: string | null; sources?: number },
+  change: { source: 'github' | 'local'; prUrl: string | null; joined: boolean },
   publishedWith: string | null,
 ): PullRequestUpdate {
   if (!config.github.comment && !config.github.updateDescription) return { kind: 'not-requested' };
-  if (change.sources !== undefined) return { kind: 'several-sources' };
+  if (change.joined) return { kind: 'several-sources' };
   if (change.source !== 'github' || !change.prUrl) return { kind: 'not-a-pull-request' };
   if (publishedWith === null || publishedWith === 'local') return { kind: 'video-stays-local' };
   return { kind: 'update', prUrl: change.prUrl };
@@ -178,7 +178,7 @@ export async function publishAndNotify(
     {
       source: stored.source,
       prUrl: stored.prUrl,
-      ...(stored.sources === undefined ? {} : { sources: stored.sources }),
+      joined: stored.sources !== undefined,
     },
     publish?.provider ?? null,
   );

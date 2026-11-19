@@ -4,20 +4,19 @@
  */
 import { writeFile } from 'node:fs/promises';
 import { estimateTokens } from '../core/cost.ts';
+import { changeLabel, fullChangeLabel } from '../core/labels.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
 import { storyboardJsonSchema } from '../core/storyboard-schema.ts';
 import {
-  AUTHORING_GUIDE,
   AUTHORING_VALUES,
-  SEVERAL_SOURCES_GUIDE,
+  guideFor,
   type ValidationResult,
   validateStoryboard,
 } from '../storyboard/index.ts';
 import { commandLine } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
 import { type Prepared, packFor, prepare } from './prepare.ts';
-import { changeLabel, repoLabel } from './presentation.ts';
 import { fitStoryboard } from './storyboard-choice.ts';
 import type { AuthoringOptions, AuthoringResult, GenerateHooks, GenerateOptions } from './types.ts';
 
@@ -57,10 +56,7 @@ export async function prepareAuthoring(
     files,
     summary: {
       title: p.changeSet.pr?.title ?? p.changeSet.commits[0]?.subject ?? changeLabel(p.changeSet),
-      // The label of a joined change already names every repository.
-      changeLabel: p.changeSet.parts
-        ? changeLabel(p.changeSet)
-        : `${repoLabel(p.changeSet)} ${changeLabel(p.changeSet)}`,
+      changeLabel: fullChangeLabel(p.changeSet),
       size: p.analysis.size,
       files: p.changeSet.stats.files,
       suggestedDurationSec: p.targetSec,
@@ -77,7 +73,7 @@ export async function prepareAuthoring(
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
   const agent = followUp?.agent === true;
-  // With --source there is no source argument: the flags are in `args`.
+  // `analyze` puts the source words at the front of `args`; another caller may pass one source here.
   const source = followUp?.source ? [followUp.source] : [];
   const validate = !followUp
     ? 'mergestory validate storyboard.json <source>'
@@ -122,8 +118,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
         ]
       : []),
     '',
-    AUTHORING_GUIDE,
-    ...(p.changeSet.parts ? [SEVERAL_SOURCES_GUIDE] : []),
+    ...guideFor(p.changeSet),
     AUTHORING_VALUES,
   ].join('\n');
 }

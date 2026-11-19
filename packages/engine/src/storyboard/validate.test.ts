@@ -262,6 +262,16 @@ describe('code references', () => {
     expect(codes(result.errors)).toEqual(expect.arrayContaining(['code-ref-sensitive', 'code-ref-binary']));
   });
 
+  it('drops a changed file that cannot be shown from the overview, with no hint for an ordinary change', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 1).visual = { type: 'files', highlightPaths: ['.env', 'src/http/retry.ts'], caption: null };
+    const result = await run(sb, fx);
+    expect(result.fixes).toContain(
+      'scenes[1].visual.highlightPaths[0]: dropped ".env" because it is not a changed file that can be shown',
+    );
+  });
+
   it('rejects files that the user excluded in the config', async () => {
     const fx = retryFixture({ config: { privacy: { excludePaths: ['src/http/retry.*'] } } });
     const sb = baseStoryboard(fx);

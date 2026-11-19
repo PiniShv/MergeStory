@@ -85,8 +85,9 @@ learns what happened.
 
 `src/pipeline` has one file for each job, and `run.ts` only connects them:
 
-- `prepare.ts`: read the change, check the context, analyse (the first half of every run). With several
-  sources it loads and analyses each one alone, then joins them (see [Several sources](#several-sources));
+- `prepare.ts`: read the change, check the context, analyse (the first half of every run). It loads each
+  source with `loadSources` (`src/sources/load.ts`), analyses each one alone, then joins them (see
+  [Several sources](#several-sources));
 - `storyboard-choice.ts`: use the caller's storyboard, ask the model, or build the offline one, then
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
@@ -149,10 +150,11 @@ Storyboards cite these ids. The watch page lists every claim with links to the c
 ### Several sources
 
 One video can explain a change in several repositories (`--source`, up to 4). Every stage after
-`prepare.ts` still works on ONE change set, ONE reader and ONE analysis, so none of them loops over sources.
-`src/sources/join.ts` makes that possible. `prepare` loads and analyses each source exactly as for a single
-source, with its own reader and its own caches. Then `joinSources` joins them into a change that looks like one
-repository with a top folder for each source:
+`prepare.ts` still works on ONE change set, ONE reader and ONE analysis.
+`src/sources/join.ts` makes that possible. `loadSources` (`src/sources/load.ts`) loads each source exactly as
+for a single source, with its own reader and its own caches, and names the source in an error when there are
+several. `prepare` analyses each one, then `joinSources` joins them into a change that looks like one
+repository with a top folder for each source (a lone source is returned as it is):
 
 - The sources are sorted by host, owner, name, pull request number and head commit. The first is `A`, then
   `B`, `C`, `D`, so the order of the flags never changes a letter. The folder of a source is its repository
@@ -167,7 +169,8 @@ repository with a top folder for each source:
   were applied before the join, so they never see a folder name.
 - `size` and `suggestedDurationSec` come from the summed lines and components, with the functions of the
   analyzer (`paceOf`). The sums of the stats, the languages and the limits are joined. `ChangeSet.parts`
-  keeps what each source looked like when it was loaded. `pr` is `null` on a joined change.
+  keeps what each source looked like when it was loaded, with its own README excerpt. `pr` and the README
+  excerpt of the joined change are `null`.
 - The evidence pack cuts some lists by position: key hunks, risks, components, relationships, symbols,
   dependencies and architecture signals. So the joined lists are not the lists of the sources one after
   the other. Key hunks, risks and components are ordered across the sources with the comparison that the
@@ -179,8 +182,16 @@ repository with a top folder for each source:
   commits and the repository once for each source. A check after the join throws `INTERNAL` when an evidence
   id exists twice.
 
-`src/core/labels.ts` answers "which repository, which change, which commit" for everything that prints it:
-the closing card, the watch page and what the publishers get. One source gives the strings it always gave.
+Only `join.ts` writes `ChangeSet.parts`. The rest of the product code reads it through
+`src/core/source-views.ts`. `sourcesOf(changeSet)` gives every source in one shape: an ordinary change is one source with an empty letter, folder, id prefix
+and path prefix, so code that works source by source (the evidence pack, the known names of the checks, the
+labels, the links to code) has one path for both kinds. `isJoined(changeSet)` is for the few texts and
+rules that really differ, such as the header of the evidence pack, the extra guide paragraph for several
+sources, and the rule that a joined change has no offline storyboard.
+
+`src/core/labels.ts` answers "which repository, which change, which commit" for everything that prints it.
+The `...Of` labels are the words of the video (the closing card); `changeLabel` and `repoLabel` are the words
+of the watch page, the PR comment and the progress lines. One source gives the strings it always gave.
 Several sources give `owner/name` of each joined with ` + `, `<name> #<n>` (or `<name> <head ref>` for a local
 change) of each, and the short commits joined with ` · `. A link to code takes the source from the folder at
 the start of the path and uses that source's web address and commit. The watch page has no link to "the"

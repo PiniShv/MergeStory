@@ -94,15 +94,7 @@ function shortenRange(
   return [shrunkStart, shrunkEnd];
 }
 
-/**
- * `pathHint` adds to the message about a path that is not part of the change (with several sources
- * it names the forms with a folder in front that do exist).
- */
-export function createRefResolver(
-  files: readonly ChangedFile[],
-  reader: RepoReader,
-  pathHint: (path: string) => string = () => '',
-): RefResolver {
+export function createRefResolver(files: readonly ChangedFile[], reader: RepoReader): RefResolver {
   const byPath = new Map<string, ChangedFile>();
   const byOldPath = new Map<string, ChangedFile>();
   for (const file of files) {
@@ -138,7 +130,7 @@ export function createRefResolver(
         return fail(
           'unknown-path',
           null,
-          `${ref.path} is not part of this change; use a path from the Files table${pathHint(ref.path)}`,
+          `${ref.path} is not part of this change; use a path from the Files table`,
         );
       }
       if (isProtectedFile(file)) {
