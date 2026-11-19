@@ -609,8 +609,12 @@ describe.skipIf(tools === null)('hidden regions in the frames of a recording', (
         }
     return worst;
   }
-  /** A cover is within this many levels of its greys in a JPEG frame. Without a cover, the stripes are 38 or more away. */
-  const COVERED = 16;
+  /**
+   * A cover is within this many levels of its greys in a JPEG frame. Where a cover meets the picture, some
+   * FFmpeg versions draw pixels that are up to 16 away. Without a cover, the worst pixel of these pictures
+   * is 60 or more away.
+   */
+  const COVERED = 30;
   const request = (
     recording: RecordingInput,
     outDir: string,
