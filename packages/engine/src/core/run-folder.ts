@@ -11,6 +11,7 @@ import type { WatchPageData } from '../publish/types.ts';
 import { MergeStoryError } from './errors.ts';
 import { randomToken } from './ids.ts';
 import { isRecord } from './json.ts';
+import { MAX_SOURCES } from './source-views.ts';
 import type { GenerateResult } from './types.ts';
 
 /** The fixed names inside a run folder. The files that publishing uploads are always these. */
@@ -133,6 +134,8 @@ export const PublishInputSchema = z.looseObject(
     prUrl: z.string({ error: 'bad pull request link' }).nullable(),
     repoIsPrivate: z.boolean({ error: 'bad repository privacy' }).nullable(),
     headSha: z.string({ error: 'no commit or language' }),
+    /** How many sources a change joined from several repositories has; absent for one source. */
+    sources: z.number().int().min(2).max(MAX_SOURCES).optional(),
     /** Narration language (BCP 47). */
     language: z.string({ error: 'no commit or language' }),
     watch: z.custom<WatchPageData>(isWatchData, { error: 'no watch page data' }),

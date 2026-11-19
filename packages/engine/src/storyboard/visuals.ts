@@ -529,7 +529,7 @@ export function checkVisualIntegrity(scene: Scene, p: string, run: Run, cleaner:
         if (run.refs.isShowable(path)) return true;
         run.fix(
           `${vp}.highlightPaths[${index}]`,
-          `dropped "${path}" because it is not a changed file that can be shown`,
+          `dropped "${path}" because it is not a changed file that can be shown${run.pathHint(path)}`,
         );
         return false;
       });

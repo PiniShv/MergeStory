@@ -59,6 +59,17 @@ them, such as `cat`, `ls` or `node`, are not needed and can ask the user for app
   `generate` as [references/cli.md](references/cli.md) describes. The user is asked to approve those.
   Always add `--publish local` to `generate`: the team's default storage may upload at once.
 
+### A change in several repositories
+
+A fix that works only when two pull requests are merged together can be one video. This needs an engine
+newer than 1.7.0, and the `agent` commands cannot do it. Use `mergestory analyze`, `validate` and `generate`
+with one `--source <repo>[:<base>..<head>]` for each repository, at most 4 (see
+[references/cli.md](references/cli.md)). The user may be asked to approve those commands. With several
+sources MergeStory writes no storyboard on its own: write it yourself from `AUTHORING.md` and `evidence.md`.
+An id of a repository starts with its letter (`A.F1`) and a path with its folder, and the first title card
+must name every pull request. Nothing is posted to a pull request: give the user the link and say that it
+has to be posted on each one.
+
 ## 3. Write down what only you know
 
 Pick a short name for this change, for example `retry-backoff` (lower-case letters, digits, `-`).

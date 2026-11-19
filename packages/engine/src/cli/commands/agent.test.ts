@@ -596,6 +596,7 @@ describe('agent: the source', () => {
 describe('agent: refused flags', () => {
   it.each([
     ['--out', 'out'],
+    ['--source', 'other-repo'],
     ['--task', 'x'],
     ['--task-file', 'task.md'],
     ['--notes-file', 'notes.md'],

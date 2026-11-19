@@ -7,6 +7,7 @@ import { findEvidence } from '../analyzer/evidence.ts';
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
+import { changeLabelOf, commitTextOf, repoLabelOf } from '../core/labels.ts';
 import { shownName } from '../core/media-probe.ts';
 import {
   frameDirFor,
@@ -33,6 +34,7 @@ import type {
   ScreenshotResolved,
 } from '../core/render-plan.ts';
 import { maskPrivateReport } from '../core/secrets.ts';
+import { isJoined } from '../core/source-views.ts';
 import { BACKING_EVIDENCE_KINDS } from '../core/storyboard-facts.ts';
 import {
   type CodeRefInput,
@@ -52,7 +54,6 @@ import type {
   ChangeSet,
   ContextInputs,
   EvidenceItem,
-  RepoInfo,
   RepoReader,
   ScreenshotInput,
   Timeline,
@@ -115,26 +116,6 @@ const beatIndex = (value: number): number => (Number.isFinite(value) ? Math.max(
 // ---------------------------------------------------------------------------
 // Labels
 // ---------------------------------------------------------------------------
-
-function lastSegment(value: string): string {
-  const parts = value.replace(/\\/g, '/').split('/').filter(Boolean);
-  return parts[parts.length - 1] ?? '';
-}
-
-/** "owner/name", or the repository name. Never a filesystem path. */
-export function repoLabelFor(repo: RepoInfo): string {
-  const name = lastSegment(repo.name) || 'repository';
-  const owner = repo.owner ? lastSegment(repo.owner) : '';
-  return owner ? `${owner}/${name}` : name;
-}
-
-/** "PR #42", or the head branch for a local run. */
-export function changeLabelFor(changeSet: ChangeSet): string {
-  if (changeSet.pr) return `PR #${changeSet.pr.number}`;
-  const ref = changeSet.head.ref.trim().replace(/^refs\/(?:heads|remotes\/[^/]+)\//, '');
-  if (/^[0-9a-f]{40}$/i.test(ref)) return ref.slice(0, 7);
-  return ref || 'working changes';
-}
 
 /** "src/a.ts:8-12" for a code reference. A path is on-screen text too, so it is masked. */
 const codeLabel = (ref: CodeRefInput, scrub: Scrubber): string =>
@@ -913,9 +894,9 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
     scenes.push(await planScene(scene, index + 1, timing, env, evidence));
   }
 
-  const repoLabel = metaScrub.text(repoLabelFor(changeSet.repo));
-  const changeLabel = metaScrub.text(changeLabelFor(changeSet));
-  const headShort = changeSet.head.sha.slice(0, 7);
+  const repoLabel = metaScrub.text(repoLabelOf(changeSet));
+  const changeLabel = metaScrub.text(changeLabelOf(changeSet));
+  const headShort = commitTextOf(changeSet);
   const plan: RenderPlan = {
     version: 1,
     width: preset.width,
@@ -945,7 +926,11 @@ export async function buildRenderPlan(input: BuildPlanInput, ctx: RunContext): P
       startSec: timeline.outro.startSec,
       durationSec: timeline.outro.durationSec,
       tagline: OUTRO_TAGLINE,
-      lines: [`${repoLabel} · ${changeLabel}`, `Commit ${headShort}`, OUTRO_DISCLAIMER],
+      lines: [
+        `${repoLabel} · ${changeLabel}`,
+        `${isJoined(changeSet) ? 'Commits' : 'Commit'} ${headShort}`,
+        OUTRO_DISCLAIMER,
+      ],
     },
   };
   ctx.logger.debug('Render plan built', {

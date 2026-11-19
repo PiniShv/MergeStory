@@ -167,6 +167,13 @@ same input always gives the same ids.
 same flags to `analyze`, `validate` and `generate`.** Otherwise those ids do not exist in the later steps, and
 lines that cite only them are removed.
 
+**Several sources.** For a change in several repositories (`--source`, see [cli.md](cli.md#several-sources)),
+every id that comes from a repository has the letter of that repository in front: `A.F1`, `A.F1.H2`, `B.S3`,
+`A.M1`, `A.PR`, `B.REPO`. `evidence.md` says which letter is which repository. `TASK`, `NOTES`, `T1`, `REPRO`,
+`SS1`, `RC1` and `L1` come from you, not from a repository, and keep their names. One narration line may cite
+ids of several repositories. An id without its letter (`F1`) is removed with a note that names the forms that
+exist (`A.F1` or `B.F1`).
+
 Cite ids on every narration line. `TASK`, `NOTES` and `REPRO` are the author's words and are not checked against
 the code. Use them for the reason behind the change, and say whose words they are ("the notes say ...", "the
 reproduction shows ..."). A reproduction shows what its author saw. It does not prove anything about the code,
@@ -240,7 +247,10 @@ A code reference points at lines. The engine reads the real code at render time.
 { "path": "src/retry.ts", "side": "head", "startLine": 21, "endLine": 36 }
 ```
 
-- `path` is the path exactly as the Files table of `evidence.md` shows it.
+- `path` is the path exactly as the Files table of `evidence.md` shows it. With several sources it starts
+  with the folder of the repository (`orders-api/src/total.js`), and the same path in two repositories
+  names two different files. A path without its folder is refused with a note that names the forms that
+  exist.
 - `side` is `head` for the new version and `base` for the old one. A new file exists only at `head`, and a
   deleted file only at `base`. A renamed file's old version is read at its old path.
 - Lines count from 1, and both ends are included.
@@ -291,6 +301,9 @@ model writes, and the one the offline generator builds. There are three kinds of
   `zoom` outside its range is moved into it.
 - **Secrets and e-mail addresses are masked** in every string, and hidden control characters are removed.
 - The language is set to the configured one.
+- Several sources: when the title card does not name every pull request, its kicker is set to the names of
+  all the changes (`orders-api #3 + storefront #7`), if that has at most 60 characters. Checking the
+  repaired storyboard again changes nothing.
 
 ### Sentences that are removed
 
@@ -368,6 +381,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
+| `title-missing-source` | Several sources: the first title card does not hold the repository name and `#<number>` of every source that is a pull request. The kicker was set to the names of all the changes when they fit in 60 characters. Otherwise write the names yourself. |
 
 An example. The demo storyboard is valid when it gets the context it was written for. Leave out the task, the
 notes and the test result, and `validate` still passes, but it reports fixes. The ids `TASK`, `NOTES` and
@@ -419,6 +433,13 @@ and no second model sees the code. The reading and writing are your agent's own 
    mergestory generate <source> --task-file <folder>/task.md --notes-file <folder>/notes.md --tests-file <folder>/tests.json --storyboard <folder>/storyboard.json
    ```
 
+**A change in several repositories.** Run `analyze` with every `--source` (see
+[cli.md](cli.md#several-sources)) and write the storyboard yourself: MergeStory does not write one for several
+sources on its own. Ids start with the letter of their repository and paths with its folder, as `evidence.md`
+says. Name every pull request on the first title card (its repository name and `#<number>`), cite ids of
+several repositories where one line needs them, and say in each node of an `architecture` visual which
+repository it is in. [`examples/two-repos-demo/`](../examples/two-repos-demo/README.md) is an example.
+
 Rules of thumb for a good storyboard:
 
 - State what the code does, with the real names and values. A reviewer learns more from "withRetry wraps each
@@ -451,6 +472,9 @@ mergestory generate /tmp/mergestory-demo --base main --head feature/retry --task
 
 [`examples/bugfix-demo/`](../examples/bugfix-demo/README.md) is a second example, with real screenshots and
 screen recordings of a bug and its fix. Its README has the commands.
+
+[`examples/two-repos-demo/`](../examples/two-repos-demo/README.md) is a third, with one video for a fix that
+lives in two repositories.
 
 ## The schema
 

@@ -4,19 +4,19 @@
  */
 import { writeFile } from 'node:fs/promises';
 import { estimateTokens } from '../core/cost.ts';
+import { changeLabel, fullChangeLabel } from '../core/labels.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
 import { storyboardJsonSchema } from '../core/storyboard-schema.ts';
 import {
-  AUTHORING_GUIDE,
   AUTHORING_VALUES,
+  guideFor,
   type ValidationResult,
   validateStoryboard,
 } from '../storyboard/index.ts';
 import { commandLine } from './commands.ts';
 import { describeFit } from './fit-duration.ts';
 import { type Prepared, packFor, prepare } from './prepare.ts';
-import { changeLabel, repoLabel } from './presentation.ts';
 import { fitStoryboard } from './storyboard-choice.ts';
 import type { AuthoringOptions, AuthoringResult, GenerateHooks, GenerateOptions } from './types.ts';
 
@@ -56,7 +56,7 @@ export async function prepareAuthoring(
     files,
     summary: {
       title: p.changeSet.pr?.title ?? p.changeSet.commits[0]?.subject ?? changeLabel(p.changeSet),
-      changeLabel: `${repoLabel(p.changeSet)} ${changeLabel(p.changeSet)}`,
+      changeLabel: fullChangeLabel(p.changeSet),
       size: p.analysis.size,
       files: p.changeSet.stats.files,
       suggestedDurationSec: p.targetSec,
@@ -73,23 +73,18 @@ export async function prepareAuthoring(
 function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] | null): string {
   const storyboard = runFolder(p.ctx.runDir).storyboard;
   const agent = followUp?.agent === true;
+  // `analyze` puts the source words at the front of `args`; another caller may pass one source here.
+  const source = followUp?.source ? [followUp.source] : [];
   const validate = !followUp
     ? 'mergestory validate storyboard.json <source>'
     : agent
-      ? commandLine(['mergestory', 'agent', 'validate', followUp.source, ...followUp.args])
-      : commandLine(['mergestory', 'validate', storyboard, followUp.source, ...followUp.args]);
+      ? commandLine(['mergestory', 'agent', 'validate', ...source, ...followUp.args])
+      : commandLine(['mergestory', 'validate', storyboard, ...source, ...followUp.args]);
   const generate = !followUp
     ? 'mergestory generate <source> --storyboard storyboard.json'
     : agent
-      ? commandLine(['mergestory', 'agent', 'render', followUp.source, ...followUp.args])
-      : commandLine([
-          'mergestory',
-          'generate',
-          followUp.source,
-          ...followUp.args,
-          '--storyboard',
-          storyboard,
-        ]);
+      ? commandLine(['mergestory', 'agent', 'render', ...source, ...followUp.args])
+      : commandLine(['mergestory', 'generate', ...source, ...followUp.args, '--storyboard', storyboard]);
   return [
     '# Writing the storyboard',
     '',
@@ -123,7 +118,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
         ]
       : []),
     '',
-    AUTHORING_GUIDE,
+    ...guideFor(p.changeSet),
     AUTHORING_VALUES,
   ].join('\n');
 }

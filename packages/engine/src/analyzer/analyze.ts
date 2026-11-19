@@ -205,27 +205,41 @@ function pickSymbols(reads: readonly ContentRead[]): {
   return { identified, symbols: identified.map(({ signatureChanged: _s, ...rest }) => rest) };
 }
 
+/** A file that makes its component count as real work: content that is shown and is not docs, tests, assets or generated. */
+export function isMeaningfulFile(s: Pick<FileInsight, 'hidden' | 'trivial' | 'role'>): boolean {
+  return !s.hidden && !s.trivial && !['docs', 'test', 'asset', 'lockfile', 'generated'].includes(s.role);
+}
+
+/** The size class and the suggested length of the video, from the changed lines and the real-work components. */
+export function paceOf(
+  meaningfulLines: number,
+  meaningfulComponents: number,
+): { size: ChangeSize; suggestedDurationSec: number } {
+  const size = sizeOf(meaningfulLines);
+  return { size, suggestedDurationSec: DURATION[size] + (meaningfulComponents >= 3 ? 10 : 0) };
+}
+
 /** Size class, line count and suggested length of the video. */
 function pacing(states: readonly FileState[], grouping: ReturnType<typeof groupComponents>) {
   let meaningfulLines = 0;
   for (const s of states) {
     if (isShowable(s.file) && !s.trivial) meaningfulLines += s.file.additions + s.file.deletions;
   }
-  const size = sizeOf(meaningfulLines);
   const stateById = new Map(states.map((s) => [s.file.id, s]));
   const meaningfulComponents = grouping.components.filter((m) =>
     m.fileIds.some((id) => {
       const s = stateById.get(id);
-      return (
-        !!s && !s.hidden && !s.trivial && !['docs', 'test', 'asset', 'lockfile', 'generated'].includes(s.role)
-      );
+      return !!s && isMeaningfulFile(s);
     }),
   ).length;
-  return {
-    meaningfulLines,
-    size,
-    suggestedDurationSec: DURATION[size] + (meaningfulComponents >= 3 ? 10 : 0),
-  };
+  return { meaningfulLines, ...paceOf(meaningfulLines, meaningfulComponents) };
+}
+
+/** `languages` of the joined analysis: the same order as `languagesOf`. */
+export function sortLanguages(counts: ReadonlyMap<string, number>): Analysis['languages'] {
+  return [...counts.entries()]
+    .map(([language, files]) => ({ language, files }))
+    .sort((a, b) => b.files - a.files || a.language.localeCompare(b.language));
 }
 
 function insightsOf(
@@ -281,9 +295,7 @@ function languagesOf(states: readonly FileState[]): Analysis['languages'] {
     const language = s.file.language ? languageInfo(s.file.language) : null;
     if (language?.isCode) counts.set(language.base, (counts.get(language.base) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .map(([language, files]) => ({ language, files }))
-    .sort((a, b) => b.files - a.files || a.language.localeCompare(b.language));
+  return sortLanguages(counts);
 }
 
 /**

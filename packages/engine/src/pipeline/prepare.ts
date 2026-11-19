@@ -2,16 +2,16 @@
 import { analyze, buildEvidencePack, targetDuration } from '../analyzer/index.ts';
 import { type Config, resolveConfig } from '../core/config.ts';
 import { createRunContext, type RunContext } from '../core/context.ts';
-import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
+import { assertNotAborted, type MergeStoryError } from '../core/errors.ts';
 import { newRunId } from '../core/ids.ts';
 import { assertNoLinks, assertNotWorkFolder, ensureDir, runDirFor } from '../core/paths.ts';
-import type { SourceInput } from '../core/providers.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import type { Analysis, ChangeSet, ContextInputs, RepoReader } from '../core/types.ts';
 import { createPublisher } from '../publish/index.ts';
-import { createSourceProvider, detectSourceInput } from '../sources/index.ts';
+import { joinedPrivacy, joinSources, type LoadedSource } from '../sources/join.ts';
+import { loadSources } from '../sources/load.ts';
+import { sourceInputsOf } from '../sources/spec.ts';
 import { buildContextInputs } from './inputs.ts';
-import { changeLabel } from './presentation.ts';
 import type { GenerateHooks, GenerateOptions } from './types.ts';
 
 export interface Prepared {
@@ -33,17 +33,6 @@ export interface PrepareSettings {
   writeAnalysis?: boolean;
   /** The folder becomes a run folder that publish trusts later (generate), so it may not be a work folder. */
   runFolder?: boolean;
-}
-
-function sourceInputFrom(options: GenerateOptions, cwd: string): SourceInput {
-  if (typeof options.source !== 'string') return options.source;
-  return detectSourceInput(options.source, { base: options.base ?? null, head: options.head ?? null, cwd });
-}
-
-function describeSource(input: SourceInput): string {
-  return input.kind === 'github'
-    ? input.url
-    : `local repository (${input.base ?? 'merge base'}..${input.head ?? 'HEAD'})`;
 }
 
 /** Read the change, check the context, analyse, and write analysis.json into the run folder. */
@@ -70,24 +59,13 @@ export async function prepare(
     ...(hooks.onProgress ? { onProgress: hooks.onProgress } : {}),
   });
 
-  const input = sourceInputFrom(options as GenerateOptions, cwd);
-  ctx.progress({ stage: 'source', status: 'start', message: `Reading ${describeSource(input)}` });
-  const { changeSet, reader } = await createSourceProvider(input).load(input, ctx);
-  ctx.progress({
-    stage: 'source',
-    status: 'done',
-    message: `${changeLabel(changeSet)}: ${changeSet.stats.files} files, +${changeSet.stats.additions} -${changeSet.stats.deletions}`,
-  });
-  if (changeSet.files.length === 0) {
-    throw new MergeStoryError('SOURCE_INVALID', 'There are no changes to explain.', {
-      hint: 'Check the base and head refs. Only committed changes are included for local repositories.',
-    });
-  }
+  const loaded = await loadSources(sourceInputsOf(options, cwd), ctx);
   assertNotAborted(ctx.signal);
 
   // A setting that would make the upload fail is found now, before anything is written, spent or rendered.
   const publishProblem = settings.checkPublishing
-    ? ((await createPublisher(config)?.check(ctx, changeSet.repo.isPrivate)) ?? null)
+    ? ((await createPublisher(config)?.check(ctx, joinedPrivacy(loaded.map((l) => l.changeSet.repo)))) ??
+      null)
     : null;
   if (publishProblem && !ctx.dryRun) throw publishProblem;
 
@@ -95,7 +73,10 @@ export async function prepare(
     ctx.progress({ stage: 'source', status: 'warn', message }),
   );
   ctx.progress({ stage: 'analyze', status: 'start', message: 'Analysing the change' });
-  const analysis = await analyze(changeSet, reader, inputs, ctx);
+  const analysed: LoadedSource[] = [];
+  for (const one of loaded)
+    analysed.push({ ...one, analysis: await analyze(one.changeSet, one.reader, inputs, ctx) });
+  const { changeSet, reader, analysis } = joinSources(analysed);
   const targetSec = targetDuration(analysis, config);
   ctx.progress({
     stage: 'analyze',

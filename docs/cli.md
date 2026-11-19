@@ -38,6 +38,9 @@ For a local repository, `--base` and `--head` choose the range. Only committed c
 changes are never included. For a pull request, MergeStory reads the change through the GitHub API and
 clones nothing. Passing `--base` or `--head` with a pull request is an error.
 
+To explain a change that spans several repositories in one video, give `--source` once for each of them
+instead of `[source]`. See [Several sources](#several-sources).
+
 A local repository is read only when a `.git` entry names it: a normal clone, a linked work tree or a
 submodule. MergeStory does not run inside a bare repository (a work tree of one is fine), or in a
 repository that sits inside a checked-out folder, because its settings can name programs for git to
@@ -181,6 +184,63 @@ accurate, because the engine can quote them as evidence.
   a secret is masked, and a warning says how many values were masked. A text with more than 1,000 letters,
   digits, `_`, `.` or `-` in a row is refused, because scanning it for secrets would take too long.
 
+## Several sources
+
+One video can explain a change that lives in more than one repository. The use case is a fix that works only
+when two pull requests are merged together. `generate`, `analyze` and `validate` take `--source` for this. The
+`agent` commands do not: they keep one source, and `--source` is refused there as an unknown option.
+
+```
+mergestory analyze --source ./orders-api:main..fix/total --source ./storefront
+mergestory validate storyboard.json --source acme/orders-api#12 --source acme/storefront#7
+mergestory generate --source acme/orders-api#12 --source acme/storefront#7 --storyboard storyboard.json
+```
+
+**The form.** `--source <repo>[:<base>..<head>]`, repeated once for each source, at most 4 times. `<repo>` is
+what `[source]` takes: the path of a local repository, a pull request URL or `owner/repo#123`. The range
+is for a local repository. It is split off at the last colon, and only when the text after that colon has the
+form `<base>..<head>`, where each side is empty or made of the characters of a git ref. So a URL or a Windows
+drive letter is never read as a range. `main..` and `..fix/x` are fine: the side that is missing takes the
+default of `--base` and `--head`. A range together with a pull request is an error, as `--base` is.
+A single `--source` does exactly what the `[source]` argument does.
+
+**Letters and folders.** Every source is read and analysed on its own, as if it were the only one. Then they
+are joined into one change that looks like a repository with one top folder for each source. The sources are
+sorted by the host, the owner and the name of the repository, then by the pull request number, then by the
+head commit. The first one is `A`, then `B`, `C` and `D`. The order of the flags does not matter, so
+`analyze`, `validate` and `generate` give the same letters. An id that comes from a repository starts with the
+letter of its source: `A.F1`, `A.F1.H2`, `B.S3`, `A.PR`. Ids that you supplied (`TASK`, `NOTES`, `T1`, `REPRO`,
+`SS1`, `RC1`, `L1`) keep their names. A path starts with the folder of its source, which is the name of the repository with
+every character other than letters, digits, `.`, `_` and `-` turned into `-`. When two repositories have the
+same name, the later one gets `-2`, then `-3`: `orders-api/src/total.js`, `storefront/src/total.js`.
+`evidence.md` lists every source with its letter and its folder. The closing card, the watch page and the
+titles that publishers get name every repository and every change (`orders-api #3 + storefront #7`). The first
+title card of the storyboard must name every pull request, with its repository name and `#<number>`: when it
+does not, `validate` warns (`title-missing-source`) and sets the kicker to those names if they fit.
+
+**What is refused.** All of these are usage errors (exit code 2) that stop the run before any video is made:
+
+- `--source` together with the `[source]` argument, `--base` or `--head`. Give the range inside each source.
+- More than 4 sources.
+- The same source twice (the same repository at the same commits).
+- `--out` inside any of the local repositories.
+- `--comment` and `--update-description` on the command line. Nothing is posted to a pull request when there
+  are several sources, so post the link on each pull request yourself. When only the configuration asks for
+  it, the run goes on, posts nothing and adds one warning. In a real run the warning names the repositories and their changes.
+
+A source with no changes is an error that names that source.
+
+**A storyboard is needed.** The free offline storyboard knows one repository only. With several sources and
+no model set up, `generate` stops with a usage error. Run `analyze` with the same `--source` flags, write the
+storyboard as `AUTHORING.md` says, and give it to `generate --storyboard`. When a model writes the storyboard
+and the storyboard fails its checks, the run fails with the reasons: there is no fall back to the offline
+storyboard. `analyze` and `validate` work with several sources. The commands that `analyze` prints repeat
+every `--source`, with an absolute path for each local repository.
+
+**Not in this version.** The `agent` commands, the [HTTP API](api.md) (it takes one `source`), relationships
+between repositories that the analysis finds by itself (an author can still draw the edge in an `architecture`
+visual), posting to several pull requests, and the offline storyboard for several sources.
+
 ## `mergestory generate`
 
 ```
@@ -199,6 +259,7 @@ plan. See [architecture.md](architecture.md#pipeline) for the stages.
 |---|---|---|
 | `--base <ref>` | Local repository: the older side of the change. | the merge base of `HEAD` and the default branch |
 | `--head <ref>` | Local repository: the newer side of the change. | `HEAD` |
+| `--source <repo>[:<base>..<head>]` | One video for a change in several repositories. Repeat it, up to 4 times. Not together with `[source]`, `--base` or `--head`. See [Several sources](#several-sources). | none |
 
 **Context.** `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`,
 `--screenshots-dir`, `--recording`, `--redact` and `--log`. See [Context flags](#context-flags).
@@ -337,6 +398,7 @@ called. This is the first step for a coding agent. See [storyboard.md](storyboar
 | Flag | What it does |
 |---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. See [`generate`](#mergestory-generate). |
+| `--source <repo>[:<base>..<head>]` | A source of a change in several repositories; repeat it. See [Several sources](#several-sources). |
 | `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--log` | See [Context flags](#context-flags). They decide which evidence ids exist. |
 | `--out <dir>` | Write the files here instead of under the MergeStory home. It must be outside the repository being explained. An existing folder must not be or hold a symbolic link. |
 
@@ -367,6 +429,7 @@ log was passed and the range lies inside it.
 | Flag | What it does | Default |
 |---|---|---|
 | `--base <ref>`, `--head <ref>` | The range of a local repository. | as for `generate` |
+| `--source <repo>[:<base>..<head>]` | A source of a change in several repositories; repeat it, as for `analyze`. See [Several sources](#several-sources). | none |
 | `--task`, `--task-file`, `--notes-file`, `--tests-file`, `--repro-file`, `--screenshot`, `--screenshots-dir`, `--recording`, `--redact`, `--log` | See [Context flags](#context-flags). | none |
 | `--max-duration <sec>` | The longest video, from 20 to 600 seconds. Validation only warns when making the video would have to drop scenes. | 150 |
 | `--duration <sec>` | A target length, from 20 to 600 seconds. | adapts |

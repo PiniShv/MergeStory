@@ -122,3 +122,29 @@ jobs:
         env:
           MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
           MERGESTORY_HOME: ${{ runner.temp }}/mergestory-home
+      - name: Render the two-repositories demo
+        timeout-minutes: 8
+        run: |
+          ./examples/two-repos-demo/create-demo-repos.sh "$RUNNER_TEMP/two-repos"
+          repos="$RUNNER_TEMP/two-repos"
+          node packages/engine/dist/cli/main.js generate \
+            --source "$repos/orders-api:main..fix/total-cents" --source "$repos/storefront:main..fix/total-cents" \
+            --task-file examples/two-repos-demo/task.md --notes-file examples/two-repos-demo/notes.md \
+            --storyboard examples/two-repos-demo/storyboard.json \
+            --tts none --quality draft --publish local --max-render-seconds 300 \
+            --out "$RUNNER_TEMP/two-repos-video" --json > "$RUNNER_TEMP/two-repos-stdout.json"
+          node -e '
+            const fs = require("node:fs");
+            const dir = process.argv[1];
+            const result = JSON.parse(fs.readFileSync(dir + "/result.json", "utf8"));
+            const size = fs.statSync(dir + "/video.mp4").size;
+            console.log("rendered", result.durationSec, "s of video in", result.elapsedSec, "s,", size, "bytes");
+            const used = result.evidenceUsed ?? [];
+            if (result.ok !== true || !used.some((id) => id.startsWith("A.")) || !used.some((id) => id.startsWith("B."))) {
+              console.error("unexpected result", { ok: result.ok, evidenceUsed: used });
+              process.exit(1);
+            }
+          ' "$RUNNER_TEMP/two-repos-video"
+        env:
+          MERGESTORY_BROWSER_PATH: /usr/bin/google-chrome
+          MERGESTORY_HOME: ${{ runner.temp }}/mergestory-home

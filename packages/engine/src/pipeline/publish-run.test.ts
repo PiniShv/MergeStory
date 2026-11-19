@@ -296,6 +296,10 @@ describe('a file that is not a MergeStory run file', () => {
       ).toThrow(/publish-input.json is not a MergeStory run file/);
     }
     expect(parseRunJson(storedInput(), PublishInputSchema, 'publish-input.json').runId).toBe(RUN_ID);
+    // A change joined from several repositories has no single commit.
+    expect(parseRunJson(storedInput({ headSha: '' }), PublishInputSchema, 'publish-input.json').headSha).toBe(
+      '',
+    );
     await writeRun({ ...storedInput(), version: 2 });
     expect((await failure(publish())).code).toBe('SOURCE_INVALID');
   });
@@ -397,6 +401,56 @@ describe('a pull request update that fails', () => {
   });
 });
 
+describe('a run that joined several repositories', () => {
+  const several = (more: Partial<StoredPublishInput> = {}) =>
+    storedInput({
+      sources: 2,
+      prUrl: null,
+      watch: { ...watchData(), changeLabel: 'orders-api #3 + storefront #7', changeUrl: null },
+      ...more,
+    });
+
+  it('posts nothing to any pull request and says so once, naming the pull requests', async () => {
+    await writeRun(several());
+    const result = await publish({ ...S3, github: { comment: true, updateDescription: true } });
+    // The fake GitHub client and both writes fail the test when they are used at all.
+    expect(clientMock).not.toHaveBeenCalled();
+    expect(commentMock).not.toHaveBeenCalled();
+    expect(descriptionMock).not.toHaveBeenCalled();
+    expect(result.notify).toBeNull();
+    const notes = result.warnings.filter((w) => w.startsWith('Skipped the PR update:'));
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toContain('orders-api #3 + storefront #7');
+    expect(notes[0]).toContain('Post the link on each pull request yourself');
+    expect(received[0]?.meta?.changeUrl).toBeNull();
+  });
+
+  it('posts nothing even when its stored record names a pull request', async () => {
+    await writeRun(several({ prUrl: PR_URL }));
+    const result = await publish({ ...S3, github: { comment: true, updateDescription: true } });
+    expect(commentMock).not.toHaveBeenCalled();
+    expect(descriptionMock).not.toHaveBeenCalled();
+    expect(result.notify).toBeNull();
+    expect(result.warnings.filter((w) => w.startsWith('Skipped the PR update:'))).toHaveLength(1);
+  });
+
+  it('is silent when no comment was asked for, and the link is not made public on its own word', async () => {
+    await writeRun(several({ repoIsPrivate: false }));
+    const result = await publish(PUBLIC);
+    expect(result.warnings).toEqual(['Earlier warning']);
+    // "Every source is public" is what the file says, but no pull request is there to confirm it.
+    expect(received.at(-1)?.repoIsPrivate).toBeNull();
+    expect(clientMock).not.toHaveBeenCalled();
+  });
+
+  it('is told apart from a run of one pull request by the sources it stores', () => {
+    const config = resolveConfig({ skipFile: true, env: {}, overrides: { github: { comment: true } } });
+    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, joined: true }, 's3')).toEqual({
+      kind: 'several-sources',
+    });
+  });
+});
+
 describe('an upload that fails', () => {
   it('is reported as it is, and what was sent before it failed is saved', async () => {
     await writeRun();
@@ -449,7 +503,21 @@ describe('the time a run took', () => {
 describe('decidePullRequestUpdate', () => {
   const asked = (github: NonNullable<ConfigInput['github']>) =>
     resolveConfig({ skipFile: true, env: {}, overrides: { github } });
-  const change = { source: 'github' as const, prUrl: PR_URL };
+  const change = { source: 'github' as const, prUrl: PR_URL, joined: false };
+
+  it('posts nothing for a joined change, for every publisher, whenever something was asked for', () => {
+    for (const github of [
+      { comment: true },
+      { updateDescription: true },
+      { comment: true, updateDescription: true },
+    ]) {
+      for (const where of ['s3', 'youtube', 'local', null]) {
+        expect(decidePullRequestUpdate(asked(github), { ...change, joined: true }, where)).toEqual({
+          kind: 'several-sources',
+        });
+      }
+    }
+  });
 
   it('updates the pull request when a comment or a description was asked for, and the video is shared', () => {
     for (const github of [
@@ -469,7 +537,7 @@ describe('decidePullRequestUpdate', () => {
     const quiet = asked({ comment: false, updateDescription: false });
     for (const where of ['s3', 'local', null]) {
       expect(decidePullRequestUpdate(quiet, change, where)).toEqual({ kind: 'not-requested' });
-      expect(decidePullRequestUpdate(quiet, { source: 'local', prUrl: null }, where)).toEqual({
+      expect(decidePullRequestUpdate(quiet, { source: 'local', prUrl: null, joined: false }, where)).toEqual({
         kind: 'not-requested',
       });
     }
@@ -477,13 +545,13 @@ describe('decidePullRequestUpdate', () => {
 
   it('says so when the change does not come from a pull request, before it looks at the video', () => {
     const config = asked({ comment: true });
-    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: null }, 's3')).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: null, joined: false }, 's3')).toEqual({
       kind: 'not-a-pull-request',
     });
-    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null }, 's3')).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'github', prUrl: null, joined: false }, 's3')).toEqual({
       kind: 'not-a-pull-request',
     });
-    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: PR_URL }, null)).toEqual({
+    expect(decidePullRequestUpdate(config, { source: 'local', prUrl: PR_URL, joined: false }, null)).toEqual({
       kind: 'not-a-pull-request',
     });
   });

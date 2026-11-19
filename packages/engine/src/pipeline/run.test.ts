@@ -583,6 +583,8 @@ describe('generate: publishing', () => {
     expect(result.elapsedSec).toBeGreaterThan(0);
     const input = await readJson<Record<string, unknown>>(join(runDir(), 'publish-input.json'));
     expect(input.files).toBeUndefined();
+    // One source keeps the head commit of the change.
+    expect(input.headSha).toMatch(/^[0-9a-f]{40}$/);
     expect(JSON.stringify(input)).not.toContain(home);
   });
 

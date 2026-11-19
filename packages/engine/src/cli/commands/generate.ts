@@ -24,6 +24,7 @@ Examples:
   mergestory generate . --base main --dry-run
   mergestory generate acme/app#42 --llm anthropic --budget 0.10
   mergestory generate . --storyboard storyboard.json --tests-file tests.json
+  mergestory generate --source ./api:main.. --source ./web --storyboard storyboard.json
 `;
 
 /** true for the result of a dry run. */
@@ -52,14 +53,17 @@ export function registerGenerate(program: Command, rt: CliRuntime): void {
   const command = program
     .command('generate')
     .description('Make a video from a pull request or a local change')
-    .argument('[source]', 'pull request URL, owner/repo#123, or the path of a local repository', '.');
-  addSourceFlags(command);
+    .argument(
+      '[source]',
+      'pull request URL, owner/repo#123, or the path of a local repository (default: the current folder)',
+    );
+  addSourceFlags(command, true);
   addContextFlags(command);
   addStyleFlags(command, true);
   addProviderFlags(command);
   addRunFlags(command);
   command.addHelpText('after', EXAMPLES);
-  command.action(async (source: string, flags: GenerateFlags, cmd: Command) => {
+  command.action(async (source: string | undefined, flags: GenerateFlags, cmd: Command) => {
     await makeVideo(rt.env(cmd), source, flags);
   });
 }
@@ -70,7 +74,7 @@ export function registerGenerate(program: Command, rt: CliRuntime): void {
  */
 export async function makeVideo(
   env: CommandEnv,
-  source: string,
+  source: string | undefined,
   flags: GenerateFlags,
   forced?: ConfigInput,
 ): Promise<void> {

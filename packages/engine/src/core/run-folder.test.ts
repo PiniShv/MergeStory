@@ -4,7 +4,15 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { MergeStoryError } from './errors.ts';
-import { readRunJson, resultFiles, runFolder, StoredResultSchema, writeRunJson } from './run-folder.ts';
+import {
+  PublishInputSchema,
+  readRunJson,
+  resultFiles,
+  runFolder,
+  StoredResultSchema,
+  writeRunJson,
+} from './run-folder.ts';
+import { MAX_SOURCES } from './source-views.ts';
 
 let dir: string;
 beforeEach(async () => {
@@ -70,6 +78,15 @@ describe('writeRunJson and readRunJson', () => {
     const error = await readRunJson(path, Schema, 'x.json').catch((err: unknown) => err);
     expect(error).toBeInstanceOf(MergeStoryError);
     expect((error as MergeStoryError).code).toBe('SOURCE_INVALID');
+  });
+});
+
+describe('PublishInputSchema', () => {
+  it('refuses a source count above the most sources one video may join', () => {
+    const sourceIssues = (sources: number) =>
+      PublishInputSchema.safeParse({ sources }).error?.issues.filter((i) => i.path[0] === 'sources') ?? [];
+    expect(sourceIssues(MAX_SOURCES)).toEqual([]);
+    expect(sourceIssues(MAX_SOURCES + 1)).toHaveLength(1);
   });
 });
 

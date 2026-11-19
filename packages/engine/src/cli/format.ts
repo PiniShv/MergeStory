@@ -203,26 +203,12 @@ export function formatPlanResult(raw: PlanResult, style: Style): string {
   return `${lines.join('\n')}\n`;
 }
 
-/** What the follow-up commands after `analyze` need to repeat. */
-export interface AuthoringContext {
-  /** The source as typed, for the follow-up commands. */
-  source: string;
-  base?: string | undefined;
-  head?: string | undefined;
-}
-
-/** The block printed by `analyze`: the files and the next steps. */
-export function formatAuthoring(
-  rawResult: AuthoringResult,
-  rawContext: AuthoringContext,
-  style: Style,
-): string {
+/** The block printed by `analyze`: the files and the next steps. `sourceWords` are the source and refs that steps 3 and 4 repeat. */
+export function formatAuthoring(rawResult: AuthoringResult, sourceWords: string[], style: Style): string {
   const result = clean(rawResult);
-  const context = clean(rawContext);
   const { summary } = result;
   const storyboardPath = `${result.runDir.replace(/[\\/]+$/, '')}/storyboard.json`;
-  const refs = `${context.base ? ` --base ${shellQuote(context.base)}` : ''}${context.head ? ` --head ${shellQuote(context.head)}` : ''}`;
-  const source = shellQuote(context.source);
+  const source = clean(sourceWords).map(shellQuote).join(' ');
   const lines = [
     `${style.green('Analysis ready')}: ${summary.title}`,
     '',
@@ -252,8 +238,8 @@ export function formatAuthoring(
     style.bold('Next steps'),
     '  1. Read AUTHORING.md and evidence.md.',
     `  2. Write ${storyboardPath}, following AUTHORING.md. It names every field and every allowed value.`,
-    `  3. Check it: mergestory validate ${shellQuote(storyboardPath)} ${source}${refs}`,
-    `  4. Make the video: mergestory generate ${source}${refs} --storyboard ${shellQuote(storyboardPath)}`,
+    `  3. Check it: mergestory validate ${shellQuote(storyboardPath)} ${source}`,
+    `  4. Make the video: mergestory generate ${source} --storyboard ${shellQuote(storyboardPath)}`,
   ];
   return `${lines.join('\n')}\n`;
 }

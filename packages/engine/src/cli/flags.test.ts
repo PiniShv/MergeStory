@@ -263,8 +263,8 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
     expect(code).toBe(0);
     expect(analyzeMock.mock.calls[0]?.[0].followUp).toEqual({
-      source: join(dir, 'repo'),
       args: [
+        join(dir, 'repo'),
         '--base',
         'main',
         '--head',
@@ -299,7 +299,11 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
     expect(code).toBe(0);
     const recordingArgs = analyzeMock.mock.calls[0]?.[0].followUp?.args;
-    expect(recordingArgs).toEqual(['--recording', `${join(dir, 'clip.mp4')}:Slow: before the fix:before`]);
+    expect(recordingArgs).toEqual([
+      join(dir, 'repo'),
+      '--recording',
+      `${join(dir, 'clip.mp4')}:Slow: before the fix:before`,
+    ]);
     expect(stdout).toContain(`--recording '${join(dir, 'clip.mp4')}:Slow: before the fix:before'`);
   });
 
@@ -319,6 +323,7 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
     expect(code).toBe(0);
     expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual([
+      join(dir, 'repo'),
       '--screenshot',
       join(dir, 'after.png'),
       '--screenshots-dir',
@@ -338,7 +343,11 @@ describe('analyze: the commands in AUTHORING.md', () => {
     await writeFile(join(dir, 'redact.json'), '{}');
     const { code, stdout } = await run(['analyze', 'repo', '--redact', 'redact.json']);
     expect(code).toBe(0);
-    expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual(['--redact', join(dir, 'redact.json')]);
+    expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual([
+      join(dir, 'repo'),
+      '--redact',
+      join(dir, 'redact.json'),
+    ]);
     expect(stdout).toContain(`--redact ${join(dir, 'redact.json')}`);
   });
 
@@ -357,6 +366,7 @@ describe('analyze: the commands in AUTHORING.md', () => {
     ]);
     expect(code).toBe(0);
     expect(analyzeMock.mock.calls[0]?.[0].followUp?.args).toEqual([
+      join(dir, 'repo'),
       '--repro-file',
       join(dir, 'repro.json'),
       '--redact',
@@ -381,7 +391,7 @@ describe('analyze: the commands in AUTHORING.md', () => {
     const { code, stdout } = await run(['analyze', 'repo', '--log', 'run.log:Checks: all green']);
     expect(code).toBe(0);
     const args = analyzeMock.mock.calls[0]?.[0].followUp?.args;
-    expect(args).toEqual(['--log', `${join(dir, 'run.log')}:Checks: all green`]);
+    expect(args).toEqual([join(dir, 'repo'), '--log', `${join(dir, 'run.log')}:Checks: all green`]);
     expect(stdout).toContain(`--log '${join(dir, 'run.log')}:Checks: all green'`);
   });
 
@@ -451,11 +461,10 @@ describe('analyze: the commands in AUTHORING.md', () => {
     analyzeMock.mockResolvedValue(authoring);
     await run(['analyze', 'acme/app#42', '--task', 'Add retries']);
     expect(analyzeMock.mock.calls[0]?.[0].followUp).toEqual({
-      source: 'acme/app#42',
-      args: ['--task', 'Add retries'],
+      args: ['acme/app#42', '--task', 'Add retries'],
     });
     const plain = await run(['analyze', 'acme/app#42']);
-    expect(analyzeMock.mock.calls[1]?.[0].followUp).toEqual({ source: 'acme/app#42', args: [] });
+    expect(analyzeMock.mock.calls[1]?.[0].followUp).toEqual({ args: ['acme/app#42'] });
     expect(plain.stdout).not.toContain('Give steps 3 and 4');
   });
 
@@ -463,8 +472,7 @@ describe('analyze: the commands in AUTHORING.md', () => {
     analyzeMock.mockResolvedValue(authoring);
     const { stdout } = await run(['analyze', 'acme/app#42', '--task', '#42']);
     expect(analyzeMock.mock.calls[0]?.[0].followUp).toEqual({
-      source: 'acme/app#42',
-      args: ['--task', '#42'],
+      args: ['acme/app#42', '--task', '#42'],
     });
     expect(stdout).toContain("--task '#42'");
     expect(stdout).not.toMatch(/--task #42/);

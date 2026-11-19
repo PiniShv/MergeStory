@@ -19,9 +19,11 @@ import type { Logger } from '../core/logger.ts';
 import { isLoopbackAddress } from '../core/net.ts';
 import { isInside } from '../core/posix.ts';
 import { maskPrivate, maskSecrets } from '../core/secrets.ts';
+import { MAX_SOURCES } from '../core/source-views.ts';
 import { refProblem, sourceProblem } from '../jobs/input-rules.ts';
 import type { JobOptions } from '../jobs/model.ts';
 import { maskContext } from '../jobs/view.ts';
+import { sourceInputsOf, sourceSpecOf } from '../sources/spec.ts';
 import { LIMITS, readJsonFile } from './files.ts';
 import { buildContext, type ContextFlags, parseLogSpec, parseScreenshotSpec } from './inputs.ts';
 
@@ -108,6 +110,11 @@ export interface SourceFlags {
   head?: string;
 }
 
+/** `--source`, which generate, analyze and validate take (the agent commands do not). */
+export interface SeveralSourcesFlag {
+  source?: string[];
+}
+
 /** Flags that map to settings, as commander delivers them. */
 export interface ConfigFlags {
   style?: Config['style'];
@@ -139,7 +146,7 @@ export interface ConfigFlags {
 }
 
 /** Every flag of `generate`. */
-export interface GenerateFlags extends SourceFlags, ContextFlags, ConfigFlags {
+export interface GenerateFlags extends SourceFlags, SeveralSourcesFlag, ContextFlags, ConfigFlags {
   storyboard?: string;
   dryRun?: boolean;
   async?: boolean;
@@ -148,12 +155,20 @@ export interface GenerateFlags extends SourceFlags, ContextFlags, ConfigFlags {
 /** Every flag of `publish`. */
 export type PublishFlags = Pick<ConfigFlags, 'publish' | 'visibility' | 'comment' | 'updateDescription'>;
 
-/** Add --base and --head. */
-export function addSourceFlags(command: Command): Command {
-  return command
+/** Add --base and --head, and with `several` also --source. */
+export function addSourceFlags(command: Command, several = false): Command {
+  command
     .optionsGroup('Source:')
     .option('--base <ref>', 'local repository: base ref (default: merge base with the default branch)')
     .option('--head <ref>', 'local repository: head ref (default: HEAD)');
+  if (several) {
+    command.option(
+      '--source <repo>[:<base>..<head>]',
+      `one video for a change in several repositories: a local repository (with an optional range) or a pull request; repeat it, up to ${MAX_SOURCES} times. Not together with a source argument, --base or --head`,
+      collect,
+    );
+  }
+  return command;
 }
 
 /** Add the flags that supply task, notes, test results and screenshots. */
@@ -441,21 +456,49 @@ export async function configFromFlags(flags: ConfigFlags, cwd: string): Promise<
 /** Options shared by generate, analyze and validate. */
 export type CommonOptions = Omit<JobOptions, 'storyboard' | 'dryRun' | 'runId'>;
 
+/** The source part of the options: one source with its refs, or the first of several `--source` and all of them. */
+async function sourceOptionsOf(
+  sourceArg: string | undefined,
+  flags: SourceFlags & SeveralSourcesFlag & ConfigFlags,
+  cwd: string,
+): Promise<Pick<CommonOptions, 'source' | 'sources' | 'base' | 'head'>> {
+  const specs = flags.source ?? [];
+  const [firstSpec] = specs;
+  if (firstSpec === undefined) {
+    const source = await normalizeSource(sourceArg ?? '.', cwd);
+    const base = checkRef('--base', flags.base);
+    const head = checkRef('--head', flags.head);
+    return { source, ...(base ? { base } : {}), ...(head ? { head } : {}) };
+  }
+  if (sourceArg !== undefined || flags.base !== undefined || flags.head !== undefined) {
+    throw new MergeStoryError(
+      'USAGE',
+      '--source cannot be used together with a source argument, --base or --head.',
+      { hint: 'Give every source as --source <repo>[:<base>..<head>].' },
+    );
+  }
+  const inputs = sourceInputsOf({ source: firstSpec, sources: specs }, cwd);
+  if (inputs.length === 1) return { source: inputs[0] };
+  if (flags.comment || flags.updateDescription) {
+    throw new MergeStoryError(
+      'USAGE',
+      '--comment and --update-description cannot be used with several sources: nothing is posted to a pull request.',
+      { hint: 'Remove the flag and post the link on each pull request yourself.' },
+    );
+  }
+  return { source: inputs[0], sources: inputs };
+}
+
 /**
  * Build the options every command needs: source, refs, context and config overrides.
  * Files are read here, with size limits, and secret-like values in the context are masked.
  */
 export async function buildCommonOptions(
   sourceArg: string | undefined,
-  flags: SourceFlags & ContextFlags & ConfigFlags,
+  flags: SourceFlags & SeveralSourcesFlag & ContextFlags & ConfigFlags,
   env: BuildEnv,
 ): Promise<CommonOptions> {
-  const source = await normalizeSource(sourceArg ?? '.', env.cwd);
-  const options: CommonOptions = { source };
-  const base = checkRef('--base', flags.base);
-  const head = checkRef('--head', flags.head);
-  if (base) options.base = base;
-  if (head) options.head = head;
+  const options: CommonOptions = await sourceOptionsOf(sourceArg, flags, env.cwd);
 
   const rawContext = await buildContext(flags, env.cwd);
   if (rawContext) {
@@ -471,8 +514,12 @@ export async function buildCommonOptions(
   const config = await configFromFlags(flags, env.cwd);
   if (Object.keys(config).length > 0) options.config = config;
 
-  // Run files must stay out of the repository being explained.
-  if (config.outDir && isAbsolute(source) && isInside(source, config.outDir)) {
+  // Run files must stay out of every repository being explained.
+  const repos = (options.sources ?? [options.source]).flatMap((input) => {
+    const path = typeof input === 'string' ? input : input.kind === 'local' ? input.repoPath : '';
+    return isAbsolute(path) ? [path] : [];
+  });
+  if (config.outDir && repos.some((repo) => isInside(repo, config.outDir as string))) {
     throw new MergeStoryError('USAGE', '--out is inside the repository being explained.', {
       hint: 'MergeStory never writes into the repository. Choose a folder outside it.',
     });
@@ -481,18 +528,34 @@ export async function buildCommonOptions(
 }
 
 /**
- * The source and flags of an `analyze` command line as raw words, for the commands that AUTHORING.md
- * shows. Files are made absolute, so the commands work from the run folder as well. The flags are
- * the ones that decide the evidence ids (refs, task, notes, tests, screenshots, recordings, logs).
+ * The source part of an `analyze` command line as raw words: `--source a --source b`, or
+ * `<source> [--base b] [--head h]`. The source is named the way it was resolved, so the commands that
+ * follow work from any directory.
+ */
+export function sourceWordsOf(
+  sourceArg: string | undefined,
+  common: Pick<CommonOptions, 'source' | 'sources'>,
+  flags: SourceFlags & SeveralSourcesFlag,
+): string[] {
+  const specs = sourceSpecsOf(common, flags);
+  if (specs) return specs.flatMap((spec) => ['--source', spec]);
+  return [
+    typeof common.source === 'string' ? common.source : (sourceArg ?? '.'),
+    ...(flags.base ? ['--base', flags.base] : []),
+    ...(flags.head ? ['--head', flags.head] : []),
+  ];
+}
+
+/**
+ * The words of the commands that AUTHORING.md shows: the source words, then the flags. Files are made
+ * absolute, so the commands work from the run folder as well. The flags are the ones that decide the
+ * evidence ids (task, notes, tests, screenshots, recordings, logs).
  */
 export function followUpFor(
-  source: string,
-  flags: SourceFlags & ContextFlags,
+  sourceWords: string[],
+  flags: ContextFlags,
   cwd: string,
-): { source: string; args: string[]; contextArgs: string[] } {
-  const refs: string[] = [];
-  if (flags.base) refs.push('--base', flags.base);
-  if (flags.head) refs.push('--head', flags.head);
+): { args: string[]; contextArgs: string[] } {
   const contextArgs: string[] = [];
   // The file becomes absolute. The caption is masked, secrets and e-mail addresses: the commands are written to AUTHORING.md.
   const withCaption = (path: string, spec: string): string =>
@@ -518,7 +581,7 @@ export function followUpFor(
     contextArgs.push('--log', withCaption(path, spec));
   }
   if (flags.redact !== undefined) contextArgs.push('--redact', resolve(cwd, flags.redact));
-  return { source, args: [...refs, ...contextArgs], contextArgs };
+  return { args: [...sourceWords, ...contextArgs], contextArgs };
 }
 
 /** Read a storyboard file. `label` names it in error messages ("--storyboard" or "storyboard file"). */
@@ -535,4 +598,12 @@ export async function readStoryboard(path: string, cwd: string, label: string): 
     });
   }
   return value;
+}
+
+/** The `--source` texts of a run that was given `--source`, for the commands that follow it; null otherwise. */
+export function sourceSpecsOf(
+  common: Pick<CommonOptions, 'source' | 'sources'>,
+  flags: SeveralSourcesFlag,
+): string[] | null {
+  return flags.source?.length ? (common.sources ?? [common.source]).map(sourceSpecOf) : null;
 }

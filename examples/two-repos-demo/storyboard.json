@@ -1,0 +1,247 @@
+{
+  "version": 1,
+  "title": "One total, two repositories",
+  "summary": "The shop page showed a total that was a hundred times too big. The fix is in two repositories: orders-api gives the total in cents with its currency, and storefront reads those cents. Both changes have to be merged together.",
+  "style": "hybrid",
+  "language": "en",
+  "scenes": [
+    {
+      "id": "s1",
+      "role": "mission",
+      "title": "The mission",
+      "narration": [
+        {
+          "text": "The shop page showed a total a hundred times too big. Two changes fix it, one in orders-api and one in storefront.",
+          "evidence": ["TASK", "A.CM1", "B.CM1"]
+        }
+      ],
+      "visual": {
+        "type": "title",
+        "kicker": "orders-api + storefront",
+        "heading": "One total, two repositories",
+        "subheading": "totalCents",
+        "chips": ["orders-api", "storefront", "totalCents"]
+      },
+      "visualDescription": "Title card that names both repositories.",
+      "transition": "fade",
+      "targetSeconds": null
+    },
+    {
+      "id": "s2",
+      "role": "mission",
+      "title": "The wrong total",
+      "narration": [
+        {
+          "text": "An order of twelve euros fifty showed as one thousand two hundred fifty. The service sent cents as total, and the page showed them as euros.",
+          "evidence": ["TASK", "A.F1.H1", "B.F2.H1"]
+        }
+      ],
+      "visual": {
+        "type": "mission",
+        "problem": "The basket page showed 1250.00 EUR for an order of 12.50 EUR.",
+        "goal": "Give the total a clear unit in the service, and read that unit in the page.",
+        "points": [
+          { "text": "orders-api answers with totalCents and the currency", "beat": 0 },
+          { "text": "storefront reads totalCents and divides it by 100", "beat": 0 }
+        ]
+      },
+      "visualDescription": "The problem, the goal and the two changes.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s3",
+      "role": "under-the-hood",
+      "title": "orders-api names its unit",
+      "narration": [
+        {
+          "text": "In orders-api, the answer now gives totalCents and the currency.",
+          "evidence": ["A.S1", "A.F1.H1"]
+        },
+        {
+          "text": "The helper behind it is renamed orderTotalCents to match.",
+          "evidence": ["A.S2", "A.F3.H1"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": { "path": "orders-api/src/handler.js", "side": "head", "startLine": 1, "endLine": 6 },
+        "mode": "diff",
+        "focus": [
+          { "startLine": 5, "endLine": 5, "note": "the total in cents, and its currency", "beat": 0 },
+          { "startLine": 1, "endLine": 1, "note": "the renamed helper", "beat": 1 }
+        ],
+        "caption": null
+      },
+      "visualDescription": "The changed answer of orders-api.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s4",
+      "role": "under-the-hood",
+      "title": "storefront reads cents",
+      "narration": [
+        {
+          "text": "In storefront, formatMoney now takes cents. It divides them by one hundred before it shows two decimals.",
+          "evidence": ["B.S1", "B.F1.H1"]
+        },
+        {
+          "text": "The page passes it totalCents and the currency from the answer.",
+          "evidence": ["B.S2", "B.F2.H1"]
+        }
+      ],
+      "visual": {
+        "type": "code",
+        "ref": { "path": "storefront/src/money.js", "side": "head", "startLine": 1, "endLine": 4 },
+        "mode": "diff",
+        "focus": [{ "startLine": 3, "endLine": 3, "note": "cents divided by 100", "beat": 0 }],
+        "caption": null
+      },
+      "visualDescription": "The changed price format of storefront.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s5",
+      "role": "big-picture",
+      "title": "How the two fit",
+      "narration": [
+        {
+          "text": "The page in storefront asks orders-api for an order.",
+          "evidence": ["B.M1", "A.M1"]
+        },
+        {
+          "text": "The answer now carries totalCents and the currency.",
+          "evidence": ["A.S1", "A.F1.H1"]
+        },
+        {
+          "text": "The page reads both, so the total shows as the right price.",
+          "evidence": ["B.S2", "B.F2.H1"]
+        }
+      ],
+      "visual": {
+        "type": "architecture",
+        "direction": "LR",
+        "nodes": [
+          {
+            "id": "web",
+            "label": "storefront",
+            "detail": "storefront: the shop page that shows the total",
+            "kind": "ui",
+            "status": "modified",
+            "beat": 0,
+            "evidence": ["B.M1", "B.S2"]
+          },
+          {
+            "id": "api",
+            "label": "orders-api",
+            "detail": "orders-api: the service that answers with the order",
+            "kind": "service",
+            "status": "modified",
+            "beat": 0,
+            "evidence": ["A.M1", "A.S1"]
+          },
+          {
+            "id": "answer",
+            "label": "totalCents and currency",
+            "detail": "orders-api: the new answer that storefront reads",
+            "kind": "api",
+            "status": "added",
+            "beat": 1,
+            "evidence": ["A.S1", "A.F1.H1"]
+          }
+        ],
+        "edges": [
+          { "from": "web", "to": "api", "label": "asks for an order", "status": "unchanged", "beat": 0 },
+          { "from": "api", "to": "answer", "label": "answers with", "status": "added", "beat": 1 },
+          { "from": "answer", "to": "web", "label": "read by the page", "status": "added", "beat": 2 }
+        ]
+      },
+      "visualDescription": "The page, the service and the new answer between them.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s6",
+      "role": "review",
+      "title": "What to check",
+      "narration": [
+        {
+          "text": "Two checks. orders-api no longer exports orderTotal, so look for other callers.",
+          "evidence": ["A.R1", "A.S3"]
+        },
+        {
+          "text": "formatMoney now takes cents, so check its other callers too.",
+          "evidence": ["B.R1", "B.S1"]
+        }
+      ],
+      "visual": {
+        "type": "checklist",
+        "items": [
+          {
+            "title": "orderTotal is removed",
+            "detail": "Nothing else in orders-api may call it.",
+            "severity": "medium",
+            "ref": { "path": "orders-api/src/total.js", "side": "head", "startLine": 1, "endLine": 4 },
+            "beat": 0,
+            "evidence": ["A.R1", "A.S3"]
+          },
+          {
+            "title": "formatMoney takes cents",
+            "detail": "Other callers must give cents, not euros.",
+            "severity": "medium",
+            "ref": { "path": "storefront/src/money.js", "side": "head", "startLine": 1, "endLine": 4 },
+            "beat": 1,
+            "evidence": ["B.R1", "B.S1"]
+          }
+        ]
+      },
+      "visualDescription": "Two review points, one for each repository.",
+      "transition": "slide",
+      "targetSeconds": null
+    },
+    {
+      "id": "s7",
+      "role": "conclusion",
+      "title": "Wrap up",
+      "narration": [
+        {
+          "text": "Merge both pull requests together. Each alone shows a wrong total.",
+          "evidence": ["NOTES", "TASK"]
+        }
+      ],
+      "visual": {
+        "type": "summary",
+        "points": [
+          { "text": "orders-api gives totalCents and the currency", "beat": 0 },
+          { "text": "storefront reads cents and shows a price", "beat": 0 },
+          { "text": "Merge the two changes together", "beat": 0 }
+        ],
+        "closing": null
+      },
+      "visualDescription": "A short list of what changed in each repository.",
+      "transition": "fade",
+      "targetSeconds": null
+    }
+  ],
+  "reviewChecklist": [
+    {
+      "title": "orderTotal is removed",
+      "detail": "Nothing else in orders-api may call it.",
+      "severity": "medium",
+      "ref": { "path": "orders-api/src/total.js", "side": "head", "startLine": 1, "endLine": 4 },
+      "evidence": ["A.R1", "A.S3"]
+    },
+    {
+      "title": "formatMoney takes cents",
+      "detail": "Other callers must give cents, not euros.",
+      "severity": "medium",
+      "ref": { "path": "storefront/src/money.js", "side": "head", "startLine": 1, "endLine": 4 },
+      "evidence": ["B.R1", "B.S1"]
+    }
+  ],
+  "uncertainties": [
+    "The change does not show how the two services are deployed. The total is wrong until both changes are live."
+  ]
+}

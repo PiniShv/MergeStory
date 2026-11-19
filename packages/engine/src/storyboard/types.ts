@@ -42,6 +42,7 @@ export type IssueCode =
   | 'log-range-out-of-range'
   | 'log-too-long'
   | 'simulated-unbacked'
+  | 'title-missing-source'
   | 'over-length';
 
 export interface ValidationIssue {

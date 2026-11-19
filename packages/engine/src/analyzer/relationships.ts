@@ -41,8 +41,15 @@ export function buildRelationships(args: {
       }
     }
   }
-  return [...edges.values()].sort(
-    (a, b) =>
-      idNumber(a.from) - idNumber(b.from) || idNumber(a.to) - idNumber(b.to) || a.kind.localeCompare(b.kind),
+  return [...edges.values()].sort(compareRelationships);
+}
+
+/** By the number of the component it starts from, then the one it points to, then its kind. */
+export function compareRelationships(
+  a: Pick<Relationship, 'from' | 'to' | 'kind'>,
+  b: Pick<Relationship, 'from' | 'to' | 'kind'>,
+): number {
+  return (
+    idNumber(a.from) - idNumber(b.from) || idNumber(a.to) - idNumber(b.to) || a.kind.localeCompare(b.kind)
   );
 }

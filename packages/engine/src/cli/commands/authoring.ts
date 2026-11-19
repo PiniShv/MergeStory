@@ -14,12 +14,15 @@ import {
   followUpFor,
   maxDurationOption,
   readStoryboard,
+  type SeveralSourcesFlag,
   type SourceFlags,
+  sourceWordsOf,
 } from '../options.ts';
 import type { CliRuntime, CommandEnv } from '../runtime.ts';
 
-export type AnalyzeFlags = SourceFlags & ContextFlags & Pick<ConfigFlags, 'out'>;
+export type AnalyzeFlags = SourceFlags & SeveralSourcesFlag & ContextFlags & Pick<ConfigFlags, 'out'>;
 export type ValidateFlags = SourceFlags &
+  SeveralSourcesFlag &
   ContextFlags &
   Pick<ConfigFlags, 'maxDuration' | 'duration' | 'language'>;
 
@@ -30,23 +33,25 @@ export function registerAnalyze(program: Command, rt: CliRuntime): void {
     .description(
       'Analyse a change and write the files needed to author a storyboard yourself (no model is called)',
     )
-    .argument('[source]', 'pull request URL, owner/repo#123, or the path of a local repository', '.');
-  addSourceFlags(command);
+    .argument(
+      '[source]',
+      'pull request URL, owner/repo#123, or the path of a local repository (default: the current folder)',
+    );
+  addSourceFlags(command, true);
   addContextFlags(command);
   command
     .optionsGroup('Output:')
     .option('--out <dir>', 'write the files here instead of under the MergeStory home');
-  command.action(async (source: string, flags: AnalyzeFlags, cmd: Command) => {
+  command.action(async (source: string | undefined, flags: AnalyzeFlags, cmd: Command) => {
     const env = rt.env(cmd);
     const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
-    // The follow-up commands name the source the way it was resolved, so they work from any directory.
-    const shownSource = typeof common.source === 'string' ? common.source : source;
-    const { source: followSource, args, contextArgs } = followUpFor(shownSource, flags, env.io.cwd);
+    const sourceWords = sourceWordsOf(source, common, flags);
+    const { args, contextArgs } = followUpFor(sourceWords, flags, env.io.cwd);
     const { prepareAuthoring } = await import('../../pipeline/index.ts');
     const result = await prepareAuthoring({
       ...common,
       outDir: common.config?.outDir ?? null,
-      followUp: { source: followSource, args },
+      followUp: { args },
       signal: env.signal,
       logger: env.logger,
     });
@@ -54,13 +59,7 @@ export function registerAnalyze(program: Command, rt: CliRuntime): void {
       env.emitJson(globalRedactor.redactValue({ ok: true, ...result }));
       return;
     }
-    env.say(
-      formatAuthoring(
-        globalRedactor.redactValue(result),
-        { source: shownSource, base: flags.base, head: flags.head },
-        env.style,
-      ),
-    );
+    env.say(formatAuthoring(globalRedactor.redactValue(result), sourceWords, env.style));
     // Task, notes, tests and screenshots create the evidence ids, so steps 3 and 4 need them too.
     if (contextArgs.length > 0) {
       env.say(
@@ -76,20 +75,25 @@ export function registerValidate(program: Command, rt: CliRuntime): void {
     .command('validate')
     .description('Check a storyboard against a change without rendering anything')
     .argument('<storyboard>', 'storyboard JSON file')
-    .argument('[source]', 'pull request URL, owner/repo#123, or the path of a local repository', '.');
-  addSourceFlags(command);
+    .argument(
+      '[source]',
+      'pull request URL, owner/repo#123, or the path of a local repository (default: the current folder)',
+    );
+  addSourceFlags(command, true);
   addContextFlags(command);
   command
     .optionsGroup('Limits:')
     .addOption(maxDurationOption(true))
     .addOption(durationOption())
     .option('--language <code>', 'narration language, for example en');
-  command.action(async (storyboardPath: string, source: string, flags: ValidateFlags, cmd: Command) => {
-    const env = rt.env(cmd);
-    const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
-    const storyboard = await readStoryboard(storyboardPath, env.io.cwd, 'storyboard file');
-    await checkAndReport(env, common, storyboard);
-  });
+  command.action(
+    async (storyboardPath: string, source: string | undefined, flags: ValidateFlags, cmd: Command) => {
+      const env = rt.env(cmd);
+      const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
+      const storyboard = await readStoryboard(storyboardPath, env.io.cwd, 'storyboard file');
+      await checkAndReport(env, common, storyboard);
+    },
+  );
 }
 
 /** Check a storyboard and print the result (validate and agent validate). */

@@ -103,6 +103,13 @@ Or a local branch, without a pull request. This works with every git host:
 mergestory generate . --base main --head feature/retry
 ```
 
+Or one video for a change in several repositories, for example a fix that works only when two pull requests
+are merged together. Give each repository as a `--source` (see [the demo](examples/two-repos-demo/README.md)):
+
+```bash
+mergestory generate --source acme/orders-api#12 --source acme/storefront#7 --storyboard storyboard.json
+```
+
 Try it on the included demo project ([how it works](examples/demo/README.md)):
 
 ```bash

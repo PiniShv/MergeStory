@@ -32,6 +32,12 @@ export interface ContextOptions {
 export interface GenerateOptions {
   /** PR URL, "owner/repo#123", a local repository path, or an explicit SourceInput. */
   source: string | SourceInput;
+  /**
+   * Several sources for one video (at most four): each a source input, or text like the CLI's
+   * `--source`: `<repo>[:<base>..<head>]`. When it is given it lists every source: `source` is not
+   * read (pass the first one) and `base` and `head` must not be set.
+   */
+  sources?: Array<string | SourceInput>;
   /** Local sources only: base and head refs (defaults: merge base with the default branch, and HEAD). */
   base?: string | null;
   head?: string | null;
@@ -81,12 +87,13 @@ export interface AuthoringOptions extends Omit<GenerateOptions, 'storyboard' | '
   /** Write the files here instead of under the MergeStory home. */
   outDir?: string | null;
   /**
-   * The source and the flags (task, notes, tests, screenshots, recordings, logs, refs) of the command line, as raw
-   * words. AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
+   * The flags (task, notes, tests, screenshots, recordings, logs, refs) of the command line, as raw
+   * words, and the source in `source` or at the front of `args` (for example `--source a --source b`).
+   * AUTHORING.md shows `validate` and `generate` with them, so the author's commands see the
    * same evidence ids as the analysis did. Without it the document says to repeat them. With `agent`,
    * it shows `mergestory agent validate` and `mergestory agent render`, which find the files by name.
    */
-  followUp?: { source: string; args: string[]; agent?: boolean };
+  followUp?: { source?: string; args: string[]; agent?: boolean };
 }
 
 /** Starts the warning that publish adds when it rebuilds a result because the earlier result.json is missing. */

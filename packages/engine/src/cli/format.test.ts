@@ -395,11 +395,25 @@ describe('untrusted text in the output', () => {
   };
   const controls = /(?![\t\n])\p{Cc}|[\u202a-\u202e\u2066-\u2069]/u;
 
+  it('repeats the source words in steps 3 and 4, quoted for a shell', () => {
+    const text = formatAuthoring(
+      authoring,
+      ['/my repo', '--base', 'main', '--head', 'fix/x'],
+      createStyle(false),
+    );
+    expect(text).toContain(
+      "mergestory validate /runs/r1/storyboard.json '/my repo' --base main --head fix/x\n",
+    );
+    expect(text).toContain(
+      "mergestory generate '/my repo' --base main --head fix/x --storyboard /runs/r1/storyboard.json\n",
+    );
+  });
+
   it('loses its control characters, while the styling stays', () => {
-    const text = formatAuthoring(authoring, { source: '.' }, plain);
+    const text = formatAuthoring(authoring, ['.'], plain);
     expect(text).toContain('Analysis ready: Add retry ]52;c;aGVsbG8=logic[2Aevil');
     expect(text).not.toMatch(controls);
-    const styled = formatAuthoring(authoring, { source: '.' }, createStyle(true));
+    const styled = formatAuthoring(authoring, ['.'], createStyle(true));
     expect(styled).toContain('\u001b[32mAnalysis ready\u001b[39m: Add retry ]52;c;aGVsbG8=logic');
     expect(styled).not.toContain('\u001b]');
   });

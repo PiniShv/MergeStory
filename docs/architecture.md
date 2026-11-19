@@ -85,7 +85,9 @@ learns what happened.
 
 `src/pipeline` has one file for each job, and `run.ts` only connects them:
 
-- `prepare.ts`: read the change, check the context, analyse (the first half of every run);
+- `prepare.ts`: read the change, check the context, analyse (the first half of every run). It loads each
+  source with `loadSources` (`src/sources/load.ts`), analyses each one alone, then joins them (see
+  [Several sources](#several-sources));
 - `storyboard-choice.ts`: use the caller's storyboard, ask the model, or build the offline one, then
   validate it. `fit-duration.ts` trims it to `--max-duration` before any speech is made;
 - `plan.ts` and `planned-egress.ts`: the dry-run plan (outline, cost, every outbound transfer);
@@ -142,7 +144,64 @@ the caller), `IS1` (linked issue), `CM1` (commit), `F2` (file), `F2.H1` (diff hu
 `M1` (component), `R1` (review risk), `D1` (dependency change), `SS1` (screenshot), `RC1` (screen
 recording), `REPRO` and `REPRO.1` (the reproduction and its steps), `L1` (log) and `L1.120-140` (lines of a
 log), `REPO`.
+With several sources, every id that comes from a repository has the letter of its source in front (`A.F2`, `B.S3`, `A.PR`).
 Storyboards cite these ids. The watch page lists every claim with links to the cited code.
+
+### Several sources
+
+One video can explain a change in several repositories (`--source`, up to 4). Every stage after
+`prepare.ts` still works on ONE change set, ONE reader and ONE analysis.
+`src/sources/join.ts` makes that possible. `loadSources` (`src/sources/load.ts`) loads each source exactly as
+for a single source, with its own reader and its own caches, and names the source in an error when there are
+several. `prepare` analyses each one, then `joinSources` joins them into a change that looks like one
+repository with a top folder for each source (a lone source is returned as it is):
+
+- The sources are sorted by host, owner, name, pull request number and head commit. The first is `A`, then
+  `B`, `C`, `D`, so the order of the flags never changes a letter. The folder of a source is its repository
+  name made safe (`-2`, `-3` when a name is taken).
+- Every id that a repository made gets `<letter>.` in front, in every field that holds one. Every path gets
+  `<folder>/` in front. Ids that the caller supplied (`TASK`, `NOTES`, `T1`, `REPRO`, `SS1`, `RC1`, `L1`) are taken once. One
+  table typed `Record<EvidenceItem['kind'], 'source' | 'run'>` says which kind is which, so a new kind does
+  not compile until it is placed there.
+- The joined reader sends `<folder>/<rest>` to the reader of that source with `<rest>`, and reads nothing for
+  any other path. Each source keeps its own guard: a path that leaves its folder, a sensitive file and a file
+  that is too large read as missing. The rules that look at a path (sensitive, excluded, binary, language, role)
+  were applied before the join, so they never see a folder name.
+- `size` and `suggestedDurationSec` come from the summed lines and components, with the functions of the
+  analyzer (`paceOf`). The sums of the stats, the languages and the limits are joined. `ChangeSet.parts`
+  keeps what each source looked like when it was loaded, with its own README excerpt. `pr` and the README
+  excerpt of the joined change are `null`.
+- The evidence pack cuts some lists by position: key hunks, risks, components, relationships, symbols,
+  dependencies and architecture signals. So the joined lists are not the lists of the sources one after
+  the other. Key hunks, risks and components are ordered across the sources with the comparison that the
+  analyzer uses for one source (by score, by severity and category, by changed lines), relationships by the
+  number of their components, and equal items keep the order of the letters. Symbols, dependencies and
+  architecture signals have no rank across sources: they are taken in turns, the first of each source, then
+  the second of each. So a tight budget does not cut one repository before the other.
+- The evidence pack lists every source and writes the sections about the pull request, the issues, the
+  commits and the repository once for each source. A check after the join throws `INTERNAL` when an evidence
+  id exists twice.
+
+Only `join.ts` writes `ChangeSet.parts`. The rest of the product code reads it through
+`src/core/source-views.ts`. `sourcesOf(changeSet)` gives every source in one shape: an ordinary change is one source with an empty letter, folder, id prefix
+and path prefix, so code that works source by source (the evidence pack, the known names of the checks, the
+labels, the links to code) has one path for both kinds. `isJoined(changeSet)` is for the few texts and
+rules that really differ, such as the header of the evidence pack, the extra guide paragraph for several
+sources, and the rule that a joined change has no offline storyboard.
+
+`src/core/labels.ts` answers "which repository, which change, which commit" for everything that prints it.
+The `...Of` labels are the words of the video (the closing card); `changeLabel` and `repoLabel` are the words
+of the watch page, the PR comment and the progress lines. One source gives the strings it always gave.
+Several sources give `owner/name` of each joined with ` + `, `<name> #<n>` (or `<name> <head ref>` for a local
+change) of each, and the short commits joined with ` · `. A link to code takes the source from the folder at
+the start of the path and uses that source's web address and commit. The watch page has no link to "the"
+change. Nothing is posted to a pull request: `publish-input.json` of such a run holds no pull request
+address, the joined privacy value (private when any source is private) and no commit: a change in several
+repositories has no single one, so the watch page shows no "Commit" row.
+
+Checking a storyboard takes the known names and the texts behind `PR`, `REPO`, commit and issue ids from
+every source. The offline storyboard knows one repository, so a run with several sources needs a storyboard
+from a model or from the caller. The `agent` commands and the HTTP API keep one source.
 
 ### Storyboard
 
