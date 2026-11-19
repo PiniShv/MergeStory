@@ -390,10 +390,15 @@ describe('conclusion scene', () => {
     );
   });
 
-  it('names the test files when nobody reported a result', () => {
+  it('names the test files when nobody reported a result, and says them only once', () => {
     const fx = inventoryFixture();
-    const last = make(fx, 150).scenes.at(-1)!;
-    expect(last.narration.map((l) => l.text)).toContain('Tests were added in test_report.py.');
+    const scenes = make(fx, 150).scenes;
+    const last = scenes.at(-1)!;
+    const spoken = scenes.flatMap((scene) => scene.narration.map((l) => l.text));
+    expect(spoken.filter((text) => text.includes('Tests were added in test_report.py.'))).toHaveLength(1);
+    expect(last.visual.type === 'summary' && last.visual.points.map((p) => p.text)).toContain(
+      'Tests were added in test_report.py',
+    );
   });
 
   it('never mentions test results that nobody reported', () => {

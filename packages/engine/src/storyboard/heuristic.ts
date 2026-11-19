@@ -204,7 +204,11 @@ function missionScene(b: Build): { scene: Scene; heading: string } {
 // Conclusion
 // ---------------------------------------------------------------------------
 
-function conclusionScene(b: Build, review: Pick<Review, 'firstSubject' | 'firstEvidence'> | null): Scene {
+function conclusionScene(
+  b: Build,
+  review: Pick<Review, 'firstSubject' | 'firstEvidence'> | null,
+  earlier: readonly Scene[],
+): Scene {
   const { ctx, level } = b;
   const { changeSet } = ctx;
   const { files: fileCount, additions, deletions } = changeSet.stats;
@@ -262,8 +266,10 @@ function conclusionScene(b: Build, review: Pick<Review, 'firstSubject' | 'firstE
       if (!said) lines.push(reported.line);
       points.push({ text: reported.point, beat: said ? 0 : lines.length - 1 });
     } else if (tests) {
-      lines.push(tests);
-      points.push({ text: tests.text.replace(/\.$/, ''), beat: lines.length - 1 });
+      // The overview may have said it already: the list keeps the point, the voice does not repeat it.
+      const said = earlier.some((scene) => scene.narration.some((line) => line.text.includes(tests.text)));
+      if (!said) lines.push(tests);
+      points.push({ text: tests.text.replace(/\.$/, ''), beat: said ? 0 : lines.length - 1 });
     }
   }
   if (level.conclusionLines >= 3 || lines.length < 2) {
@@ -319,7 +325,7 @@ function buildStoryboard(ctx: Ctx, level: Level): Storyboard {
   scenes.push(bigPicture, ...code);
   if (repro.proof) scenes.push(repro.proof);
   if (review) scenes.push(review.scene);
-  scenes.push(conclusionScene(b, review));
+  scenes.push(conclusionScene(b, review, scenes));
   scenes.forEach((s, index) => {
     s.id = `s${index + 1}`;
   });

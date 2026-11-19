@@ -178,13 +178,14 @@ describe('authoring guide', () => {
     const at = [
       'mission',
       'reproduction',
-      'big-picture',
       'under-the-hood',
       'before-after',
       'proof',
+      'big-picture',
       'review',
-      'conclusion',
     ].map((role) => arc.indexOf(`. ${role}:`));
+    // The key change comes before the overview, and there is no recap at the end.
+    expect(arc).not.toContain('. conclusion:');
     expect(at.every((position) => position >= 0)).toBe(true);
     expect(at).toEqual([...at].sort((a, b) => a - b));
     expect(arc).toContain(
@@ -197,8 +198,9 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 2188 words today. The log visual (its shape and one bullet) added 32 to the 2156 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2193);
+    // 2342 words today. The story arc that leads with why and the key change, and the review scene
+    // with places to read, added 154 to the 2188 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2347);
   });
 
   it('states every limit that the validator enforces', () => {

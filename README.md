@@ -18,7 +18,7 @@
 
 MergeStory turns a pull request into a short narrated video. It shows what changed, why, and what to review.
 
-A typical video runs from 45 seconds to 3 minutes. It has animated architecture diagrams, the real code highlighted line by line, captions and a review checklist.
+A typical video runs from 25 seconds to 3 minutes. It has animated architecture diagrams, the real code highlighted line by line, captions and a review checklist.
 
 ## Reads. Tells. Checks.
 

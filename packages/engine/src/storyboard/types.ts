@@ -43,6 +43,7 @@ export type IssueCode =
   | 'log-too-long'
   | 'simulated-unbacked'
   | 'title-missing-source'
+  | 'repeated-line'
   | 'over-length';
 
 export interface ValidationIssue {

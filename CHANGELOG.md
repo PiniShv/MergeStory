@@ -6,6 +6,16 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Changed:** small changes get shorter videos. The suggested length is 25 seconds (was 45) for up to 20
+  changed lines, and 40 seconds (was 70) for up to 120. Larger changes keep their length. `--duration`
+  still sets the length you choose.
+- **Changed:** the storyboard guide (`AUTHORING.md` and the model prompt) leads with why the change exists
+  and its most important hunk; the overview of the components comes after the code. The video says so when
+  the pull request text gives no reason. The review scene names two or three places to read closely, with
+  file and lines, and there is no recap scene at the end. Every line must add a new fact, and the pull
+  request number is not spoken. A model receives about 200 more tokens per request.
+- **Added:** `validate` warns when a narration line repeats an earlier one (`repeated-line`). The offline
+  storyboard is not checked, and its closing scene no longer repeats the line about added tests.
 - **Fixed:** the voice reads clock times, dates and versions as a person says them. `17:00` is "5 PM",
   `2026-11-19` is "November 19, 2026" and `1.0.0.52` is "1 point 0 point 0 point 52". Before, the speech
   engine chose how to read them. Captions still show the text as written.
