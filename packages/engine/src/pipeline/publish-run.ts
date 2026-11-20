@@ -164,7 +164,11 @@ export async function publishAndNotify(
         },
       };
       const { warnings: uploadWarnings = [], ...published } = await publisher.publish(bundle, ctx);
-      publish = published;
+      // A file:// link only works on this machine, so the local provider has nothing to share.
+      publish = {
+        ...published,
+        shareUrl: published.provider === 'local' ? null : (published.watchUrl ?? published.videoUrl),
+      };
       warnings.push(...uploadWarnings);
       ctx.progress({ stage: 'publish', status: 'done', message: `Published to ${publish.location}` });
     }

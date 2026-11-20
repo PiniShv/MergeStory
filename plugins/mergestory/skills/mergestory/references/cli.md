@@ -111,7 +111,7 @@ Success of `generate` and `publish` (shortened):
   "chapters": [{ "title": "The mission", "startSec": 0 }],
   "storyboardSource": "agent",
   "files": { "video": "...", "poster": "...", "captions": "...", "storyboard": "...", "watchPage": "..." },
-  "publish": { "provider": "s3", "watchUrl": "https://...", "videoUrl": "https://...", "expiresAt": "...", "visibility": "private" },
+  "publish": { "provider": "s3", "watchUrl": "https://...", "shareUrl": "https://...", "videoUrl": "https://...", "expiresAt": "...", "visibility": "private" },
   "notify": { "commentUrl": "https://github.com/...", "descriptionUpdated": false },
   "grounding": { "groundedClaims": 21, "fixes": [], "warnings": [] },
   "cost": { "totalUsd": 0, "budgetUsd": 0.25, "records": [] },
@@ -122,7 +122,9 @@ Success of `generate` and `publish` (shortened):
 
 `files.poster` is `null` when no poster image was made; check for it before you open the file.
 `publish.provider` tells you where the video went. With the default `--publish local` it is `local`,
-and `watchUrl` is a `file://` link to a file on this machine. `publish` is `null` only with
+and `watchUrl` is a `file://` link to a file on this machine. `publish.shareUrl` is the link to post
+or send: it is `null` when nothing was shared, so never post `watchUrl` without checking `shareUrl`.
+`publish` is `null` only with
 `--publish none`. `notify` is `null` unless a pull request update was asked for and tried. `egress`
 lists every outbound transfer (host, purpose, bytes, what it contained).
 

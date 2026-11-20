@@ -88,7 +88,12 @@ describe('mergestory runs', () => {
       title: 'Add retries to the uploader',
       durationSec: 83,
       video: join(runsDir(), A, 'video.mp4'),
-      publish: { provider: 's3', watchUrl: 'https://v.example.com/x', expiresAt: null },
+      publish: {
+        provider: 's3',
+        watchUrl: 'https://v.example.com/x',
+        shareUrl: 'https://v.example.com/x',
+        expiresAt: null,
+      },
     });
     expect(runs[1]).toMatchObject({ runId: 'old-run', createdAt: '2020-01-02T03:04:05.000Z', publish: null });
   });
@@ -103,6 +108,15 @@ describe('mergestory runs', () => {
     expect(stdout).toContain('this machine');
     expect(stdout).toContain('https://v.example.com/x');
     expect(stdout).not.toContain('\u001b');
+  });
+
+  it('gives a local run no link to share, in the table and in the JSON', async () => {
+    await withResult(A, { publish: { provider: 'local', watchUrl: 'file:///runs/a/publish/index.html' } });
+    expect((await run(['runs'])).stdout).not.toContain('file://');
+    const { runs } = JSON.parse((await run(['runs', '--json'])).stdout) as {
+      runs: { publish: { shareUrl: string | null } }[];
+    };
+    expect(runs[0]?.publish.shareUrl).toBeNull();
   });
 });
 

@@ -102,6 +102,6 @@ jobs:
             const fs = require("fs");
             let r;
             try { r = JSON.parse(fs.readFileSync("mergestory-result.json", "utf8")); } catch {}
-            const line = !r ? "MergeStory did not finish." : r.ok ? `MergeStory video: ${r.publish?.watchUrl ?? r.files?.video}` : `MergeStory failed: \`${String(r.error?.message).replaceAll("`", "\u0027")}\``;
+            const line = !r ? "MergeStory did not finish." : r.ok ? `MergeStory video: ${r.publish?.shareUrl ?? r.files?.video}` : `MergeStory failed: \`${String(r.error?.message).replaceAll("`", "\u0027")}\``;
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + "\n");
           '

@@ -241,7 +241,7 @@ const result = await generate({
 if ('dryRun' in result) {
   console.log(`Planned ${result.estimatedDurationSec} seconds`);
 } else {
-  console.log(result.files.video, result.publish?.watchUrl);
+  console.log(result.files.video, result.publish?.shareUrl ?? result.files.video);
 }
 ```
 
@@ -325,7 +325,7 @@ const result = await publishRun({
   config: { publish: { provider: 's3', visibility: 'private' }, github: { comment: true } },
 });
 
-console.log(result.publish?.watchUrl);
+console.log(result.publish?.shareUrl); // null when nothing was shared
 ```
 
 | Option | What it is |

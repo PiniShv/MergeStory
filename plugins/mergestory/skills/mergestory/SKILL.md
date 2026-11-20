@@ -198,7 +198,7 @@ Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and
 agent's own usage, storage and CI are billed separately and are not in it.
 When `publish` is null or `publish.provider` is `local`, nothing was shared: give the local
 files `files.watchPage` and `files.video`, and say that they are only on this machine. Otherwise
-the link is `publish.watchUrl`. Say plainly that the video explains the change and does not
+the link is `publish.shareUrl`. Say plainly that the video explains the change and does not
 replace code review.
 
 ## Gotchas

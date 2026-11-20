@@ -24,7 +24,13 @@ interface RunSummary {
   title: string;
   durationSec: number;
   video: string;
-  publish: { provider: string; watchUrl: string | null; expiresAt: string | null } | null;
+  publish: {
+    provider: string;
+    watchUrl: string | null;
+    /** The link to share, or null when the video is only on this machine. */
+    shareUrl: string | null;
+    expiresAt: string | null;
+  } | null;
 }
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
@@ -79,6 +85,7 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
     const published = result.publish as {
       provider?: unknown;
       watchUrl?: unknown;
+      shareUrl?: unknown;
       expiresAt?: unknown;
     } | null;
     runs.push({
@@ -92,6 +99,9 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
         ? {
             provider: str(published.provider) ?? 'unknown',
             watchUrl: str(published.watchUrl),
+            // Runs saved before shareUrl existed: only the local provider has no link to share.
+            shareUrl:
+              published.provider === 'local' ? null : (str(published.shareUrl) ?? str(published.watchUrl)),
             expiresAt: str(published.expiresAt),
           }
         : null,
@@ -108,7 +118,7 @@ function formatRunList(runs: RunSummary[], style: Style): string {
     terminalSafe(r.title).replace(/\s+/g, ' ').slice(0, 60),
     formatDuration(r.durationSec),
     !r.publish || r.publish.provider === 'local' ? 'this machine' : terminalSafe(r.publish.provider),
-    r.publish?.watchUrl ? terminalSafe(r.publish.watchUrl) : '',
+    r.publish?.shareUrl ? terminalSafe(r.publish.shareUrl) : '',
   ]);
   const header = ['RUN', 'DATE', 'TITLE', 'LENGTH', 'WENT TO', 'LINK'];
   const width = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i]!.length)));

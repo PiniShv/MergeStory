@@ -34,6 +34,7 @@ export function redactResult<T extends GenerateResult | PlanResult>(result: T): 
   const target = (redacted as { publish?: PublishResult | null }).publish;
   if (original && target) {
     target.watchUrl = withoutUserInfo(original.watchUrl);
+    if (original.shareUrl !== undefined) target.shareUrl = withoutUserInfo(original.shareUrl);
     target.videoUrl = withoutUserInfo(original.videoUrl);
     target.posterUrl = withoutUserInfo(original.posterUrl);
     target.captionsUrl = withoutUserInfo(original.captionsUrl);
