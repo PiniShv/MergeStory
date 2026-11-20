@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
-import { mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { resolveConfig } from '../../core/config.ts';
@@ -788,11 +788,37 @@ describe('agent frames', () => {
     expect(stderr).toContain('not in the runs folder');
   });
 
+  it('does not follow a pointer that climbs out of the runs folder with ".."', async () => {
+    await mkdir(work(), { recursive: true });
+    const runDir = join(dir, 'home', 'runs', '..', '..', 'x');
+    await writeFile(join(work(), 'last-run.json'), JSON.stringify({ runDir }));
+    const { code, stderr } = await run(['agent', 'frames', '--name', 'fix-1']);
+    expect(code).toBe(2);
+    expect(stderr).toContain('not in the runs folder');
+  });
+
+  it('forgets the old render when a new one fails, and keeps it for --dry-run', async () => {
+    await renderedRun();
+    const pointer = join(work(), 'last-run.json');
+    expect(existsSync(pointer)).toBe(true);
+    generateMock.mockResolvedValue(fakePlan());
+    await run(['agent', 'render', '--name', 'fix-1', '--dry-run']);
+    expect(existsSync(pointer)).toBe(true);
+    generateMock.mockRejectedValue(new Error('boom'));
+    expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(1);
+    expect(existsSync(pointer)).toBe(false);
+  });
+
   it('takes a contact sheet and one frame per scene, in the work folder', async () => {
     await renderedRun();
     const ffmpeg = join(dir, 'ffmpeg');
-    // A fake ffmpeg: creates the output file, which is its last argument.
-    await writeFile(ffmpeg, '#!/bin/sh\nfor last; do :; done\nprintf jpg > "$last"\n', { mode: 0o755 });
+    const log = join(dir, 'ffmpeg.log');
+    // A fake ffmpeg: logs its arguments, and creates the output file, which is its last argument.
+    await writeFile(
+      ffmpeg,
+      `#!/bin/sh\necho "$@" >> '${log}'\nfor last; do :; done\nprintf jpg > "$last"\n`,
+      { mode: 0o755 },
+    );
     const { code, stdout } = await run(['agent', 'frames', '--name', 'fix-1', '--json'], {
       MERGESTORY_FFMPEG_PATH: ffmpeg,
       MERGESTORY_FFPROBE_PATH: ffmpeg,
@@ -809,6 +835,13 @@ describe('agent frames', () => {
         { sceneId: 's2', title: 'Code', timeSec: 14, file: join(work(), 'frames', 'scene-02.jpg') },
       ],
     });
+    expect(Object.keys(out).sort()).toEqual(
+      ['contactSheet', 'frames', 'framesDir', 'name', 'ok', 'sheetStepSec'].sort(),
+    );
+    const calls = (await readFile(log, 'utf8')).trim().split('\n');
+    expect(calls[0]).toContain('fps=1/2,scale=480:-2,tile=4x3');
+    expect(calls[1]).toContain('-ss 6 ');
+    expect(calls[2]).toContain('-ss 14 ');
     for (const f of out.frames) expect(existsSync(f.file)).toBe(true);
     expect(existsSync(out.contactSheet)).toBe(true);
   });

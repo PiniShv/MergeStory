@@ -77,7 +77,7 @@ export async function makeVideo(
   source: string | undefined,
   flags: GenerateFlags,
   forced?: ConfigInput,
-): Promise<ReturnType<typeof redactResult> | undefined> {
+): Promise<GenerateResult | PlanResult | undefined> {
   const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
   const options: JobOptions = { ...common };
   if (forced) options.config = mergeConfigInputs(common.config, forced);
@@ -97,5 +97,5 @@ export async function makeVideo(
   else
     env.say(isPlanResult(safe) ? formatPlanResult(safe, env.style) : formatGenerateResult(safe, env.style));
   if (!isPlanResult(safe)) reportFailedPullRequestUpdate(env, safe);
-  return safe;
+  return result;
 }

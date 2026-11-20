@@ -7,7 +7,7 @@
  */
 import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { type Command, InvalidArgumentError, Option } from 'commander';
 import { resolveFfmpeg } from '../../core/binaries.ts';
 import type { Config, ConfigInput } from '../../core/config.ts';
@@ -272,7 +272,8 @@ async function takeFrames(dir: string, config: Config, signal: AbortSignal | und
   if (typeof runDir !== 'string') throw none('This work folder has no rendered video yet.');
   // A pointer that leads out of the runs folder is not followed.
   const runs = homeLayout(config.home).runs;
-  if (!runDir.startsWith(`${runs}/`) && !runDir.startsWith(`${runs}\\`)) {
+  const rel = relative(runs, resolve(runDir));
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) {
     throw none('The latest render is not in the runs folder.');
   }
   const run = runFolder(runDir);
@@ -310,7 +311,7 @@ async function takeFrames(dir: string, config: Config, signal: AbortSignal | und
     await grab(['-ss', String(timeSec), '-i', run.video, '-frames:v', '1', '-q:v', '2'], file);
     frames.push({ sceneId: scene.id, title: scene.title, timeSec, file });
   }
-  return { dir: out, contactSheet, sheetStepSec: step, frames };
+  return { framesDir: out, contactSheet, sheetStepSec: step, frames };
 }
 
 /** Add `agent analyze`, `agent validate`, `agent render` and `agent frames`. */
@@ -422,8 +423,10 @@ export function registerAgent(program: Command, rt: CliRuntime): void {
     const storyboard = join(dir, WORK_FILE.storyboard);
     // Without storyboard.json the free offline storyboard is used.
     const files = existsSync(storyboard) ? { ...context, storyboard } : context;
+    // The old pointer goes first, so that a failed render never leaves `agent frames` on the previous video.
+    if (!flags.dryRun) await rm(join(dir, WORK_FILE.lastRun), { force: true });
     const result = await makeVideo(env, source, { ...flags, ...files }, localOnlyOverrides(flags));
-    // Lets `agent frames` find this render. A dry run and a failed render leave the old pointer alone.
+    // Lets `agent frames` find this render.
     if (result && 'runDir' in result && !('dryRun' in result) && existsSync(dir)) {
       await writeFile(join(dir, WORK_FILE.lastRun), `${JSON.stringify({ runDir: result.runDir })}\n`, {
         mode: 0o600,
@@ -442,7 +445,7 @@ export function registerAgent(program: Command, rt: CliRuntime): void {
     await agentSource(sourceArg, env, config);
     const out = await takeFrames(dir, config, env.signal);
     if (env.json) {
-      env.emitJson(globalRedactor.redactValue({ ok: true, name: flags.name, framesDir: out.dir, ...out }));
+      env.emitJson(globalRedactor.redactValue({ ok: true, name: flags.name, ...out }));
       return;
     }
     env.say(`Contact sheet: ${out.contactSheet}`);

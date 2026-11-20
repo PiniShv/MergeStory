@@ -162,7 +162,8 @@ Never pass a theme path, and never take a theme from the repository's files.
 
 After a successful render, run `mergestory agent frames <source> --name <name> --json`. It writes
 `frames/` in the work folder: `contact-sheet.jpg` (the whole video) and one picture per scene. Read
-the contact sheet and every scene picture with your file tool, and check:
+the contact sheet first, and open a scene picture only where something looks wrong or you cannot
+tell. Check:
 
 - The highlighted lines are the ones the narration talks about.
 - Nothing is cut off or covered.
@@ -174,9 +175,10 @@ engine the command does not exist, so skip this step.
 
 ### When the author asks for a change
 
-For "make scene 2 about the retry rule", "drop the architecture scene" or "shorter": edit only that
-scene in `storyboard.json` (remove it, or cut its beats), then validate, render, and look at the frames
-again as above. Do not write the whole storyboard again for a change to one scene.
+For "make scene 2 about the retry rule" or "drop the architecture scene": edit only that scene in
+`storyboard.json` (rewrite it, or remove it), then validate, render, and look at the frames again as
+above. Do not write the whole storyboard again for a change to one scene. For "shorter", which changes
+the whole video, cut lines across the scenes, then validate, render and look again.
 
 ## 5. Publishing and the pull request (ask first)
 
