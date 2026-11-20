@@ -99,15 +99,18 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
         ? {
             provider: str(published.provider) ?? 'unknown',
             watchUrl: str(published.watchUrl),
-            // Runs saved before shareUrl existed: only the local provider has no link to share.
-            shareUrl:
-              published.provider === 'local' ? null : (str(published.shareUrl) ?? str(published.watchUrl)),
+            // Runs saved before shareUrl existed: fall back to watchUrl, but a file: link is never shared.
+            shareUrl: shareLink(published.provider, str(published.shareUrl) ?? str(published.watchUrl)),
             expiresAt: str(published.expiresAt),
           }
         : null,
     });
   }
   return runs.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.runId.localeCompare(a.runId));
+}
+
+function shareLink(provider: unknown, url: string | null): string | null {
+  return provider === 'local' || url === null || /^file:/i.test(url.trim()) ? null : url;
 }
 
 function formatRunList(runs: RunSummary[], style: Style): string {
