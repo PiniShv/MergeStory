@@ -37,7 +37,7 @@ All notable changes to MergeStory are listed here, newest first.
   and lines.
 - **Added:** five `validate` warnings: `narration-over-budget` (more than 15% over the word budget),
   `review-item-no-ref`, `review-item-question`, `key-change-not-code` and `focus-same-beat` (two focus ranges
-  on one beat, of which only one is lit). The offline storyboard is not checked for them.
+  on one beat, of which only one is lit). The offline storyboard is checked only for `key-change-not-code`.
 
 ### Docs
 
