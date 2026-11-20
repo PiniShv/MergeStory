@@ -44,11 +44,12 @@ describe('names that are not in the change', () => {
     expect(paths.some((p) => p.startsWith('scenes[2].visual'))).toBe(true);
   });
 
-  it('does not treat release notes or a notes field as the private notes', async () => {
+  it('does not treat release notes or a notes feature as the private notes', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);
     scene(sb, 1).narration[1].text = 'The release notes say the limit stays at three.';
     scene(sb, 2).visual.points[0].text = 'The notes field keeps its old value.';
+    scene(sb, 2).visual.points[1].text = 'The notes list now sorts by date. The notes show a badge.';
     const result = await run(sb, fx);
     expect(codes(result.warnings)).not.toContain('internal-term');
   });

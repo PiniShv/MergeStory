@@ -75,7 +75,7 @@ follow-up, a known limit), the video says it once, in the review scene or as the
 and cites that source. It never guesses such a limit.
 
 There is no recap at the end: the end card closes the video. Every line adds a new fact: a line does not
-repeat an earlier scene or read out what the screen already shows. The `conclusion`
+repeat an earlier scene or read out a file name, title or count that the screen already shows. The `conclusion`
 role still exists for older storyboards.
 
 Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that

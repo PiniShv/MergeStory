@@ -336,10 +336,10 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Write for the ear: short sentences, one idea each, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. The word budget in the task line is a limit: stay within it. The key change gets the most words.
 - One or two sentences per line, at most ${LIMITS.maxWordsPerNarrationLine} words. One to six lines per scene.
 - No markdown, no lists, no emoji.
-- The viewer has never seen the evidence pack or the notes, which are private. Do not say "the pack", "the evidence pack" or "the notes", in narration or on screen. The engine warns about these words.
+- The viewer has never seen the evidence pack or the private notes (NOTES). Do not say "the pack", "the evidence pack" or "the notes", in narration or on screen. The engine warns about these words.
 - Be explicit about what the code does and the real values. Say how the important lines work and why they are there. "This function changed" teaches nothing.
 - Say a name only when a reviewer will search for it, and say it once. Describe constants in capitals, casts, symbols, long camelCase names, columns and flags in plain words ("the retry limit"): the screen shows the exact name. Never read a file path out loud; say "in the retry module". Write numbers without underscores.
-- Every line adds a new fact. No introduction, no closing words, no summary. Never restate scene 1 in a before panel, the previous scene in the last review item, or what the screen shows (a file name, a count, the PR title or number). No line that only names a source ("The ticket asks for this."). The engine warns about a repeated line.
+- Every line adds a new fact. No introduction, no closing words, no summary. Never restate scene 1 in a before panel or the previous scene in the last review item. Do not read out a file name the screen shows, the PR title or number, or counts that teach nothing ("seven files changed"). No line that only names a source ("The ticket asks for this."). The engine warns about a repeated line.
 - Review scene: each item is a risk or decision that this change introduces, not old behaviour elsewhere or something already fine. Its detail states the fact, then what to check: "The loop now replaces any segment a line already had. Check that this is wanted." Never only a question.
 - No filler and no hype. Avoid words such as "powerful", "seamless", "robust" and "simply".
 

@@ -198,9 +198,9 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 2487 words today. Saying what the change does not do, the kinds of filler and "the notes" on
-    // screen added 65 to the 2422 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2492);
+    // 2495 words today. Saying what the change does not do, the kinds of filler and "the notes" on
+    // screen added 73 to the 2422 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2500);
   });
 
   it('states every limit that the validator enforces', () => {
