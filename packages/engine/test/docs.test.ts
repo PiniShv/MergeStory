@@ -4,6 +4,7 @@
  * one of them, with the defaults the code has. A page that sends people to a missing file, or leaves a
  * flag out, is a bug.
  */
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -377,5 +378,33 @@ describe.skipIf(!hasDocs)('the other pages', () => {
     const readme = read('README.md');
     const pages = readdirSync(join(repository, 'docs')).filter((name) => name.endsWith('.md'));
     expect(pages.filter((name) => !readme.includes(`(docs/${name})`))).toEqual([]);
+  });
+});
+
+describe.skipIf(!hasDocs)('the website in docs/', () => {
+  it('index.html names only local files that exist', () => {
+    const page = read('docs', 'index.html');
+    const named = [
+      ...page.matchAll(/(?:src|href)="((?:assets|demo)\/[^"#?]*|favicon-32\.png|apple-touch-icon\.png)"/g),
+    ];
+    expect(named.length).toBeGreaterThan(10);
+    const missing = named
+      .map((match) => match[1] as string)
+      .filter((file) => !existsSync(join(repository, 'docs', file)));
+    expect(missing).toEqual([]);
+  });
+
+  // The watch page of the demo is made by `generate`, and then its player and chapters are pointed at YouTube.
+  // The generated styles know a <video> and <button> chapters, so that step adds two rules and a new hash.
+  it('demo/index.html plays from YouTube, styles its poster and chapter links, and allows its own styles', () => {
+    const page = read('docs', 'demo', 'index.html');
+    expect(page).not.toContain('video.mp4');
+    expect(page).toMatch(
+      /<a class="chapter" href="https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}&amp;t=\d+s">/,
+    );
+    const style = /<style>([\s\S]*?)<\/style>/.exec(page)?.[1] ?? '';
+    expect(style).toContain('.player img{display:block;width:100%;height:auto}');
+    expect(style).toContain('a.chapter{text-decoration:none}');
+    expect(page).toContain(`style-src 'sha256-${createHash('sha256').update(style).digest('base64')}'`);
   });
 });

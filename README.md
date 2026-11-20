@@ -1,62 +1,50 @@
 <div align="center">
 
-<img src="docs/assets/hero.png" alt="MergeStory. Every change has a story." width="100%">
+<img src="docs/assets/logo.svg" alt="" width="84" height="84">
+
+# MergeStory
+
+### Your pull request. Explained.
+
+MergeStory turns a pull request into a short narrated video:<br>
+**what changed**, **why**, and **what to review**.
+
+[Website](https://mergestory.pinishv.com) · [Watch the film](https://www.youtube.com/watch?v=i4SWSSwX3kM) · [Install](#get-started) · [MergeStory for Chrome](#mergestory-for-chrome)
 
 [![CI](https://github.com/PiniShv/MergeStory/actions/workflows/ci.yml/badge.svg)](https://github.com/PiniShv/MergeStory/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/mergestory.svg)](https://www.npmjs.com/package/mergestory)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-# Your pull request. Explained.
-
-[Website](https://mergestory.pinishv.com) · [Watch the film](https://www.youtube.com/watch?v=Ylp5W4oaAqM) · [Watch the demo](https://www.youtube.com/watch?v=yZaKPyuZN1Q) · [Get started](#get-started)
-
-<sub>"Free" in the film means MergeStory adds no charge with the default settings. [What can still cost money](docs/cost.md#what-can-still-cost-money).</sub>
+<a href="https://mergestory.pinishv.com"><img src="docs/assets/frame-mission.webp" alt="The opening frame of a MergeStory video: Retry temporary failures with exponential backoff. Plus 148, minus 12, across 7 files." width="100%"></a>
 
 </div>
 
 <br>
 
-MergeStory turns a pull request into a short narrated video. It shows what changed, why, and what to review.
+A typical video runs from 25 seconds to 3 minutes. It is made on your machine, and it stays there until you
+share it. Open source, under Apache-2.0.
 
-A typical video runs from 25 seconds to 3 minutes. It has animated architecture diagrams, the real code highlighted line by line, captions and a review checklist.
+## Everything a reviewer needs, in one video
 
-## Reads. Tells. Checks.
+<table>
+<tr>
+<td width="50%"><b>The big picture.</b> An animated diagram shows which parts changed and how they connect.<br><br><img src="docs/assets/frame-diagram.webp" alt="A video frame with a diagram of five components. Two are marked changed and one is marked new."></td>
+<td width="50%"><b>The real code, line by line.</b> The key lines light up as the narrator explains them.<br><br><img src="docs/assets/frame-code.webp" alt="A video frame with the code of a retry loop. Two lines are highlighted, with a short note."></td>
+</tr>
+<tr>
+<td width="50%"><b>Before and after.</b> How behaviour changes, when there is something real to show.<br><br><img src="docs/assets/frame-flow.webp" alt="A video frame with the sequence of one request: no response, a wait, a 503 error, another wait, then 200 OK."></td>
+<td width="50%"><b>What to review.</b> Risky or subtle spots, each with a file and a line.<br><br><img src="docs/assets/frame-review.webp" alt="A video frame with a review checklist of five items, each with a file and line numbers."></td>
+</tr>
+</table>
 
-MergeStory **reads** the change. Your coding agent **tells** the story. The engine **checks** every claim before it renders a single frame.
+These frames are from a real video. [Watch it on YouTube](https://www.youtube.com/watch?v=5WFVH8T0GG4), or open
+its [watch page](https://mergestory.pinishv.com/demo/) with the chapters, the review checklist and every claim,
+linked to the code.
 
-Then you get an MP4, captions (VTT and SRT), a poster image and a local watch page.
+More real videos: [a real pull request of 94 files](https://www.youtube.com/watch?v=x63P-LXSH68) (2:25) and
+[a bug fix you can see](https://www.youtube.com/watch?v=oaLRpW8WOS0) (1:29).
 
-## Every line cites the code.
-
-Every narration line cites evidence from the change. Code on screen is read from the repository, never generated.
-
-Claims nobody can check, like "all tests pass", are removed unless real test results were supplied.
-
-## No MergeStory fee. By design.
-
-By default, MergeStory itself calls no paid service.[^cost] The real cost is your coding agent's usage:
-about 20 cents per video if you pay per token. [See what it costs and why.](#what-it-costs)
-
-## Private by default.
-
-No telemetry. Nothing from your code leaves your machine unless you set it up. Secrets and e-mail addresses are masked in all text: captions, narration, code and logs. Screenshots and recordings you supply are shown as they are, apart from the regions you ask to hide.
-
-## Works with your agent.
-
-An Agent Skill for Claude Code, Codex, GitHub Copilot, Cursor, OpenCode, Goose, Amp, Gemini CLI, Windsurf, Kiro and Cline. Also a CLI, an HTTP API, a library and a GitHub Actions example.
-
----
-
-## See it in action
-
-<!-- demo-video -->
-[![MergeStory explains a change to a weather API client](docs/demo/poster.jpg)](https://mergestory.pinishv.com/demo/)
-
-The video explains a change that adds retries with exponential backoff to a small weather API client.
-[Watch it on YouTube](https://www.youtube.com/watch?v=yZaKPyuZN1Q), or open the
-[watch page](https://mergestory.pinishv.com/demo/) with the chapters and the review checklist.
-
-## What a video looks like
+A video has up to eight chapters:
 
 1. **The mission:** the task and the problem it solves.
 2. **The bug happening:** the steps that show it, with a screenshot or a recording (only when you supply them).
@@ -73,6 +61,45 @@ Real captures that you supply are labelled too: "Actual screenshot" for a screen
 screen recording, the steps of a reproduction are labelled "Reported steps", and "Real output" marks lines
 of a log you supply (see
 [the storyboard guide](docs/storyboard.md)).
+
+## Show the bug, then the fix
+
+Add a screen recording, the steps and real test output. MergeStory puts them in the story and labels each
+one as real. See [the bug-fix demo](examples/bugfix-demo/README.md).
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/frame-bug.webp" alt="A video frame with a screen recording of a basket page. The camera has zoomed in on the count, 23 items, labelled: 23, not 5."></td>
+<td width="50%"><img src="docs/assets/frame-fix.webp" alt="A video frame with two screenshots of the basket page. Before the fix the count reads 23 items. After it, 5 items."></td>
+</tr>
+</table>
+
+## MergeStory for Chrome
+
+**Now playing inside your pull request.** Click the MergeStory link in the comment. The video plays right
+there, next to the code. No new tab.
+
+<a href="https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl"><img src="docs/assets/chrome-in-pr.webp" alt="A pull request page. In a comment, the MergeStory link was clicked, and the video plays inside the comment." width="100%"></a>
+
+- **Made for GitHub.** Each reviewer installs it once. It plays videos on YouTube and Google Drive, and any
+  other link opens as before.
+- **Nothing loads until you click.** No request goes to a video host before that.
+- **No data, no settings, no account.** Free and open source.
+
+**[Add to Chrome](https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl)** · [Watch the 30-second film](https://www.youtube.com/watch?v=80lZhMxjrs0) · [Source](https://github.com/PiniShv/mergestory-chrome)
+
+## In short
+
+- **Every line cites the code.** Each narration line cites evidence from the change, and the code on screen is
+  read from the repository, never generated. Claims nobody can check, like "all tests pass", are removed unless
+  real test results were supplied.
+- **No MergeStory fee.** By default, MergeStory itself calls no paid service.[^cost] The real cost is your coding
+  agent's usage: about 20 cents per video if you pay per token. [See what it costs and why.](#what-it-costs)
+- **Private by default.** No telemetry. Nothing from your code leaves your machine unless you set it up.
+  [See what is protected.](#privacy-and-security)
+- **Works with your agent.** An Agent Skill for Claude Code, Codex, GitHub Copilot, Cursor, OpenCode, Goose, Amp,
+  Gemini CLI, Windsurf, Kiro and Cline. Also a CLI, an HTTP API, a library and a GitHub Actions example.
+  [Install the skill.](#use-it-from-a-coding-agent)
 
 ## Get started
 
@@ -173,15 +200,8 @@ Public links for a private repository are blocked unless you allow them. Set-up 
 [hosting your videos](docs/hosting.md), [publishing to YouTube](docs/youtube.md) and
 [publishing to Google Drive](docs/drive.md).
 
-### Watch inside the pull request
-
-[MergeStory for Chrome](https://chromewebstore.google.com/detail/mergestory/kgchkgdmnjfbkabmmcnmhjkndehhcehl) is a small browser extension from the
-Chrome Web Store ([source](https://github.com/PiniShv/mergestory-chrome)). A
-click on the MergeStory link in the comment plays the video right there, so the reviewer stays on the
-pull request page. It works on GitHub with videos on YouTube and Google Drive, and it loads nothing
-until you click.
-
-▶ [Watch the 30-second film on MergeStory for Chrome.](https://www.youtube.com/watch?v=80lZhMxjrs0)
+With [MergeStory for Chrome](#mergestory-for-chrome), a click on the link in the comment plays the video
+inside the pull request page.
 
 ## Use it in CI
 
@@ -246,10 +266,14 @@ default settings. See [what can still cost money](docs/cost.md#what-can-still-co
 
 MergeStory reads code that may be private, so the defaults are strict: no telemetry, no uploads
 unless configured, a one-time download of the free voice that sends nothing from the change, sensitive files (`.env`, keys, credentials) never shown or sent, secrets masked
-in all text, private links that expire (or permanent links behind your team's sign-in), and read-only
-access to your repository. Details: [SECURITY.md](SECURITY.md).
+in all text (captions, narration, code and logs), private links that expire (or permanent links behind your
+team's sign-in), and read-only access to your repository. Screenshots and recordings you supply are shown as they
+are, apart from the regions you ask to hide. Details: [SECURITY.md](SECURITY.md).
 
 ## How it works
+
+MergeStory **reads** the change. Your coding agent **tells** the story. The engine **checks** every claim before
+it renders a single frame. Then you get an MP4, captions (VTT and SRT), a poster image and a local watch page.
 
 ```mermaid
 flowchart LR
@@ -291,5 +315,7 @@ FFmpeg, so the same input gives the same video. Read [docs/architecture.md](docs
 
 [Apache-2.0](LICENSE). The software is provided "as is", without warranties, and the license limits liability
 (sections 7 and 8). Bundled fonts: Inter and JetBrains Mono (SIL Open Font License 1.1).
+
+GitHub, YouTube, Google Drive and Chrome are trademarks of their owners. MergeStory is not affiliated with them.
 
 [^cost]: MergeStory is open source, and a default run calls no paid service, so MergeStory itself adds no charge. Your coding agent's usage, any model or voice you turn on, storage and CI minutes can still cost money, and their providers bill you. See [what can still cost money](docs/cost.md#what-can-still-cost-money).

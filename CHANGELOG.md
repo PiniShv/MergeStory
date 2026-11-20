@@ -20,6 +20,15 @@ All notable changes to MergeStory are listed here, newest first.
   `2026-11-19` is "November 19, 2026" and `1.0.0.52` is "1 point 0 point 0 point 52". Before, the speech
   engine chose how to read them. Captions still show the text as written.
 
+### Docs
+
+- **Changed:** the website and the README are new. Both show frames of real videos in place of drawings. The
+  website plays every film in one player, which loads only after a click.
+- **Added:** MergeStory for Chrome has its own section on the website and in the README, with a picture of the
+  video playing inside a pull request.
+- **Changed:** a new film, and three demo videos made with this engine: a real pull request of 94 files, a
+  bug fix with a screen recording, and the weather feature. The demo watch page is rendered again.
+
 ## 1.8.0
 
 ### Skill and plugin
