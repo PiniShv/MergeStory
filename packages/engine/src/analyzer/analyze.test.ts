@@ -24,9 +24,9 @@ const lines = (n: number, prefix = 'const v') =>
 
 describe('analyze: sizing and pacing', () => {
   const table: [number, string, number][] = [
-    [20, 'xs', 25],
-    [21, 's', 40],
-    [120, 's', 40],
+    [20, 'xs', 60],
+    [21, 's', 70],
+    [120, 's', 70],
     [121, 'm', 100],
     [400, 'm', 100],
     [401, 'l', 130],
@@ -56,13 +56,13 @@ describe('analyze: sizing and pacing', () => {
       { path: 'src/b/x.ts', base: null, head: lines(5) },
       { path: 'src/c/x.ts', base: null, head: lines(5) },
     ]);
-    expect(analysis.suggestedDurationSec).toBe(35);
+    expect(analysis.suggestedDurationSec).toBe(70);
     const docsOnly = await run([
       { path: 'src/a/x.ts', base: null, head: lines(5) },
       { path: 'docs/a.md', base: null, head: 'a\n' },
       { path: 'docs/b/b.md', base: null, head: 'b\n' },
     ]);
-    expect(docsOnly.analysis.suggestedDurationSec).toBe(25);
+    expect(docsOnly.analysis.suggestedDurationSec).toBe(60);
   });
 });
 
