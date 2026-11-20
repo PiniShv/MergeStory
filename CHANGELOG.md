@@ -6,6 +6,10 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Fixed:** a storyboard can show code from large source files. Files up to 8 MiB (was 1 MiB) are read, for
+  local repositories and for pull requests on GitHub. Before, every code reference into a larger file, such
+  as a big bundled script, failed with `code-ref-unreadable`. Binary files and files over 8 MiB still read as
+  not available.
 - **Changed:** small changes get shorter videos. The suggested length is 25 seconds (was 45) for up to 20
   changed lines, and 40 seconds (was 70) for up to 120. Larger changes keep their length. `--duration`
   still sets the length you choose.
