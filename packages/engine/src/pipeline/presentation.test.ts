@@ -113,6 +113,7 @@ describe('labels of code references', () => {
         {
           provider: 's3',
           watchUrl: 'https://media.example.com/v/index.html',
+          shareUrl: 'https://media.example.com/v/index.html',
           videoUrl: 'https://media.example.com/v/video.mp4',
           posterUrl: null,
           captionsUrl: null,

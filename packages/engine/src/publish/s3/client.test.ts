@@ -79,6 +79,7 @@ describe('S3Publisher with S3-compatible services', () => {
     const result = await publisher.publish(bundle, ctx);
     const keyPrefix = folderOf(result);
     const parsed = new URL(result.watchUrl ?? '');
+    expect(result.shareUrl).toBe(result.watchUrl);
     expect(parsed.host).toBe('acct123.r2.cloudflarestorage.com');
     expect(parsed.pathname).toBe(`/media/${keyPrefix}index.html`);
   });

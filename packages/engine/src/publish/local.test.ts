@@ -58,6 +58,7 @@ describe('LocalPublisher', () => {
     const result = await publishLocally(await makeBundle(), ctx);
     const dir = join(ctx.runDir, 'publish');
     expect(fileURLToPath(result.watchUrl ?? '')).toBe(join(dir, 'index.html'));
+    expect(result.shareUrl).toBeNull();
     expect(fileURLToPath(result.videoUrl)).toBe(join(dir, 'video.mp4'));
     expect(fileURLToPath(result.posterUrl ?? '')).toBe(join(dir, 'poster.jpg'));
     expect(fileURLToPath(result.captionsUrl ?? '')).toBe(join(dir, 'captions.vtt'));

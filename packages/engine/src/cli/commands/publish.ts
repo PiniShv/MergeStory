@@ -35,7 +35,7 @@ async function normalizeRun(run: string, cwd: string): Promise<string> {
 
 /** Who can open the link, in plain words. */
 function describeAccess(publish: PublishResult): string {
-  if (publish.provider === 'local') return 'only on this machine, so nobody else can open these files';
+  if (publish.shareUrl === null) return 'only on this machine, so nobody else can open these files';
   switch (publish.visibility) {
     case 'protected':
       return 'protected: a permanent link that needs a team sign-in';
@@ -68,14 +68,15 @@ export function formatPublishResult(result: GenerateResult, style: Style): strin
       '',
     ].join('\n');
   }
-  const link = publish.watchUrl ?? publish.videoUrl;
   const lines = [
     `${style.green('Published')}: ${result.title}`,
     '',
     ...formatRows(
       [
-        [publish.provider === 'local' ? 'Saved' : 'Shared', link],
-        ['Video', publish.watchUrl && publish.provider !== 'local' ? publish.videoUrl : null],
+        publish.shareUrl === null
+          ? ['Saved', publish.watchUrl ?? publish.videoUrl]
+          : ['Shared', publish.shareUrl],
+        ['Video', publish.shareUrl && publish.shareUrl !== publish.videoUrl ? publish.videoUrl : null],
         ['Access', describeAccess(publish)],
         ['Expires', formatTime(publish.expiresAt)],
         ['Pull request', result.notify ? pullRequestLine(result.notify) : null],

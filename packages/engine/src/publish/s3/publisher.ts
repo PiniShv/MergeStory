@@ -145,6 +145,7 @@ export class S3Publisher implements Publisher {
       return {
         provider: 's3',
         watchUrl: links.watchUrl,
+        shareUrl: links.watchUrl,
         videoUrl: links.urls.video,
         posterUrl: links.urls.poster,
         captionsUrl: links.urls.captions,

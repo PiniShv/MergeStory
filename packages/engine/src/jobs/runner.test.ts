@@ -234,6 +234,7 @@ describe('runJob', () => {
         publish: {
           provider: 's3',
           watchUrl: link.replace('video.mp4', 'index.html'),
+          shareUrl: link.replace('video.mp4', 'index.html'),
           videoUrl: link,
           posterUrl: null,
           captionsUrl: null,

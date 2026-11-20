@@ -225,6 +225,7 @@ export class YouTubePublisher implements Publisher {
     return {
       provider: 'youtube',
       watchUrl,
+      shareUrl: watchUrl,
       videoUrl: watchUrl,
       posterUrl: visibility === 'private' ? null : `https://i.ytimg.com/vi/${created.id}/hqdefault.jpg`,
       captionsUrl: null,

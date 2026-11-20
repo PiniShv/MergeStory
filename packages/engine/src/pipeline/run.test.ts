@@ -122,6 +122,7 @@ let uploads: PublishBundle[];
 const uploaded: PublishResult = {
   provider: 's3',
   watchUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
+  shareUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
   videoUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/video.mp4',
   posterUrl: null,
   captionsUrl: null,

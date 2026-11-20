@@ -483,6 +483,7 @@ describe('a pull request update that did not happen', () => {
   const published = {
     provider: 's3',
     watchUrl: 'https://videos.example.com/v/abc/index.html',
+    shareUrl: 'https://videos.example.com/v/abc/index.html',
     videoUrl: 'https://videos.example.com/v/abc/video.mp4',
     posterUrl: null,
     captionsUrl: null,

@@ -75,6 +75,7 @@ describe('redactResult', () => {
         publish: {
           provider: 's3',
           watchUrl: 'https://files.example.com/v/abc/index.html?X-Amz-Signature=fedcba9876543210',
+          shareUrl: 'https://files.example.com/v/abc/index.html?X-Amz-Signature=fedcba9876543210',
           videoUrl: link,
           posterUrl: null,
           captionsUrl: 'https://files.example.com/v/abc/captions.vtt?sig=abcdef0123456789',
@@ -90,12 +91,33 @@ describe('redactResult', () => {
     expect(redacted.publish?.posterUrl).toBeNull();
   });
 
+  it('keeps the signed query string of the link to share', () => {
+    const shareUrl = 'https://files.example.com/v/abc/index.html?X-Amz-Signature=fedcba9876543210';
+    const redacted = redactResult(
+      result({
+        publish: {
+          provider: 's3',
+          watchUrl: shareUrl,
+          shareUrl,
+          videoUrl: 'https://files.example.com/v/abc/video.mp4',
+          posterUrl: null,
+          captionsUrl: null,
+          expiresAt: null,
+          visibility: 'private',
+          location: 's3://bucket/prefix/',
+        },
+      }),
+    );
+    expect(redacted.publish?.shareUrl).toBe(shareUrl);
+  });
+
   it('still removes a password from a link', () => {
     const redacted = redactResult(
       result({
         publish: {
           provider: 'local',
           watchUrl: null,
+          shareUrl: null,
           videoUrl: 'https://user:hunter2hunter2@files.example.com/video.mp4',
           posterUrl: null,
           captionsUrl: null,

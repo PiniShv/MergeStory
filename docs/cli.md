@@ -658,7 +658,7 @@ mergestory runs [--limit <n>]
 video went ("this machine" or the provider) and its link. A folder without a readable `result.json`, such
 as the folder of a dry run, is left out. `--limit <n>` sets how many to show, from 1 to 500 (default 20). With `--json` it prints
 `{"ok": true, "runs": [{"runId", "runDir", "createdAt", "title", "durationSec", "video", "publish"}]}`,
-where `publish` is `{"provider", "watchUrl", "expiresAt"}` or `null`.
+where `publish` is `{"provider", "watchUrl", "shareUrl", "expiresAt"}` or `null`. `shareUrl` is the link to share, or `null` when the video is only on this machine.
 
 ## `mergestory runs delete`
 
@@ -872,6 +872,7 @@ published video: a signed link stops working without its signature, so it is kep
   "publish": {
     "provider": "s3",
     "watchUrl": "https://...",
+    "shareUrl": "https://...",
     "videoUrl": "https://...",
     "posterUrl": "https://...",
     "captionsUrl": "https://...",
@@ -893,7 +894,7 @@ published video: a signed link stops working without its signature, so it is kep
 | `evidenceUsed` | Every [evidence id](storyboard.md#evidence-ids) that the video cites or shows, each one once. It tells you whether the video used what you supplied, for example a screenshot. |
 | `storyboardSource` | Who wrote the storyboard: `agent` (you passed `--storyboard`), `llm` or `heuristic` (the offline storyboard). |
 | `files` | Paths on this machine. `files.poster` is `null` when no poster image was made (for example when the capture failed). The run still succeeds. `files.watchPage` is the page in `watch/`, which has its own copies of the video, the poster and the captions. `files.watchHtml` is the same page next to `video.mp4`. |
-| `publish` | `null` when you chose `--publish none`, and in the `result.json` of a run whose upload failed (the exit code is then 5). With the default `--publish local` it is `{"provider": "local", ...}` and the links are `file://` links to files on this machine. A local `publish` has no `expiresAt` and counts as `private`. |
+| `publish` | `null` when you chose `--publish none`, and in the `result.json` of a run whose upload failed (the exit code is then 5). With the default `--publish local` it is `{"provider": "local", ...}` and the links are `file://` links to files on this machine. A local `publish` has no `expiresAt`, counts as `private` and has `"shareUrl": null`. |
 | `publish.visibility` | `private`, `protected`, `public`, or `unlisted` (YouTube's link-only mode). |
 | `publish.expiresAt` | When a signed link stops working, or `null` for a link that does not expire. |
 | `notify` | `null` unless you asked for a comment or a description update and it was tried. Then it is `{commentUrl, descriptionUpdated}`. |
@@ -902,7 +903,7 @@ published video: a signed link stops working without its signature, so it is kep
 | `egress` | Every outbound transfer: `destination` (a host name), `purpose`, `bytes` and `contains` (for example `video` or `diff`). |
 | `warnings` | Things worth knowing, in plain words. |
 
-To tell a local-only run from a shared one, look at `publish.provider`. Do not test for `publish === null`.
+When `publish` is null or `publish.shareUrl` is null, nothing was shared. Otherwise the link to post or send is `publish.shareUrl`. For the local provider `shareUrl` is `null` and `publish.watchUrl` is a `file://` link that works only on this machine: never post it. A `result.json` written by an older version has no `shareUrl`; there, treat provider `local` as not shared.
 
 ### The plan of a dry run
 

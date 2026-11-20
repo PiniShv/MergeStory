@@ -12,6 +12,7 @@ import { newRunId, RUN_ID_PATTERN, randomToken } from '../core/ids.ts';
 import { isRecord } from '../core/json.ts';
 import { ensureDir } from '../core/paths.ts';
 import { globalRedactor } from '../core/redact.ts';
+import { withShareUrl } from '../core/run-folder.ts';
 import { canTransition, isTerminal, JOB_STATUSES, type Job, type JobOptions } from './model.ts';
 
 /** true for a well-formed job id. Job ids look like run ids, for example "20261103-214501-a3f9". */
@@ -147,6 +148,10 @@ export class JobStore {
       throw new MergeStoryError('INTERNAL', `The file for job ${id} is damaged.`, { cause: err });
     }
     if (!isJob(parsed)) throw new MergeStoryError('INTERNAL', `The file for job ${id} is damaged.`);
+    const { result } = parsed;
+    if (result && 'publish' in result && result.publish) {
+      return { ...parsed, result: { ...result, publish: withShareUrl(result.publish) } };
+    }
     return parsed;
   }
 

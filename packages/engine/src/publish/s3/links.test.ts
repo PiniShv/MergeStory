@@ -92,6 +92,7 @@ describe('S3Publisher with public links', () => {
     expect(result).toEqual({
       provider: 's3',
       watchUrl: `${base}index.html`,
+      shareUrl: `${base}index.html`,
       videoUrl: `${base}video.mp4`,
       posterUrl: `${base}poster.jpg`,
       captionsUrl: `${base}captions.vtt`,
