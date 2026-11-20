@@ -8,7 +8,7 @@
 import type { Browser, BrowserContext, CDPSession } from 'playwright-core';
 import { MergeStoryError } from '../core/errors.ts';
 import type { Logger } from '../core/logger.ts';
-import { FIT_WARNING_PREFIX, type MergeStoryRuntimeApi, type RenderPlan } from '../core/render-plan.ts';
+import type { LoadResult, MergeStoryRuntimeApi, RenderPlan } from '../core/render-plan.ts';
 import { detectImage } from '../visuals/image.ts';
 
 export const PAGE_CSP =
@@ -114,7 +114,8 @@ export class PlanPage {
   private readonly cdp: CDPSession;
   private blocked = 0;
   private readonly errors: string[] = [];
-  private readonly fitWarnings = new Set<string>();
+  /** Text the runtime could not fit, as reported by load(). */
+  fitProblems: readonly string[] = [];
 
   private constructor(context: BrowserContext, cdp: CDPSession) {
     this.context = context;
@@ -143,8 +144,6 @@ export class PlanPage {
       page.on('pageerror', (error) => instance?.errors.push(error.message));
       page.on('console', (message) => {
         if (message.type() === 'error') instance?.errors.push(message.text());
-        if (message.text().startsWith(FIT_WARNING_PREFIX))
-          instance?.fitWarnings.add(message.text().slice(FIT_WARNING_PREFIX.length));
       });
       await page.setContent(html, { waitUntil: 'load' });
       // After the content: a page that never painted cannot be captured to measure.
@@ -154,11 +153,12 @@ export class PlanPage {
         const host = globalThis as unknown as BrowserGlobals;
         return Promise.all(Array.from(host.document.fonts, (face) => face.load())).then(() => undefined);
       });
-      await within(
+      const loaded = await within(
         page.evaluate((p) => (globalThis as unknown as BrowserGlobals).__MERGESTORY__.load(p), plan),
         LOAD_TIMEOUT_MS,
         'loading the render plan',
       );
+      instance.fitProblems = loaded.fitProblems;
       logger?.debug('Render page ready', { width: plan.width, height: plan.height });
       return instance;
     } catch (err) {
@@ -180,11 +180,6 @@ export class PlanPage {
   /** Errors the page reported (console errors and uncaught exceptions). */
   get pageErrors(): readonly string[] {
     return this.errors;
-  }
-
-  /** Text the runtime could not fit, in plain words (each message once). */
-  get fitProblems(): readonly string[] {
-    return [...this.fitWarnings];
   }
 
   /** Show the frame at `timeSec`. Returns false only when the frame is identical to the previous seek's. */

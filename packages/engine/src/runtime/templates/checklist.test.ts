@@ -78,7 +78,7 @@ describe('cutTitles', () => {
 });
 
 describe('pickLevel', () => {
-  const levels = ['roomy', 'tight', 'smallest'];
+  const levels = ['roomy', 'tight', 'smallest'] as const;
 
   it('uses the first level that fits', () => {
     const result = pickLevel(levels, (l) => measure([l === 'roomy' ? clamped('a') : ok('a')]));
@@ -107,9 +107,5 @@ describe('pickLevel', () => {
   it('keeps the last level and reports what it cuts when nothing fits', () => {
     const result = pickLevel(levels, () => measure([ok('a'), overflowing('b')]));
     expect(result).toEqual({ level: 'smallest', cut: ['b'] });
-  });
-
-  it('refuses an empty table', () => {
-    expect(() => pickLevel([], () => measure([]))).toThrow();
   });
 });

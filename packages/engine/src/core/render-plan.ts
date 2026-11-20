@@ -365,15 +365,17 @@ export interface SeekResult {
   dirty: boolean;
 }
 
+export interface LoadResult {
+  /** Text that does not fit even at the smallest size, in plain words. The renderer logs them. */
+  fitProblems: string[];
+}
+
 export interface MergeStoryRuntimeApi {
   /** Build the DOM for the whole plan and wait until fonts and images are ready. */
-  load(plan: RenderPlan): Promise<void>;
+  load(plan: RenderPlan): Promise<LoadResult>;
   /** Show the frame at an absolute time. Must be a pure function of timeSec. */
   seek(timeSec: number): SeekResult;
 }
-
-/** Console warnings that start with this are text the runtime could not fit; the renderer logs them. */
-export const FIT_WARNING_PREFIX = 'mergestory-fit: ';
 
 /** Logical layout size. All templates are designed for this canvas. */
 export const STAGE_WIDTH = 1920;

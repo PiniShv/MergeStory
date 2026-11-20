@@ -2,7 +2,7 @@
 import type { ChecklistResolved } from '../../core/render-plan.ts';
 import { ease, enter } from '../anim.ts';
 import { css, h } from '../dom.ts';
-import { reportFit, truncatePath } from '../fit.ts';
+import { truncatePath } from '../fit.ts';
 import { grow, rise } from '../motion.ts';
 import type { SceneInstance, TemplateFactory } from '../types.ts';
 
@@ -121,7 +121,7 @@ export interface Level {
  * trade size for lines; the smallest sizes are still easy to read on the 1920 px canvas.
  * One column of up to three cards.
  */
-export const LIST_LEVELS: Level[] = [
+export const LIST_LEVELS: NonEmpty<Level> = [
   { title: 38, detail: 30, pad: 26, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 36, detail: 30, pad: 22, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 6, titleLines: 2, detailLines: 2, chip: 36, ref: 40 },
@@ -131,7 +131,7 @@ export const LIST_LEVELS: Level[] = [
 ];
 
 /** Two columns, two rows (four items). */
-export const GRID_LEVELS: Level[] = [
+export const GRID_LEVELS: NonEmpty<Level> = [
   { title: 36, detail: 30, pad: 22, gap: 14, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 10, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
   { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 2, detailLines: 3, chip: 36, ref: 40 },
@@ -140,7 +140,7 @@ export const GRID_LEVELS: Level[] = [
 ];
 
 /** Two columns, three rows (five or six items). */
-export const DENSE_LEVELS: Level[] = [
+export const DENSE_LEVELS: NonEmpty<Level> = [
   { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
   { title: 30, detail: 26, pad: 12, gap: 6, titleLines: 2, detailLines: 2, chip: 34, ref: 38 },
   { title: 28, detail: 24, pad: 10, gap: 4, titleLines: 2, detailLines: 3, chip: 34, ref: 38 },
@@ -148,8 +148,12 @@ export const DENSE_LEVELS: Level[] = [
 
 /** Height of the card area in grid mode, in pixels. */
 const GRID_HEIGHT = 612;
+/** Space between the heading and the list. */
+const LIST_GAP = 16;
 
-export function checklistLevels(count: number): Level[] {
+type NonEmpty<T> = readonly [T, ...T[]];
+
+export function checklistLevels(count: number): NonEmpty<Level> {
   if (count <= 3) return LIST_LEVELS;
   return count === 4 ? GRID_LEVELS : DENSE_LEVELS;
 }
@@ -191,15 +195,14 @@ export function cutTitles(m: Measure): string[] {
  * and the items it cuts are returned. `measure` applies the level, then measures.
  */
 export function pickLevel<L>(
-  levels: readonly L[],
+  levels: NonEmpty<L>,
   measure: (level: L) => Measure,
 ): { level: L; cut: string[] } {
-  let result: { level: L; cut: string[] } | undefined;
-  for (const level of levels) {
-    result = { level, cut: cutTitles(measure(level)) };
+  let result = { level: levels[0], cut: cutTitles(measure(levels[0])) };
+  for (const level of levels.slice(1)) {
     if (result.cut.length === 0) break;
+    result = { level, cut: cutTitles(measure(level)) };
   }
-  if (!result) throw new Error('A checklist needs at least one level.');
   return result;
 }
 
@@ -251,7 +254,15 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
       main,
       ref,
     );
-    return { el, stripe, sev, name, detail, start: item.start };
+    return {
+      el,
+      stripe,
+      sev,
+      parts: ref ? [main, ref] : [main],
+      clamps: detail ? [name, detail] : [name],
+      title: item.title,
+      start: item.start,
+    };
   });
 
   const gridEl = h(
@@ -281,23 +292,23 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
     set('--chk-chip', `${level.chip}px`);
     set('--chk-ref', `${level.ref}px`);
   };
+  const listRoom = () => root.clientHeight - head.offsetHeight - LIST_GAP;
   // Text that the line limit hides still counts in scrollHeight. Grid rows have a fixed height and centre
   // their content, so overflow there is clipped at both ends and scrollHeight misses it: compare offsets.
   const measure = (level: Level): Measure => {
     apply(level);
     return {
-      cards: cards.map((c, i) => {
-        const parts = Array.from(c.el.children).filter((el) => el !== c.stripe) as HTMLElement[];
-        const top = Math.min(...parts.map((el) => el.offsetTop));
-        const bottom = Math.max(...parts.map((el) => el.offsetTop + el.offsetHeight));
+      cards: cards.map((c) => {
+        const top = Math.min(...c.parts.map((el) => el.offsetTop));
+        const bottom = Math.max(...c.parts.map((el) => el.offsetTop + el.offsetHeight));
         return {
-          title: items[i]!.title,
-          clamps: [c.name, c.detail].filter((el): el is HTMLDivElement => el !== null),
+          title: c.title,
+          clamps: c.clamps,
           content: bottom - top,
           inner: c.el.clientHeight - 2 * level.pad,
         };
       }),
-      listOverflow: !grid && gridEl.offsetHeight > root.clientHeight - head.offsetHeight - 16 - 2,
+      listOverflow: !grid && gridEl.offsetHeight > listRoom() - 2,
     };
   };
 
@@ -306,16 +317,15 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
     layout() {
       // Even the smallest level may cut some text: say so, because a reviewer would miss that part.
       const lost = pickLevel(checklistLevels(items.length), measure).cut;
-      if (lost.length > 0) {
-        reportFit(
-          `The review checklist cuts text that does not fit, even at the smallest size: ${lost.map((t) => `"${t}"`).join(', ')}. Shorten these items.`,
-        );
-      }
       // One or two cards used to sit at the top with the lower half empty: center a short list.
       if (!grid) {
-        const spare = root.clientHeight - head.offsetHeight - 16 - gridEl.offsetHeight;
-        gridEl.style.marginTop = `${16 + Math.max(0, spare / 2)}px`;
+        gridEl.style.marginTop = `${LIST_GAP + Math.max(0, (listRoom() - gridEl.offsetHeight) / 2)}px`;
       }
+      return lost.length
+        ? [
+            `The review checklist cuts text that does not fit, even at the smallest size: ${lost.map((t) => `"${t}"`).join(', ')}. Shorten these items.`,
+          ]
+        : [];
     },
     update(t) {
       rise(sw, head, enter(t, 0.15, 0.6), 16);

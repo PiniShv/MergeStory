@@ -2,7 +2,6 @@
  * Text fitting. Measuring needs a laid-out DOM with the final fonts, so the runtime calls it
  * once at load time (after fonts are ready). Results depend only on content, never on time.
  */
-import { FIT_WARNING_PREFIX } from '../core/render-plan.ts';
 
 /**
  * Shrink an element's font size in steps until its content fits its box (or the minimum is reached).
@@ -23,11 +22,6 @@ export function fitText(
     el.style.fontSize = `${size}px`;
   }
   return size;
-}
-
-/** Tell the engine that text did not fit; the renderer shows it as a warning. Never changes layout. */
-export function reportFit(message: string): void {
-  console.warn(`${FIT_WARNING_PREFIX}${message}`);
 }
 
 /** Whole text lines in a block, from its scroll height. Tolerates sub-pixel rounding. */
