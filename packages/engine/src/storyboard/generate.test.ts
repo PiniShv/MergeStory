@@ -198,9 +198,9 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 2426 words today. The rules on saying names, sources, claim strength, the word budget, review
-    // items, the key change as code and one focus per beat added 84 to the 2342 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2431);
+    // 2422 words today. The rules on saying names, sources, claim strength, the word budget, review
+    // items, the key change as code and one focus per beat added 80 to the 2342 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2427);
   });
 
   it('states every limit that the validator enforces', () => {

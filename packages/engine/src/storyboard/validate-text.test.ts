@@ -571,12 +571,14 @@ describe('length', () => {
     // 53 words: within 15% of the budget of a 20-second video (50 words), far over a 10-second one (25).
     expect(codes((await validateStoryboard(sb, { ...fx.deps, targetSec: 20 })).warnings)).toEqual([]);
     const over = await validateStoryboard(sb, { ...fx.deps, targetSec: 10 });
-    expect(over.warnings).toEqual([expect.objectContaining({ path: 'scenes', code: 'over-budget' })]);
+    expect(over.warnings).toEqual([
+      expect.objectContaining({ path: 'scenes', code: 'narration-over-budget' }),
+    ]);
     expect(over.warnings[0]!.message).toContain('the budget for a 10-second video is 25;');
     // No target, or the offline storyboard, which fits the budget itself: nothing to say.
     expect(codes((await run(sb, fx)).warnings)).toEqual([]);
     const offline = await validateStoryboard(sb, { ...fx.deps, targetSec: 10, offline: true });
-    expect(codes(offline.warnings)).not.toContain('over-budget');
+    expect(codes(offline.warnings)).not.toContain('narration-over-budget');
   });
 });
 

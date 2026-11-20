@@ -65,9 +65,9 @@ describe('quoting the author', () => {
   it('quotes the note that names a symbol on screen, with its source', () => {
     const fx = noted();
     const { scene } = codeScenes(make(fx, 300))[0]!;
-    const quote = lines(scene).find((line) => line.startsWith('The notes say:'));
+    const quote = lines(scene).find((line) => line.startsWith('The author writes:'));
     expect(quote).toBe(
-      'The notes say: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
+      'The author writes: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
     );
     const at = lines(scene).indexOf(quote!);
     expect(scene.narration[at]!.evidence).toEqual(['NOTES', 'F1.H1', 'S1']);
@@ -86,13 +86,13 @@ describe('quoting the author', () => {
     const storyboard = make(noted(), 300);
     const quotes = storyboard.scenes
       .flatMap((s) => lines(s))
-      .filter((line) => line.startsWith('The notes say:'));
+      .filter((line) => line.startsWith('The author writes:'));
     expect(new Set(quotes).size).toBe(quotes.length);
   });
 
   it('does not quote anything when no note names the code on screen', () => {
     const fx = noted({ inputs: { notes: '- The weather was nice while this was written.' } });
-    expect(narration(make(fx, 300))).not.toContain('The notes say');
+    expect(narration(make(fx, 300))).not.toContain('The author writes');
     expect(make(fx, 300).uncertainties).toHaveLength(1);
   });
 
@@ -113,7 +113,7 @@ describe('quoting the author', () => {
   it('is valid, and leaves quotes out at the leanest level', async () => {
     const fx = noted();
     expect(await expectCleanStoryboard(fx.deps, make(fx, 300))).toEqual([]);
-    expect(narration(make(fx, 1))).not.toContain('The notes say');
+    expect(narration(make(fx, 1))).not.toContain('The author writes');
   });
 });
 
@@ -282,7 +282,7 @@ describe('review scene', () => {
     });
     const scene = byRole(make(fx, 300), 'review')[0]!;
     expect(lines(scene)[1]).toBe(
-      'The notes flag this for review: retrying a request is only safe because of the attempt limit; and the timeout applies per attempt.',
+      'The author flags this for review: retrying a request is only safe because of the attempt limit; and the timeout applies per attempt.',
     );
     expect(scene.visual.type === 'checklist' && scene.visual.items[0]).toMatchObject({
       title: 'Retrying a request is only safe because of the attempt limit',

@@ -45,7 +45,7 @@ export type IssueCode =
   | 'title-missing-source'
   | 'repeated-line'
   | 'over-length'
-  | 'over-budget'
+  | 'narration-over-budget'
   | 'review-item-no-ref'
   | 'review-item-question'
   | 'key-change-not-code'

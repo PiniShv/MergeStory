@@ -64,7 +64,7 @@ wanted is gone:
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. | Check the lines that are shown. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. | Show fewer lines, and mark the ones you discuss in `focus`. |
 | `repeated-line` | A narration line repeats an earlier one. | Cut the line, or replace it with a fact the video has not said yet. |
-| `over-budget` | The narration is more than 15% over the word budget for the target length. | Cut lines or scenes until it fits. |
+| `narration-over-budget` | The narration is more than 15% over the word budget for the target length. | Cut lines or scenes until it fits. |
 | `key-change-not-code` | The first under-the-hood scene does not show code. | Show the key change as a `code` visual, or a `before-after` with a code panel. |
 | `focus-same-beat` | Two focus ranges of one code visual share a beat. Only one is lit at a time. | Give each range its own narration line and beat. |
 | `review-item-no-ref` | A review scene item has no `ref`. | Point it at the file and lines to read. |

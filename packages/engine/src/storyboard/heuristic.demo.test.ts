@@ -199,14 +199,14 @@ describe('the offline storyboard for the demo change', () => {
     const board = storyboard(300);
     const text = board.scenes.flatMap(sentences);
     expect(text).toContain(
-      'The notes say: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
+      'The author writes: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
     );
     expect(text).toContain(
-      'The notes say: getForecast is a GET with no side effects, so sending it again is safe.',
+      'The author writes: getForecast is a GET with no side effects, so sending it again is safe.',
     );
     const review = ofRole(board, 'review')[0]!;
     expect(sentences(review)[1]).toBe(
-      'The notes flag this for review: the timeout applies per attempt, so the worst-case total time grows with retries; and a long Retry-After is used as sent, without the maxDelayMs cap.',
+      'The author flags this for review: the timeout applies per attempt, so the worst-case total time grows with retries; and a long Retry-After is used as sent, without the maxDelayMs cap.',
     );
     expect(board.uncertainties.some((u) => u.includes('the author’s words'))).toBe(true);
   });

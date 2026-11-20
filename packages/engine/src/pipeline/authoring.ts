@@ -7,7 +7,7 @@ import { estimateTokens } from '../core/cost.ts';
 import { changeLabel, fullChangeLabel } from '../core/labels.ts';
 import { runFolder, writeRunJson } from '../core/run-folder.ts';
 import { wordBudget } from '../core/storyboard-facts.ts';
-import { storyboardJsonSchema } from '../core/storyboard-schema.ts';
+import { STORYBOARD_LIMITS, storyboardJsonSchema } from '../core/storyboard-schema.ts';
 import {
   AUTHORING_VALUES,
   guideFor,
@@ -88,7 +88,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
   return [
     '# Writing the storyboard',
     '',
-    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total). Stay within it: \`validate\` warns (over-budget) when the narration is more than 15% over it.`,
+    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total). Stay within it: \`validate\` warns (narration-over-budget) when the narration is more than ${STORYBOARD_LIMITS.overBudgetPercent}% over it.`,
     `Longest video: ${p.config.maxDurationSec} seconds. When a storyboard is estimated to be longer, \`validate\` warns (over-length) and \`generate\` leaves out the least important scenes and lines (never the mission or the review scene).`,
     `Style: ${p.config.style}. Narration language: ${p.config.language}.`,
     '',

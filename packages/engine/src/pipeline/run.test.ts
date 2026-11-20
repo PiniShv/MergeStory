@@ -1026,7 +1026,7 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     });
     const guide = await readFile(result.files.guide, 'utf8');
     expect(guide).toContain(
-      'Stay within it: `validate` warns (over-budget) when the narration is more than 15% over it.',
+      'Stay within it: `validate` warns (narration-over-budget) when the narration is more than 15% over it.',
     );
     expect(guide).toContain(
       '`validate` warns (over-length) and `generate` leaves out the least important scenes and lines',
@@ -1036,7 +1036,9 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     const board = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
     expect(narrationWords(board)).toBeGreaterThan(budget);
     const checked = await checkStoryboard({ ...options(), storyboard: board });
-    expect(checked.warnings.filter((w) => w.code === 'over-length' || w.code === 'over-budget')).toEqual([]);
+    expect(
+      checked.warnings.filter((w) => w.code === 'over-length' || w.code === 'narration-over-budget'),
+    ).toEqual([]);
     const planned = await plan({ storyboard: board });
     expect(planned.scenes).toHaveLength(board.scenes.length);
     expect(planned.warnings.filter((w) => w.includes('--max-duration'))).toEqual([]);

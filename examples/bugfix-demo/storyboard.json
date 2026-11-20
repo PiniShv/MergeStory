@@ -11,7 +11,7 @@
       "title": "The mission",
       "narration": [
         {
-          "text": "The basket page counted its items wrongly. This change fixes the count.",
+          "text": "For 2 and 3, the basket said 23 items. This fixes it.",
           "evidence": ["CM1", "TASK"]
         }
       ],
@@ -32,15 +32,15 @@
       "title": "The steps that show the bug",
       "narration": [
         {
-          "text": "In the reproduction, someone opens the basket page.",
+          "text": "Open the basket page.",
           "evidence": ["REPRO.1"]
         },
         {
-          "text": "Then they type 2 for the trail mix and 3 for the oat bars.",
+          "text": "Type 2 and 3.",
           "evidence": ["REPRO.2"]
         },
         {
-          "text": "The reproduction shows the page saying 23 items. That is the bug.",
+          "text": "It says 23 items.",
           "evidence": ["REPRO.3"]
         }
       ],
@@ -58,11 +58,11 @@
       "title": "The bug on the page",
       "narration": [
         {
-          "text": "This is the bug, on the basket page. Someone types 2 trail mix and 3 oat bars.",
+          "text": "This is the real page.",
           "evidence": ["TASK", "RC1"]
         },
         {
-          "text": "The page then says 23 items, not 5.",
+          "text": "23 items, not 5.",
           "evidence": ["TASK", "RC1"]
         }
       ],
@@ -71,7 +71,7 @@
         "recordingId": "RC1",
         "caption": null,
         "trim": null,
-        "speed": null,
+        "speed": 3,
         "zoom": null,
         "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.36, "h": 0.14, "label": "23, not 5", "beat": 1 }],
         "focus": { "x": 0.02, "y": 0.5, "w": 0.5, "h": 0.3 }
@@ -86,11 +86,11 @@
       "title": "The cause in basketCount",
       "narration": [
         {
-          "text": "The cause is in basketCount. The quantity fields give text, so the plus sign joined the two values.",
+          "text": "The fields give text, so the plus joined 2 and 3 into 23.",
           "evidence": ["S1", "F1.H1", "NOTES"]
         },
         {
-          "text": "The fix turns both values into numbers with Number, before it adds them.",
+          "text": "The fix turns both into numbers first.",
           "evidence": ["S1", "F1.H1", "NOTES"]
         }
       ],
@@ -114,11 +114,11 @@
       "title": "The page after the fix",
       "narration": [
         {
-          "text": "After the fix, the same steps give the right answer. Someone types 2 trail mix and 3 oat bars.",
+          "text": "Same steps, with the fix.",
           "evidence": ["TASK", "RC2"]
         },
         {
-          "text": "The basket now says 5 items.",
+          "text": "Now it says 5.",
           "evidence": ["TASK", "RC2"]
         }
       ],
@@ -127,7 +127,7 @@
         "recordingId": "RC2",
         "caption": null,
         "trim": null,
-        "speed": null,
+        "speed": 3,
         "zoom": null,
         "highlights": [{ "x": 0.05, "y": 0.58, "w": 0.32, "h": 0.14, "label": "5 items", "beat": 1 }],
         "focus": null
@@ -142,11 +142,11 @@
       "title": "The real output",
       "narration": [
         {
-          "text": "This is the real output of a small check that runs the fixed code. The old way joined the text and gave 23.",
+          "text": "The real check: joined text gives 23.",
           "evidence": ["L1.2", "T2"]
         },
         {
-          "text": "The fixed code adds the numbers and gives 5 items.",
+          "text": "Added numbers give 5 items.",
           "evidence": ["L1.3", "T2"]
         }
       ],
@@ -171,7 +171,7 @@
       "title": "Before and after",
       "narration": [
         {
-          "text": "Side by side, the same two quantities. Before the fix the count reads 23 items. After it, the count reads 5 items.",
+          "text": "Side by side: 23 before, 5 after.",
           "evidence": ["TASK", "SS1", "SS2"]
         }
       ],
@@ -209,11 +209,11 @@
       "title": "What to check",
       "narration": [
         {
-          "text": "The notes ask for one check. Number also accepts values such as 1e2, and the page does not block them.",
+          "text": "Number also accepts values like 1e2, which the page does not block.",
           "evidence": ["NOTES", "F1.H1"]
         },
         {
-          "text": "The coding agent reported that npm test passed.",
+          "text": "The coding agent reported npm test passed.",
           "evidence": ["T1"]
         }
       ],
@@ -232,28 +232,6 @@
       },
       "visualDescription": "One review point about the values that Number accepts.",
       "transition": "slide",
-      "targetSeconds": null
-    },
-    {
-      "id": "s8",
-      "role": "conclusion",
-      "title": "Wrap up",
-      "narration": [
-        {
-          "text": "In short, basketCount now adds numbers, not text. Two and three give five.",
-          "evidence": ["S1", "F1.H1"]
-        }
-      ],
-      "visual": {
-        "type": "summary",
-        "points": [
-          { "text": "basketCount turns both quantities into numbers", "beat": 0 },
-          { "text": "A new test file covers text quantities", "beat": 0 }
-        ],
-        "closing": null
-      },
-      "visualDescription": "A short list of what changed.",
-      "transition": "fade",
       "targetSeconds": null
     }
   ],

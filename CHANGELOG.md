@@ -30,6 +30,14 @@ All notable changes to MergeStory are listed here, newest first.
 - **Fixed:** the voice reads clock times, dates and versions as a person says them. `17:00` is "5 PM",
   `2026-11-19` is "November 19, 2026" and `1.0.0.52` is "1 point 0 point 0 point 52". Before, the speech
   engine chose how to read them. Captions still show the text as written.
+- **Changed:** the storyboard guide asks for fewer spoken code names (say a name once, only when a reviewer
+  will search for it; describe constants, casts and symbols in words), keeps a source's wording at its
+  strength ("should" stays "should"), treats the word budget as a limit, shows the key change as real code,
+  and gives a formula for each review item: a risk this change adds, the fact, then what to check, with file
+  and lines.
+- **Added:** five `validate` warnings: `narration-over-budget` (more than 15% over the word budget),
+  `review-item-no-ref`, `review-item-question`, `key-change-not-code` and `focus-same-beat` (two focus ranges
+  on one beat, of which only one is lit). The offline storyboard is not checked for them.
 
 ### Docs
 

@@ -504,4 +504,6 @@ export const STORYBOARD_LIMITS = {
   minFocusSide: 0.2,
   /** Average speaking rate used to estimate narration length before speech exists. */
   wordsPerSecond: 2.5,
+  /** `validate` warns when the narration is more than this percentage over the word budget. */
+  overBudgetPercent: 15,
 } as const;

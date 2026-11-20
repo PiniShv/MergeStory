@@ -293,7 +293,7 @@ Pick the visual that shows the real thing. The engine draws it from real data.
 - code: a CodeRef to real lines, mode "diff" for changed lines or "snippet" for context, and focus ranges. The engine reads the code itself. Never paste code.
 - before-after: two panels. A panel shows code (a CodeRef), bullets, a screenshot, a recording or a terminal. For one small changed function, show its old lines (side "base") and its new lines (side "head").
 - terminal, browser: simulated. See "Simulated visuals".
-- checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and an optional CodeRef. In "detail", do not repeat "title" or the file and line: "ref" has them.
+- checklist: up to ${LIMITS.maxChecklistItems} review items, each with a severity and a CodeRef in "ref". In "detail", do not repeat "title" or the file and line: "ref" has them.
 - bullets: up to ${LIMITS.maxBullets} short points.
 - screenshot: only a screenshot id that was supplied (SS1, SS2, ...). Point at the part that matters with "highlights": up to ${LIMITS.maxHighlights} boxes, each with a "beat" and a "label" of up to ${LIMITS.maxHighlightLabelLength} characters. When that part is small, set "focus" to zoom the camera slowly into it. Boxes are fractions of the picture, from 0 to 1. A screenshot panel in before-after takes "highlights" too.
 - recording: only a supplied recording id (RC1, ...). The scene lasts as long as its narration (about ${LIMITS.wordsPerSecond} words a second): write enough for the clip, or set "speed". A clip that ends early stays on its last frame. "highlights" and "focus" work as on a screenshot.
@@ -333,7 +333,7 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 
 ## Narration
 
-- Write for the ear: short sentences, one idea each, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. The word budget in the task line is a limit: stay within it, and give each scene its share (the key change gets the most).
+- Write for the ear: short sentences, one idea each, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. The word budget in the task line is a limit: stay within it. The key change gets the most words.
 - One or two sentences per line, at most ${LIMITS.maxWordsPerNarrationLine} words. One to six lines per scene.
 - No markdown, no lists, no emoji.
 - The viewer has never seen the evidence pack. Do not say "the pack" or "the evidence pack"; say what the change shows. The engine warns about these words.

@@ -501,7 +501,7 @@ describe('the offline storyboard for changes read by the real analyzer', () => {
     const change = await CASES['a Python module with a new function, a modified one and a test']!();
     const code = change.storyboard(300).scenes.find((s) => s.visual.type === 'code')!;
     expect(sentences(code)).toContain(
-      'The notes say: total_with_bonus adds a flat BONUS_RATE of 20 percent to the sum of the line prices.',
+      'The author writes: total_with_bonus adds a flat BONUS_RATE of 20 percent to the sum of the line prices.',
     );
   });
 

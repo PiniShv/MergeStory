@@ -727,17 +727,15 @@ function checkRepeatedLines(storyboard: Storyboard, run: Run): void {
   }
 }
 
-/** Narration more than this percentage of the word budget makes a video that runs well past its target length. */
-const OVER_BUDGET_PERCENT = 115;
-
 function checkWordBudget(storyboard: Storyboard, run: Run): void {
   if (run.targetSec === null) return;
   const budget = wordBudget(run.targetSec);
   const words = narrationWords(storyboard);
-  if (words * 100 <= budget * OVER_BUDGET_PERCENT) return;
+  // Narration well over the budget makes a video that runs well past its target length.
+  if (words * 100 <= budget * (100 + LIMITS.overBudgetPercent)) return;
   run.warn(
     'scenes',
-    'over-budget',
+    'narration-over-budget',
     `the narration has ${words} words, but the budget for a ${run.targetSec}-second video is ${budget}; cut lines or scenes until it fits`,
   );
 }

@@ -137,7 +137,7 @@ The offline generator and the length estimate use a speaking rate of 2.5 words a
 (150 seconds by default) trims a storyboard before narration, least important scenes first. The reproduction
 and proof scenes go last, after every other scene that can be dropped. The mission and review scenes
 always stay. The target length that `analyze` gives sets a word budget, and a storyboard stays within it:
-`validate` warns when the narration is more than 15% over it (`over-budget`). Narration over the budget is
+`validate` warns when the narration is more than 15% over it (`narration-over-budget`). Narration over the budget is
 kept as it is. Only a storyboard that is estimated to be longer than `--max-duration` is trimmed, and
 `validate` warns about it first (`over-length`).
 
@@ -385,7 +385,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
-| `over-budget` | The narration has more than 15% more words than the budget for the target length. Cut lines or scenes. Not checked for the offline storyboard. |
+| `narration-over-budget` | The narration has more than 15% more words than the budget for the target length. Cut lines or scenes. Not checked for the offline storyboard. |
 | `key-change-not-code` | The first `under-the-hood` scene is not a `code` visual or a `before-after` with a code panel. Show the key change as real code. |
 | `focus-same-beat` | Two focus ranges of one `code` visual share a beat. The view lights one range at a time, so the voice talks about lines that are not lit. Give each range its own narration line. Not checked for the offline storyboard. |
 | `review-item-no-ref` | An item of the review scene's checklist has no `ref`. Point it at the file and lines to read. Not checked for the offline storyboard. |
