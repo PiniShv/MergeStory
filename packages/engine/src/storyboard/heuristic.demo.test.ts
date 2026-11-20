@@ -225,7 +225,7 @@ describe('the offline storyboard for the demo change', () => {
 describe('the hand-written storyboard of the demo', () => {
   it('stays valid for the demo change, with nothing repaired and nothing to warn about', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as unknown;
-    expect(await expectCleanStoryboard(demo, written as Storyboard)).toEqual([]);
+    expect(await expectCleanStoryboard(demo, written as Storyboard, false)).toEqual([]);
   });
 
   it('keeps every code range on screen, with the highlights inside it', async () => {

@@ -11,7 +11,7 @@
       "title": "The mission",
       "narration": [
         {
-          "text": "The shop page showed a total a hundred times too big. Two changes fix it, one in orders-api and one in storefront.",
+          "text": "The shop page showed totals a hundred times too big. Both repositories change to fix it.",
           "evidence": ["TASK", "A.CM1", "B.CM1"]
         }
       ],
@@ -32,7 +32,7 @@
       "title": "The wrong total",
       "narration": [
         {
-          "text": "An order of twelve euros fifty showed as one thousand two hundred fifty. The service sent cents as total, and the page showed them as euros.",
+          "text": "Twelve euros fifty showed as one thousand two hundred fifty: cents shown as euros.",
           "evidence": ["TASK", "A.F1.H1", "B.F2.H1"]
         }
       ],
@@ -59,7 +59,7 @@
           "evidence": ["A.S1", "A.F1.H1"]
         },
         {
-          "text": "The helper behind it is renamed orderTotalCents to match.",
+          "text": "Its helper is renamed orderTotalCents.",
           "evidence": ["A.S2", "A.F3.H1"]
         }
       ],
@@ -83,11 +83,11 @@
       "title": "storefront reads cents",
       "narration": [
         {
-          "text": "In storefront, formatMoney now takes cents. It divides them by one hundred before it shows two decimals.",
+          "text": "In storefront, formatMoney now takes cents and divides them by one hundred.",
           "evidence": ["B.S1", "B.F1.H1"]
         },
         {
-          "text": "The page passes it totalCents and the currency from the answer.",
+          "text": "The page passes it totalCents and the currency.",
           "evidence": ["B.S2", "B.F2.H1"]
         }
       ],
@@ -108,15 +108,15 @@
       "title": "How the two fit",
       "narration": [
         {
-          "text": "The page in storefront asks orders-api for an order.",
+          "text": "The page asks orders-api for an order.",
           "evidence": ["B.M1", "A.M1"]
         },
         {
-          "text": "The answer now carries totalCents and the currency.",
+          "text": "The answer carries cents and the currency.",
           "evidence": ["A.S1", "A.F1.H1"]
         },
         {
-          "text": "The page reads both, so the total shows as the right price.",
+          "text": "The page shows the right price.",
           "evidence": ["B.S2", "B.F2.H1"]
         }
       ],
@@ -168,11 +168,11 @@
       "title": "What to check",
       "narration": [
         {
-          "text": "Two checks. orders-api no longer exports orderTotal, so look for other callers.",
+          "text": "orders-api no longer exports orderTotal, so look for other callers.",
           "evidence": ["A.R1", "A.S3"]
         },
         {
-          "text": "formatMoney now takes cents, so check its other callers too.",
+          "text": "formatMoney now takes cents, so check its callers too.",
           "evidence": ["B.R1", "B.S1"]
         }
       ],

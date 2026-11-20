@@ -11,7 +11,7 @@
       "title": "The mission",
       "narration": [
         {
-          "text": "The weather client now retries temporary failures on its own.",
+          "text": "The weather client now retries temporary failures.",
           "evidence": ["CM1", "F6", "TASK"]
         }
       ],

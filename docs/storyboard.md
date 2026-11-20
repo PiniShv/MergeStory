@@ -136,9 +136,10 @@ The checker trims what is over a limit and says so in `fixes`. Too few scenes is
 The offline generator and the length estimate use a speaking rate of 2.5 words a second. `--max-duration`
 (150 seconds by default) trims a storyboard before narration, least important scenes first. The reproduction
 and proof scenes go last, after every other scene that can be dropped. The mission and review scenes
-always stay. The target length that `analyze` gives is a guide, not a limit: narration over its
-word budget is kept as it is. Only a storyboard that is estimated to be longer than `--max-duration` is
-trimmed, and `validate` warns about it first (`over-length`).
+always stay. The target length that `analyze` gives sets a word budget, and a storyboard stays within it:
+`validate` warns when the narration is more than 15% over it (`over-budget`). Narration over the budget is
+kept as it is. Only a storyboard that is estimated to be longer than `--max-duration` is trimmed, and
+`validate` warns about it first (`over-length`).
 
 ## Evidence ids
 
@@ -178,8 +179,8 @@ ids of several repositories. An id without its letter (`F1`) is removed with a n
 exist (`A.F1` or `B.F1`).
 
 Cite ids on every narration line. `TASK`, `NOTES` and `REPRO` are the author's words and are not checked against
-the code. Use them for the reason behind the change, and say whose words they are ("the notes say ...", "the
-reproduction shows ..."). A reproduction shows what its author saw. It does not prove anything about the code,
+the code. Use them for the reason behind the change, and say a source's claim as a claim ("the ticket asks
+for ...", "the reproduction shows ..."). Never say "the notes say": the viewer cannot see the notes. A reproduction shows what its author saw. It does not prove anything about the code,
 and it is not backing evidence for a simulated visual.
 
 ## Visuals
@@ -384,6 +385,11 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `log-range-out-of-range` | The lines of a log visual reached outside the log. They were cut to fit. |
 | `log-too-long` | A log visual would show more than 18 lines. The lines were shortened from the end. |
 | `over-length` | The narration is longer than the maximum. `generate` leaves out the least important scenes and lines. |
+| `over-budget` | The narration has more than 15% more words than the budget for the target length. Cut lines or scenes. Not checked for the offline storyboard. |
+| `key-change-not-code` | The first `under-the-hood` scene is not a `code` visual or a `before-after` with a code panel. Show the key change as real code. |
+| `focus-same-beat` | Two focus ranges of one `code` visual share a beat. The view lights one range at a time, so the voice talks about lines that are not lit. Give each range its own narration line. Not checked for the offline storyboard. |
+| `review-item-no-ref` | An item of the review scene's checklist has no `ref`. Point it at the file and lines to read. Not checked for the offline storyboard. |
+| `review-item-question` | The `detail` of an item in the review scene is only a question. State the fact, then what to check. Not checked for the offline storyboard. |
 | `repeated-line` | A narration line says again what an earlier line said, with almost the same words and the same names. Cut it or say something new. Not checked for the offline storyboard. |
 | `title-missing-source` | Several sources: the first title card does not hold the repository name and `#<number>` of every source that is a pull request. The kicker was set to the names of all the changes when they fit in 60 characters. Otherwise write the names yourself. |
 
@@ -446,10 +452,15 @@ repository it is in. [`examples/two-repos-demo/`](../examples/two-repos-demo/REA
 
 Rules of thumb for a good storyboard:
 
-- State what the code does, with the real names and values. A reviewer learns more from "withRetry wraps each
+- State what the code does, with the real values. A reviewer learns more from "withRetry wraps each
   attempt" than from "a helper handles retries".
 - Write for the ear: short sentences, plain words, no markdown, no filler such as "powerful" or "seamless".
-  Say a function name naturally, and never read a file path out loud.
+  Say a name only when a reviewer will search for it, and only once. Describe constants, symbols and long
+  names in plain words, because the screen shows them. Never read a file path out loud.
+- Keep the strength of the source's words: "should" stays "should", and a plan is not a fact. Say "every",
+  "all", "only" or "never" only when the code shows it.
+- Show the key change in the first `under-the-hood` scene as real code. In the review scene, each item is a
+  risk that this change introduces, with a `ref`: state the fact, then what to check.
 - Put what the evidence does not settle into `uncertainties`.
 - Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that
   were supplied. Word what a reproduction says as the author's account ("in the reproduction, ...").

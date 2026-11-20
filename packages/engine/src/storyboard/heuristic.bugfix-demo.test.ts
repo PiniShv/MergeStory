@@ -261,7 +261,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
 
   it('has a hand-written storyboard with nothing to report, repair or remove', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
-    expect(await expectCleanStoryboard(deps, written)).toEqual([]);
+    expect(await expectCleanStoryboard(deps, written, false)).toEqual([]);
   });
 
   it('puts every highlight and the focus on the item count, as this machine draws it', async () => {

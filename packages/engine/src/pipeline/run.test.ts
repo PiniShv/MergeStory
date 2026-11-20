@@ -1019,22 +1019,24 @@ describe('prepareAuthoring: AUTHORING.md', () => {
     expect(printed).toContain(heading);
   });
 
-  it('says that the word budget is a guide, and what the longest video does', async () => {
+  it('says that the word budget is a limit, and what the longest video does', async () => {
     const result = await prepareAuthoring({
       ...options({ withContext: false }),
       outDir: join(base, 'authoring-budget'),
     });
     const guide = await readFile(result.files.guide, 'utf8');
-    expect(guide).toContain('This is a guide, not a limit: narration over it is kept as it is.');
+    expect(guide).toContain(
+      'Stay within it: `validate` warns (over-budget) when the narration is more than 15% over it.',
+    );
     expect(guide).toContain(
       '`validate` warns (over-length) and `generate` leaves out the least important scenes and lines',
     );
-    // The demo storyboard is over the budget that this guide gives. Nothing reports it and nothing is left out.
+    // The demo storyboard is over the budget that this guide gives, by less than 15%. Nothing reports it and nothing is left out.
     const budget = Number(/about (\d+) words of narration in total/.exec(guide)?.[1]);
     const board = await readJson<Storyboard>(join(DEMO, 'storyboard.json'));
     expect(narrationWords(board)).toBeGreaterThan(budget);
     const checked = await checkStoryboard({ ...options(), storyboard: board });
-    expect(checked.warnings.filter((w) => w.code === 'over-length')).toEqual([]);
+    expect(checked.warnings.filter((w) => w.code === 'over-length' || w.code === 'over-budget')).toEqual([]);
     const planned = await plan({ storyboard: board });
     expect(planned.scenes).toHaveLength(board.scenes.length);
     expect(planned.warnings.filter((w) => w.includes('--max-duration'))).toEqual([]);

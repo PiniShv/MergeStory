@@ -88,7 +88,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
   return [
     '# Writing the storyboard',
     '',
-    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total). This is a guide, not a limit: narration over it is kept as it is.`,
+    `Target length: about ${p.targetSec} seconds (about ${wordBudget(p.targetSec)} words of narration in total). Stay within it: \`validate\` warns (over-budget) when the narration is more than 15% over it.`,
     `Longest video: ${p.config.maxDurationSec} seconds. When a storyboard is estimated to be longer, \`validate\` warns (over-length) and \`generate\` leaves out the least important scenes and lines (never the mission or the review scene).`,
     `Style: ${p.config.style}. Narration language: ${p.config.language}.`,
     '',
@@ -146,6 +146,7 @@ export async function checkStoryboard(
     inputs: p.inputs,
     reader: p.reader,
     config: p.config,
+    targetSec: p.targetSec,
     authored: true,
   });
   // The caller gets the errors as data. This line is for whoever reads the log.

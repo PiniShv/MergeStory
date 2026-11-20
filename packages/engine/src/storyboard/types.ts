@@ -44,7 +44,12 @@ export type IssueCode =
   | 'simulated-unbacked'
   | 'title-missing-source'
   | 'repeated-line'
-  | 'over-length';
+  | 'over-length'
+  | 'over-budget'
+  | 'review-item-no-ref'
+  | 'review-item-question'
+  | 'key-change-not-code'
+  | 'focus-same-beat';
 
 export interface ValidationIssue {
   /** Location in the storyboard, e.g. "scenes[2].visual.ref". */
@@ -80,6 +85,8 @@ export interface ValidationDeps {
    * narration was written for the code as asked.
    */
   authored?: boolean;
+  /** The target length of the video in seconds. When it is given, narration far over its word budget is reported. */
+  targetSec?: number;
 }
 
 export interface GenerateStoryboardInput {

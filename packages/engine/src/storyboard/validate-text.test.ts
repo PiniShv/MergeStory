@@ -564,6 +564,20 @@ describe('length', () => {
     expect(result.errors).toEqual([]);
     expect(codes(result.warnings)).not.toContain('over-length');
   });
+
+  it('warns when the narration is more than 15% over the word budget of the target length', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    // 53 words: within 15% of the budget of a 20-second video (50 words), far over a 10-second one (25).
+    expect(codes((await validateStoryboard(sb, { ...fx.deps, targetSec: 20 })).warnings)).toEqual([]);
+    const over = await validateStoryboard(sb, { ...fx.deps, targetSec: 10 });
+    expect(over.warnings).toEqual([expect.objectContaining({ path: 'scenes', code: 'over-budget' })]);
+    expect(over.warnings[0]!.message).toContain('the budget for a 10-second video is 25;');
+    // No target, or the offline storyboard, which fits the budget itself: nothing to say.
+    expect(codes((await run(sb, fx)).warnings)).toEqual([]);
+    const offline = await validateStoryboard(sb, { ...fx.deps, targetSec: 10, offline: true });
+    expect(codes(offline.warnings)).not.toContain('over-budget');
+  });
 });
 
 describe('robustness', () => {
