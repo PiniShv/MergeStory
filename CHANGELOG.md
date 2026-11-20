@@ -13,7 +13,10 @@ All notable changes to MergeStory are listed here, newest first.
 - **Fixed:** checklist cards no longer cut a title or a detail without saying so. The text first gets a
   smaller size and more lines. If it still does not fit at the smallest readable size, the render logs one
   warning that names the items to shorten.
-- **Added:** `publish.shareUrl` in the result: the link to share (a public, protected or signed link), or null when the video was only saved on this machine. `publish.watchUrl` is unchanged, and after a local render it still holds a `file://` link to the watch page. Scripts and agents that post a link should read `shareUrl`. The LINK column of `mergestory runs` never shows a `file://` link.
+- **Added:** `publish.shareUrl` in the result: the link to share (a public, protected or signed link), or null
+  when the video was only saved on this machine. `publish.watchUrl` is unchanged, and after a local render it
+  still holds a `file://` link to the watch page. Scripts and agents that post a link should read `shareUrl`.
+  The LINK column of `mergestory runs` never shows a `file://` link.
 - **Changed:** small changes get shorter videos. The suggested length is 25 seconds (was 45) for up to 20
   changed lines, and 40 seconds (was 70) for up to 120. Larger changes keep their length. `--duration`
   still sets the length you choose.
