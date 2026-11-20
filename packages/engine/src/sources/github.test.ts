@@ -5,6 +5,7 @@ import { isMergeStoryError, type MergeStoryError } from '../core/errors.ts';
 import type { ProgressEvent } from '../core/types.ts';
 import { testContext } from '../testing/context.ts';
 import { GitHubSource } from './github.ts';
+import { MAX_READ_BYTES } from './limits.ts';
 
 const BASE = 'b'.repeat(40);
 const HEAD = 'a'.repeat(40);
@@ -400,6 +401,19 @@ describe('GitHubSource', () => {
     const appReads = calls.filter((c) => c.url.pathname === '/repos/acme/widgets/contents/src/app.ts');
     expect(appReads.map((c) => c.url.searchParams.get('ref'))).toEqual([MERGE_BASE, HEAD]);
     expect(calls.every((c) => c.url.pathname.startsWith('/repos/acme/widgets'))).toBe(true);
+  });
+
+  it('reads files over 1 MiB and returns null over the read limit', async () => {
+    const sized = (bytes: number) => `${'a'.repeat(bytes - 1)}\n`;
+    installFetch({
+      contents: {
+        [`large.js@${HEAD}`]: sized(1024 * 1024 + 10),
+        [`huge.js@${HEAD}`]: sized(MAX_READ_BYTES + 10),
+      },
+    });
+    const { reader } = await new GitHubSource().load({ kind: 'github', url: PR_URL }, makeContext());
+    expect((await reader.readFile('large.js', 'head'))?.length).toBe(1024 * 1024 + 10);
+    expect(await reader.readFile('huge.js', 'head')).toBeNull();
   });
 
   it('builds the repository context from the tree, README and manifests', async () => {

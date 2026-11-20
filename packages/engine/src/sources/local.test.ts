@@ -9,6 +9,7 @@ import type { RunContext } from '../core/context.ts';
 import { isMergeStoryError, type MergeStoryError } from '../core/errors.ts';
 import type { LoadedSource } from '../core/providers.ts';
 import type { ProgressEvent } from '../core/types.ts';
+import { createRefResolver } from '../storyboard/coderef.ts';
 import { testContext } from '../testing/context.ts';
 import { LocalGitSource, parseNameStatus, parseNumstat } from './local.ts';
 
@@ -521,16 +522,25 @@ describe('LocalGitSource', () => {
     expect(await reader.readFile('', 'head')).toBeNull();
   });
 
-  it('returns null for files over 1 MiB and normalises line endings', async () => {
+  it('reads files over 1 MiB, returns null over 8 MiB, and normalises line endings', async () => {
     const repo = await newRepo();
     await repo.write('README.md', 'x\n');
     repo.commit('base');
     repo.git('checkout', '-q', '-b', 'topic');
-    await repo.write('big.txt', `${'a'.repeat(1024 * 1024)}\nmore\n`);
+    await repo.write('big.txt', `${'a'.repeat(8 * 1024 * 1024)}\nmore\n`);
+    await repo.write('large.txt', `${'a'.repeat(1024 * 1024 + 10)}\nlast line\n`);
     await repo.write('crlf.txt', '\ufeffone\r\ntwo\r\n');
     repo.commit('add');
-    const { reader } = await load(repo);
+    const { reader, changeSet } = await load(repo);
     expect(await reader.readFile('big.txt', 'head')).toBeNull();
+    expect(await reader.readFile('large.txt', 'head')).toMatch(/\nlast line\n$/);
+    const ref = await createRefResolver(changeSet.files, reader).resolve({
+      path: 'large.txt',
+      side: 'head',
+      startLine: 2,
+      endLine: 2,
+    });
+    expect(ref.ok).toBe(true);
     expect(await reader.readFile('crlf.txt', 'head')).toBe('one\ntwo\n');
   });
 

@@ -16,8 +16,11 @@ import { highlightText, plainTokens, resolveLanguage } from './highlight.ts';
 /** Lines longer than this are cut with an ellipsis, so one minified line cannot flood the page. */
 export const MAX_LINE_CHARS = 240;
 
-/** Files up to this many lines are highlighted whole; longer files only up to the lines that are shown. */
+/** Files up to this many lines are highlighted whole; longer files only a window around the lines that are shown. */
 const FULL_FILE_LINES = 6000;
+
+/** Lines highlighted above the first shown line of a long file, so the highlighter has context. */
+const WINDOW_CONTEXT_LINES = 400;
 
 const MASK_TEXT = MASK_CHAR.repeat(8);
 
@@ -160,7 +163,8 @@ interface Row {
 
 interface Prepared {
   masked: MaskedLines;
-  tokens: CodeToken[][];
+  /** Tokens of the line at a 0-based index; undefined outside the highlighted window of a long file. */
+  tokensAt(index: number): CodeToken[] | undefined;
 }
 
 /** Resolves code references for one run. Files are read, masked and highlighted once and reused. */
@@ -168,6 +172,7 @@ export class CodeResolver {
   private readonly deps: CodeResolverDeps;
   private readonly fileLines = new Map<string, Promise<string[] | null>>();
   private readonly prepared = new Map<string, Promise<Prepared>>();
+  private readonly masked = new Map<string, MaskedLines>();
 
   constructor(deps: CodeResolverDeps) {
     this.deps = deps;
@@ -274,26 +279,47 @@ export class CodeResolver {
     return pending;
   }
 
-  /** Mask and highlight the first `limit` lines of a normalised file (cached). */
-  private prepareFile(key: string, lines: string[], language: string, neededUpTo: number): Promise<Prepared> {
-    const limit = lines.length <= FULL_FILE_LINES ? lines.length : Math.min(lines.length, neededUpTo + 50);
-    const cacheKey = `${key}:${limit}`;
+  private highlight(lines: string[], language: string): Promise<CodeToken[][]> {
+    return highlightText(lines.join('\n'), {
+      language,
+      theme: this.deps.shiki,
+      logger: this.deps.logger,
+    });
+  }
+
+  /**
+   * Mask a normalised file (cached) and highlight the lines in `range`. A file over FULL_FILE_LINES is
+   * masked whole, so a secret that starts far above is still hidden, but only a window around the range
+   * is highlighted; a short file's window is the whole file.
+   */
+  private prepareFile(key: string, lines: string[], language: string, range: FocusRange): Promise<Prepared> {
+    let masked = this.masked.get(key);
+    if (!masked) {
+      masked = maskLines(lines);
+      this.masked.set(key, masked);
+    }
+    const [from, to] =
+      lines.length <= FULL_FILE_LINES
+        ? [0, lines.length]
+        : [Math.max(0, range.startLine - 1 - WINDOW_CONTEXT_LINES), Math.min(lines.length, range.endLine)];
+    const cacheKey = `${key}:${from}:${to}`;
     let pending = this.prepared.get(cacheKey);
     if (!pending) {
-      pending = this.prepareLines(lines.slice(0, limit), language);
+      const whole = masked;
+      pending = this.highlight(whole.lines.slice(from, to), language).then((tokens) => ({
+        masked: whole,
+        tokensAt: (index) => tokens[index - from],
+      }));
       this.prepared.set(cacheKey, pending);
     }
     return pending;
   }
 
+  /** Mask and highlight lines taken from a diff hunk; their indexes start at 0. */
   private async prepareLines(lines: string[], language: string): Promise<Prepared> {
     const masked = maskLines(lines);
-    const tokens = await highlightText(masked.lines.join('\n'), {
-      language,
-      theme: this.deps.shiki,
-      logger: this.deps.logger,
-    });
-    return { masked, tokens };
+    const tokens = await this.highlight(masked.lines, language);
+    return { masked, tokensAt: (index) => tokens[index] };
   }
 
   private async snippetRows(
@@ -310,14 +336,17 @@ export class CodeResolver {
     let all: Row[] = [];
     if (content && startLine <= content.length) {
       const last = Math.min(endLine, content.length);
-      const prepared = await this.prepareFile(`${side}:${sidePath}`, content, language, last);
+      const prepared = await this.prepareFile(`${side}:${sidePath}`, content, language, {
+        startLine,
+        endLine: last,
+      });
       for (let n = startLine; n <= last; n++) {
         all.push(
           this.snippetRow(
             side,
             n,
             prepared.masked.lines[n - 1] ?? '',
-            prepared.tokens[n - 1],
+            prepared.tokensAt(n - 1),
             prepared.masked.flags[n - 1],
           ),
         );
@@ -379,7 +408,7 @@ export class CodeResolver {
             side,
             n,
             prepared.masked.lines[i] ?? '',
-            prepared.tokens[i],
+            prepared.tokensAt(i),
             prepared.masked.flags[i],
           ),
         );
@@ -462,9 +491,16 @@ export class CodeResolver {
     if (wholeFileAvailable) {
       const sidePath = this.sidePath(file, side);
       const content = await this.readSide(sidePath, side);
-      if (content && ownLines.every((l) => normalizeLine(l.text) === content[sideNumber(l, side)! - 1])) {
-        const needed = Math.max(...ownLines.map((l) => sideNumber(l, side) ?? 0), 1);
-        const prepared = await this.prepareFile(`${side}:${sidePath}`, content, language, needed);
+      if (
+        content &&
+        ownLines.length > 0 &&
+        ownLines.every((l) => normalizeLine(l.text) === content[sideNumber(l, side)! - 1])
+      ) {
+        const numbers = ownLines.map((l) => sideNumber(l, side)!);
+        const prepared = await this.prepareFile(`${side}:${sidePath}`, content, language, {
+          startLine: Math.min(...numbers),
+          endLine: Math.max(...numbers),
+        });
         return {
           lookup: (line) => {
             const index = (sideNumber(line, side) ?? 0) - 1;
@@ -472,7 +508,7 @@ export class CodeResolver {
             if (text === undefined) return undefined;
             return {
               text,
-              tokens: prepared.tokens[index] ?? plainTokens(text)[0] ?? [],
+              tokens: prepared.tokensAt(index) ?? plainTokens(text)[0] ?? [],
               masked: prepared.masked.flags[index] ?? false,
             };
           },
@@ -492,7 +528,7 @@ export class CodeResolver {
         const text = prepared.masked.lines[i] ?? '';
         return {
           text,
-          tokens: prepared.tokens[i] ?? plainTokens(text)[0] ?? [],
+          tokens: prepared.tokensAt(i) ?? plainTokens(text)[0] ?? [],
           masked: prepared.masked.flags[i] ?? false,
         };
       },

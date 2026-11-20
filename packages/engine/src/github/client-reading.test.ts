@@ -218,6 +218,12 @@ describe('getFileContent', () => {
     );
   });
 
+  it('reads a file between 1 MiB and a larger limit', async () => {
+    mockFetch(() => raw('a'.repeat(2 * 1024 * 1024)));
+    const text = await (await clientWith()).getFileContent('large.js', SHA, 8 * 1024 * 1024);
+    expect(text?.length).toBe(2 * 1024 * 1024);
+  });
+
   it('never requests or caches sensitive or excluded paths, or unsafe ones', async () => {
     const cache = memoryCache();
     const { calls } = mockFetch(() => raw('secret'));
