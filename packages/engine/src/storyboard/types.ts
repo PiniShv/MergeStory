@@ -85,15 +85,14 @@ export interface ValidationDeps {
    * narration was written for the code as asked.
    */
   authored?: boolean;
-  /** The target length of the video in seconds. When it is given, narration far over its word budget is reported. */
-  targetSec?: number;
+  /** The target length of the video in seconds. Narration far over its word budget is reported. */
+  targetSec: number;
 }
 
 export interface GenerateStoryboardInput {
   provider: LlmProvider;
   pack: EvidencePack;
   deps: ValidationDeps;
-  targetSec: number;
 }
 
 export interface GenerateStoryboardOutput {

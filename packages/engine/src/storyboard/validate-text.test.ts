@@ -575,8 +575,7 @@ describe('length', () => {
       expect.objectContaining({ path: 'scenes', code: 'narration-over-budget' }),
     ]);
     expect(over.warnings[0]!.message).toContain('the budget for a 10-second video is 25;');
-    // No target, or the offline storyboard, which fits the budget itself: nothing to say.
-    expect(codes((await run(sb, fx)).warnings)).toEqual([]);
+    // The offline storyboard fits the budget itself: nothing to say.
     const offline = await validateStoryboard(sb, { ...fx.deps, targetSec: 10, offline: true });
     expect(codes(offline.warnings)).not.toContain('narration-over-budget');
   });

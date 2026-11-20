@@ -90,7 +90,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     );
     const analysis = await analyze(changeSet, reader, inputs, ctx);
     targetSec = targetDuration(analysis, ctx.config);
-    deps = { changeSet, analysis, inputs, reader, config: ctx.config };
+    deps = { changeSet, analysis, inputs, reader, config: ctx.config, targetSec };
   }, 180_000);
 
   afterAll(async () => {
@@ -263,7 +263,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
   it('has a hand-written storyboard with nothing to report, repair or remove', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
     // With the target length, so a storyboard over its word budget is reported too.
-    expect(await expectCleanStoryboard({ ...deps, targetSec }, written, false)).toEqual([]);
+    expect(await expectCleanStoryboard({ ...deps, offline: false }, written)).toEqual([]);
     // The example follows the guide: the word budget is a limit, not only the point where validate warns.
     expect(narrationWords(written)).toBeLessThanOrEqual(wordBudget(targetSec));
   });

@@ -445,7 +445,7 @@ export function buildFixture(spec: FixtureSpec): Fixture {
     inputs,
     reader,
     config,
-    deps: { changeSet, analysis, inputs, reader, config },
+    deps: { changeSet, analysis, inputs, reader, config, targetSec: 60 },
     id: {
       file: (path) => fileIds.get(path) ?? `?${path}`,
       hunk: hunkId,

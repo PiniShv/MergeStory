@@ -242,7 +242,8 @@ export async function generateStoryboard(
   input: GenerateStoryboardInput,
   ctx: RunContext,
 ): Promise<GenerateStoryboardOutput> {
-  const { provider, pack, deps, targetSec } = input;
+  const { provider, pack, deps } = input;
+  const { targetSec } = deps;
   const config = ctx.config;
   const system = buildSystemPrompt(config, deps.changeSet);
   const prompt = buildUserPrompt(pack, targetSec, config);

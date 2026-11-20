@@ -109,8 +109,7 @@ function setup(config: ConfigInput = {}, cache: Cache = new MemoryCache()) {
 const input = (provider: LlmProvider, fx: Fixture, targetSec = 60) => ({
   provider,
   pack: PACK,
-  deps: fx.deps,
-  targetSec,
+  deps: { ...fx.deps, targetSec },
 });
 
 async function failure(promise: Promise<unknown>): Promise<MergeStoryError> {
@@ -493,7 +492,7 @@ describe('generateStoryboard', () => {
     const key = ['AKIA', 'ABCDEFGHIJKLMNOP'].join('');
     const leaky: EvidencePack = { ...PACK, markdown: `${PACK.markdown}\nconst id = "${key}";\n` };
     const provider = fakeProvider([validStoryboard()]);
-    await generateStoryboard({ provider, pack: leaky, deps: fx.deps, targetSec: 60 }, ctx);
+    await generateStoryboard({ provider, pack: leaky, deps: fx.deps }, ctx);
     const request = provider.calls[0]!;
     expect(request.prompt).not.toContain(key);
     expect(request.system).not.toContain(key);
@@ -776,7 +775,7 @@ describe('cost, budget and egress', () => {
       cache,
     });
     const result = await generateStoryboard(
-      { provider: fakeProvider([], { costPerCall: 1 }), pack: PACK, deps: tight.deps, targetSec: 60 },
+      { provider: fakeProvider([], { costPerCall: 1 }), pack: PACK, deps: tight.deps },
       again,
     );
     expect(result.cached).toBe(true);
