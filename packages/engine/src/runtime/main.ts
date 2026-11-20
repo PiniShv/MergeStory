@@ -6,7 +6,7 @@
  * end card sit above them. Every DOM write goes through one StyleWriter, which is how seek()
  * knows whether a frame differs from the previous one.
  */
-import type { MergeStoryRuntimeApi, PlannedScene, RenderPlan } from '../core/render-plan.ts';
+import type { LoadResult, MergeStoryRuntimeApi, PlannedScene, RenderPlan } from '../core/render-plan.ts';
 import { STAGE_HEIGHT, STAGE_WIDTH } from '../core/render-plan.ts';
 import { StyleWriter } from './anim.ts';
 import { type Chrome, createChrome } from './chrome.ts';
@@ -81,7 +81,7 @@ async function loadFonts(): Promise<void> {
  * unseen. Laying them out also makes the browser request any font file the text needs that was not
  * preloaded, so the fonts are awaited before anything measures.
  */
-async function layoutScenes(): Promise<void> {
+async function layoutScenes(): Promise<string[]> {
   for (const m of mounted) {
     m.wrapper.style.display = 'block';
     m.wrapper.style.visibility = 'hidden';
@@ -89,14 +89,15 @@ async function layoutScenes(): Promise<void> {
   void document.body.offsetHeight;
   await document.fonts.ready;
   chrome?.layout();
-  for (const m of mounted) m.instance.layout?.();
+  const problems = mounted.flatMap((m) => m.instance.layout?.() ?? []);
   for (const m of mounted) {
     m.wrapper.style.display = 'none';
     m.wrapper.style.visibility = '';
   }
+  return problems;
 }
 
-async function load(next: RenderPlan): Promise<void> {
+async function load(next: RenderPlan): Promise<LoadResult> {
   plan = next;
   css('base', BASE_CSS);
   css('runtime', RUNTIME_CSS);
@@ -136,8 +137,9 @@ async function load(next: RenderPlan): Promise<void> {
   stage.append(chrome.root);
 
   await Promise.all(Array.from(document.images).map((img) => img.decode().catch(() => undefined)));
-  await layoutScenes();
+  const fitProblems = await layoutScenes();
   sw.markDirty();
+  return { fitProblems };
 }
 
 function seek(timeSec: number): { dirty: boolean } {

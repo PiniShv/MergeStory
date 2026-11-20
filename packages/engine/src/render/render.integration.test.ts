@@ -66,7 +66,7 @@ const STUB_RUNTIME = `
       node = document.createElement('div');
       node.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0';
       document.body.appendChild(node);
-      return Promise.resolve();
+      return Promise.resolve({ fitProblems: [] });
     },
     seek: function (t) {
       var frame = Math.round(t * plan.fps);

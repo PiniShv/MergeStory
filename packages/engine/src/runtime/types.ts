@@ -27,9 +27,10 @@ export interface SceneInstance {
   update(t: number): void;
   /**
    * Optional: measure text once after fonts are loaded. The runtime calls it with every scene laid
-   * out but hidden, so templates can fit text deterministically before the first frame.
+   * out but hidden, so templates can fit text deterministically before the first frame. Returns
+   * plain-words problems for text that still does not fit (none when everything fits).
    */
-  layout?(): void;
+  layout?(): string[] | void;
 }
 
 export type TemplateFactory<V extends ResolvedVisual = ResolvedVisual> = (

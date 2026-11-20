@@ -365,9 +365,14 @@ export interface SeekResult {
   dirty: boolean;
 }
 
+export interface LoadResult {
+  /** Text that does not fit even at the smallest size, in plain words. The renderer logs them. */
+  fitProblems: string[];
+}
+
 export interface MergeStoryRuntimeApi {
   /** Build the DOM for the whole plan and wait until fonts and images are ready. */
-  load(plan: RenderPlan): Promise<void>;
+  load(plan: RenderPlan): Promise<LoadResult>;
   /** Show the frame at an absolute time. Must be a pure function of timeSec. */
   seek(timeSec: number): SeekResult;
 }

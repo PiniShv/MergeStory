@@ -105,7 +105,7 @@ const CHECKLIST_CSS = String.raw`
 const SEVERITY_ORDER: Item['severity'][] = ['high', 'medium', 'low', 'info'];
 
 /** One set of sizes. The first level that fits the content area is used. */
-interface Level {
+export interface Level {
   title: number;
   detail: number;
   pad: number;
@@ -116,32 +116,94 @@ interface Level {
   ref: number;
 }
 
-/** One column of up to three cards: roomy first, then tighter. */
-const LIST_LEVELS: Level[] = [
+/**
+ * Roomy first, then tighter. A level is used only if no title or detail is cut, so the last levels
+ * trade size for lines; the smallest sizes are still easy to read on the 1920 px canvas.
+ * One column of up to three cards.
+ */
+export const LIST_LEVELS: NonEmpty<Level> = [
   { title: 38, detail: 30, pad: 26, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 36, detail: 30, pad: 22, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 6, titleLines: 2, detailLines: 2, chip: 36, ref: 40 },
-  { title: 32, detail: 28, pad: 14, gap: 6, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 32, detail: 28, pad: 14, gap: 6, titleLines: 2, detailLines: 2, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 12, gap: 6, titleLines: 2, detailLines: 3, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 12, gap: 4, titleLines: 3, detailLines: 4, chip: 34, ref: 38 },
 ];
 
 /** Two columns, two rows (four items). */
-const GRID_LEVELS: Level[] = [
+export const GRID_LEVELS: NonEmpty<Level> = [
   { title: 36, detail: 30, pad: 22, gap: 14, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 10, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
-  { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 2, detailLines: 3, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 14, gap: 8, titleLines: 2, detailLines: 4, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 12, gap: 6, titleLines: 3, detailLines: 5, chip: 34, ref: 38 },
 ];
 
 /** Two columns, three rows (five or six items). */
-const DENSE_LEVELS: Level[] = [
+export const DENSE_LEVELS: NonEmpty<Level> = [
   { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 12, gap: 6, titleLines: 2, detailLines: 2, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 10, gap: 4, titleLines: 2, detailLines: 3, chip: 34, ref: 38 },
 ];
 
 /** Height of the card area in grid mode, in pixels. */
 const GRID_HEIGHT = 612;
+/** Space between the heading and the list. */
+const LIST_GAP = 16;
 
-function checklistLevels(count: number): Level[] {
+type NonEmpty<T> = readonly [T, ...T[]];
+
+export function checklistLevels(count: number): NonEmpty<Level> {
   if (count <= 3) return LIST_LEVELS;
   return count === 4 ? GRID_LEVELS : DENSE_LEVELS;
+}
+
+/** What the browser reports for a block of text: its full height and the height it shows. */
+export interface Box {
+  scrollHeight: number;
+  clientHeight: number;
+}
+
+/** What was measured for one card at one level. `content` and `inner` are heights in pixels. */
+export interface CardMeasure {
+  title: string;
+  /** The title and detail blocks, which cut text after their line limit. */
+  clamps: Box[];
+  /** Height from the top of the first part to the bottom of the last part of the card. */
+  content: number;
+  /** Height of the card inside its padding. */
+  inner: number;
+}
+
+export interface Measure {
+  cards: CardMeasure[];
+  /** The list is taller than the space under the heading (only a list can grow). */
+  listOverflow: boolean;
+}
+
+const cutBox = (b: Box) => b.scrollHeight > b.clientHeight + 1;
+/** A clamped block hides text, or the card's content is taller than the card (clipped at both ends, as it is centred). */
+const cardCut = (c: CardMeasure) => c.clamps.some(cutBox) || c.content > c.inner + 1;
+
+/** Titles of the items whose text is cut. A list that is too tall loses the end of the list: name every item. */
+export function cutTitles(m: Measure): string[] {
+  return m.listOverflow ? m.cards.map((c) => c.title) : m.cards.filter(cardCut).map((c) => c.title);
+}
+
+/**
+ * Settle on the first level where nothing is cut. If none fits, the last level stays applied
+ * and the items it cuts are returned. `measure` applies the level, then measures.
+ */
+export function pickLevel<L>(
+  levels: NonEmpty<L>,
+  measure: (level: L) => Measure,
+): { level: L; cut: string[] } {
+  let result = { level: levels[0], cut: cutTitles(measure(levels[0])) };
+  for (const level of levels.slice(1)) {
+    if (result.cut.length === 0) break;
+    result = { level, cut: cutTitles(measure(level)) };
+  }
+  return result;
 }
 
 export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ctx) => {
@@ -179,12 +241,9 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
           text: truncatePath(item.refLabel, wide ? 56 : refChars),
         })
       : null;
-    const main = h(
-      'div',
-      { class: 'ms-chk__main' },
-      h('div', { class: 'ms-chk__top' }, sev, h('div', { class: 'ms-chk__name', text: item.title })),
-      item.detail ? h('div', { class: 'ms-chk__detail', text: item.detail }) : null,
-    );
+    const name = h('div', { class: 'ms-chk__name', text: item.title });
+    const detail = item.detail ? h('div', { class: 'ms-chk__detail', text: item.detail }) : null;
+    const main = h('div', { class: 'ms-chk__main' }, h('div', { class: 'ms-chk__top' }, sev, name), detail);
     const el = h(
       'div',
       {
@@ -195,7 +254,15 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
       main,
       ref,
     );
-    return { el, stripe, sev, start: item.start };
+    return {
+      el,
+      stripe,
+      sev,
+      parts: ref ? [main, ref] : [main],
+      clamps: detail ? [name, detail] : [name],
+      title: item.title,
+      start: item.start,
+    };
   });
 
   const gridEl = h(
@@ -225,25 +292,40 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
     set('--chk-chip', `${level.chip}px`);
     set('--chk-ref', `${level.ref}px`);
   };
-  // Grid rows have a fixed height, so a card overflows its box; list rows grow, so the whole list overflows.
-  const fits = () =>
-    grid
-      ? cards.every((c) => c.el.scrollHeight <= c.el.clientHeight + 1)
-      : gridEl.offsetHeight <= root.clientHeight - head.offsetHeight - 16 - 2;
+  const listRoom = () => root.clientHeight - head.offsetHeight - LIST_GAP;
+  // Text that the line limit hides still counts in scrollHeight. Grid rows have a fixed height and centre
+  // their content, so overflow there is clipped at both ends and scrollHeight misses it: compare offsets.
+  const measure = (level: Level): Measure => {
+    apply(level);
+    return {
+      cards: cards.map((c) => {
+        const top = Math.min(...c.parts.map((el) => el.offsetTop));
+        const bottom = Math.max(...c.parts.map((el) => el.offsetTop + el.offsetHeight));
+        return {
+          title: c.title,
+          clamps: c.clamps,
+          content: bottom - top,
+          inner: c.el.clientHeight - 2 * level.pad,
+        };
+      }),
+      listOverflow: !grid && gridEl.offsetHeight > listRoom() - 2,
+    };
+  };
 
   const instance: SceneInstance = {
     root,
     layout() {
-      const levels = checklistLevels(items.length);
-      for (const level of levels) {
-        apply(level);
-        if (fits()) break;
-      }
+      // Even the smallest level may cut some text: say so, because a reviewer would miss that part.
+      const lost = pickLevel(checklistLevels(items.length), measure).cut;
       // One or two cards used to sit at the top with the lower half empty: center a short list.
       if (!grid) {
-        const spare = root.clientHeight - head.offsetHeight - 16 - gridEl.offsetHeight;
-        gridEl.style.marginTop = `${16 + Math.max(0, spare / 2)}px`;
+        gridEl.style.marginTop = `${LIST_GAP + Math.max(0, (listRoom() - gridEl.offsetHeight) / 2)}px`;
       }
+      return lost.length
+        ? [
+            `The review checklist cuts text that does not fit, even at the smallest size: ${lost.map((t) => `"${t}"`).join(', ')}. Shorten these items.`,
+          ]
+        : [];
     },
     update(t) {
       rise(sw, head, enter(t, 0.15, 0.6), 16);
