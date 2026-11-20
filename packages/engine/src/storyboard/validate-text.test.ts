@@ -32,6 +32,27 @@ describe('names that are not in the change', () => {
     expect(codes(result.warnings)).toContain('internal-term');
   });
 
+  it('warns when narration or on-screen text cites the private notes', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 1).narration[1].text = 'The notes say the limit stays at three.';
+    scene(sb, 2).visual.points[0].text = 'According to the notes, the delay is capped.';
+    const result = await run(sb, fx);
+    const paths = result.warnings.filter((w) => w.code === 'internal-term').map((w) => w.path);
+    expect(paths).toHaveLength(2);
+    expect(paths.some((p) => p.startsWith('scenes[1].narration'))).toBe(true);
+    expect(paths.some((p) => p.startsWith('scenes[2].visual'))).toBe(true);
+  });
+
+  it('does not treat release notes or a notes field as the private notes', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 1).narration[1].text = 'The release notes say the limit stays at three.';
+    scene(sb, 2).visual.points[0].text = 'The notes field keeps its old value.';
+    const result = await run(sb, fx);
+    expect(codes(result.warnings)).not.toContain('internal-term');
+  });
+
   it('accepts names from the diff, the symbols, the PR text and the code on screen', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);

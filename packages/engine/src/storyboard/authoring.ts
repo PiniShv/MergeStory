@@ -273,7 +273,7 @@ Lead with why, then the key change; details come after. Use these scenes in this
 4. before-after: the impact: what goes in, what came out before, what comes out now. Only when behaviour changes in a way a user or the system would notice, or when a changed function is small enough to show both versions.
 5. proof: only when a capture of the fix working (an "after" screenshot or recording, or a step marked "fixed") or a reported test result was supplied. Show the fix working.
 6. big-picture: only when two or more components changed: how they relate.
-7. review: two or three places to read closely, each with its file and lines (checklist items with a "ref"), and why each matters. Take them from the risk signals, the notes and the largest or most sensitive changes.
+7. review: two or three places to read closely, each with its file and lines (checklist items with a "ref"), and why each matters. Take them from the risk signals, the notes and the largest or most sensitive changes. When a source (PR text, task, notes, issue) states what the change does not do (out of scope, a follow-up, a known limit), say it once, here or as the mission's last line, and cite it. Never infer one.
 
 No conclusion or recap scene: the end card closes the video.
 
@@ -314,7 +314,7 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Never invent files, symbols, behaviour, test results or numbers. If the pack does not show it, do not say it.
 - Names, constants and values that appear in the code are facts, not claims. State them: "three retries", "a 250 millisecond base delay", "a four second cap". Cite the hunk or symbol that holds them.
 - Measured results are claims. Do not say that tests pass, that CI is green, how much code is covered, how much faster something is, that nothing breaks, or that the code is bug-free, fully tested, production-ready, secure or verified. Do not write test runner output ("3 passed") or badges ("Build ✅", "Tests: green") either. Such text is removed. The one exception is a run that the caller reported: cite its id (T1, T2, ...). Only a passing run of tests backs "the tests pass", and only a passing run that CI reported backs "CI is green". If any reported run did not pass, say which one instead.
-- TASK and NOTES say why the change was made. Use them for the reason and cite them. Say a source's claim as a claim ("the ticket asks for ...", "the PR says ..."), never "the notes say": notes are private to the writer.
+- TASK and NOTES say why the change was made. Use them for the reason and cite them. Say a source's claim as a claim ("the ticket asks for ...", "the PR says ...").
 - Keep the strength of the source's words: "should" stays "should", and a plan is not a fact. Say "every", "all", "only" or "never" only when the code shows it.
 - REPRO and REPRO.1, REPRO.2, ... are steps that the author wrote. They show what the author saw, not what the code does. A line that cites only them says so: "In the reproduction, ...", "The reproduction shows ...".
 - Put what the evidence does not settle in "uncertainties". Do not guess.
@@ -336,11 +336,10 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Write for the ear: short sentences, one idea each, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. The word budget in the task line is a limit: stay within it. The key change gets the most words.
 - One or two sentences per line, at most ${LIMITS.maxWordsPerNarrationLine} words. One to six lines per scene.
 - No markdown, no lists, no emoji.
-- The viewer has never seen the evidence pack. Do not say "the pack" or "the evidence pack"; say what the change shows. The engine warns about these words.
+- The viewer has never seen the evidence pack or the notes, which are private. Do not say "the pack", "the evidence pack" or "the notes", in narration or on screen. The engine warns about these words.
 - Be explicit about what the code does and the real values. Say how the important lines work and why they are there. "This function changed" teaches nothing.
 - Say a name only when a reviewer will search for it, and say it once. Describe constants in capitals, casts, symbols, long camelCase names, columns and flags in plain words ("the retry limit"): the screen shows the exact name. Never read a file path out loud; say "in the retry module". Write numbers without underscores.
-- Every line adds a new fact. No introduction, no closing words, no summary. The engine warns about a repeated line.
-- Do not say the pull request number or counts that teach nothing ("seven files changed").
+- Every line adds a new fact. No introduction, no closing words, no summary. Never restate scene 1 in a before panel, the previous scene in the last review item, or what the screen shows (a file name, a count, the PR title or number). No line that only names a source ("The ticket asks for this."). The engine warns about a repeated line.
 - Review scene: each item is a risk or decision that this change introduces, not old behaviour elsewhere or something already fine. Its detail states the fact, then what to check: "The loop now replaces any segment a line already had. Check that this is wanted." Never only a question.
 - No filler and no hype. Avoid words such as "powerful", "seamless", "robust" and "simply".
 
