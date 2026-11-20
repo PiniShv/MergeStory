@@ -3,6 +3,7 @@ import {
   collapseLineRange,
   countWords,
   decodeTextBlob,
+  dedupeRefs,
   naturalList,
   plural,
   shellQuote,
@@ -211,5 +212,38 @@ describe('countWords', () => {
     expect(countWords('  ')).toBe(0);
     expect(countWords('a — b ...')).toBe(2);
     expect(countWords('v2 über 3.5')).toBe(3);
+  });
+});
+
+describe('dedupeRefs', () => {
+  const sym = 'Mgr.toList (src/Mgr.java:67-106)';
+  it('prefers the range the scene shows over other labels of that file', () => {
+    expect(dedupeRefs(['src/Mgr.java:80-90'], [sym, 'src/Mgr.java:60-70', 'src/Mgr.java'], 3)).toEqual([
+      'src/Mgr.java:80-90',
+    ]);
+  });
+  it('prefers a symbol over a plain range or file of the same file', () => {
+    expect(dedupeRefs([], ['src/Mgr.java', sym, 'src/Mgr.java:1-5', 'src/B.ts:2-3'], 3)).toEqual([
+      sym,
+      'src/B.ts:2-3',
+    ]);
+  });
+  it('shows one plain label per file: the first range, else the bare path', () => {
+    expect(dedupeRefs([], ['src/a.ts', 'src/a.ts:1-5', 'src/a.ts:9-12', 'src/b.ts'], 3)).toEqual([
+      'src/a.ts:1-5',
+      'src/b.ts',
+    ]);
+  });
+  it('reads a path that holds a space and a bracket', () => {
+    const sym = 'Name (src/utils (1).ts:3-9)';
+    expect(dedupeRefs(['src/utils (1).ts:5-6'], [sym, 'src/utils (1).ts'], 3)).toEqual([
+      'src/utils (1).ts:5-6',
+    ]);
+    expect(dedupeRefs([], ['src/utils (1).ts:1-2', sym], 3)).toEqual([sym]);
+  });
+  it('keeps different symbols of one file, shows an equal label once, and caps the list', () => {
+    const other = 'Mgr.save (src/Mgr.java:10-20)';
+    expect(dedupeRefs([], [sym, other, sym], 3)).toEqual([sym, other]);
+    expect(dedupeRefs([], ['a:1', 'b:1', 'c:1', 'd:1'], 3)).toEqual(['a:1', 'b:1', 'c:1']);
   });
 });

@@ -7,6 +7,7 @@ import {
   monoChars,
   monoWidth,
   pad2,
+  shortenRef,
   truncatePath,
 } from './fit.ts';
 
@@ -113,5 +114,28 @@ describe('number formatting', () => {
     expect(pad2(2)).toBe('02');
     expect(pad2(12)).toBe('12');
     expect(pad2(-1)).toBe('00');
+  });
+});
+
+describe('shortenRef', () => {
+  const symbol = 'ClassNameManager.toFeatureList (micro/src/main/ClassNameManager.java:67-106)';
+  it('keeps a label that fits', () => {
+    expect(shortenRef('src/a.ts:8', 20)).toBe('src/a.ts:8');
+  });
+  it('drops the folders of a symbol chip before anything else', () => {
+    expect(shortenRef(symbol, 62)).toBe('ClassNameManager.toFeatureList (ClassNameManager.java:67-106)');
+  });
+  it('drops the file, then the lines, of a symbol chip', () => {
+    expect(shortenRef(symbol, 40)).toBe('ClassNameManager.toFeatureList:67-106');
+    expect(shortenRef(symbol, 31)).toBe('ClassNameManager.toFeatureList');
+  });
+  it('cuts only the end of a symbol name and never leaves a bracket open', () => {
+    const out = shortenRef(symbol, 20);
+    expect(out).toBe('ClassNameManager.to…');
+    expect(out).not.toMatch(/[()]/);
+  });
+  it('keeps the lines of a path chip and cuts the file name from the end', () => {
+    expect(shortenRef('a/b/c/LongFileNameHere.java:67-106', 20)).toBe('LongFileName…:67-106');
+    expect(shortenRef('a/b/c/LongFileNameHere.java:67-106', 30)).toBe('…/LongFileNameHere.java:67-106');
   });
 });

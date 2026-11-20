@@ -140,6 +140,43 @@ export function truncatePath(path: string, maxChars: number): string {
   return middleTruncate(path, maxChars, 0.7);
 }
 
+const SYMBOL_REF = /^(.+?) \((.+):(\d+(?:-\d+)?)\)$/;
+const PATH_REF = /^(.+):(\d+(?:-\d+)?)$/;
+
+/** Cut the end of a name and add an ellipsis. */
+function cutEnd(text: string, maxChars: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= maxChars) return text;
+  return maxChars < 2 ? '…' : `${chars.slice(0, maxChars - 1).join('')}…`;
+}
+
+/**
+ * Shorten an evidence chip to `maxChars` characters and keep it readable. A symbol chip
+ * "Name (dir/File.ts:1-9)" loses its folders, then its file, then its lines, before the name is cut
+ * (at the end only, so a bracket is never left open). A "path:lines" chip keeps its lines and cuts
+ * the folders first, then the end of the file name.
+ */
+export function shortenRef(label: string, maxChars: number): string {
+  if (Array.from(label).length <= maxChars) return label;
+  const symbol = SYMBOL_REF.exec(label);
+  if (symbol) {
+    const [, name, path, lines] = symbol as unknown as [string, string, string, string];
+    const base = path.slice(path.lastIndexOf('/') + 1);
+    const options = [`${name} (${base}:${lines})`, `${name}:${lines}`, name];
+    const fit = options.find((o) => Array.from(o).length <= maxChars);
+    return fit ?? cutEnd(name, maxChars);
+  }
+  const located = PATH_REF.exec(label);
+  if (located) {
+    const [, path, lines] = located as unknown as [string, string, string];
+    const base = path.slice(path.lastIndexOf('/') + 1);
+    const tail = `:${lines}`;
+    if (Array.from(base + tail).length + 2 <= maxChars) return truncatePath(label, maxChars);
+    return `${cutEnd(base, Math.max(2, maxChars - Array.from(tail).length))}${tail}`;
+  }
+  return truncatePath(label, maxChars);
+}
+
 /** Width of monospaced text in pixels (JetBrains Mono advances 0.6 em per character). */
 export function monoWidth(chars: number, fontSizePx: number): number {
   return chars * fontSizePx * 0.6;

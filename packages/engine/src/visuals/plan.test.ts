@@ -14,6 +14,7 @@ import {
 import type { CodeLine, RenderPlan, ResolvedImage, ResolvedVisual } from '../core/render-plan.ts';
 import { MASK_CHAR } from '../core/secrets.ts';
 import type { Highlight, Scene, Storyboard } from '../core/storyboard-schema.ts';
+import { dedupeRefs } from '../core/text.ts';
 import { loadTheme } from '../core/theme.ts';
 import type { Analysis, CaptionCue, ChangedFile, ChangeSet, ContextInputs } from '../core/types.ts';
 import { buildContextInputs } from '../pipeline/inputs.ts';
@@ -22,7 +23,7 @@ import { averageColor, ffmpegTo } from '../testing/media.ts';
 import { makePng } from '../testing/png.ts';
 import { memoryReader, sample, sampleFiles, sampleNarration } from '../testing/sample-change.ts';
 import { ENGINE_VERSION } from '../version.ts';
-import { buildRenderPlan, loadStoryboardScreenshots, MAX_FILE_ROWS } from './plan.ts';
+import { buildRenderPlan, chipOf, loadStoryboardScreenshots, MAX_FILE_ROWS } from './plan.ts';
 import type { ExtractedFrames } from './recording-frames.ts';
 import { buildTimeline } from './timeline.ts';
 
@@ -1199,17 +1200,17 @@ describe('buildRenderPlan: refs and badges', () => {
     expect(plan.scenes.find((s) => s.id === 's1')!.refs).toEqual([]);
     // s4 cites M1 (a component, not listed), F2 and F1 through narration and nodes.
     expect(plan.scenes.find((s) => s.id === 's4')!.refs).toEqual(['src/client.ts', 'src/retry/backoff.ts']);
-    // s5: its own code reference, then the hunk it cites (same label, listed once).
+    // s5: its own code reference; the hunk it cites is the same file and shows once. s6 likewise
+    // drops a file chip for the file it shows.
     expect(plan.scenes.find((s) => s.id === 's5')!.refs).toEqual(['src/client.ts:8-16']);
-    expect(plan.scenes.find((s) => s.id === 's6')!.refs).toEqual(['src/client.ts:8-14', 'src/client.ts']);
+    expect(plan.scenes.find((s) => s.id === 's6')!.refs).toEqual(['src/client.ts:8-14']);
 
     const storyboard = withScene(sample().storyboard, 's3', (scene) => {
       scene.narration = [{ text: 'Many files.', evidence: ['F1', 'F2', 'F2.H1', 'S1'] }];
     });
     expect((await build({ storyboard })).scenes.find((s) => s.id === 's3')!.refs).toEqual([
-      'src/retry/backoff.ts',
-      'src/client.ts',
       'src/client.ts:8-16',
+      'withRetry (src/retry/backoff.ts:16-27)',
     ]);
   });
 
@@ -1470,5 +1471,56 @@ describe('loadStoryboardScreenshots: a reproduction', () => {
       code: 'USAGE',
       message: expect.stringContaining('Screenshot SS1 (wide-step-broken.png)'),
     });
+  });
+});
+
+describe('chipOf', () => {
+  const path =
+    'svc/billing/billing-core/src/main/java/com/example/billing/service/impl/LongNamedExecutionService.java';
+  const cutLabel = (lines: string): string => `${path.slice(0, 100)}…:${lines}`;
+  it('builds hunk, symbol and file chips from the full path, not from a cut label', () => {
+    const ref = { path, side: 'head' as const, startLine: 1815, endLine: 1836 };
+    const hunk = { id: 'F1.H2', kind: 'hunk' as const, label: cutLabel('1815-1836'), ref, url: null };
+    const symbol = {
+      id: 'S3',
+      kind: 'symbol' as const,
+      label: `LongNamedExecutionService.processResult (${path.slice(0, 80)}…:1818-1865)`,
+      ref: { ...ref, startLine: 1818, endLine: 1865 },
+      url: null,
+    };
+    const file = {
+      id: 'F1',
+      kind: 'file' as const,
+      label: path.slice(0, 119) + '…',
+      ref: null,
+      url: null,
+      path,
+    };
+    expect(chipOf(hunk)).toBe(`${path}:1815-1836`);
+    expect(chipOf(symbol)).toBe(`LongNamedExecutionService.processResult (${path}:1818-1865)`);
+    expect(chipOf(file)).toBe(path);
+  });
+  it('keeps a symbol name when the path holds a space and a bracket', () => {
+    const symbol = {
+      id: 'S',
+      kind: 'symbol' as const,
+      label: 'Name (src/utils (1).ts:3-9)',
+      ref: { path: 'src/utils (1).ts', side: 'head' as const, startLine: 3, endLine: 9 },
+      url: null,
+    };
+    expect(chipOf(symbol)).toBe('Name (src/utils (1).ts:3-9)');
+  });
+  it('lets the shown range win over a hunk and a symbol of the same long path', () => {
+    const hunk = {
+      id: 'H',
+      kind: 'hunk' as const,
+      label: 'x',
+      url: null,
+      ref: { path, side: 'head' as const, startLine: 1815, endLine: 1836 },
+    };
+    const symbol = { ...hunk, id: 'S', kind: 'symbol' as const, label: `Name (${path}:1-2)` };
+    expect(dedupeRefs([`${path}:1821-1834`], [chipOf(hunk), chipOf(symbol)], 3)).toEqual([
+      `${path}:1821-1834`,
+    ]);
   });
 });

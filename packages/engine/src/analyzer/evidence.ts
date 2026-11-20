@@ -67,8 +67,9 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
     label: string,
     ref: CodeRef | null,
     url: string | null,
+    path?: string,
   ): void => {
-    items.push({ id, kind, label, ref, url });
+    items.push(path === undefined ? { id, kind, label, ref, url } : { id, kind, label, ref, url, path });
   };
 
   if (changeSet.pr) add('PR', 'pr', 'PR description', null, changeSet.pr.url || null);
@@ -99,6 +100,7 @@ export function buildEvidenceIndex(src: EvidenceSources): EvidenceItem[] {
       cleanLabel(file.path, 120),
       null,
       blobUrl(web, side === 'head' ? headSha : baseSha, file.path),
+      file.path,
     );
     if (src.hiddenFileIds.has(file.id)) continue;
     for (const hunk of file.hunks) {

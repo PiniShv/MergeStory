@@ -185,6 +185,7 @@ function renameSource(
         id: id(e.id),
         label: e.kind === 'file' || e.kind === 'hunk' ? at(e.label) : e.label,
         ref: e.ref && ref(e.ref),
+        ...(e.path === undefined ? {} : { path: at(e.path) }),
       })),
   };
   return { changeSet, analysis };

@@ -463,6 +463,8 @@ export interface EvidenceItem {
   ref: CodeRef | null;
   /** Web link (file at commit with line anchors), when known. */
   url: string | null;
+  /** Files only: the full path, which `label` may have cut. */
+  path?: string;
   /** Logs only: how many lines the log has. A range such as "L1.3-9" is valid inside it. */
   lines?: number;
 }
