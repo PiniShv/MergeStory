@@ -82,12 +82,7 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
       RUN_FILE.result,
     ).catch(() => null);
     if (!result) continue;
-    const published = result.publish as {
-      provider?: unknown;
-      watchUrl?: unknown;
-      shareUrl?: unknown;
-      expiresAt?: unknown;
-    } | null;
+    const published = result.publish;
     runs.push({
       runId: entry.name,
       runDir,
@@ -99,19 +94,13 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
         ? {
             provider: str(published.provider) ?? 'unknown',
             watchUrl: str(published.watchUrl),
-            shareUrl: 'shareUrl' in published ? str(published.shareUrl) : legacyShareUrl(published),
+            shareUrl: str(published.shareUrl),
             expiresAt: str(published.expiresAt),
           }
         : null,
     });
   }
   return runs.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.runId.localeCompare(a.runId));
-}
-
-/** For results written before shareUrl existed: watchUrl, unless the video only sits on this machine. */
-function legacyShareUrl(published: { provider?: unknown; watchUrl?: unknown }): string | null {
-  const url = str(published.watchUrl);
-  return published.provider === 'local' || url === null || /^file:/i.test(url.trim()) ? null : url;
 }
 
 function formatRunList(runs: RunSummary[], style: Style): string {

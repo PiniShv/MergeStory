@@ -98,4 +98,14 @@ describe('StoredResultSchema', () => {
       expect(StoredResultSchema.safeParse(broken).success).toBe(false);
     }
   });
+
+  it('gives a result from before shareUrl existed the link of its watch page', () => {
+    const base = { ok: true, cost: { records: [] }, egress: [], warnings: [], files: {} };
+    const old = { provider: 's3', watchUrl: 'https://x.example/w', videoUrl: 'https://x.example/v.mp4' };
+    expect(StoredResultSchema.parse({ ...base, publish: old }).publish?.shareUrl).toBe(old.watchUrl);
+    const local = { ...old, provider: 'local', watchUrl: 'file:///runs/a/index.html' };
+    expect(StoredResultSchema.parse({ ...base, publish: local }).publish?.shareUrl).toBeNull();
+    const current = { ...old, shareUrl: null };
+    expect(StoredResultSchema.parse({ ...base, publish: current }).publish?.shareUrl).toBeNull();
+  });
 });

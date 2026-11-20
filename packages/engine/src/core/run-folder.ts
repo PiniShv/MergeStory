@@ -12,7 +12,7 @@ import { MergeStoryError } from './errors.ts';
 import { randomToken } from './ids.ts';
 import { isRecord } from './json.ts';
 import { MAX_SOURCES } from './source-views.ts';
-import type { GenerateResult } from './types.ts';
+import type { GenerateResult, PublishResult } from './types.ts';
 
 /** The fixed names inside a run folder. The files that publishing uploads are always these. */
 export const RUN_FILE = {
@@ -155,7 +155,22 @@ const ResultShape = z.looseObject({
 });
 
 /** result.json: the shape is checked, and the rest is trusted because this program wrote it. */
-export const StoredResultSchema = z.custom<GenerateResult>((value) => ResultShape.safeParse(value).success);
+export const StoredResultSchema = z
+  .custom<GenerateResult>((value) => ResultShape.safeParse(value).success)
+  .transform((result) => (result.publish ? { ...result, publish: withShareUrl(result.publish) } : result));
+
+/**
+ * A publish block that an older version wrote has no shareUrl. Give it one: nothing when the video
+ * only sits on this machine, otherwise the watch page (or the video).
+ */
+export function withShareUrl(
+  publish: Omit<PublishResult, 'shareUrl'> & { shareUrl?: string | null },
+): PublishResult {
+  if (publish.shareUrl !== undefined) return publish as PublishResult;
+  const url = publish.watchUrl ?? publish.videoUrl;
+  const local = publish.provider === 'local' || !url || /^file:/i.test(url.trim());
+  return { ...publish, shareUrl: local ? null : url };
+}
 
 /** The part of render-plan.json that publishing reads: whether the captions are drawn into the video. */
 export const RenderPlanCaptionsSchema = z.looseObject({

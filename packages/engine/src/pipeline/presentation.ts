@@ -1,6 +1,7 @@
 /** Builds the data for the watch page and the PR comment from a validated storyboard. */
 
 import { findEvidence } from '../analyzer/evidence.ts';
+import { MergeStoryError } from '../core/errors.ts';
 import { changeLabel, codeRefUrl, repoLabel } from '../core/labels.ts';
 import { isJoined } from '../core/source-views.ts';
 import { isSimulated } from '../core/storyboard-facts.ts';
@@ -102,11 +103,12 @@ export function buildWatchPageData(input: PresentationInput): WatchPageData {
 }
 
 export function buildCommentData(watch: WatchPageData, publish: PublishResult, headSha: string): CommentData {
+  // decidePullRequestUpdate already stops a local result, so a missing link here is a bug.
+  if (publish.shareUrl === null) throw new MergeStoryError('INTERNAL', 'The video has no link to share.');
   return {
     title: watch.title,
     summary: watch.summary,
-    // Empty for a local result: the comment builder rejects it.
-    watchUrl: publish.shareUrl ?? '',
+    watchUrl: publish.shareUrl,
     posterUrl: publish.posterUrl,
     durationSec: watch.durationSec,
     chapters: watch.chapters,

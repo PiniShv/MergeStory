@@ -220,6 +220,27 @@ describe('JobStore.list', () => {
   });
 });
 
+describe('JobStore.read of a result from before shareUrl existed', () => {
+  it('gives it a shareUrl, null for a local video', async () => {
+    const job = await store.create({ source: '.' });
+    await store.update(job.id, (j) => {
+      // No shareUrl key, as an older version wrote it.
+      j.result = {
+        ok: true,
+        title: 'T',
+        files: {},
+        publish: {
+          provider: 'local',
+          watchUrl: 'file:///runs/a/index.html',
+          videoUrl: 'file:///runs/a/video.mp4',
+        },
+      } as unknown as GenerateResult;
+    });
+    const seen = await store.read(job.id);
+    expect((seen.result as GenerateResult).publish?.shareUrl).toBeNull();
+  });
+});
+
 describe('JobStore.get', () => {
   it('marks a running job as failed when its worker is gone', async () => {
     const job = await store.create({ source: '.' });
