@@ -6,12 +6,17 @@
  * general commands keep their flexible flags for people and CI.
  */
 import { existsSync } from 'node:fs';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { type Command, InvalidArgumentError, Option } from 'commander';
+import { resolveFfmpeg } from '../../core/binaries.ts';
 import type { Config, ConfigInput } from '../../core/config.ts';
 import { MergeStoryError } from '../../core/errors.ts';
 import { assertNoLinks, ensureDir, homeLayout } from '../../core/paths.ts';
+import { runCommand } from '../../core/process.ts';
 import { globalRedactor } from '../../core/redact.ts';
+import type { PlannedScene, RenderPlan } from '../../core/render-plan.ts';
+import { runFolder } from '../../core/run-folder.ts';
 import { isSameRepository } from '../../github/linked-issues.ts';
 import { parsePullRequestUrl, webHostFromApiUrl } from '../../github/pr-url.ts';
 import { sourceProblem } from '../../jobs/input-rules.ts';
@@ -52,7 +57,12 @@ const WORK_FILE = {
   repro: 'repro.json',
   redact: 'redact.json',
   storyboard: 'storyboard.json',
+  /** Written by `agent render`: the run folder of the latest render. */
+  lastRun: 'last-run.json',
 } as const;
+/** The pictures that `agent frames` writes. */
+const FRAMES_DIR = 'frames';
+const CONTACT_SHEET = 'contact-sheet.jpg';
 /** The folders of screenshots, of screen recordings and of logs. Each may hold a captions.json. */
 const SCREENSHOTS_DIR = 'screenshots';
 const RECORDINGS_DIR = 'recordings';
@@ -238,7 +248,72 @@ function addNameFlag(command: Command): Command {
 const SOURCE_ARGUMENT =
   'omit or ".": the repository of the current folder; or a pull request of one of its remotes';
 
-/** Add `agent analyze`, `agent validate` and `agent render`. */
+const SHEET_COLUMNS = 4;
+const SHEET_MAX_FRAMES = 24;
+
+/** A scene's frame time: the middle of its last beat, or of the scene when it has none. Always inside the video. */
+function frameTime(scene: PlannedScene, durationSec: number): number {
+  const beat = scene.beats.at(-1);
+  const t = beat ? beat.startSec + beat.durationSec / 2 : scene.startSec + scene.durationSec / 2;
+  return Math.round(Math.max(0, Math.min(t, durationSec - 0.1)) * 100) / 100;
+}
+
+/** Write frames/ in the work folder from the video of the latest `agent render`. */
+async function takeFrames(dir: string, config: Config, signal: AbortSignal | undefined) {
+  const pointer = join(dir, WORK_FILE.lastRun);
+  let runDir: unknown;
+  try {
+    runDir = (JSON.parse(await readFile(pointer, 'utf8')) as { runDir?: unknown }).runDir;
+  } catch {
+    runDir = undefined;
+  }
+  const none = (why: string) =>
+    new MergeStoryError('USAGE', why, { hint: 'Run `mergestory agent render --name <name>` first.' });
+  if (typeof runDir !== 'string') throw none('This work folder has no rendered video yet.');
+  // A pointer that leads out of the runs folder is not followed.
+  const runs = homeLayout(config.home).runs;
+  if (!runDir.startsWith(`${runs}/`) && !runDir.startsWith(`${runs}\\`)) {
+    throw none('The latest render is not in the runs folder.');
+  }
+  const run = runFolder(runDir);
+  if (!existsSync(run.video) || !existsSync(run.renderPlan)) throw none('The latest render has no video.');
+  const plan = JSON.parse(await readFile(run.renderPlan, 'utf8')) as RenderPlan;
+  const { ffmpeg } = await resolveFfmpeg(config);
+  const out = join(dir, FRAMES_DIR);
+  await rm(out, { recursive: true, force: true });
+  await ensureDir(out);
+  const grab = async (args: string[], file: string) => {
+    try {
+      await runCommand(ffmpeg, ['-v', 'error', '-y', ...args, file], { signal, timeoutMs: 120_000 });
+    } catch (cause) {
+      throw new MergeStoryError('RENDER_FAILED', 'FFmpeg could not take a frame from the video.', { cause });
+    }
+  };
+  const step = Math.max(2, Math.ceil(plan.durationSec / SHEET_MAX_FRAMES));
+  const count = Math.max(1, Math.ceil(plan.durationSec / step));
+  const contactSheet = join(out, CONTACT_SHEET);
+  await grab(
+    [
+      '-i',
+      run.video,
+      '-vf',
+      `fps=1/${step},scale=480:-2,tile=${SHEET_COLUMNS}x${Math.ceil(count / SHEET_COLUMNS)}`,
+      '-frames:v',
+      '1',
+    ],
+    contactSheet,
+  );
+  const frames: { sceneId: string; title: string; timeSec: number; file: string }[] = [];
+  for (const [i, scene] of plan.scenes.entries()) {
+    const timeSec = frameTime(scene, plan.durationSec);
+    const file = join(out, `scene-${String(i + 1).padStart(2, '0')}.jpg`);
+    await grab(['-ss', String(timeSec), '-i', run.video, '-frames:v', '1', '-q:v', '2'], file);
+    frames.push({ sceneId: scene.id, title: scene.title, timeSec, file });
+  }
+  return { dir: out, contactSheet, sheetStepSec: step, frames };
+}
+
+/** Add `agent analyze`, `agent validate`, `agent render` and `agent frames`. */
 export function registerAgent(program: Command, rt: CliRuntime): void {
   const agent = program
     .command('agent')
@@ -347,6 +422,31 @@ export function registerAgent(program: Command, rt: CliRuntime): void {
     const storyboard = join(dir, WORK_FILE.storyboard);
     // Without storyboard.json the free offline storyboard is used.
     const files = existsSync(storyboard) ? { ...context, storyboard } : context;
-    await makeVideo(env, source, { ...flags, ...files }, localOnlyOverrides(flags));
+    const result = await makeVideo(env, source, { ...flags, ...files }, localOnlyOverrides(flags));
+    // Lets `agent frames` find this render. A dry run and a failed render leave the old pointer alone.
+    if (result && 'runDir' in result && !('dryRun' in result) && existsSync(dir)) {
+      await writeFile(join(dir, WORK_FILE.lastRun), `${JSON.stringify({ runDir: result.runDir })}\n`, {
+        mode: 0o600,
+      });
+    }
+  });
+
+  const frames = agent
+    .command('frames')
+    .description('Take still frames from the latest render of the work folder, to check the video by eye')
+    .argument('[source]', SOURCE_ARGUMENT);
+  addNameFlag(frames);
+  frames.action(async (sourceArg: string | undefined, flags: AgentFlags, cmd: Command) => {
+    const env = rt.env(cmd);
+    const { dir, config } = await openWorkFolder(env, flags.name, false);
+    await agentSource(sourceArg, env, config);
+    const out = await takeFrames(dir, config, env.signal);
+    if (env.json) {
+      env.emitJson(globalRedactor.redactValue({ ok: true, name: flags.name, framesDir: out.dir, ...out }));
+      return;
+    }
+    env.say(`Contact sheet: ${out.contactSheet}`);
+    for (const f of out.frames) env.say(`${f.sceneId} "${f.title}" at ${f.timeSec}s: ${f.file}`);
+    env.say('Next: look at these pictures, fix storyboard.json if a scene is wrong, and render again.');
   });
 }

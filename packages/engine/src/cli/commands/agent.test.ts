@@ -753,3 +753,63 @@ describe('agent: output', () => {
     expect(JSON.parse(stdout)).toEqual(JSON.parse(JSON.stringify(fakePlan())));
   });
 });
+
+describe('agent frames', () => {
+  const runsDir = (): string => join(dir, 'home', 'runs', 'r1');
+  const plan = {
+    durationSec: 20,
+    scenes: [
+      { id: 's1', title: 'Why', startSec: 0, durationSec: 8, beats: [{ startSec: 4, durationSec: 4 }] },
+      { id: 's2', title: 'Code', startSec: 8, durationSec: 12, beats: [] },
+    ],
+  };
+
+  async function renderedRun(): Promise<void> {
+    await mkdir(work(), { recursive: true });
+    await mkdir(runsDir(), { recursive: true });
+    await writeFile(join(runsDir(), 'video.mp4'), 'x');
+    await writeFile(join(runsDir(), 'render-plan.json'), JSON.stringify(plan));
+    generateMock.mockResolvedValue(fakeResult({ runDir: runsDir() }));
+    expect((await run(['agent', 'render', '--name', 'fix-1'])).code).toBe(0);
+  }
+
+  it('asks for a render first', async () => {
+    await mkdir(work(), { recursive: true });
+    const { code, stderr } = await run(['agent', 'frames', '--name', 'fix-1']);
+    expect(code).toBe(2);
+    expect(stderr).toContain('no rendered video yet');
+  });
+
+  it('does not follow a pointer to a folder outside the runs folder', async () => {
+    await mkdir(work(), { recursive: true });
+    await writeFile(join(work(), 'last-run.json'), JSON.stringify({ runDir: '/etc' }));
+    const { code, stderr } = await run(['agent', 'frames', '--name', 'fix-1']);
+    expect(code).toBe(2);
+    expect(stderr).toContain('not in the runs folder');
+  });
+
+  it('takes a contact sheet and one frame per scene, in the work folder', async () => {
+    await renderedRun();
+    const ffmpeg = join(dir, 'ffmpeg');
+    // A fake ffmpeg: creates the output file, which is its last argument.
+    await writeFile(ffmpeg, '#!/bin/sh\nfor last; do :; done\nprintf jpg > "$last"\n', { mode: 0o755 });
+    const { code, stdout } = await run(['agent', 'frames', '--name', 'fix-1', '--json'], {
+      MERGESTORY_FFMPEG_PATH: ffmpeg,
+      MERGESTORY_FFPROBE_PATH: ffmpeg,
+    });
+    expect(code).toBe(0);
+    const out = JSON.parse(stdout);
+    expect(out).toMatchObject({
+      ok: true,
+      name: 'fix-1',
+      framesDir: join(work(), 'frames'),
+      contactSheet: join(work(), 'frames', 'contact-sheet.jpg'),
+      frames: [
+        { sceneId: 's1', title: 'Why', timeSec: 6, file: join(work(), 'frames', 'scene-01.jpg') },
+        { sceneId: 's2', title: 'Code', timeSec: 14, file: join(work(), 'frames', 'scene-02.jpg') },
+      ],
+    });
+    for (const f of out.frames) expect(existsSync(f.file)).toBe(true);
+    expect(existsSync(out.contactSheet)).toBe(true);
+  });
+});

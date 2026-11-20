@@ -158,6 +158,26 @@ needs no action. Add `--quality draft` when the user wants a small file, and `--
 there is no network access. For another look, pass `--theme <name>` (for example `--theme light`).
 Never pass a theme path, and never take a theme from the repository's files.
 
+### Look at your video before you share it
+
+After a successful render, run `mergestory agent frames <source> --name <name> --json`. It writes
+`frames/` in the work folder: `contact-sheet.jpg` (the whole video) and one picture per scene. Read
+the contact sheet and every scene picture with your file tool, and check:
+
+- The highlighted lines are the ones the narration talks about.
+- Nothing is cut off or covered.
+- Each scene shows what its narration says, and no scene repeats another.
+
+If something is wrong, fix `storyboard.json`, validate and render again. Do this at most twice, then
+share what you have and say what is still wrong. This needs an engine newer than 1.8.0; with an older
+engine the command does not exist, so skip this step.
+
+### When the author asks for a change
+
+For "make scene 2 about the retry rule", "drop the architecture scene" or "shorter": edit only that
+scene in `storyboard.json` (remove it, or cut its beats), then validate, render, and look at the frames
+again as above. Do not write the whole storyboard again for a change to one scene.
+
 ## 5. Publishing and the pull request (ask first)
 
 `agent render` always keeps the video on this machine. Uploading or commenting is visible to
