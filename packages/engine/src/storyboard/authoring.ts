@@ -173,7 +173,7 @@ export const EXAMPLE_STORYBOARD = {
           evidence: ['PR'],
         },
         {
-          text: 'The new function fetchWithBackoff wraps the fetch call and tries again after a server error.',
+          text: 'A new function wraps the fetch call and tries again after a server error.',
           evidence: ['F1', 'S1'],
         },
       ],
@@ -194,7 +194,7 @@ export const EXAMPLE_STORYBOARD = {
       title: 'The retry loop',
       narration: [
         {
-          text: 'fetchWithBackoff sends the request inside a loop. The limit comes from MAX_RETRIES, which is set to 3.',
+          text: 'fetchWithBackoff sends the request inside a loop. The retry limit is three.',
           evidence: ['S1', 'S3', 'F1.H1'],
         },
         {
@@ -207,8 +207,7 @@ export const EXAMPLE_STORYBOARD = {
         ref: { path: 'src/http/retry.ts', side: 'head', startLine: 18, endLine: 29 },
         mode: 'diff',
         focus: [
-          { startLine: 18, endLine: 22, note: 'New function fetchWithBackoff', beat: 0 },
-          { startLine: 23, endLine: 23, note: 'Limit: MAX_RETRIES, which is 3', beat: 0 },
+          { startLine: 18, endLine: 23, note: 'New function, limit MAX_RETRIES', beat: 0 },
           { startLine: 26, endLine: 27, note: 'Return, or wait and retry', beat: 1 },
         ],
         caption: null,
@@ -223,7 +222,7 @@ export const EXAMPLE_STORYBOARD = {
       title: 'Where to look',
       narration: [
         {
-          text: 'Read the retry rule closely: fetchWithBackoff retries every response with a status of 500 or above.',
+          text: 'Read the retry rule closely: it retries every response with a status of 500 or above.',
           evidence: ['R1', 'S1'],
         },
       ],
@@ -232,7 +231,7 @@ export const EXAMPLE_STORYBOARD = {
         items: [
           {
             title: 'Retries on every server error',
-            detail: 'A request that is not safe to send twice is retried too.',
+            detail: 'A request that is not safe to send twice is retried too. Check that this is wanted.',
             severity: 'medium',
             ref: REF,
             beat: 0,
@@ -270,7 +269,7 @@ Lead with why, then the key change; details come after. Use these scenes in this
 
 1. mission: why the change exists: the problem, and who it helps. Take it from the PR description, the task, the notes or an issue, and cite them. If none says why, say so in one line ("The pull request does not say why."). Never guess a reason.
 2. reproduction: only when a reproduction (REPRO) or a capture of the bug (a "before" screenshot or recording) was supplied. Show the bug happening.
-3. under-the-hood: one to three scenes, most important hunk first (see "Key hunks", unless the task or notes point elsewhere). Explain how the key lines work.
+3. under-the-hood: one to three scenes, most important hunk first (see "Key hunks", unless the task or notes point elsewhere). Explain how the key lines work. The first one shows the key change as real code: a code visual, or a before-after with a code panel. Never bullets or pseudo-code.
 4. before-after: the impact: what goes in, what came out before, what comes out now. Only when behaviour changes in a way a user or the system would notice, or when a changed function is small enough to show both versions.
 5. proof: only when a capture of the fix working (an "after" screenshot or recording, or a step marked "fixed") or a reported test result was supplied. Show the fix working.
 6. big-picture: only when two or more components changed: how they relate.
@@ -315,7 +314,8 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Never invent files, symbols, behaviour, test results or numbers. If the pack does not show it, do not say it.
 - Names, constants and values that appear in the code are facts, not claims. State them: "three retries", "a 250 millisecond base delay", "a four second cap". Cite the hunk or symbol that holds them.
 - Measured results are claims. Do not say that tests pass, that CI is green, how much code is covered, how much faster something is, that nothing breaks, or that the code is bug-free, fully tested, production-ready, secure or verified. Do not write test runner output ("3 passed") or badges ("Build ✅", "Tests: green") either. Such text is removed. The one exception is a run that the caller reported: cite its id (T1, T2, ...). Only a passing run of tests backs "the tests pass", and only a passing run that CI reported backs "CI is green". If any reported run did not pass, say which one instead.
-- TASK and NOTES say why the change was made. Use them for the reason, cite them, and say whose words they are when the code does not show it too ("the notes say ...").
+- TASK and NOTES say why the change was made. Use them for the reason and cite them. Say a source's claim as a claim ("the ticket asks for ...", "the PR says ..."), never "the notes say": notes are private to the writer.
+- Keep the strength of the source's words: "should" stays "should", and a plan is not a fact. Say "every", "all", "only" or "never" only when the code shows it.
 - REPRO and REPRO.1, REPRO.2, ... are steps that the author wrote. They show what the author saw, not what the code does. A line that cites only them says so: "In the reproduction, ...", "The reproduction shows ...".
 - Put what the evidence does not settle in "uncertainties". Do not guess.
 - Names in your text (functions, files, constants) must exist in the change, in narration and on screen alike: headings, titles, chips, notes, captions, labels. A sentence or label with an invented name is removed, and a heading or title with nothing left is an error. A name that only the PR text, a commit, an issue, the README, the task or the notes mention is accepted only on a line that cites that source (PR, CM1, IS1, REPO, TASK, NOTES, REPRO): those texts also describe plans and mistakes.
@@ -327,24 +327,22 @@ ${VISUAL_SHAPES.map((shape) => `- ${JSON.stringify(shape)}`).join('\n')}
 - Use at most ${LIMITS.maxCodeLines} lines per CodeRef. Choose the most important hunk, not the first one. Centre the range on the function you explain, so that every function or constant you name is on screen.
 - In mode "diff" the view also shows removed lines between the new ones, and the screen holds ${LIMITS.maxCodeLines} rows. When the new and removed lines of the range need more, use a shorter range or mode "snippet". Otherwise the check fails with diff-too-tall. Over a snippet, do not describe removed lines.
 - Talk only about code inside the range. A viewer cannot see a function that the range leaves out.
-- Use mode "diff" only for lines inside a changed hunk. Put "focus" ranges on the lines you talk about, in the order you talk about them. Give each a short note and the beat of the line that explains it.
+- Use mode "diff" only for lines inside a changed hunk. Put "focus" ranges on the lines you talk about, in the order you talk about them. Give each a short note and the beat of the line that explains it. One range per beat: the view lights one range at a time.
 - A new file exists only at "head". A deleted file exists only at "base".
 - Sensitive and binary files are never shown. They are not in the pack.
 
 ## Narration
 
-- Write for the ear: short sentences, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. Stay within the word budget in the task line.
+- Write for the ear: short sentences, one idea each, plain words, about ${LIMITS.wordsPerSecond * 60} words per minute. The word budget in the task line is a limit: stay within it, and give each scene its share (the key change gets the most).
 - One or two sentences per line, at most ${LIMITS.maxWordsPerNarrationLine} words. One to six lines per scene.
 - No markdown, no lists, no emoji.
 - The viewer has never seen the evidence pack. Do not say "the pack" or "the evidence pack"; say what the change shows. The engine warns about these words.
-- Be explicit. Name the real functions, types and constants. State the real values from the code. Say how the important lines work and why they are there. "This function changed" teaches nothing.
-- Say names naturally: function and constant names are fine to say. Never read a file path out loud character by character, because the screen shows it. Say "in the retry module" or just the file name. Write numbers without underscores.
-- Keep sentences short. One idea per sentence.
+- Be explicit about what the code does and the real values. Say how the important lines work and why they are there. "This function changed" teaches nothing.
+- Say a name only when a reviewer will search for it, and say it once. Describe constants in capitals, casts, symbols, long camelCase names, columns and flags in plain words ("the retry limit"): the screen shows the exact name. Never read a file path out loud; say "in the retry module". Write numbers without underscores.
 - Every line adds a new fact. No introduction, no closing words, no summary. The engine warns about a repeated line.
 - Do not say the pull request number or counts that teach nothing ("seven files changed").
-- Use the review scene for real risks: what could go wrong, where to look (a function, a value, a signature) and why. Take them from the risk ids and from what the notes ask a reviewer to check.
+- Review scene: each item is a risk or decision that this change introduces, not old behaviour elsewhere or something already fine. Its detail states the fact, then what to check: "The loop now replaces any segment a line already had. Check that this is wanted." Never only a question.
 - No filler and no hype. Avoid words such as "powerful", "seamless", "robust" and "simply".
-- Say what the change does, not what it might do.
 
 ## Simulated visuals
 

@@ -198,9 +198,9 @@ describe('authoring guide', () => {
   });
 
   it('is short enough to send with every request', () => {
-    // 2342 words today. The story arc that leads with why and the key change, and the review scene
-    // with places to read, added 154 to the 2188 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2347);
+    // 2426 words today. The rules on saying names, sources, claim strength, the word budget, review
+    // items, the key change as code and one focus per beat added 84 to the 2342 before it.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2431);
   });
 
   it('states every limit that the validator enforces', () => {
