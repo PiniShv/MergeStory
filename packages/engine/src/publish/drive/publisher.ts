@@ -198,6 +198,7 @@ export class DrivePublisher implements Publisher {
       ...('warning' in shared ? { warnings: [shared.warning] } : {}),
       provider: 'drive',
       watchUrl: file.webViewLink,
+      shareUrl: file.webViewLink,
       videoUrl: file.webViewLink,
       posterUrl: null,
       captionsUrl: null,

@@ -196,7 +196,7 @@ same run after they approve, without rendering again:
 Reply with: the link, the duration, the one-line `summary`, `cost.totalUsd`, and any `warnings`. Say that
 `cost.totalUsd` counts only MergeStory's paid calls, and call it an estimate only when it is above 0. Your
 agent's own usage, storage and CI are billed separately and are not in it.
-When `publish` is null or `publish.provider` is `local`, nothing was shared: give the local
+When `publish` is null or `publish.shareUrl` is null, nothing was shared: give the local
 files `files.watchPage` and `files.video`, and say that they are only on this machine. Otherwise
 the link is `publish.shareUrl`. Say plainly that the video explains the change and does not
 replace code review.

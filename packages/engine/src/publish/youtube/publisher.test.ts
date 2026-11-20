@@ -460,6 +460,7 @@ describe('the upload', () => {
     expect(result).toEqual({
       provider: 'youtube',
       watchUrl: `https://www.youtube.com/watch?v=${FAKE_VIDEO_ID}`,
+      shareUrl: `https://www.youtube.com/watch?v=${FAKE_VIDEO_ID}`,
       videoUrl: `https://www.youtube.com/watch?v=${FAKE_VIDEO_ID}`,
       posterUrl: `https://i.ytimg.com/vi/${FAKE_VIDEO_ID}/hqdefault.jpg`,
       captionsUrl: null,

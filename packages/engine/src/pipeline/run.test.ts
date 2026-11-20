@@ -122,6 +122,7 @@ let uploads: PublishBundle[];
 const uploaded: PublishResult = {
   provider: 's3',
   watchUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
+  shareUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
   videoUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/video.mp4',
   posterUrl: null,
   captionsUrl: null,
@@ -576,9 +577,9 @@ describe('generate: publishing', () => {
     });
     const result = await run({ config: S3_CONFIG });
     expect(seen).toEqual({ result: true, input: true });
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     const stored = await readJson<GenerateResult>(join(runDir(), 'result.json'));
-    expect(stored.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(stored.publish).toEqual(uploaded);
     expect(stored.elapsedSec).toBe(result.elapsedSec);
     expect(result.elapsedSec).toBeGreaterThan(0);
     const input = await readJson<Record<string, unknown>>(join(runDir(), 'publish-input.json'));
@@ -622,13 +623,10 @@ describe('generate: publishing', () => {
     // `mergestory publish` picks it up where it stopped.
     publishMock.mockReturnValue(fakePublisher('ok'));
     const retried = await publishRun({ run: runDir(), config: S3_CONFIG });
-    expect(retried.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(retried.publish).toEqual(uploaded);
     expect(retried.title).toBe(saved.title);
     expect(retried.egress.filter((e) => e.purpose === 'video upload')).toHaveLength(2);
-    expect((await readJson<GenerateResult>(join(runDir(), 'result.json'))).publish).toEqual({
-      ...uploaded,
-      shareUrl: uploaded.watchUrl,
-    });
+    expect((await readJson<GenerateResult>(join(runDir(), 'result.json'))).publish).toEqual(uploaded);
   });
 
   it('stops a refused public link before anything is narrated or rendered', async () => {
@@ -669,7 +667,7 @@ describe('generate: publishing', () => {
 
     publishMock.mockReturnValue(fakePublisher('ok'));
     const result = await publishRun({ run: moved, config: S3_CONFIG });
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     expect(result.runDir).toBe(moved);
     expect(result.files.video).toBe(join(moved, 'video.mp4'));
     // What was uploaded came from the moved folder (the system may spell it through a link).
@@ -685,7 +683,7 @@ describe('generate: publishing', () => {
     await rm(join(runDir(), 'result.json'));
     publishMock.mockReturnValue(fakePublisher('ok'));
     const result = await publishRun({ run: runDir(), config: S3_CONFIG });
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     expect(result.warnings.some((w) => w.startsWith(EARLIER_RESULT_MISSING))).toBe(true);
     // The publish output does not show $0 for costs that are not known.
     expect(formatPublishResult(result, createStyle(false))).toMatch(/Cost\s+not known/);
@@ -773,7 +771,7 @@ describe('generate: details', () => {
     });
     publishMock.mockReturnValue(fakePublisher('ok'));
     const result = await run({ config: S3_CONFIG });
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     expect(result.files.poster).toBeNull();
     expect(JSON.parse(await readFile(join(runDir(), 'result.json'), 'utf8')).files.poster).toBeNull();
     const [bundle] = uploads.slice(-1);

@@ -118,6 +118,17 @@ describe('mergestory runs', () => {
     };
     expect(runs[0]?.publish.shareUrl).toBeNull();
   });
+
+  it('treats a file link in a result from an older version as no link to share', async () => {
+    await withResult(A, {
+      publish: { provider: 'unknown-host', watchUrl: 'file:///runs/a/publish/index.html' }, // no shareUrl: older result
+    });
+    expect((await run(['runs'])).stdout).not.toContain('file://');
+    const { runs } = JSON.parse((await run(['runs', '--json'])).stdout) as {
+      runs: { publish: { shareUrl: string | null } }[];
+    };
+    expect(runs[0]?.publish.shareUrl).toBeNull();
+  });
 });
 
 describe('mergestory runs delete', () => {
@@ -194,16 +205,5 @@ describe('mergestory runs delete --older-than', () => {
     expect((await run(['runs', 'delete'])).code).toBe(2);
     expect((await run(['runs', 'delete', A, '--older-than', '1'])).code).toBe(2);
     expect(await readdir(runsDir())).toEqual([A]);
-  });
-
-  it('never shows a file link as the link to share, whatever the provider says', async () => {
-    await withResult(A, {
-      publish: { provider: 'unknown-host', watchUrl: 'file:///runs/a/publish/index.html' },
-    });
-    expect((await run(['runs'])).stdout).not.toContain('file://');
-    const { runs } = JSON.parse((await run(['runs', '--json'])).stdout) as {
-      runs: { publish: { shareUrl: string | null } }[];
-    };
-    expect(runs[0]?.publish.shareUrl).toBeNull();
   });
 });

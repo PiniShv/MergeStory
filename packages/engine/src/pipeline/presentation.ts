@@ -105,7 +105,8 @@ export function buildCommentData(watch: WatchPageData, publish: PublishResult, h
   return {
     title: watch.title,
     summary: watch.summary,
-    watchUrl: publish.watchUrl ?? publish.videoUrl,
+    // Empty for a local result: the comment builder rejects it.
+    watchUrl: publish.shareUrl ?? '',
     posterUrl: publish.posterUrl,
     durationSec: watch.durationSec,
     chapters: watch.chapters,

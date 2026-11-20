@@ -99,8 +99,7 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
         ? {
             provider: str(published.provider) ?? 'unknown',
             watchUrl: str(published.watchUrl),
-            // Runs saved before shareUrl existed: fall back to watchUrl, but a file: link is never shared.
-            shareUrl: shareLink(published.provider, str(published.shareUrl) ?? str(published.watchUrl)),
+            shareUrl: 'shareUrl' in published ? str(published.shareUrl) : legacyShareUrl(published),
             expiresAt: str(published.expiresAt),
           }
         : null,
@@ -109,8 +108,10 @@ async function listRuns(runsDir: string): Promise<RunSummary[]> {
   return runs.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.runId.localeCompare(a.runId));
 }
 
-function shareLink(provider: unknown, url: string | null): string | null {
-  return provider === 'local' || url === null || /^file:/i.test(url.trim()) ? null : url;
+/** For results written before shareUrl existed: watchUrl, unless the video only sits on this machine. */
+function legacyShareUrl(published: { provider?: unknown; watchUrl?: unknown }): string | null {
+  const url = str(published.watchUrl);
+  return published.provider === 'local' || url === null || /^file:/i.test(url.trim()) ? null : url;
 }
 
 function formatRunList(runs: RunSummary[], style: Style): string {

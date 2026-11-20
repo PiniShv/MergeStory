@@ -112,15 +112,11 @@ function chapterLines(chapters: { title: string; startSec: number }[]): string[]
 
 /** The label and the text of the row that says where the video went. A link to a file is no sharing. */
 function publishedRow(publish: NonNullable<GenerateResult['publish']>): [string, string] {
-  const link = publish.watchUrl ?? publish.videoUrl;
-  if (publish.provider === 'local') return ['Saved', `${link}  (saved on this machine)`];
-  return ['Shared', sharedLine(publish)];
-}
-
-function sharedLine(publish: NonNullable<GenerateResult['publish']>): string {
-  const link = publish.watchUrl ?? publish.videoUrl;
+  if (publish.shareUrl === null) {
+    return ['Saved', `${publish.watchUrl ?? publish.videoUrl}  (saved on this machine)`];
+  }
   const expiry = publish.expiresAt ? `, link expires ${publish.expiresAt}` : '';
-  return `${link}  (${publish.visibility}${expiry})`;
+  return ['Shared', `${publish.shareUrl}  (${publish.visibility}${expiry})`];
 }
 
 function notifyLine(notify: NonNullable<GenerateResult['notify']>): string | null {

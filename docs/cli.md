@@ -903,7 +903,7 @@ published video: a signed link stops working without its signature, so it is kep
 | `egress` | Every outbound transfer: `destination` (a host name), `purpose`, `bytes` and `contains` (for example `video` or `diff`). |
 | `warnings` | Things worth knowing, in plain words. |
 
-To get the link to post or send, use `publish.shareUrl`. It is `null` when nothing was shared (the local provider), and then `publish.watchUrl` is a `file://` link that works only on this machine: never post it. `watchUrl` is kept for compatibility. A `result.json` written by an older version has no `shareUrl`; there, treat `provider` `local` as not shared. Do not test for `publish === null`.
+When `publish` is null or `publish.shareUrl` is null, nothing was shared. Otherwise the link to post or send is `publish.shareUrl`. For the local provider `shareUrl` is `null` and `publish.watchUrl` is a `file://` link that works only on this machine: never post it. A `result.json` written by an older version has no `shareUrl`; there, treat provider `local` as not shared.
 
 ### The plan of a dry run
 

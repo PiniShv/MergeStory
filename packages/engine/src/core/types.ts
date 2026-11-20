@@ -597,12 +597,8 @@ export interface PublishResult {
   provider: string;
   /** Shareable page with the player, chapters and review checklist. */
   watchUrl: string | null;
-  /**
-   * The link to post or send to other people, or null when nothing was shared (the local and none
-   * providers). The engine sets it; a result.json from an older version may not have it.
-   * watchUrl alone is not enough to tell: for the local provider it is a file:// link.
-   */
-  shareUrl?: string | null;
+  /** The link to post or send to other people, or null when the video was only saved on this machine (the local provider). */
+  shareUrl: string | null;
   videoUrl: string;
   posterUrl: string | null;
   captionsUrl: string | null;

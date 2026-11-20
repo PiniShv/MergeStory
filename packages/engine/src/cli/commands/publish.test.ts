@@ -59,6 +59,7 @@ function published(overrides: Partial<PublishResult> = {}): PublishResult {
   return {
     provider: 's3',
     watchUrl: PROTECTED_WATCH,
+    shareUrl: PROTECTED_WATCH,
     videoUrl: PROTECTED_WATCH.replace('index.html', 'video.mp4'),
     posterUrl: PROTECTED_WATCH.replace('index.html', 'poster.jpg'),
     captionsUrl: PROTECTED_WATCH.replace('index.html', 'captions.vtt'),
@@ -326,6 +327,7 @@ describe('publish: output', () => {
         publish: published({
           provider: 'local',
           watchUrl: 'file:///runs/r1/publish/index.html',
+          shareUrl: null,
           videoUrl: 'file:///runs/r1/publish/video.mp4',
           visibility: 'private',
         }),
@@ -555,7 +557,13 @@ describe('formatPublishResult', () => {
 
   it('leaves out the video line for a result without a watch page', () => {
     const text = formatPublishResult(
-      fakeResult({ publish: published({ watchUrl: null, videoUrl: 'https://videos.example.com/v.mp4' }) }),
+      fakeResult({
+        publish: published({
+          watchUrl: null,
+          shareUrl: 'https://videos.example.com/v.mp4',
+          videoUrl: 'https://videos.example.com/v.mp4',
+        }),
+      }),
       createStyle(false),
     );
     expect(text).toContain('https://videos.example.com/v.mp4');

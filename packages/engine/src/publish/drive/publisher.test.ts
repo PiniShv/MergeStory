@@ -109,6 +109,7 @@ describe('DrivePublisher', () => {
     expect(result).toEqual({
       provider: 'drive',
       watchUrl: FILE_LINK,
+      shareUrl: FILE_LINK,
       videoUrl: FILE_LINK,
       posterUrl: null,
       captionsUrl: null,

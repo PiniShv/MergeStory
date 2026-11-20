@@ -121,6 +121,7 @@ describe('generate: output', () => {
         publish: {
           provider: 's3',
           watchUrl: 'https://files.example.com/v/abc/index.html?X-Amz-Signature=0123456789abcdef',
+          shareUrl: 'https://files.example.com/v/abc/index.html?X-Amz-Signature=0123456789abcdef',
           videoUrl: 'https://files.example.com/v/abc/video.mp4?X-Amz-Signature=0123456789abcdef',
           posterUrl: null,
           captionsUrl: null,
@@ -187,6 +188,7 @@ describe('generate: output', () => {
         publish: {
           provider: 's3',
           watchUrl: null,
+          shareUrl: link,
           videoUrl: link,
           posterUrl: null,
           captionsUrl: null,

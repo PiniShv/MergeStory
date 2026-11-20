@@ -165,6 +165,8 @@ export class LocalPublisher implements Publisher {
     return {
       provider: 'local',
       watchUrl: fileUrl(WATCH_PAGE_NAME),
+      // A file:// link only works on this machine, so there is nothing to share.
+      shareUrl: null,
       videoUrl: fileUrl(files.video.file.name),
       posterUrl: files.poster ? fileUrl(files.poster.file.name) : null,
       captionsUrl: files.captions ? fileUrl(files.captions.file.name) : null,

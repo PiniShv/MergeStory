@@ -48,6 +48,7 @@ describe('formatGenerateResult: where the video went', () => {
   const published = (overrides: Partial<PublishResult>): PublishResult => ({
     provider: 'local',
     watchUrl: 'file:///runs/a/publish/index.html',
+    shareUrl: null,
     videoUrl: 'file:///runs/a/publish/video.mp4',
     posterUrl: null,
     captionsUrl: null,
@@ -66,7 +67,13 @@ describe('formatGenerateResult: where the video went', () => {
 
   it('shows a link that others can open as shared, with its access', () => {
     const text = formatGenerateResult(
-      result(published({ provider: 's3', watchUrl: 'https://videos.example.com/v/index.html' })),
+      result(
+        published({
+          provider: 's3',
+          watchUrl: 'https://videos.example.com/v/index.html',
+          shareUrl: 'https://videos.example.com/v/index.html',
+        }),
+      ),
       plain,
     );
     expect(text).toMatch(/Shared +https:\/\/videos\.example\.com\/v\/index\.html {2}\(private\)/);

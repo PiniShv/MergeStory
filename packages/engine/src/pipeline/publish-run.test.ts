@@ -39,6 +39,7 @@ const clientMock = vi.mocked(GitHubClient.create);
 const uploaded: PublishResult = {
   provider: 's3',
   watchUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
+  shareUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/index.html',
   videoUrl: 'https://videos.example.com/mergestory/v/0123456789abcdef0123456789abcdef/video.mp4',
   posterUrl: null,
   captionsUrl: null,
@@ -231,34 +232,6 @@ describe('the files that are uploaded', () => {
   });
 });
 
-describe('the link to share', () => {
-  it('is the watch page for a remote provider', async () => {
-    await writeRun();
-    const result = await publish();
-    expect(result.publish?.shareUrl).toBe(uploaded.watchUrl);
-    expect((await resultFile()).publish?.shareUrl).toBe(uploaded.watchUrl);
-  });
-
-  it('is null for the local provider, whose watchUrl is a file:// link', async () => {
-    await writeRun();
-    publisherMock.mockReturnValue({
-      ...publisher(),
-      id: 'local',
-      publish: async () => ({
-        ...uploaded,
-        provider: 'local',
-        watchUrl: 'file:///runs/r1/publish/index.html',
-        videoUrl: 'file:///runs/r1/publish/video.mp4',
-        visibility: 'private',
-      }),
-    });
-    const result = await publish({ publish: { provider: 'local' } });
-    expect(result.publish?.watchUrl).toMatch(/^file:/);
-    expect(result.publish?.shareUrl).toBeNull();
-    expect((await resultFile()).publish?.shareUrl).toBeNull();
-  });
-});
-
 describe('what publish-input.json says about the repository', () => {
   const bundlePrivacy = () => received.at(-1)?.repoIsPrivate;
 
@@ -399,7 +372,7 @@ describe('a pull request update that fails', () => {
       ),
     );
     const result = await publish(PR_CONFIG);
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     expect(result.notify).toEqual({ commentUrl: null, descriptionUpdated: false });
     const warning = result.warnings.find((w) => w.startsWith('The pull request was not updated:'));
     expect(warning).toContain('Resource not accessible by integration.');
@@ -407,7 +380,7 @@ describe('a pull request update that fails', () => {
     expect(warning).toContain('The video itself is published.');
     expect(warning).toContain(`mergestory publish ${runDir} --publish s3 --visibility protected --comment`);
     expect(warning).toContain('this uploads the video again');
-    expect((await resultFile()).publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect((await resultFile()).publish).toEqual(uploaded);
   });
 
   it('keeps what worked when only the description fails', async () => {
@@ -501,7 +474,7 @@ describe('a run that has no result.json', () => {
   it('is rebuilt from publish-input.json, with a note', async () => {
     await writeRun(storedInput(), false);
     const result = await publish();
-    expect(result.publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect(result.publish).toEqual(uploaded);
     expect(result).toMatchObject({
       title: 'Add retries to the uploader',
       durationSec: 83,
@@ -509,7 +482,7 @@ describe('a run that has no result.json', () => {
       files: { video: join(runDir, 'video.mp4') },
     });
     expect(result.warnings[0]).toContain('was not found');
-    expect((await resultFile()).publish).toEqual({ ...uploaded, shareUrl: uploaded.watchUrl });
+    expect((await resultFile()).publish).toEqual(uploaded);
 
     // A damaged file is treated the same way.
     await writeFile(join(runDir, 'result.json'), '{"ok": tr');

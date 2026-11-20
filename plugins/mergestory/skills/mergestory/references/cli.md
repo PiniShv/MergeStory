@@ -122,9 +122,9 @@ Success of `generate` and `publish` (shortened):
 
 `files.poster` is `null` when no poster image was made; check for it before you open the file.
 `publish.provider` tells you where the video went. With the default `--publish local` it is `local`,
-and `watchUrl` is a `file://` link to a file on this machine. `publish.shareUrl` is the link to post
-or send: it is `null` when nothing was shared, so never post `watchUrl` without checking `shareUrl`.
-`publish` is `null` only with
+and `watchUrl` is a `file://` link to a file on this machine. When `publish` is null or
+`publish.shareUrl` is null, nothing was shared: give `files.watchPage` and `files.video`. Otherwise
+the link to post or send is `publish.shareUrl`; never post `watchUrl` instead. `publish` is `null` only with
 `--publish none`. `notify` is `null` unless a pull request update was asked for and tried. `egress`
 lists every outbound transfer (host, purpose, bytes, what it contained).
 
