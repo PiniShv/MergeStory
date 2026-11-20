@@ -21,8 +21,11 @@ export const DEFAULT_SOURCE_LIMITS: SourceLimits = {
   maxCommits: 250,
 };
 
-/** Largest file the readers return (1 MiB). Bigger files read as "not available". */
-export const MAX_READ_BYTES = 1024 * 1024;
+/**
+ * Largest file the readers return (8 MiB). Bigger files read as "not available". Real bundled or generated
+ * source files pass 1 MiB; 8 MiB still fits the reader cache (16 million characters) and reads quickly.
+ */
+export const MAX_READ_BYTES = 8 * 1024 * 1024;
 
 /** Repository context caps. */
 export const REPO_TREE_MAX_ENTRIES = 200;
