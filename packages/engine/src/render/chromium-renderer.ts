@@ -275,6 +275,7 @@ class RenderRun {
         first: page.pageErrors[0]?.slice(0, 200),
       });
     }
+    for (const problem of page.fitProblems) logger.warn(problem);
     if (page.blockedRequests > 0) {
       logger.warn('The render page tried to make network requests; all were blocked.', {
         count: page.blockedRequests,

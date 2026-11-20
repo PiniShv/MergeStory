@@ -372,6 +372,9 @@ export interface MergeStoryRuntimeApi {
   seek(timeSec: number): SeekResult;
 }
 
+/** Console warnings that start with this are text the runtime could not fit; the renderer logs them. */
+export const FIT_WARNING_PREFIX = 'mergestory-fit: ';
+
 /** Logical layout size. All templates are designed for this canvas. */
 export const STAGE_WIDTH = 1920;
 export const STAGE_HEIGHT = 1080;

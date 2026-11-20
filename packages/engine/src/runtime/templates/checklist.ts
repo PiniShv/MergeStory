@@ -2,7 +2,7 @@
 import type { ChecklistResolved } from '../../core/render-plan.ts';
 import { ease, enter } from '../anim.ts';
 import { css, h } from '../dom.ts';
-import { truncatePath } from '../fit.ts';
+import { reportFit, truncatePath } from '../fit.ts';
 import { grow, rise } from '../motion.ts';
 import type { SceneInstance, TemplateFactory } from '../types.ts';
 
@@ -105,7 +105,7 @@ const CHECKLIST_CSS = String.raw`
 const SEVERITY_ORDER: Item['severity'][] = ['high', 'medium', 'low', 'info'];
 
 /** One set of sizes. The first level that fits the content area is used. */
-interface Level {
+export interface Level {
   title: number;
   detail: number;
   pad: number;
@@ -116,30 +116,40 @@ interface Level {
   ref: number;
 }
 
-/** One column of up to three cards: roomy first, then tighter. */
-const LIST_LEVELS: Level[] = [
+/**
+ * Roomy first, then tighter. A level is used only if no title or detail is cut, so the last levels
+ * trade size for lines; the smallest sizes are still easy to read on the 1920 px canvas.
+ */
+/** One column of up to three cards. */
+export const LIST_LEVELS: Level[] = [
   { title: 38, detail: 30, pad: 26, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 36, detail: 30, pad: 22, gap: 8, titleLines: 2, detailLines: 2, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 6, titleLines: 2, detailLines: 2, chip: 36, ref: 40 },
-  { title: 32, detail: 28, pad: 14, gap: 6, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 32, detail: 28, pad: 14, gap: 6, titleLines: 2, detailLines: 2, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 12, gap: 6, titleLines: 2, detailLines: 3, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 12, gap: 4, titleLines: 3, detailLines: 4, chip: 34, ref: 38 },
 ];
 
 /** Two columns, two rows (four items). */
-const GRID_LEVELS: Level[] = [
+export const GRID_LEVELS: Level[] = [
   { title: 36, detail: 30, pad: 22, gap: 14, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
   { title: 34, detail: 29, pad: 18, gap: 10, titleLines: 2, detailLines: 3, chip: 38, ref: 42 },
-  { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 2, detailLines: 3, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 14, gap: 8, titleLines: 2, detailLines: 4, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 12, gap: 6, titleLines: 3, detailLines: 5, chip: 34, ref: 38 },
 ];
 
 /** Two columns, three rows (five or six items). */
-const DENSE_LEVELS: Level[] = [
+export const DENSE_LEVELS: Level[] = [
   { title: 32, detail: 28, pad: 14, gap: 8, titleLines: 1, detailLines: 2, chip: 36, ref: 40 },
+  { title: 30, detail: 26, pad: 12, gap: 6, titleLines: 2, detailLines: 2, chip: 34, ref: 38 },
+  { title: 28, detail: 24, pad: 10, gap: 4, titleLines: 2, detailLines: 3, chip: 34, ref: 38 },
 ];
 
 /** Height of the card area in grid mode, in pixels. */
 const GRID_HEIGHT = 612;
 
-function checklistLevels(count: number): Level[] {
+export function checklistLevels(count: number): Level[] {
   if (count <= 3) return LIST_LEVELS;
   return count === 4 ? GRID_LEVELS : DENSE_LEVELS;
 }
@@ -179,12 +189,9 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
           text: truncatePath(item.refLabel, wide ? 56 : refChars),
         })
       : null;
-    const main = h(
-      'div',
-      { class: 'ms-chk__main' },
-      h('div', { class: 'ms-chk__top' }, sev, h('div', { class: 'ms-chk__name', text: item.title })),
-      item.detail ? h('div', { class: 'ms-chk__detail', text: item.detail }) : null,
-    );
+    const name = h('div', { class: 'ms-chk__name', text: item.title });
+    const detail = item.detail ? h('div', { class: 'ms-chk__detail', text: item.detail }) : null;
+    const main = h('div', { class: 'ms-chk__main' }, h('div', { class: 'ms-chk__top' }, sev, name), detail);
     const el = h(
       'div',
       {
@@ -195,7 +202,7 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
       main,
       ref,
     );
-    return { el, stripe, sev, start: item.start };
+    return { el, stripe, sev, name, detail, start: item.start };
   });
 
   const gridEl = h(
@@ -225,11 +232,16 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
     set('--chk-chip', `${level.chip}px`);
     set('--chk-ref', `${level.ref}px`);
   };
+  // Text that the line limit hides still counts in scrollHeight, so this finds every cut.
+  const cut = (el: HTMLElement) => el.scrollHeight > el.clientHeight + 1;
+  const cutItems = () =>
+    cards.flatMap((c, i) => ([c.name, c.detail].some((el) => el && cut(el)) ? [items[i]!.title] : []));
   // Grid rows have a fixed height, so a card overflows its box; list rows grow, so the whole list overflows.
   const fits = () =>
-    grid
+    cutItems().length === 0 &&
+    (grid
       ? cards.every((c) => c.el.scrollHeight <= c.el.clientHeight + 1)
-      : gridEl.offsetHeight <= root.clientHeight - head.offsetHeight - 16 - 2;
+      : gridEl.offsetHeight <= root.clientHeight - head.offsetHeight - 16 - 2);
 
   const instance: SceneInstance = {
     root,
@@ -238,6 +250,13 @@ export const checklistTemplate: TemplateFactory<ChecklistResolved> = (visual, ct
       for (const level of levels) {
         apply(level);
         if (fits()) break;
+      }
+      // Even the smallest level cut some text: say so, because a reviewer would miss that part.
+      const lost = cutItems();
+      if (lost.length > 0) {
+        reportFit(
+          `The review checklist cuts text that does not fit, even at the smallest size: ${lost.map((t) => `"${t}"`).join(', ')}. Shorten these items.`,
+        );
       }
       // One or two cards used to sit at the top with the lower half empty: center a short list.
       if (!grid) {
