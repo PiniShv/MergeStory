@@ -121,10 +121,7 @@ async function modelStoryboard(p: Prepared, provider: LlmProvider): Promise<Stor
     };
   }
   try {
-    const result = await generateStoryboard(
-      { provider, pack, deps: validationDeps(p), targetSec: p.targetSec },
-      ctx,
-    );
+    const result = await generateStoryboard({ provider, pack, deps: validationDeps(p) }, ctx);
     ctx.progress({
       stage: 'storyboard',
       status: 'done',

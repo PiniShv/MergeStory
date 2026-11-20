@@ -21,6 +21,14 @@ export function isSimulated(visual: Visual): boolean {
   );
 }
 
+/** Visuals that show real code: a code view, or a before-after with a code panel. */
+export function showsCode(visual: Visual): boolean {
+  return (
+    visual.type === 'code' ||
+    (visual.type === 'before-after' && (visual.before.kind === 'code' || visual.after.kind === 'code'))
+  );
+}
+
 /** Elements that appear on a narration beat. Used to keep beat indexes in range. */
 export function beatHolders(visual: Visual): { beat: number }[] {
   switch (visual.type) {

@@ -20,7 +20,7 @@ describe('heuristic storyboard passes the grounding validator', () => {
 
   it.each(fixtures)('for %s', async (_name, create) => {
     const fx = create();
-    const result = await validateStoryboard(make(fx), fx.deps);
+    const result = await validateStoryboard(make(fx), { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
     expect(result.fixes).toEqual([]);
@@ -31,7 +31,7 @@ describe('heuristic storyboard passes the grounding validator', () => {
   it.each([20, 30, 60, 90, 150, 300])('at a target of %i seconds', async (targetSec) => {
     for (const [, create] of fixtures) {
       const fx = create();
-      const result = await validateStoryboard(make(fx, targetSec), fx.deps);
+      const result = await validateStoryboard(make(fx, targetSec), { ...fx.deps, offline: true });
       expect(result.errors).toEqual([]);
       expect(result.warnings).toEqual([]);
       expect(result.fixes).toEqual([]);
@@ -42,7 +42,7 @@ describe('heuristic storyboard passes the grounding validator', () => {
     const fx = buildFixture({ source: 'local', pr: null, files: [], components: [] });
     const storyboard = make(fx);
     expect(storyboard.scenes.length).toBeGreaterThanOrEqual(2);
-    const result = await validateStoryboard(storyboard, fx.deps);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
   });
 
@@ -75,7 +75,7 @@ describe('heuristic storyboard passes the grounding validator', () => {
       components: [{ key: 'root', name: 'project files', path: '.', kind: 'config' }],
     });
     const storyboard = make(fx);
-    const result = await validateStoryboard(storyboard, fx.deps);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
     expect(JSON.stringify(storyboard)).not.toContain('.env');
   });
@@ -141,7 +141,7 @@ describe('heuristic storyboard respects privacy settings', () => {
     });
     expect(shown.length).toBeGreaterThan(0);
     expect(new Set(shown)).toEqual(new Set(['src/http/client.ts']));
-    const result = await validateStoryboard(storyboard, fx.deps);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
@@ -303,7 +303,7 @@ describe('mission scene', () => {
     const storyboard = make(fx, 150);
     const text = `${narration(storyboard)}\n${JSON.stringify(storyboard.scenes[0]!.visual)}\n${storyboard.title}\n${storyboard.summary}`;
     expect(text).not.toMatch(/production-ready|all tests pass|3x faster|no breaking/i);
-    const result = await validateStoryboard(storyboard, fx.deps);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
   });
@@ -333,7 +333,7 @@ describe('mission scene', () => {
     const storyboard = make(fx, 150);
     const text = `${narration(storyboard)}\n${JSON.stringify(storyboard.scenes[0]!.visual)}\n${storyboard.title}\n${storyboard.summary}`;
     expect(text).not.toMatch(/phish\.attacker|attacker\.net|https?:\/\//);
-    const result = await validateStoryboard(storyboard, fx.deps);
+    const result = await validateStoryboard(storyboard, { ...fx.deps, offline: true });
     expect(result.errors).toEqual([]);
     expect(result.warnings).toEqual([]);
   });

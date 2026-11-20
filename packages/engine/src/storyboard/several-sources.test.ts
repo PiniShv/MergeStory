@@ -7,7 +7,12 @@ import { validateStoryboard } from './validate.ts';
 
 async function deps() {
   const joined = joinSources([await orders(), await store()]);
-  return { ...joined, inputs: JOINED_INPUTS, config: testContext().ctx.config, authored: true };
+  return {
+    ...joined,
+    inputs: JOINED_INPUTS,
+    config: testContext().ctx.config,
+    authored: true,
+  };
 }
 
 type Json = Record<string, unknown>;
@@ -228,7 +233,12 @@ describe('a storyboard for two sources', () => {
 
     it('names a local change by its branch, and the repaired title is still stable', async () => {
       const joined = joinSources([await orders({ prNumber: null }), await store()]);
-      const local = { ...joined, inputs: JOINED_INPUTS, config: testContext().ctx.config, authored: true };
+      const local = {
+        ...joined,
+        inputs: JOINED_INPUTS,
+        config: testContext().ctx.config,
+        authored: true,
+      };
       const first = await validateStoryboard(withKicker(null), local);
       expect(first.storyboard?.scenes[0]?.visual).toMatchObject({
         kicker: `orders-api ${joined.changeSet.parts?.[0]?.head.ref} + storefront #7`,

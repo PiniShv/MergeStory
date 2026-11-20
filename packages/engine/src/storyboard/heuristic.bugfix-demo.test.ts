@@ -14,6 +14,7 @@ import { buildContext } from '../cli/inputs.ts';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { runCommand } from '../core/process.ts';
 import { frameDirForStep } from '../core/recording-frames.ts';
+import { narrationWords, wordBudget } from '../core/storyboard-facts.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { buildContextInputs, checkRepro, unusedScreenshotWarning } from '../pipeline/inputs.ts';
 import { locateBrowser } from '../render/browser.ts';
@@ -261,7 +262,10 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
 
   it('has a hand-written storyboard with nothing to report, repair or remove', async () => {
     const written = JSON.parse(await readFile(join(DEMO, 'storyboard.json'), 'utf8')) as Storyboard;
-    expect(await expectCleanStoryboard(deps, written)).toEqual([]);
+    // With the target length, so a storyboard over its word budget is reported too.
+    expect(await expectCleanStoryboard({ ...deps, offline: false }, written)).toEqual([]);
+    // The example follows the guide: the word budget is a limit, not only the point where validate warns.
+    expect(narrationWords(written)).toBeLessThanOrEqual(wordBudget(targetSec));
   });
 
   it('puts every highlight and the focus on the item count, as this machine draws it', async () => {

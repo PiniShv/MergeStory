@@ -49,9 +49,12 @@ export async function analysedChange(
   };
 }
 
-/** The offline storyboard, run through the validator: nothing may be reported, repaired or removed. */
+/**
+ * A storyboard run through the validator: nothing may be reported, repaired or removed. It is the
+ * offline one unless `deps.offline` says otherwise, as for a hand-written storyboard.
+ */
 export async function expectCleanStoryboard(deps: ValidationDeps, storyboard: Storyboard): Promise<string[]> {
-  const result = await validateStoryboard(storyboard, deps);
+  const result = await validateStoryboard(storyboard, { offline: true, ...deps });
   return [
     ...result.errors.map((issue) => `error ${issue.path}: ${issue.message}`),
     ...result.warnings.map((issue) => `warning ${issue.path}: ${issue.message}`),

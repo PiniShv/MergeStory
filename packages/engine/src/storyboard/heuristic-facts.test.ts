@@ -135,7 +135,7 @@ describe('statements by the author', () => {
       'It replaces the computed backoff.',
       'Only 429 and 5xx are retried.',
     ]);
-    expect(statements.every((s) => s.source === 'NOTES' && s.lead === 'The notes say')).toBe(true);
+    expect(statements.every((s) => s.source === 'NOTES' && s.lead === 'The author writes')).toBe(true);
   });
 
   it('shortens a sentence that is mostly code to its first clause, or leaves it out', () => {
@@ -266,7 +266,7 @@ describe('picking the statement for a window of code', () => {
     const ctx = ctxOf(withNotes(notes));
     const line = quoteLine(ctx, statements[0]!, 'F1.H1', 'S1', 'nothing');
     expect(line.text).toBe(
-      'The notes say: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
+      'The author writes: Retries live in a small reusable helper, src/retry.ts (withRetry), so other calls can use it later.',
     );
     expect(line.evidence).toEqual(['NOTES', 'F1.H1']);
   });

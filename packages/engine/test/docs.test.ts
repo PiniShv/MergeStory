@@ -15,6 +15,7 @@ import { buildProgram } from '../src/cli/program.ts';
 import { CliRuntime } from '../src/cli/runtime.ts';
 import { ConfigSchema, configFromEnv, QUALITY_PRESETS, SECRET_ENV_VARS } from '../src/core/config.ts';
 import { EXIT_CODES } from '../src/core/errors.ts';
+import { STORYBOARD_LIMITS } from '../src/core/storyboard-schema.ts';
 
 const engine = fileURLToPath(new URL('..', import.meta.url));
 const repository = resolve(engine, '..', '..');
@@ -350,7 +351,20 @@ describe.skipIf(!hasDocs)('the validator codes in the docs', () => {
       expect(codes.length).toBeGreaterThan(8);
       expect(codes.filter((code) => !quoted.has(code))).toEqual([]);
     });
+
+    it(`give the narration-over-budget margin of the code (${name})`, () => {
+      const row = read(...parts)
+        .split('\n')
+        .find((line) => line.startsWith('| `narration-over-budget` |'));
+      expect(row).toContain(`${STORYBOARD_LIMITS.overBudgetPercent}%`);
+    });
   }
+
+  it('docs/storyboard.md gives the narration-over-budget margin of the code in the text too', () => {
+    expect(read('docs', 'storyboard.md')).toContain(
+      `more than ${STORYBOARD_LIMITS.overBudgetPercent}% over it (\`narration-over-budget\`)`,
+    );
+  });
 });
 
 describe.skipIf(!hasDocs)('the other pages', () => {

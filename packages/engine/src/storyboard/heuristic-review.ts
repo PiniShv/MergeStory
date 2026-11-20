@@ -143,7 +143,7 @@ export function reviewScene(b: Build): Review | null {
       });
       beats.push(lines.length);
       lines.push({
-        text: `${hint.stripped ? 'The notes flag this for review' : 'The notes say'}: ${hint.spoken}`,
+        text: `${hint.stripped ? 'The author flags this for review' : 'The author writes'}: ${hint.spoken}`,
         evidence: cite(ctx, hint.source),
       });
     }

@@ -114,7 +114,7 @@ export interface Statement {
   /** What the video says: the sentence, or its first clause when the sentence reads badly aloud. */
   spoken: string;
   source: 'NOTES' | 'PR';
-  /** The words that introduce it: "The notes say". */
+  /** The words that introduce it: "The author writes". */
   lead: string;
   /** Names in the sentence that look like code: camelCase, snake_case and UPPER_CASE. */
   tokens: Set<string>;
@@ -210,7 +210,7 @@ function statementsFrom(
 /** Sentences from the notes and the pull request description that may be quoted next to the code they mention. */
 export function authorStatements(ctx: Ctx): Statement[] {
   return [
-    ...statementsFrom(ctx, ctx.inputs.notes, 'NOTES', 'The notes say'),
+    ...statementsFrom(ctx, ctx.inputs.notes, 'NOTES', 'The author writes'),
     ...statementsFrom(ctx, ctx.changeSet.pr?.body, 'PR', 'The description says'),
   ].filter((statement) => ctx.evidence.has(statement.source));
 }
@@ -286,7 +286,7 @@ const LEAD_IN =
 /** The first note that asks for a careful review, with its lead-in removed. Only the caller's notes count. */
 export function reviewHint(ctx: Ctx): ReviewHint | null {
   if (!ctx.evidence.has('NOTES')) return null;
-  for (const statement of statementsFrom(ctx, ctx.inputs.notes, 'NOTES', 'The notes say')) {
+  for (const statement of statementsFrom(ctx, ctx.inputs.notes, 'NOTES', 'The author writes')) {
     if (!REVIEW_WORDS.test(statement.full)) continue;
     const rest = statement.full.replace(LEAD_IN, '');
     const stripped = rest !== statement.full;

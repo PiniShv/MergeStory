@@ -22,6 +22,7 @@ import { countWords, stripInvisible } from '../core/text.ts';
 import type { ChangedFile } from '../core/types.ts';
 import type { RefOutcome } from './coderef.ts';
 import { addCorpusText } from './identifiers.ts';
+import { checkWrittenQuality } from './quality.ts';
 import { Run, TextCleaner } from './run.ts';
 import { joinSentences, truncateText } from './text.ts';
 import type { ValidationDeps, ValidationIssue, ValidationResult } from './types.ts';
@@ -680,47 +681,6 @@ function checkTitleNamesEverySource(storyboard: Storyboard, run: Run): void {
   }
 }
 
-/** The words of a narration line, for comparing lines: lower case, without punctuation. */
-function lineWords(text: string): Set<string> {
-  return new Set(text.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? []);
-}
-
-/** The names in a line: words with a digit, an underscore, a dot or a capital after the first letter. */
-function lineNames(text: string): string {
-  return [...new Set(text.match(/[\w.]*(?:\d|_|\w\.\w|[a-z][A-Z])[\w.]*/g) ?? [])].sort().join(' ');
-}
-
-/** Lines with fewer words than this are not compared: short lines share words by chance. */
-const MIN_REPEAT_WORDS = 5;
-/** Two lines that name the same things and share more than this part of their words say it twice. */
-const REPEAT_OVERLAP = 0.9;
-
-/** Warns about a narration line that says again what an earlier line said, such as a recap at the end. */
-function checkRepeatedLines(storyboard: Storyboard, run: Run): void {
-  const seen: { words: Set<string>; names: string; path: string }[] = [];
-  for (const [si, scene] of storyboard.scenes.entries()) {
-    for (const [li, line] of scene.narration.entries()) {
-      const words = lineWords(line.text);
-      const names = lineNames(line.text);
-      const path = `scenes[${si}].narration[${li}]`;
-      if (words.size < MIN_REPEAT_WORDS) continue;
-      const earlier = seen.find((other) => {
-        if (other.names !== names) return false;
-        let shared = 0;
-        for (const word of words) if (other.words.has(word)) shared += 1;
-        return shared / Math.max(words.size, other.words.size) > REPEAT_OVERLAP;
-      });
-      if (earlier)
-        run.warn(
-          path,
-          'repeated-line',
-          `this line repeats ${earlier.path}: every line should add a new fact`,
-        );
-      seen.push({ words, names, path });
-    }
-  }
-}
-
 async function validateParsed(parsed: Storyboard, run: Run): Promise<Storyboard> {
   // Secrets and personal data first, so every later step sees the masked text.
   const counters: MaskCounters = { secrets: 0, emails: 0, hidden: 0 };
@@ -806,8 +766,7 @@ async function validateParsed(parsed: Storyboard, run: Run): Promise<Storyboard>
     clampBeats(scene, p, run);
   }
   checkTitleNamesEverySource(storyboard, run);
-  // The offline storyboard is built from fixed sentences, so this hint is for written storyboards only.
-  if (!run.offline) checkRepeatedLines(storyboard, run);
+  checkWrittenQuality(storyboard, run);
 
   const everything = new TextCleaner(run, [...new Set(storyboard.scenes.flatMap(narrationEvidence))]);
   storyboard.title = everything.required(storyboard.title, 'title');

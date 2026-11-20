@@ -44,7 +44,12 @@ export type IssueCode =
   | 'simulated-unbacked'
   | 'title-missing-source'
   | 'repeated-line'
-  | 'over-length';
+  | 'over-length'
+  | 'narration-over-budget'
+  | 'review-item-no-ref'
+  | 'review-item-question'
+  | 'key-change-not-code'
+  | 'focus-same-beat';
 
 export interface ValidationIssue {
   /** Location in the storyboard, e.g. "scenes[2].visual.ref". */
@@ -86,7 +91,6 @@ export interface GenerateStoryboardInput {
   provider: LlmProvider;
   pack: EvidencePack;
   deps: ValidationDeps;
-  targetSec: number;
 }
 
 export interface GenerateStoryboardOutput {

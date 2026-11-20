@@ -784,4 +784,100 @@ describe('beats', () => {
     expect(summary.type === 'summary' && summary.points[1]!.beat).toBe(1);
     expect(result.fixes.filter((f) => f.includes('beat index'))).toHaveLength(2);
   });
+
+  it('warns when two focus ranges of a code visual share a beat, because only one is lit', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    scene(sb, 1).visual.focus[1].beat = 0;
+    const result = await run(sb, fx);
+    expect(result.warnings).toEqual([
+      {
+        path: 'scenes[1].visual.focus[1]',
+        code: 'focus-same-beat',
+        message:
+          'another focus range is on beat 0, and only one range is lit at a time; give each range its own narration line',
+      },
+    ]);
+    const offline = await validateStoryboard(sb, { ...fx.deps, offline: true });
+    expect(codes(offline.warnings)).not.toContain('focus-same-beat');
+  });
+});
+
+describe('the review scene and the key change', () => {
+  const ref = { path: 'src/http/retry.ts', side: 'head', startLine: 18, endLine: 29 };
+
+  /** The base storyboard with its last scene as a review scene that lists these items. */
+  function withReview(fx: Fixture, items: Json[]): Json {
+    const sb = baseStoryboard(fx);
+    scene(sb, 2).role = 'review';
+    scene(sb, 2).visual = {
+      type: 'checklist',
+      items: items.map((item) => ({
+        title: 'Retries on every server error',
+        severity: 'medium',
+        ref,
+        beat: 0,
+        evidence: [fx.id.risk(1)],
+        ...item,
+      })),
+    };
+    return sb;
+  }
+
+  it('warns about an item without a ref, and about a detail that is only a question', async () => {
+    const fx = retryFixture();
+    const sb = withReview(fx, [
+      { detail: 'A request that is not safe to send twice is retried too.', ref: null },
+      { detail: 'Is a request that is not safe to send twice retried too?' },
+      { detail: 'Is it safe? Is it wanted?' },
+      { detail: 'A request that is not safe to send twice is retried too. Is that wanted?' },
+    ]);
+    const result = await run(sb, fx);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ path: 'scenes[2].visual.items[0]', code: 'review-item-no-ref' }),
+      expect.objectContaining({ path: 'scenes[2].visual.items[1].detail', code: 'review-item-question' }),
+      expect.objectContaining({ path: 'scenes[2].visual.items[2].detail', code: 'review-item-question' }),
+    ]);
+    const offline = await validateStoryboard(sb, { ...fx.deps, offline: true });
+    expect(offline.warnings).toEqual([]);
+  });
+
+  it('leaves checklist items outside the review scene alone', async () => {
+    const fx = retryFixture();
+    const sb = withReview(fx, [{ detail: 'Is it safe?', ref: null }]);
+    scene(sb, 2).role = 'conclusion';
+    expect((await run(sb, fx)).warnings).toEqual([]);
+  });
+
+  it('warns when the first under-the-hood scene does not show the key change as code', async () => {
+    const fx = retryFixture();
+    const sb = baseStoryboard(fx);
+    const bullets = { type: 'bullets', heading: null, items: [{ text: 'A retry loop', beat: 0 }] };
+    scene(sb, 1).visual = bullets;
+    expect((await run(sb, fx)).warnings).toEqual([
+      expect.objectContaining({ path: 'scenes[1].visual', code: 'key-change-not-code' }),
+    ]);
+
+    // A before-after with one code panel shows real code.
+    const panel = {
+      codeRef: null,
+      bullets: [],
+      terminal: [],
+      screenshotId: null,
+      recordingId: null,
+      highlights: [],
+    };
+    scene(sb, 1).visual = {
+      type: 'before-after',
+      before: { ...panel, label: 'Before', kind: 'bullets', bullets: [{ text: 'One attempt', beat: 0 }] },
+      after: { ...panel, label: 'After', kind: 'code', codeRef: ref },
+      caption: null,
+    };
+    expect(codes((await run(sb, fx)).warnings)).not.toContain('key-change-not-code');
+
+    // With no under-the-hood scene there is no key change to judge.
+    scene(sb, 1).role = 'big-picture';
+    scene(sb, 1).visual = bullets;
+    expect(codes((await run(sb, fx)).warnings)).not.toContain('key-change-not-code');
+  });
 });

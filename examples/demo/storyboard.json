@@ -11,7 +11,7 @@
       "title": "The mission",
       "narration": [
         {
-          "text": "The weather client now retries temporary failures on its own.",
+          "text": "The weather client now retries temporary failures.",
           "evidence": ["CM1", "F6", "TASK"]
         }
       ],
@@ -69,7 +69,7 @@
       "title": "Where the change lives",
       "narration": [
         {
-          "text": "The retry loop lives in a new helper, withRetry, so other calls can use it later.",
+          "text": "The retry loop lives in a new helper, withRetry, so other calls can reuse it.",
           "evidence": ["F6", "S14", "NOTES"]
         },
         {
@@ -168,15 +168,15 @@
       "title": "The retry loop",
       "narration": [
         {
-          "text": "withRetry fills in defaults from DEFAULT_RETRY, then runs the operation in a loop.",
+          "text": "It fills in defaults, then runs the operation in a loop.",
           "evidence": ["S14", "S10", "F6.H1"]
         },
         {
-          "text": "On a final error, or after the last allowed retry, it throws the error.",
+          "text": "On a final error, or after the last retry, it throws.",
           "evidence": ["S14", "F6.H1"]
         },
         {
-          "text": "Otherwise it waits: afterMs if the decision has one, or else backoffDelay.",
+          "text": "Otherwise it waits as Retry-After says, or else for the backoff.",
           "evidence": ["S14", "F6.H1"]
         }
       ],
@@ -229,7 +229,7 @@
           "evidence": ["S12", "F6.H1"]
         },
         {
-          "text": "backoffDelay picks a random wait below a limit that doubles each time. That is full jitter.",
+          "text": "The backoff picks a random wait below a limit that doubles each time: full jitter.",
           "evidence": ["S13", "F6.H1", "NOTES"]
         }
       ],
@@ -278,7 +278,7 @@
           "evidence": ["S4", "F3.H2", "NOTES"]
         },
         {
-          "text": "A TypeError means fetch got no response, so it is retried as a network error.",
+          "text": "A TypeError means no response, so it is retried as a network error.",
           "evidence": ["S4", "F3.H2"]
         },
         {
@@ -327,7 +327,7 @@
       "title": "One request during an outage",
       "narration": [
         {
-          "text": "Before, the first failure went straight back to the caller.",
+          "text": "Before, the first failure went straight to the caller.",
           "evidence": ["F3.H3"]
         },
         {
@@ -447,7 +447,7 @@
           "evidence": ["NOTES", "F3.H3"]
         },
         {
-          "text": "A long Retry-After is used as sent, without the maxDelayMs cap.",
+          "text": "A long Retry-After is used as sent, without the delay cap.",
           "evidence": ["NOTES", "F6.H1"]
         },
         {
@@ -543,7 +543,7 @@
           "evidence": ["S6", "S4", "F6.H1"]
         },
         {
-          "text": "The coding agent reports that npm test passed.",
+          "text": "The coding agent reports npm test passed.",
           "evidence": ["T1", "F7.H1"]
         }
       ],
