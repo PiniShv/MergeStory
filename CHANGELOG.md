@@ -10,6 +10,9 @@ All notable changes to MergeStory are listed here, newest first.
   local repositories and for pull requests on GitHub. Before, every code reference into a larger file, such
   as a big bundled script, failed with `code-ref-unreadable`. Binary files and files over 8 MiB still read as
   not available.
+- **Fixed:** checklist cards no longer cut a title or a detail without saying so. The text first gets a
+  smaller size and more lines. If it still does not fit at the smallest readable size, the render logs one
+  warning that names the items to shorten.
 - **Changed:** small changes get shorter videos. The suggested length is 25 seconds (was 45) for up to 20
   changed lines, and 40 seconds (was 70) for up to 120. Larger changes keep their length. `--duration`
   still sets the length you choose.

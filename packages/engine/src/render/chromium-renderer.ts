@@ -161,6 +161,8 @@ class RenderRun {
   private posterClaimed = false;
   private readonly encoders = new Set<SegmentEncoder>();
   private readonly browsers = new Set<Browser>();
+  /** Fit problems of all pages. Every segment opens a page, so one message would repeat per segment. */
+  private readonly fitProblems = new Set<string>();
   /** Rejects with the first failure. A worker that is stuck cannot hold a stop up. */
   private readonly stopped: Promise<never>;
   private stop: (err: Error) => void = () => undefined;
@@ -195,6 +197,7 @@ class RenderRun {
       if (this.failure) throw this.failure;
     } finally {
       ctx.signal.removeEventListener('abort', onAbort);
+      for (const problem of this.fitProblems) ctx.logger.warn(problem);
       for (const encoder of this.encoders) encoder.kill();
       await Promise.allSettled([...this.browsers].map((browser) => browser.close()));
     }
@@ -275,7 +278,7 @@ class RenderRun {
         first: page.pageErrors[0]?.slice(0, 200),
       });
     }
-    for (const problem of page.fitProblems) logger.warn(problem);
+    for (const problem of page.fitProblems) this.fitProblems.add(problem);
     if (page.blockedRequests > 0) {
       logger.warn('The render page tried to make network requests; all were blocked.', {
         count: page.blockedRequests,
@@ -714,6 +717,7 @@ export async function renderStillFrames(
       await writeFile(file, png, { mode: 0o600 });
       written.push(file);
     }
+    for (const problem of page.fitProblems) ctx.logger.warn(problem);
     return written;
   } finally {
     await browser.close().catch(() => undefined);
