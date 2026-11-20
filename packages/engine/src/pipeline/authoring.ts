@@ -146,7 +146,6 @@ export async function checkStoryboard(
     inputs: p.inputs,
     reader: p.reader,
     config: p.config,
-    targetSec: p.targetSec,
     authored: true,
   });
   // The caller gets the errors as data. This line is for whoever reads the log.

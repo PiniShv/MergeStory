@@ -568,15 +568,18 @@ describe('length', () => {
   it('warns when the narration is more than 15% over the word budget of the target length', async () => {
     const fx = retryFixture();
     const sb = baseStoryboard(fx);
-    // 53 words: within 15% of the budget of a 20-second video (50 words), far over a 10-second one (25).
-    expect(codes((await validateStoryboard(sb, { ...fx.deps, targetSec: 20 })).warnings)).toEqual([]);
-    const over = await validateStoryboard(sb, { ...fx.deps, targetSec: 10 });
+    // 53 words: within 15% of the budget of a 20-second video (50 words), over it once 10 words are added.
+    const target = { ...fx.deps, config: { ...fx.deps.config, targetDurationSec: 20 } };
+    expect(codes((await validateStoryboard(sb, target)).warnings)).toEqual([]);
+    const lines = scene(sb, 0).narration;
+    lines.push({ text: 'One two three four five six seven eight nine ten.', evidence: lines[0].evidence });
+    const over = await validateStoryboard(sb, target);
     expect(over.warnings).toEqual([
       expect.objectContaining({ path: 'scenes', code: 'narration-over-budget' }),
     ]);
-    expect(over.warnings[0]!.message).toContain('the budget for a 10-second video is 25;');
+    expect(over.warnings[0]!.message).toContain('the budget for a 20-second video is 50;');
     // The offline storyboard fits the budget itself: nothing to say.
-    const offline = await validateStoryboard(sb, { ...fx.deps, targetSec: 10, offline: true });
+    const offline = await validateStoryboard(sb, { ...target, offline: true });
     expect(codes(offline.warnings)).not.toContain('narration-over-budget');
   });
 });

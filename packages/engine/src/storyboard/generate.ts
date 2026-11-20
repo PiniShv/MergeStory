@@ -4,7 +4,7 @@
  * Nothing leaves the machine before the budget check, and a repeated request is answered from
  * the cache at no cost.
  */
-import type { EvidencePack } from '../analyzer/index.ts';
+import { type EvidencePack, targetDuration } from '../analyzer/index.ts';
 import type { Config } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { CHARS_PER_TOKEN, estimateTokens } from '../core/cost.ts';
@@ -243,10 +243,9 @@ export async function generateStoryboard(
   ctx: RunContext,
 ): Promise<GenerateStoryboardOutput> {
   const { provider, pack, deps } = input;
-  const { targetSec } = deps;
   const config = ctx.config;
   const system = buildSystemPrompt(config, deps.changeSet);
-  const prompt = buildUserPrompt(pack, targetSec, config);
+  const prompt = buildUserPrompt(pack, targetDuration(deps.analysis, deps.config), config);
   const jsonSchema = storyboardJsonSchemaForLlm();
   const maxAttempts = 1 + config.llm.repairAttempts;
   const history: { role: 'user' | 'assistant'; content: string }[] = [];

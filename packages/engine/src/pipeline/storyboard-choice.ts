@@ -56,7 +56,6 @@ function validationDeps(p: Prepared): ValidationDeps {
     inputs: p.inputs,
     reader: p.reader,
     config: p.config,
-    targetSec: p.targetSec,
   };
 }
 

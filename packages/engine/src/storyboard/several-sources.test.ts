@@ -11,7 +11,6 @@ async function deps() {
     ...joined,
     inputs: JOINED_INPUTS,
     config: testContext().ctx.config,
-    targetSec: 60,
     authored: true,
   };
 }
@@ -238,7 +237,6 @@ describe('a storyboard for two sources', () => {
         ...joined,
         inputs: JOINED_INPUTS,
         config: testContext().ctx.config,
-        targetSec: 60,
         authored: true,
       };
       const first = await validateStoryboard(withKicker(null), local);
@@ -255,7 +253,6 @@ describe('a storyboard for two sources', () => {
         ...(await orders()),
         inputs: JOINED_INPUTS,
         config: testContext().ctx.config,
-        targetSec: 60,
         authored: true,
       });
       expect(result.warnings.map((w) => w.code)).not.toContain('title-missing-source');

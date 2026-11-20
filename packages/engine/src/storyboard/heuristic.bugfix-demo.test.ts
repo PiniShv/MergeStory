@@ -90,7 +90,7 @@ describe.skipIf(ffmpeg === null || browser === null)('the bug-fix demo', () => {
     );
     const analysis = await analyze(changeSet, reader, inputs, ctx);
     targetSec = targetDuration(analysis, ctx.config);
-    deps = { changeSet, analysis, inputs, reader, config: ctx.config, targetSec };
+    deps = { changeSet, analysis, inputs, reader, config: ctx.config };
   }, 180_000);
 
   afterAll(async () => {

@@ -42,7 +42,7 @@ export async function analysedChange(
     tests: (tests ?? []).map((test, index) => ({ ...test, id: `T${index + 1}` })),
   });
   const analysis = await analyze(changeSet, reader, inputs, ctx);
-  const deps: ValidationDeps = { changeSet, analysis, inputs, reader, config: ctx.config, targetSec: 60 };
+  const deps: ValidationDeps = { changeSet, analysis, inputs, reader, config: ctx.config };
   return {
     ...deps,
     storyboard: (targetSec = 150) => heuristicStoryboard(changeSet, analysis, inputs, ctx.config, targetSec),

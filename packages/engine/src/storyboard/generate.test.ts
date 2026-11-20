@@ -109,7 +109,8 @@ function setup(config: ConfigInput = {}, cache: Cache = new MemoryCache()) {
 const input = (provider: LlmProvider, fx: Fixture, targetSec = 60) => ({
   provider,
   pack: PACK,
-  deps: { ...fx.deps, targetSec },
+  deps:
+    targetSec === 60 ? fx.deps : { ...fx.deps, config: { ...fx.deps.config, targetDurationSec: targetSec } },
 });
 
 async function failure(promise: Promise<unknown>): Promise<MergeStoryError> {

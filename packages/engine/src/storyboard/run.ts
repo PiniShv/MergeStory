@@ -4,6 +4,7 @@
  */
 
 import { findEvidence } from '../analyzer/evidence.ts';
+import { targetDuration } from '../analyzer/index.ts';
 import type { Config } from '../core/config.ts';
 import { changeLabelOf } from '../core/labels.ts';
 import { isShowable } from '../core/path-policy.ts';
@@ -200,7 +201,7 @@ export class Run {
   private readonly filePaths: ReadonlySet<string>;
   /** An agent or a person wrote the storyboard and reads the result (see ValidationDeps.authored). */
   readonly authored: boolean;
-  /** The target length in seconds (see ValidationDeps.targetSec). */
+  /** The target length in seconds: narration far over its word budget is reported. */
   readonly targetSec: number;
 
   constructor(deps: ValidationDeps) {
@@ -211,7 +212,7 @@ export class Run {
     this.filePaths = new Set(deps.changeSet.files.map((f) => f.path));
     this.offline = deps.offline ?? false;
     this.authored = deps.authored ?? false;
-    this.targetSec = deps.targetSec;
+    this.targetSec = targetDuration(deps.analysis, deps.config);
     this.evidence = new Map(deps.analysis.evidence.map((item) => [item.id, item]));
     this.tests = deps.inputs.tests;
     this.screenshots = new Map(deps.inputs.screenshots.map((shot) => [shot.id, shot]));
