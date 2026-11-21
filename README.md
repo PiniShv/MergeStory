@@ -21,7 +21,7 @@ MergeStory turns a pull request into a short narrated video:<br>
 
 <br>
 
-A typical video runs from 25 seconds to 3 minutes. It is made on your machine, and it stays there until you
+A typical video runs from 1 to 3 minutes. It is made on your machine, and it stays there until you
 share it. Open source, under Apache-2.0.
 
 ## Everything a reviewer needs, in one video

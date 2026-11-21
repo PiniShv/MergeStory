@@ -33,9 +33,9 @@ import { joinSentences, splitSentences } from './text.ts';
 import type { IssueCode, ValidationDeps, ValidationIssue } from './types.ts';
 import { codeTextOf, foreignUrls, hostsIn } from './urls.ts';
 
-/** MergeStory's own words for its input. A viewer has never seen the evidence pack. */
+/** MergeStory's own words for its input. A viewer has never seen the evidence pack or the notes. */
 const INTERNAL_TERM =
-  /\b(?:evidence pack|the pack (?:flags?|says?|shows?|lists?|notes?|reports?|marks?|has|contains?))\b/i;
+  /\b(?:evidence pack|the pack (?:flags?|says?|shows?|lists?|notes?|reports?|marks?|has|contains?)|the notes (?:says?|said|states?|mentions?|shows? that)|according to the notes)\b/i;
 
 /** A sentence on one line, cut to 80 characters, for a message that quotes it. */
 function quoted(sentence: string): string {

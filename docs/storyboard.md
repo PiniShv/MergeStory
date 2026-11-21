@@ -70,7 +70,12 @@ key change, where to look.
 6. `big-picture`: only when two or more components changed: how they relate.
 7. `review`: two or three places to read closely, each with its file and lines, and why each matters.
 
-There is no recap at the end: the end card closes the video. Every line adds a new fact. The `conclusion`
+When the PR text, the task, the notes or an issue says what the change does not do (out of scope, a
+follow-up, a known limit), the video says it once, in the review scene or as the last line of the mission,
+and cites that source. It never guesses such a limit.
+
+There is no recap at the end: the end card closes the video. Every line adds a new fact: a line does not
+repeat an earlier scene or read out a file name, title or count that the screen already shows. The `conclusion`
 role still exists for older storyboards.
 
 Show the bug before the code, and the fix working after the code. Use only screenshots and recordings that
@@ -366,7 +371,7 @@ a required text (a title, a heading or the summary) with nothing in it. These ar
 | `unverified-claim` | A sentence claims something that no reported result backs. It was removed. |
 | `url-in-text` | A sentence has a web address whose host is not in the code. It was removed. |
 | `unknown-identifier` | A sentence names something that is not in the change. It was removed. |
-| `internal-term` | A sentence uses MergeStory's own words, such as "the pack". It stays; rewrite it for the viewer. |
+| `internal-term` | A sentence uses MergeStory's own words, such as "the pack", or cites the private notes ("the notes say"). It stays; rewrite it for the viewer. |
 | `secret-masked` | Text that looks like a secret was masked. |
 | `language-mismatch` | The storyboard names another language than the configured one. It was set to the configured one. |
 | `claims-english-only` | The configured language is not English. Claims such as "all tests pass" are found in English text only, so none were checked. |

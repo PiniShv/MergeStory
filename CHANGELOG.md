@@ -24,6 +24,13 @@ All notable changes to MergeStory are listed here, newest first.
   the work folder, so that an agent can look at its own video. It writes `frames/` in the work folder with a
   contact sheet and one full-size frame for each scene. `agent render` now writes `last-run.json` in the work
   folder to say which run is the latest.
+- **Changed:** the storyboard guide asks the video to say once what the change deliberately does not do,
+  when the pull request text, the task, the notes or an issue states it, and to cite that source. It names
+  the common kinds of filler to cut: a before panel or review item that repeats an earlier scene, a line
+  that reads out what the screen shows, and a line that only names the source.
+- **Changed:** the `internal-term` warning of `validate` also catches text that cites the private notes
+  ("the notes say", "according to the notes"), in narration and on screen.
+
 - **Fixed:** a storyboard can show code from large source files. Files up to 8 MiB (was 1 MiB) are read, for
   local repositories and for pull requests on GitHub. Before, every code reference into a larger file, such
   as a big bundled script, failed with `code-ref-unreadable`. Binary files and files over 8 MiB still read as
@@ -35,9 +42,10 @@ All notable changes to MergeStory are listed here, newest first.
   when the video was only saved on this machine. `publish.watchUrl` is unchanged, and after a local render it
   still holds a `file://` link to the watch page. Scripts and agents that post a link should read `shareUrl`.
   The LINK column of `mergestory runs` never shows a `file://` link.
-- **Changed:** small changes get shorter videos. The suggested length is 25 seconds (was 45) for up to 20
-  changed lines, and 40 seconds (was 70) for up to 120. Larger changes keep their length. `--duration`
-  still sets the length you choose.
+- **Changed:** the suggested length for the smallest changes is 60 seconds (was 45), for up to 20 changed
+  lines; the title and end cards alone take part of it. Up to 120 changed lines stays at 70 seconds, and
+  larger changes keep their length. The word budget is a limit, so a small change may still be shorter.
+  `--duration` still sets the length you choose.
 - **Changed:** the storyboard guide (`AUTHORING.md` and the model prompt) leads with why the change exists
   and its most important hunk; the overview of the components comes after the code. The video says so when
   the pull request text gives no reason. The review scene names two or three places to read closely, with

@@ -71,7 +71,7 @@ function sizeOf(lines: number): ChangeSize {
   return 'xl';
 }
 
-const DURATION: Record<ChangeSize, number> = { xs: 25, s: 40, m: 100, l: 130, xl: 160 };
+const DURATION: Record<ChangeSize, number> = { xs: 60, s: 70, m: 100, l: 130, xl: 160 };
 
 function changedText(file: ChangedFile): string {
   return file.hunks.flatMap((h) => h.lines.filter((l) => l.kind !== 'ctx').map((l) => l.text)).join('\n');
