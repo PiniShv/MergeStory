@@ -6,6 +6,11 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Fixed:** evidence chips at the bottom of a scene are readable. A long symbol chip first loses its
+  folders, then its file and lines, and only then the end of its name, so no bracket is left open and a
+  name is not cut twice (a symbol name over 80 characters is already cut when its label is made). A file
+  or symbol shows once per scene. When a scene shows code, its chip for that file gives the lines on
+  screen, not the range of another symbol or hunk in the same file.
 - **Fixed:** a storyboard can show code from large source files. Files up to 8 MiB (was 1 MiB) are read, for
   local repositories and for pull requests on GitHub. Before, every code reference into a larger file, such
   as a big bundled script, failed with `code-ref-unreadable`. Binary files and files over 8 MiB still read as

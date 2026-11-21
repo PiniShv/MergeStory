@@ -12,7 +12,7 @@ import {
 } from '../core/render-plan.ts';
 import { clamp01, ease, enter, progress, q, type StyleWriter } from './anim.ts';
 import { css, h, s } from './dom.ts';
-import { fitLines, monoChars, pad2, truncatePath } from './fit.ts';
+import { fitLines, monoChars, pad2, shortenRef } from './fit.ts';
 import { shift } from './motion.ts';
 import { fitImage, isDataImage } from './templates/parts.ts';
 import type { SceneSlot } from './transitions.ts';
@@ -342,7 +342,7 @@ function buildFoot(scene: PlannedScene): HTMLElement | null {
       'div',
       { class: 'ms-chrome__refs' },
       ...refs.map((ref, i) =>
-        h('span', { class: 'ms-ref', text: truncatePath(ref, Math.max(14, budgets[i] as number)) }),
+        h('span', { class: 'ms-ref', text: shortenRef(ref, Math.max(14, budgets[i] as number)) }),
       ),
     ),
     h(

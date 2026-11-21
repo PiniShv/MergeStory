@@ -3,7 +3,7 @@
  * self-contained RenderPlan. Code is read from the repository here, never taken from the storyboard,
  * and every string that reaches the screen is masked first.
  */
-import { findEvidence } from '../analyzer/evidence.ts';
+import { cleanLabel, findEvidence } from '../analyzer/evidence.ts';
 import { type Config, QUALITY_PRESETS } from '../core/config.ts';
 import type { RunContext } from '../core/context.ts';
 import { assertNotAborted, MergeStoryError } from '../core/errors.ts';
@@ -46,7 +46,7 @@ import {
   type Storyboard,
   type Visual,
 } from '../core/storyboard-schema.ts';
-import { collapseLineRange } from '../core/text.ts';
+import { collapseLineRange, dedupeRefs } from '../core/text.ts';
 import type { ResolvedTheme } from '../core/theme.ts';
 import type {
   Analysis,
@@ -796,18 +796,30 @@ function citedEvidence(scene: Scene): string[] {
   return ids;
 }
 
+/**
+ * The chip text of an evidence item, built from its structured path, lines and symbol name, because
+ * `label` may already be cut. The runtime shortens the chip once, at render time.
+ */
+export function chipOf(item: EvidenceItem): string {
+  const clean = (text: string): string => cleanLabel(text, Number.MAX_SAFE_INTEGER);
+  if (item.kind === 'file' && item.path) return clean(item.path);
+  if ((item.kind === 'hunk' || item.kind === 'symbol') && item.ref) {
+    const { path, startLine, endLine } = item.ref;
+    const where = collapseLineRange(`${clean(path)}:${startLine}-${endLine}`);
+    if (item.kind === 'hunk') return where;
+    const at = item.label.indexOf(' (');
+    return at > 0 ? `${item.label.slice(0, at)} (${where})` : where;
+  }
+  return collapseLineRange(item.label);
+}
+
 function sceneRefs(scene: Scene, codeLabels: string[], evidence: Map<string, EvidenceItem>): string[] {
-  const refs: string[] = [];
-  const add = (label: string): void => {
-    if (refs.length < MAX_REFS && label && !refs.includes(label)) refs.push(label);
-  };
-  for (const label of codeLabels) add(label);
+  const cited: string[] = [];
   for (const id of citedEvidence(scene)) {
     const item = findEvidence(evidence, id);
-    if (item && (BACKING_EVIDENCE_KINDS.includes(item.kind) || item.kind === 'log'))
-      add(collapseLineRange(item.label));
+    if (item && (BACKING_EVIDENCE_KINDS.includes(item.kind) || item.kind === 'log')) cited.push(chipOf(item));
   }
-  return refs;
+  return dedupeRefs(codeLabels, cited, MAX_REFS);
 }
 
 function sceneBadges(scene: Scene, resolved: ResolvedScene, masked: boolean): PlannedScene['badges'] {

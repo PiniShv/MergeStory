@@ -58,6 +58,43 @@ export function collapseLineRange(label: string): string {
 }
 
 /**
+ * Choose the evidence chips of a scene. A file is shown once: the range the scene shows (`shown`) wins
+ * over every other label for that file, so a chip never names lines the scene does not show; without
+ * one, symbol labels ("Name (path:1-9)") win over a plain range or file label of the same file, and the first
+ * range wins over a bare path. The same symbol is shown once. Order of first appearance is kept.
+ */
+export function dedupeRefs(shown: readonly string[], cited: readonly string[], max: number): string[] {
+  const pathOf = (label: string): string | null => {
+    const m = /^.+? \((.+):\d+(?:-\d+)?\)$/.exec(label) ?? /^(.+?)(?::\d+(?:-\d+)?)?$/.exec(label);
+    return m ? (m[1] as string) : null;
+  };
+  const isSymbol = (label: string): boolean => /^.+? \(.+:\d+(?:-\d+)?\)$/.test(label);
+  const shownPaths = new Set(shown.map(pathOf));
+  const symbolPaths = new Set(cited.filter(isSymbol).map(pathOf));
+  const hasRange = (label: string): boolean => /:\d+(?:-\d+)?$/.test(label);
+  const rangedPaths = new Set(cited.filter((l) => !isSymbol(l) && hasRange(l)).map(pathOf));
+  const seenRanged = new Set<string | null>();
+  const out: string[] = [];
+  const add = (label: string): void => {
+    if (label && !out.includes(label)) out.push(label);
+  };
+  shown.forEach(add);
+  for (const label of cited) {
+    const path = pathOf(label);
+    if (path !== null && shownPaths.has(path)) continue;
+    if (!isSymbol(label) && path !== null && symbolPaths.has(path)) continue;
+    if (!isSymbol(label)) {
+      // One plain label per file: the first range, else the bare path.
+      if (!hasRange(label) && rangedPaths.has(path)) continue;
+      if (hasRange(label) && seenRanged.has(path)) continue;
+      if (hasRange(label)) seenRanged.add(path);
+    }
+    add(label);
+  }
+  return out.slice(0, max);
+}
+
+/**
  * A value quoted for a POSIX shell, only when it needs it. A value that starts with "#" would begin
  * a comment and one that starts with "~" would turn into a home folder, so those are quoted too.
  */
