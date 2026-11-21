@@ -466,6 +466,7 @@ what it does, so do not pre-approve that form.
 mergestory agent analyze  [source] --name <name> [--base <ref>] [--head <ref>]
 mergestory agent validate [source] --name <name> [flags]
 mergestory agent render   [source] --name <name> [flags]
+mergestory agent frames   [source] --name <name>
 ```
 
 **The work folder.** `--name` is required. It is 1 to 64 characters: `a-z`, `0-9`, `.`, `_` and `-`, and it
@@ -485,7 +486,7 @@ folder:
 | `AUTHORING.md`, `evidence.md`, `analysis.json`, `storyboard.schema.json` | `agent analyze` | As for [`analyze`](#mergestory-analyze). `AUTHORING.md` shows the `agent validate` and `agent render` commands. |
 
 The commands refuse to work when the work folder, or the `work` folder above it, is a symbolic link, or
-when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot, a recording, a log or a region as a flag. They read `screenshots/`, `recordings/` and `logs/` in the work folder. `agent validate` and `agent render` create nothing in the work folder.
+when the work folder holds a symbolic link at any depth. The agent commands never take a screenshot, a recording, a log or a region as a flag. They read `screenshots/`, `recordings/` and `logs/` in the work folder. `agent validate` creates nothing in the work folder, and `agent render` creates only `last-run.json` in a work folder that exists.
 
 **The source.** The agent commands only explain the repository of the current folder. Leave the source out, or
 give `.`, for the local branch range (`--base`, `--head`). A pull request (URL or `owner/repo#123`) is accepted
@@ -543,7 +544,24 @@ browser still come from your settings.
 | `--no-cache` | Do not use or fill the cache. | cache on |
 | `--no-captions` | Leave captions out of the video. | captions on |
 
-It prints the same result and ends with the same exit codes as `generate`.
+It prints the same result and ends with the same exit codes as `generate`. After a real render (not
+`--dry-run`) it writes `last-run.json` in the work folder, which holds the run folder, so that `agent frames`
+finds the video.
+
+## `mergestory agent frames`
+
+```
+mergestory agent frames [source] --name <name>
+```
+
+Takes still pictures from the latest `agent render` of the work folder, so that you can look at the video
+before you share it. It writes `frames/` in the work folder (and replaces what was there): `contact-sheet.jpg`,
+one small frame for every 2 seconds, tiled (for a video longer than 48 seconds, one for every
+`ceil(length / 24)` seconds), and `scene-01.jpg`, `scene-02.jpg`, and so on: one full-size frame for each
+scene, taken in the middle of the scene's last narration beat (the middle of the scene when it has no beat).
+It uses the FFmpeg that the other commands use. It fails with exit code 2 when the work folder has no
+rendered video yet. With `--json` it prints
+`{"ok": true, "name", "framesDir", "contactSheet", "sheetStepSec", "frames": [{"sceneId", "title", "timeSec", "file"}]}`.
 
 ## `mergestory schema`
 
@@ -936,6 +954,7 @@ request update would be skipped.
 |---|---|
 | `analyze` | `{"ok": true, "runId", "runDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary": {"title", "changeLabel", "size", "files", "suggestedDurationSec", "evidenceItems"}}` |
 | `agent analyze` | `{"ok": true, "name", "workDir", "files": {"analysis", "evidence", "guide", "schema"}, "summary"}`. `agent validate` and `agent render` print the same object as `validate` and `generate`. |
+| `agent frames` | `{"ok": true, "name", "framesDir", "contactSheet", "sheetStepSec", "frames": [{"sceneId", "title", "timeSec", "file"}]}` |
 | `validate` | `{"ok", "errors", "warnings", "fixes", "groundedClaims"}`. `ok` is `false` when there is an error. Each error and warning has `path` (for example `scenes[3].visual.ref`), `code` and `message`. `fixes` is a list of strings. |
 | `doctor` | `{"ok", "online", "version", "summary": {"pass", "warn", "fail"}, "checks": [{"id", "name", "status", "detail", "fix"}], "kokoro": {"installed", "version", "modelCached"}}` |
 | `setup` | `{"ok": true, "targets": [{"name", "summary"}]}`. `setup kokoro` gives `{"ok": true, "kokoro": {"installed", "location", "version", "modelCached"}}`. `setup youtube` gives `{"ok": true, "youtube": {"credentialsFile", "scopes"}}`, and `setup drive` gives `{"ok": true, "drive": {"credentialsFile", "scopes"}}`. Never a token. |

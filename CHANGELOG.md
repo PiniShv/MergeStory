@@ -4,6 +4,15 @@ All notable changes to MergeStory are listed here, newest first.
 
 ## Unreleased
 
+### Skill and plugin
+
+- **Added:** a self-review step. After a render, the skill runs `mergestory agent frames`, looks at the contact
+  sheet and each scene frame, and fixes the storyboard (at most two more renders) before it shares the video.
+  It needs an engine newer than 1.8.0; with an older engine the skill skips the step.
+- **Added:** a short rule for changes the author asks for ("make scene 2 about the retry rule", "drop the
+  scene", "shorter"): edit only that scene in `storyboard.json`, validate, render and look again. The whole
+  storyboard is not written again.
+
 ### Engine
 
 - **Fixed:** evidence chips at the bottom of a scene are readable. A long symbol chip first loses its
@@ -11,6 +20,10 @@ All notable changes to MergeStory are listed here, newest first.
   name is not cut twice (a symbol name over 80 characters is already cut when its label is made). A file
   or symbol shows once per scene. When a scene shows code, its chip for that file gives the lines on
   screen, not the range of another symbol or hunk in the same file.
+- **Added:** `mergestory agent frames [source] --name <name>`: still pictures of the latest `agent render` of
+  the work folder, so that an agent can look at its own video. It writes `frames/` in the work folder with a
+  contact sheet and one full-size frame for each scene. `agent render` now writes `last-run.json` in the work
+  folder to say which run is the latest.
 - **Fixed:** a storyboard can show code from large source files. Files up to 8 MiB (was 1 MiB) are read, for
   local repositories and for pull requests on GitHub. Before, every code reference into a larger file, such
   as a big bundled script, failed with `code-ref-unreadable`. Binary files and files over 8 MiB still read as

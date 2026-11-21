@@ -77,7 +77,7 @@ export async function makeVideo(
   source: string | undefined,
   flags: GenerateFlags,
   forced?: ConfigInput,
-): Promise<void> {
+): Promise<GenerateResult | PlanResult | undefined> {
   const common = await buildCommonOptions(source, flags, { cwd: env.io.cwd, logger: env.logger });
   const options: JobOptions = { ...common };
   if (forced) options.config = mergeConfigInputs(common.config, forced);
@@ -87,7 +87,7 @@ export async function makeVideo(
   if (flags.allowLowContrast) options.allowLowContrast = true;
   if (flags.async) {
     await runInBackground(env, options);
-    return;
+    return undefined;
   }
   // Loaded here, so that --help and the small commands stay quick to start.
   const { generate } = await import('../../pipeline/index.ts');
@@ -97,4 +97,5 @@ export async function makeVideo(
   else
     env.say(isPlanResult(safe) ? formatPlanResult(safe, env.style) : formatGenerateResult(safe, env.style));
   if (!isPlanResult(safe)) reportFailedPullRequestUpdate(env, safe);
+  return result;
 }
