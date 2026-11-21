@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, type TestContext } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
-import { probeRecording } from '../core/media-probe.ts';
+import { clockProblem, probeRecording } from '../core/media-probe.ts';
 import { runCommand } from '../core/process.ts';
 import { RECORDING_BOX, RECORDING_FPS } from '../core/recording-frames.ts';
 import type { HiddenRegion } from '../core/types.ts';
@@ -17,6 +17,8 @@ import {
   farthestFrom,
   fileTimes,
   makeTaggedClip,
+  meanDifference,
+  type PixelBox,
   pictureTimes,
   readCut,
   readTag,
@@ -52,12 +54,47 @@ const SHAPES: TaggedShape[] = [
   { name: 'vp9-24-odd.webm', codec: 'vp9', width: 641, height: 361, rate: 24, seconds: 3 },
 ];
 const shape = (name: string): TaggedShape => SHAPES.find((s) => s.name === name)!;
+/** Clips whose picture does not start at the file's 0, with and without sound that does. */
+const LATE: TaggedShape[] = [
+  { name: 'h264-starts-late.mp4', codec: 'h264', width: 640, height: 360, rate: 30, seconds: 2, start: 1 },
+  {
+    name: 'h264-after-sound.mp4',
+    codec: 'h264',
+    width: 640,
+    height: 360,
+    rate: 30,
+    seconds: 2,
+    start: 1,
+    sound: true,
+  },
+  { name: 'vp9-starts-late.webm', codec: 'vp9', width: 640, height: 360, rate: 30, seconds: 2, start: 0.5 },
+  {
+    name: 'vp8-after-sound.webm',
+    codec: 'vp8',
+    width: 640,
+    height: 360,
+    rate: 30,
+    seconds: 2,
+    start: 0.5,
+    sound: true,
+  },
+];
 
 /** The step of the clip's grid of frames: frame k of the whole clip stands for the moment k * STEP. */
 const STEP = 1 / RECORDING_FPS;
+/** The region that these tests hide: below the tag, so the tag still reads in a covered frame. */
+const REGION = { x: 0.25, y: 0.5, w: 0.5, h: 0.3 };
+/** The inside of a region in a cut frame, a few pixels in from its border, where JPEG mixes the colours. */
+const inside = (region: HiddenRegion, size: { width: number; height: number }): PixelBox => ({
+  x: Math.ceil(region.x * size.width) + 3,
+  y: Math.ceil(region.y * size.height) + 3,
+  w: Math.floor(region.w * size.width) - 6,
+  h: Math.floor(region.h * size.height) - 6,
+});
 
 describe.skipIf(tools === null)('which picture each cut frame of a recording shows', () => {
   let dir: string;
+  let cuts = 0;
   const clips = new Map<string, Promise<string | null>>();
   beforeAll(async () => {
     dir = await mkdtemp(join(tmpdir(), 'mergestory-frame-times-'));
@@ -83,7 +120,7 @@ describe.skipIf(tools === null)('which picture each cut frame of a recording sho
       expect(Math.abs(times[i]! - t), `${of.name}: time of picture ${i}`).toBeLessThan(0.0015);
     const { codec, width, height, durationSec } = await probeRecording(tools!.ffprobe, clip);
     const { hidden, ...rest } = over;
-    const outDir = join(dir, `${of.name}-${ctx.task.id}`);
+    const outDir = join(dir, `cut-${++cuts}`);
     const request: FrameRequest = {
       recording: {
         id: 'RC1',
@@ -165,18 +202,101 @@ describe.skipIf(tools === null)('which picture each cut frame of a recording sho
   for (const name of ['h264-gaps.mp4', 'h264-turned-90.mp4', 'vp9-24-odd.webm']) {
     it(`${name}: a region hidden for the whole clip is covered in every frame, and the pictures stay right`, async (ctx) => {
       const of = shape(name);
-      const region = { x: 0.25, y: 0.5, w: 0.5, h: 0.3 };
-      const { made, frames, numbers, first } = await cut(ctx, of, { hidden: [region] });
-      // The inside of the region in the frame, a few pixels in from its border where JPEG mixes the colours.
-      const box = {
-        x: Math.ceil(region.x * made.width) + 3,
-        y: Math.ceil(region.y * made.height) + 3,
-        w: Math.floor(region.w * made.width) - 6,
-        h: Math.floor(region.h * made.height) - 6,
-      };
+      const { made, frames, numbers, first } = await cut(ctx, of, { hidden: [REGION] });
+      const box = inside(REGION, made);
       for (const [i, grey] of frames.entries())
         expect(farthestFrom(grey, made.width, box, [COVER_FILL, COVER_EDGE]), `frame ${i}`).toBeLessThan(30);
       expectRightPictures(of, numbers, first);
+    });
+  }
+
+  /**
+   * A region hidden from `from` to `to`, judged frame by frame against the times the clip was made with and
+   * against the same cut with nothing hidden. A frame that stands for a moment of the part, give or take half
+   * a frame, is covered. So is every frame that shows a picture which a player shows only during the part,
+   * wherever the cut puts it. A frame more than three frames from the part is left exactly as it was.
+   */
+  function expectHiddenPart(
+    of: TaggedShape,
+    part: Awaited<ReturnType<typeof cut>>,
+    plain: Awaited<ReturnType<typeof cut>>,
+    from: number,
+    to: number,
+  ): void {
+    const { made, frames, numbers, first } = part;
+    expect(plain.frames).toHaveLength(frames.length);
+    const box = inside(REGION, made);
+    const times = pictureTimes(of);
+    const onlyInPart = new Set(
+      times
+        .filter(({ t }, i) => t >= from - 1e-6 && (times[i + 1]?.t ?? Number.POSITIVE_INFINITY) <= to + 1e-6)
+        .map(({ n }) => n),
+    );
+    for (const [i, grey] of frames.entries()) {
+      const moment = (first + i) * STEP;
+      const label = `${of.name}, part ${from} to ${to} s, frame ${i} at ${moment.toFixed(3)} s`;
+      const covered = farthestFrom(grey, made.width, box, [COVER_FILL, COVER_EDGE]) < 30;
+      const untouched = meanDifference(grey, plain.frames[i]!, made.width, box) < 3;
+      expect(covered !== untouched, `${label}: covered or as it was, and not both`).toBe(true);
+      if (moment >= from - STEP / 2 - 1e-6 && moment <= to + STEP / 2 + 1e-6) {
+        expect(covered, `${label}: stands for a moment of the part`).toBe(true);
+      }
+      if (onlyInPart.has(numbers[i]!)) {
+        expect(covered, `${label}: shows picture ${numbers[i]}, which a player shows only in the part`).toBe(
+          true,
+        );
+      }
+      if (moment < from - 3 * STEP || moment > to + 3 * STEP) {
+        expect(untouched, `${label}: far from the part`).toBe(true);
+      }
+    }
+    expectRightPictures(of, numbers, first);
+  }
+
+  for (const name of [
+    'h264-30.mp4',
+    'h264-29.97.mp4',
+    'h264-gaps.mp4',
+    'h264-turned-90.mp4',
+    'vp8-gaps.webm',
+    'vp9-24-odd.webm',
+  ]) {
+    it(`${name}: a region hidden for a part of the clip is covered just then`, async (ctx) => {
+      const of = shape(name);
+      const plain = await cut(ctx, of);
+      // In the middle, very short, from the start, and on past the end.
+      for (const [from, to] of [
+        [0.5, 1],
+        [1.3, 1.35],
+        [0, 0.25],
+        [2.6, 60],
+      ] as const) {
+        expectHiddenPart(of, await cut(ctx, of, { hidden: [{ ...REGION, from, to }] }), plain, from, to);
+      }
+    });
+  }
+
+  it('a part of a clip with a zoom covers the region at the moments of the whole clip', async (ctx) => {
+    const of = shape('h264-30.mp4');
+    const over = { trim: { start: 1, end: 2.5 }, zoom: { x: 0, y: 0, w: 1, h: 1 }, box: RECORDING_BOX.thumb };
+    const plain = await cut(ctx, of, over);
+    const part = await cut(ctx, of, { ...over, hidden: [{ ...REGION, from: 1.4, to: 1.9 }] });
+    expect(part.first).toBe(12);
+    expectHiddenPart(of, part, plain, 1.4, 1.9);
+  });
+
+  for (const each of LATE) {
+    it(`${each.name}: the cut shows its pictures at other moments than a player, and a part is refused`, async (ctx) => {
+      const { numbers, first } = await cut(ctx, each);
+      const elsewhere = numbers.filter(
+        (n, i) => !shownBetween(each, (first + i) * STEP, (first + i + 0.5) * STEP).includes(n!),
+      );
+      expect(elsewhere.length, 'frames that show a picture at another moment than a player').toBeGreaterThan(
+        0,
+      );
+      const clip = (await clips.get(each.name))!;
+      const { durationSec } = await probeRecording(tools!.ffprobe, clip);
+      expect(await clockProblem(tools!.ffprobe, clip, durationSec)).not.toBeNull();
     });
   }
 });

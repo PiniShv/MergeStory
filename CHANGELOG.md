@@ -2,6 +2,19 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
+## Unreleased
+
+### Engine
+
+- **Added:** a region of a recording in `--redact` (and in `redact.json`) can be hidden for a part of the
+  clip only: add `"from"` and `"to"`, in seconds of the clip as a player shows them. The region is also
+  hidden one frame before and after the part. A part is allowed only for a clip in a plain form that
+  MergeStory checks first: one picture track that starts at 0 with a full picture and lasts to the end,
+  and none of the file layouts that players read in different ways (an MP4 in pieces, as Chrome's and
+  Safari's recorders write it, and a clip cut without re-encoding are refused too). For any other clip
+  the run stops and says why; the region can still be hidden for the whole clip. The check knows the
+  files that recorders and FFmpeg write, not files built by hand to fool players.
+
 ## 1.9.0
 
 ### Skill and plugin

@@ -10,7 +10,7 @@ import type { Config } from '../core/config.ts';
 import { MergeStoryError } from '../core/errors.ts';
 import { isRecord } from '../core/json.ts';
 import { resolveLogId } from '../core/log-id.ts';
-import { probeRecording, shownName } from '../core/media-probe.ts';
+import { clockProblem, probeRecording, shownName } from '../core/media-probe.ts';
 import { maskPrivate, type PrivateMaskOptions } from '../core/secrets.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import { stripInvisible } from '../core/text.ts';
@@ -205,10 +205,11 @@ function normalizeContextText(value: string | null | undefined, what: string): s
 
 /** Most regions to hide for one screenshot or recording. */
 export const MAX_HIDDEN_REGIONS = 20;
-const REGION_KEYS = ['x', 'y', 'w', 'h'];
+const REGION_KEYS = ['x', 'y', 'w', 'h', 'from', 'to'];
 const REDACT_HINT =
-  'Use {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}. ' +
-  'x, y, w and h are fractions (0 to 1) of the whole picture. A region of a recording is hidden for the whole clip.';
+  'Use {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "from": 12, "to": 15}]}. ' +
+  'x, y, w and h are fractions (0 to 1) of the whole picture. A region of a recording is hidden for the whole clip, ' +
+  'or only from "from" to "to": seconds from the start of the clip, as a player shows them.';
 
 /**
  * Check the regions that the caller wants hidden. Strict, and it fails closed: nothing that is wrong
@@ -235,12 +236,6 @@ export function checkRedactions(value: unknown): Map<string, HiddenRegion[]> {
       list.map((entry: unknown, index) => {
         const at = `${id}, region ${index + 1}`;
         if (!isRecord(entry)) return fail(`${at} is not an object.`);
-        const timed = Object.keys(entry).find((key) => key === 'from' || key === 'to');
-        if (timed !== undefined) {
-          return fail(
-            `${at} has "${timed}": a region cannot be limited to a part of a clip. Leave out "from" and "to", and the region is hidden for the whole clip.`,
-          );
-        }
         const unknown = Object.keys(entry).find((key) => !REGION_KEYS.includes(key));
         if (unknown !== undefined) {
           return fail(`${at} has unknown field "${shown(unknown)}". Allowed: ${REGION_KEYS.join(', ')}.`);
@@ -253,7 +248,18 @@ export function checkRedactions(value: unknown): Map<string, HiddenRegion[]> {
         };
         const region = { x: number('x'), y: number('y'), w: number('w'), h: number('h') };
         if (!(region.w > 0 && region.h > 0)) return fail(`${at} needs "w" and "h" above 0.`);
-        return region;
+        const timed = Object.keys(entry).filter((key) => key === 'from' || key === 'to');
+        if (timed.length === 0) return region;
+        if (id.startsWith('SS')) {
+          return fail(`${at} has "${timed[0]}", but a screenshot has no time. Leave out "from" and "to".`);
+        }
+        if (timed.length === 1) {
+          return fail(`${at} has "${timed[0]}" without "${timed[0] === 'from' ? 'to' : 'from'}": give both.`);
+        }
+        const from = number('from');
+        const to = number('to');
+        if (!(from >= 0 && to > from)) return fail(`${at} needs "from" at 0 or later and "to" after "from".`);
+        return { ...region, from, to };
       }),
     );
   }
@@ -275,7 +281,39 @@ function cutRegion(region: HiddenRegion, at: string): HiddenRegion {
       hint: REDACT_HINT,
     });
   }
-  return { x, y, w, h };
+  return { ...region, x, y, w, h };
+}
+
+/**
+ * Refuse the regions for a part of a clip that the video could not keep exactly: a part that starts after
+ * the clip ends, or a clip whose pictures a player and the cut frames would show at different times
+ * (clockProblem). Nothing is shifted or guessed: such a region would leave the hidden part showing.
+ */
+async function checkTimedRegions(
+  ffprobe: string,
+  id: string,
+  recording: { path: string; durationSec: number },
+  regions: readonly HiddenRegion[],
+): Promise<void> {
+  const timed = regions.filter((region) => region.from !== undefined);
+  if (timed.length === 0) return;
+  for (const [i, region] of regions.entries()) {
+    if (region.from !== undefined && region.from >= recording.durationSec) {
+      throw new MergeStoryError(
+        'USAGE',
+        `Hidden regions: ${id}, region ${i + 1} starts at ${region.from} s, but the clip is ${recording.durationSec.toFixed(3)} s long.`,
+        { hint: REDACT_HINT },
+      );
+    }
+  }
+  const problem = await clockProblem(ffprobe, recording.path, recording.durationSec);
+  if (problem !== null) {
+    throw new MergeStoryError(
+      'USAGE',
+      `Hidden regions: ${id} (${shownName(recording.path)}) cannot hide a region for a part of the clip: ${problem}, so a player and the video would not show its pictures at the same times.`,
+      { hint: 'Leave out "from" and "to" to hide the region for the whole clip.' },
+    );
+  }
 }
 
 /** "5.2 MB", rounded up, for a size that is over the screenshot limit. */
@@ -491,13 +529,16 @@ export async function buildContextInputs(
   // FFmpeg is looked up only when a recording was supplied.
   const ffprobe = wanted.length > 0 ? (await resolveFfmpeg(config)).ffprobe : '';
   for (const [i, rec] of wanted.entries()) {
+    const id = `RC${i + 1}`;
     const checked = await checkRecording(ffprobe, rec.path, cwd, config.inputs);
+    const hidden = hiddenFor(id);
+    await checkTimedRegions(ffprobe, id, checked, hidden.hidden ?? []);
     recordings.push({
-      id: `RC${i + 1}`,
+      id,
       caption: (rec.caption ?? '').slice(0, MAX_CAPTION),
       moment: rec.moment ?? 'other',
       ...checked,
-      ...hiddenFor(`RC${i + 1}`),
+      ...hidden,
     });
   }
   const supplied = [...screenshots, ...recordings].map((item) => item.id);

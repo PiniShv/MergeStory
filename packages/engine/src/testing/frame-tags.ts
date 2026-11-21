@@ -65,6 +65,10 @@ export interface TaggedShape {
   keep?: [number, number][];
   /** The file stores the picture turned and tells a player to turn it back by this many degrees. */
   rotate?: 90 | 180 | 270;
+  /** The first picture comes this many seconds after the file's 0. Without sound, the file starts there too. */
+  start?: number;
+  /** A sound track from the file's 0, so the file starts at 0 even when its picture starts later. */
+  sound?: boolean;
 }
 
 /** When each picture of a shape starts to show in a player, in order. A picture shows until the next one. */
@@ -72,9 +76,10 @@ export function pictureTimes(shape: TaggedShape): { n: number; t: number }[] {
   const [perSecond = 0, per = 1] = String(shape.rate).split('/').map(Number);
   const count = Math.ceil((shape.seconds * perSecond) / per - 1e-9);
   const kept = (n: number) => !shape.keep || shape.keep.some(([first, last]) => n >= first && n <= last);
-  return Array.from({ length: count }, (_, n) => ({ n, t: (n * per) / perSecond })).filter(({ n }) =>
-    kept(n),
-  );
+  return Array.from({ length: count }, (_, n) => ({
+    n,
+    t: (shape.start ?? 0) + (n * per) / perSecond,
+  })).filter(({ n }) => kept(n));
 }
 
 /**
@@ -119,8 +124,23 @@ export async function makeTaggedClip(
     ...(shape.rotate ? [TURNS[shape.rotate]] : []),
   ];
   const source = `testsrc2=size=${shape.width}x${shape.height}:rate=${shape.rate}:duration=${shape.seconds}`;
+  const start = shape.start ?? 0;
+  const picture = ['-f', 'lavfi', '-i', source];
   const made = await run([
-    ...['-f', 'lavfi', '-i', source, '-vf', filters.join(',')],
+    ...(shape.sound
+      ? [
+          ...['-f', 'lavfi', '-t', String(start + shape.seconds), '-i', 'sine=frequency=440'],
+          '-itsoffset',
+          String(start),
+        ]
+      : []),
+    ...picture,
+    ...['-vf', filters.join(',')],
+    ...(shape.sound
+      ? ['-map', '1:v', '-map', '0:a', '-c:a', shape.name.endsWith('.webm') ? 'libopus' : 'aac']
+      : start > 0
+        ? ['-output_ts_offset', String(start)]
+        : []),
     // Each picture keeps the time it was drawn at, also where pictures were left out.
     ...['-fps_mode', 'passthrough', ...ENCODERS[shape.codec], stored],
   ]);
@@ -192,6 +212,18 @@ export interface PixelBox {
   y: number;
   w: number;
   h: number;
+}
+
+/**
+ * The average difference between two grey pictures of one size inside the box. A cut with a hidden region
+ * passes every frame through the cover's filters, which moves single pixels at sharp edges by up to about 30
+ * levels even where nothing is covered, so the average is what tells a frame as it was from a covered one.
+ */
+export function meanDifference(a: Uint8Array, b: Uint8Array, width: number, box: PixelBox): number {
+  let sum = 0;
+  for (let y = box.y; y < box.y + box.h; y++)
+    for (let x = box.x; x < box.x + box.w; x++) sum += Math.abs(a[y * width + x]! - b[y * width + x]!);
+  return sum / (box.w * box.h);
 }
 
 /** The largest distance of a pixel in the box from the nearest of the given greys: 0 when every pixel is one of them. */
