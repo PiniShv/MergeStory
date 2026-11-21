@@ -44,16 +44,17 @@ linked to the code.
 More real videos: [a real pull request of 94 files](https://www.youtube.com/watch?v=x63P-LXSH68) (2:25) and
 [a bug fix you can see](https://www.youtube.com/watch?v=oaLRpW8WOS0) (1:29).
 
-A video has up to eight chapters:
+A video tells the story in this order. A chapter appears only when it has something real to show:
 
-1. **The mission:** the task and the problem it solves.
+1. **Why:** the problem the change solves, from the pull request, the ticket or your notes. When no source says why, the video says so.
 2. **The bug happening:** the steps that show it, with a screenshot or a recording (only when you supply them).
-3. **The big picture:** which components changed and how they connect.
-4. **Under the hood:** the most important code, highlighted line by line.
-5. **Before and after:** how behaviour changes (only when there is something real to show).
-6. **The fix working:** the capture of the fix and the real test results (only when you supply them).
-7. **What to review:** risky or subtle spots, with file and line links.
-8. **Conclusion:** a short, review-oriented summary.
+3. **The key change:** the most important code first, highlighted line by line.
+4. **Before and after:** what goes in, and what came out before and comes out now.
+5. **The fix working:** the capture of the fix and the real test results (only when you supply them).
+6. **The big picture:** which components changed and how they connect, when more than one did.
+7. **What to review:** two or three places to read closely, each with a file and line link and the reason. When the pull request says what it leaves out, the video says that too.
+
+There is no recap at the end: every sentence adds something new.
 
 Next to the video, a watch page lists the chapters, the review checklist and every claim with links
 to the code it is based on. Simulated visuals (terminal sessions, app screens) are always labelled.

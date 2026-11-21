@@ -27,7 +27,7 @@ These codes are errors:
 | Code | What it means | What to do |
 |---|---|---|
 | `schema` | A field is missing, has the wrong type, or has a value that is not allowed. | Write every field. Use `null` or `[]` when there is nothing to say. |
-| `too-few-scenes` | There are fewer than 2 scenes. | Add a mission scene and a conclusion. |
+| `too-few-scenes` | There are fewer than 2 scenes. | Add a mission scene and a review scene. |
 | `no-narration` | A scene has no narration, or every line of it was removed. | Write lines that state what the change shows, and cite evidence. |
 | `uncited-line` | No line of a scene cites a valid evidence id. | Cite ids from `evidence.md` on every line. |
 | `code-ref-unknown-path` | The path is not a changed file. | Copy the path exactly from the Files table of `evidence.md`. |

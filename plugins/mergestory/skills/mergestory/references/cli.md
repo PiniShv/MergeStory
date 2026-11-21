@@ -14,7 +14,7 @@ These run without a question:
 | `mergestory agent analyze [source] --name <name> [--base <ref>] [--head <ref>] --json` | Writes `analysis.json`, `evidence.md`, `AUTHORING.md` and `storyboard.schema.json` into the work folder `~/.mergestory/work/<name>`, and prints it as `workDir`. Reads `task.md`, `notes.md` and `tests.json` from that folder. No model is called. |
 | `mergestory agent validate [source] --name <name> --json` | Checks `storyboard.json` in the work folder against the change, without rendering. Exit code 3 when it has errors. |
 | `mergestory agent render [source] --name <name> [flags] --json` | Makes the video on this machine from `storyboard.json` in the work folder. Never calls a model or a paid voice, never uploads and never comments. |
-| `mergestory agent frames [source] --name <name> --json` | Needs an engine newer than 1.8.0 and a finished `agent render`. Writes `frames/` in the work folder: `contact-sheet.jpg` and `scene-01.jpg`, `scene-02.jpg`, and so on. Prints `{"ok", "name", "framesDir", "contactSheet", "sheetStepSec", "frames": [{"sceneId", "title", "timeSec", "file"}]}`. |
+| `mergestory agent frames [source] --name <name> --json` | Needs engine 1.9.0 or newer and a finished `agent render`. Writes `frames/` in the work folder: `contact-sheet.jpg` and `scene-01.jpg`, `scene-02.jpg`, and so on. Prints `{"ok", "name", "framesDir", "contactSheet", "sheetStepSec", "frames": [{"sceneId", "title", "timeSec", "file"}]}`. |
 
 For the `agent` commands, leave `[source]` out to explain the current branch, or give a pull request
 of this repository: its repository must be a git remote of the current folder, on GitHub. Anything
