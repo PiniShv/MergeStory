@@ -10,7 +10,7 @@ description: >-
 license: Apache-2.0
 compatibility: Requires Node.js 22.12+, git, FFmpeg and a Chromium-based browser. Network access to the GitHub API for pull requests, and to a storage endpoint only when publishing.
 metadata:
-  version: "1.8.0"
+  version: "1.9.0"
 allowed-tools: Bash(mergestory --version) Bash(mergestory doctor --json) Bash(mergestory agent *) Bash(gh pr view --json url --jq .url) Read(~/.mergestory/work/**) Edit(~/.mergestory/work/**) Read(/${CLAUDE_SKILL_DIR}/references/**)
 ---
 
@@ -25,7 +25,7 @@ Do not use it for text-only summaries or code review comments. It does not recor
 ## 1. Find the engine
 
 Run `mergestory --version`. It must print 1.5.0 or newer. If the command is missing or older, ask
-the user whether you may install it, then run `npm install -g mergestory@1.8.0`. Never start
+the user whether you may install it, then run `npm install -g mergestory@1.9.0`. Never start
 MergeStory with `npx`: inside a repository, `npx` can run that repository's own copy of a package
 instead of the published one.
 
@@ -170,7 +170,7 @@ tell. Check:
 - Each scene shows what its narration says, and no scene repeats another.
 
 If something is wrong, fix `storyboard.json`, validate and render again. Do this at most twice, then
-share what you have and say what is still wrong. This needs an engine newer than 1.8.0; with an older
+share what you have and say what is still wrong. This needs engine 1.9.0 or newer; with an older
 engine the command does not exist, so skip this step.
 
 ### When the author asks for a change

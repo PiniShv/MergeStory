@@ -2,16 +2,18 @@
 
 All notable changes to MergeStory are listed here, newest first.
 
-## Unreleased
+## 1.9.0
 
 ### Skill and plugin
 
+- The skill installs `mergestory@1.9.0`. It still asks for 1.5.0 or newer: with an older engine it skips the
+  steps that need 1.9.0.
 - **Added:** a self-review step. After a render, the skill runs `mergestory agent frames`, looks at the contact
   sheet and each scene frame, and fixes the storyboard (at most two more renders) before it shares the video.
-  It needs an engine newer than 1.8.0; with an older engine the skill skips the step.
-- **Added:** a short rule for changes the author asks for ("make scene 2 about the retry rule", "drop the
-  scene", "shorter"): edit only that scene in `storyboard.json`, validate, render and look again. The whole
-  storyboard is not written again.
+  It needs engine 1.9.0 or newer; with an older engine the skill skips the step.
+- **Added:** a short rule for changes the author asks for. "Make scene 2 about the retry rule" or "drop the
+  architecture scene" edits only that scene in `storyboard.json`; "shorter" cuts lines across the scenes. Then
+  the skill validates, renders and looks again. The whole storyboard is not written again.
 
 ### Engine
 
@@ -67,6 +69,8 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Docs
 
+- **Fixed:** the README describes the story a video tells today: why first, the key change as code, the
+  big picture after the code, places to read closely, and no recap at the end.
 - **Changed:** the website and the README are new. Both show frames of real videos in place of drawings. The
   website plays every film in one player, which loads only after a click.
 - **Added:** MergeStory for Chrome has its own section on the website and in the README, with a picture of the
