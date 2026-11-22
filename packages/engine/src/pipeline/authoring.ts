@@ -113,7 +113,7 @@ function authoringDocument(p: Prepared, followUp: AuthoringOptions['followUp'] |
           'Real screenshots (PNG or JPEG) go in the `screenshots/` folder here. They become SS1, SS2 and so on.',
           'Screen recordings (MP4, QuickTime, WebM or Matroska) go in the `recordings/` folder here. They become RC1, RC2 and so on.',
           'The steps that show the bug go in `repro.json` here. They become REPRO, REPRO.1, REPRO.2 and so on.',
-          'Parts of a screenshot or recording that must not show go in `redact.json` here: {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}, fractions of the picture. A region of a recording is hidden for the whole clip.',
+          'Parts of a screenshot or recording that must not show go in `redact.json` here: {"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}, fractions of the picture. A region of a recording is hidden for the whole clip, or only from "from" to "to": seconds of the clip, as a player shows them.',
           'Logs (UTF-8 text) go in the `logs/` folder here, as `.log` or `.txt` files. They become L1, L2 and so on. `evidence.md` shows only an excerpt of each: the full files are in `logs/`.',
         ]
       : []),

@@ -420,7 +420,7 @@ describe('agent: the work folder', () => {
       }
     });
 
-    it('is refused in every command when a region has "from" or "to"', async () => {
+    it('is refused in every command when a region of a screenshot has "from" or "to"', async () => {
       await mkdir(join(work(), 'screenshots'), { recursive: true });
       await writeFile(join(work(), 'screenshots', 'a.png'), makePng(8, 8));
       await writeFile(
@@ -430,9 +430,7 @@ describe('agent: the work folder', () => {
       for (const context of await contexts()) {
         await expect(buildContextInputs(context!, dir, testConfig())).rejects.toMatchObject({
           code: 'USAGE',
-          message: expect.stringContaining(
-            'SS1, region 1 has "from": a region cannot be limited to a part of a clip.',
-          ),
+          message: expect.stringContaining('SS1, region 1 has "from", but a screenshot has no time.'),
         });
       }
     });

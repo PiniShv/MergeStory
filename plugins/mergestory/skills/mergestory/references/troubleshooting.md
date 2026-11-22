@@ -106,8 +106,12 @@ or older, do not pass that capture at all.
   the capture.
 - "has unknown field", "needs a list of regions", "needs ... as a number", "needs w and h above 0",
   "has N regions, the most is 20": fix the entry as the message says.
-- "a region cannot be limited to a part of a clip": the entry has `from` or `to`. Remove them.
-  A region of a recording is hidden in every frame of the clip.
+- "a region cannot be limited to a part of a clip": an engine of 1.9.0 or older does not know `from` and
+  `to`. Remove them, and the region is hidden in every frame of the clip.
+- "cannot hide a region for a part of the clip": the clip's own times are not the times of the video
+  (the message says why). Remove `from` and `to` for that clip, and the region is hidden in every frame.
+- "a screenshot has no time", "without ... give both", "needs from at 0 or later and to after from",
+  "starts at ... but the clip is ... long": fix the entry as the message says.
 - "gives SS1 twice", "gives a field twice in one region" or "has a backslash": JSON keeps only the last of
   two equal names, so the engine refuses them. Give each id once, each field once, and write no escapes.
 - "Give --redact once": put all regions into one file.

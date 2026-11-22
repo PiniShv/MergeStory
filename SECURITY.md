@@ -165,7 +165,13 @@ See [docs/api.md](docs/api.md#safety-rules).
   recording there), unless you hide it with `--redact`. That option covers
   the regions you name with a solid block before anything is written: the video, the render plan and the
   frames hold only the covered picture, and a failure stops the run. The cover is the same whatever was
-  under it. In a recording, a region is covered in every frame of the clip. It is not a blur, because a blurred or pixelated text can sometimes be read
+  under it. In a recording, a region is covered in every frame of the clip, or only in the part of it that
+  you give with `from` and `to`, and one frame before and after that part. A part is allowed only for a
+  clip in a plain form that MergeStory checks first (one picture track that starts at 0 with a full
+  picture and lasts to the end, and none of the file layouts that players read in different ways; see
+  `docs/cli.md`). Any other clip is refused, and a part is never shifted to make it fit. The check knows
+  the files that recorders and FFmpeg write: a file built by hand to show other pictures in other players
+  can still pass it, so use a part only for a recording that you made. It is not a blur, because a blurred or pixelated text can sometimes be read
   back. It finds nothing by itself, so a region you forget stays visible. Check a capture before you pass
   it.
 - A screenshot, a recording, a file in `recording-frames/` and the render plan never leave the machine. The

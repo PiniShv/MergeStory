@@ -206,7 +206,7 @@ export function addContextFlags(command: Command): Command {
     )
     .option(
       '--redact <file>',
-      'JSON file (max 64 KB) of regions to cover with a solid block in screenshots and recordings: {"SS1": [{"x", "y", "w", "h"}], "RC1": [{"x", "y", "w", "h"}]}, fractions of the picture, hidden for the whole clip in a recording (given once)',
+      'JSON file (max 64 KB) of regions to cover with a solid block in screenshots and recordings: {"SS1": [{"x", "y", "w", "h"}], "RC1": [{"x", "y", "w", "h", "from", "to"}]}, fractions of the picture, hidden for the whole clip in a recording or only from "from" to "to" seconds (given once)',
       (value: string, previous: string | undefined) => {
         // A second file would replace the first in silence, and show what the first one hid.
         if (previous !== undefined)

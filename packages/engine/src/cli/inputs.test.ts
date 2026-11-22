@@ -453,18 +453,16 @@ describe('buildContext: --redact', () => {
     ]);
   });
 
-  it('stops the run on "from" or "to", with a message that says the region is hidden for the whole clip', async () => {
+  it('stops the run on "from" or "to" in a region of a screenshot, which has no time', async () => {
     await writeFile(join(dir, 'shot.png'), makePng(8, 8));
     await writeFile(
       join(dir, 'redact.json'),
-      JSON.stringify({ SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5, to: 2 }] }),
+      JSON.stringify({ SS1: [{ x: 0, y: 0, w: 0.5, h: 0.5, from: 1, to: 2 }] }),
     );
     const context = await buildContext({ screenshot: ['shot.png'], redact: 'redact.json' }, dir);
     await expect(buildContextInputs(context!, dir, testConfig())).rejects.toMatchObject({
       code: 'USAGE',
-      message: expect.stringContaining(
-        'SS1, region 1 has "to": a region cannot be limited to a part of a clip.',
-      ),
+      message: expect.stringContaining('SS1, region 1 has "from", but a screenshot has no time.'),
     });
   });
 
