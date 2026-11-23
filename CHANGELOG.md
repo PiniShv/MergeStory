@@ -6,6 +6,9 @@ All notable changes to MergeStory are listed here, newest first.
 
 ### Engine
 
+- **Fixed:** a limit that a title or ticket puts on where a change applies (for example one environment) is
+  now checked against the changed files before the narration repeats it. When the files reach further, the
+  story says what they show.
 - **Added:** a region of a recording in `--redact` (and in `redact.json`) can be hidden for a part of the
   clip only: add `"from"` and `"to"`, in seconds of the clip as a player shows them. The region is also
   hidden one frame before and after the part. A part is allowed only for a clip in a plain form that

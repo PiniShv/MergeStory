@@ -464,6 +464,8 @@ Rules of thumb for a good storyboard:
   names in plain words, because the screen shows them. Never read a file path out loud.
 - Keep the strength of the source's words: "should" stays "should", and a plan is not a fact. Say "every",
   "all", "only" or "never" only when the code shows it.
+- A limit on where the change applies (an environment, a customer, a platform, a version) is a claim too.
+  Compare one that the title, ticket or branch name states with the changed files, and say what the files show.
 - Show the key change in the first `under-the-hood` scene as real code. In the review scene, each item is a
   risk that this change introduces, with a `ref`: state the fact, then what to check.
 - Put what the evidence does not settle into `uncertainties`.

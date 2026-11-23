@@ -132,6 +132,10 @@ describe('authoring guide', () => {
     expect(StoryboardSchema.safeParse(parsed).success).toBe(true);
   });
 
+  it('tells the author to check a stated scope against the changed files', () => {
+    expect(AUTHORING_GUIDE).toContain('Never narrow the scope to the title');
+  });
+
   it('shows the exact fields of every visual', () => {
     expect(new Set(VISUAL_SHAPES.map((shape) => shape.type)).size).toBe(VisualSchema.options.length);
     for (const shape of VISUAL_SHAPES) {
@@ -199,8 +203,8 @@ describe('authoring guide', () => {
 
   it('is short enough to send with every request', () => {
     // 2495 words today. Saying what the change does not do, the kinds of filler and "the notes" on
-    // screen added 73 to the 2422 before it.
-    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2500);
+    // screen added 73 to the 2422 before it. The rule on a stated scope added about 40 more.
+    expect(countWords(AUTHORING_GUIDE)).toBeLessThan(2550);
   });
 
   it('states every limit that the validator enforces', () => {
