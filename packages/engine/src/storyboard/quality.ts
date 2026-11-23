@@ -14,7 +14,8 @@ function lineWords(text: string): Set<string> {
 
 /** The names in a line: words with a digit, an underscore, a dot or a capital after the first letter. */
 function lineNames(text: string): string {
-  return [...new Set(text.match(/[\w.]*(?:\d|_|\w\.\w|[a-z][A-Z])[\w.]*/g) ?? [])].sort().join(' ');
+  const names = (text.match(/[\w.]+/g) ?? []).filter((word) => /\d|_|\w\.\w|[a-z][A-Z]/.test(word));
+  return [...new Set(names)].sort().join(' ');
 }
 
 /** Lines with fewer words than this are not compared: short lines share words by chance. */
