@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { resolveFfmpeg } from '../core/binaries.ts';
 import { MergeStoryError } from '../core/errors.ts';
+import { runCommand } from '../core/process.ts';
 import type { Storyboard } from '../core/storyboard-schema.ts';
 import type { ContextInputs } from '../core/types.ts';
 import { testConfig } from '../testing/context.ts';
@@ -928,15 +929,40 @@ describe('checkRedactions', () => {
     expect(checkRedactions({ SS1: [] })).toEqual(new Map([['SS1', []]]));
   });
 
-  it('refuses "from" and "to" with their own message: a region is hidden for the whole clip', () => {
-    for (const [value, at, field] of [
-      [{ RC1: [{ ...region, from: 1, to: 2 }] }, 'RC1, region 1', 'from'],
-      [{ RC2: [region, { ...region, to: 1 }] }, 'RC2, region 2', 'to'],
-      [{ SS1: [{ ...region, from: 1 }] }, 'SS1, region 1', 'from'],
+  it('reads "from" and "to" of a region of a recording, as seconds of the clip', () => {
+    expect(checkRedactions({ RC1: [{ ...region, from: 0, to: 2.5 }, region] })).toEqual(
+      new Map([['RC1', [{ ...region, from: 0, to: 2.5 }, region]]]),
+    );
+  });
+
+  it('refuses a time on a screenshot, a time without its other end, and a part that ends before it starts', () => {
+    for (const [value, expected] of [
+      [
+        { SS1: [{ ...region, from: 1, to: 2 }] },
+        'SS1, region 1 has "from", but a screenshot has no time. Leave out "from" and "to".',
+      ],
+      [
+        { SS1: [{ ...region, to: 2 }] },
+        'SS1, region 1 has "to", but a screenshot has no time. Leave out "from" and "to".',
+      ],
+      [{ RC2: [region, { ...region, to: 1 }] }, 'RC2, region 2 has "to" without "from": give both.'],
+      [{ RC1: [{ ...region, from: 1 }] }, 'RC1, region 1 has "from" without "to": give both.'],
+      [{ RC1: [{ ...region, from: '1', to: 2 }] }, 'RC1, region 1 needs "from" as a number.'],
+      [{ RC1: [{ ...region, from: 0, to: null }] }, 'RC1, region 1 needs "to" as a number.'],
+      [
+        { RC1: [{ ...region, from: -1, to: 2 }] },
+        'RC1, region 1 needs "from" at 0 or later and "to" after "from".',
+      ],
+      [
+        { RC1: [{ ...region, from: 2, to: 2 }] },
+        'RC1, region 1 needs "from" at 0 or later and "to" after "from".',
+      ],
+      [
+        { RC1: [{ ...region, from: 3, to: 2 }] },
+        'RC1, region 1 needs "from" at 0 or later and "to" after "from".',
+      ],
     ] as const) {
-      expect(message(value)).toBe(
-        `Hidden regions: ${at} has "${field}": a region cannot be limited to a part of a clip. Leave out "from" and "to", and the region is hidden for the whole clip.`,
-      );
+      expect(message(value), JSON.stringify(value)).toBe(`Hidden regions: ${expected}`);
     }
   });
 
@@ -950,7 +976,7 @@ describe('checkRedactions', () => {
       [{ SS1: region }, 'SS1 needs a list of regions.'],
       [{ SS1: Array.from({ length: 21 }, () => region) }, 'SS1 has 21 regions, the most is 20.'],
       [{ SS1: [region, 'x'] }, 'SS1, region 2 is not an object.'],
-      [{ SS1: [{ ...region, z: 1 }] }, 'SS1, region 1 has unknown field "z". Allowed: x, y, w, h.'],
+      [{ SS1: [{ ...region, z: 1 }] }, 'SS1, region 1 has unknown field "z". Allowed: x, y, w, h, from, to.'],
       [{ SS1: [{ x: 0, y: 0, w: 1 }] }, 'SS1, region 1 needs "h" as a number.'],
       [{ SS1: [{ ...region, x: '0.1' }] }, 'SS1, region 1 needs "x" as a number.'],
       [{ SS1: [{ ...region, y: Number.NaN }] }, 'SS1, region 1 needs "y" as a number.'],
@@ -1102,6 +1128,62 @@ describe('buildContextInputs: regions to hide', () => {
       expect(first).toEqual(region);
       expect(Object.keys(second!)).toEqual(['x', 'y', 'w', 'h']);
       expect(second!.w).toBeCloseTo(0.1);
+    });
+
+    it('gives a recording a region for a part of the clip, and keeps the part when it cuts the region', async () => {
+      await makeC();
+      const inputs = await buildContextInputs(
+        { recordings: [clip('c.mp4')], redact: { RC1: [{ x: 0.9, y: 0, w: 5, h: 0.1, from: 0.5, to: 9 }] } },
+        dir,
+        testConfig(),
+      );
+      expect(inputs.recordings[0]!.hidden![0]).toMatchObject({ x: 0.9, from: 0.5, to: 9 });
+    });
+
+    it('refuses a part that starts after the clip ends', async () => {
+      await makeC();
+      await expect(
+        buildContextInputs(
+          { recordings: [clip('c.mp4')], redact: { RC1: [region, { ...region, from: 2, to: 3 }] } },
+          dir,
+          testConfig(),
+        ),
+      ).rejects.toMatchObject({
+        code: 'USAGE',
+        message: 'Hidden regions: RC1, region 2 starts at 2 s, but the clip is 2.000 s long.',
+      });
+    });
+
+    it('refuses a part of a clip whose picture a player would show at other times, naming the clip and why', async () => {
+      const late = join(dir, 'late.mp4');
+      const picture = ['-f', 'lavfi', '-i', 'testsrc=duration=2:size=160x120:rate=12', '-c:v', 'libx264'];
+      const made = await runCommand(
+        tools!.ffmpeg,
+        ['-v', 'error', '-y', ...picture, '-output_ts_offset', '1', late],
+        {
+          allowFailure: true,
+        },
+      );
+      expect(made.code).toBe(0);
+      await expect(
+        buildContextInputs(
+          { recordings: [clip('late.mp4')], redact: { RC1: [{ ...region, from: 1, to: 2 }] } },
+          dir,
+          testConfig(),
+        ),
+      ).rejects.toMatchObject({
+        code: 'USAGE',
+        message:
+          'Hidden regions: RC1 (late.mp4) cannot hide a region for a part of the clip: the file starts at 1.000 s, not at 0, so a player and the video would not show its pictures at the same times.',
+        hint: 'Leave out "from" and "to" to hide the region for the whole clip.',
+      });
+      // The same clip may hide the region for the whole clip.
+      const inputs = await buildContextInputs(
+        { recordings: [clip('late.mp4')], redact: { RC1: [region] } },
+        dir,
+        testConfig(),
+      );
+      expect(inputs.recordings[0]!.hidden).toEqual([region]);
     });
   });
 });

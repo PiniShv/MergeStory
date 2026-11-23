@@ -9,6 +9,7 @@ import { abortedError, MergeStoryError } from '../core/errors.ts';
 import { detectImage, type ImageInfo } from '../core/image.ts';
 import { shownName } from '../core/media-probe.ts';
 import { runCommand } from '../core/process.ts';
+import { RECORDING_FPS } from '../core/recording-frames.ts';
 import type { HiddenRegion } from '../core/types.ts';
 
 /** The fill of a cover (#262626) and its edge (#b0b0b0): neutral greys, so a colour matrix cannot tint them. */
@@ -64,17 +65,37 @@ export function coverFilter(rect: PixelRect, edge: number): string {
 }
 
 /**
- * The FFmpeg filter that hides these regions in a picture of this size, in every frame: one split, one
- * cover per region, and the overlays in series, so the time grows in a straight line with the number of
- * regions.
+ * The frames of a recording's cut that a region with `from` and `to` covers, by number from the clip's
+ * start. The cut has RECORDING_FPS frames a second, and frame k shows the picture that a player shows just
+ * before (k + 0.5) / RECORDING_FPS seconds (the rate step takes the nearest picture). So the cover is on
+ * every frame whose picture a player shows from one frame before `from` to one frame after `to`.
+ */
+export function coveredFrames(region: HiddenRegion): { first: number; last: number } | null {
+  if (region.from === undefined || region.to === undefined) return null;
+  // The small slack keeps a time that lies exactly on the margin inside it, whatever the rounding.
+  return {
+    first: Math.max(0, Math.ceil((region.from - 1 / RECORDING_FPS) * RECORDING_FPS - 0.5 - 1e-6)),
+    last: Math.floor((region.to + 1 / RECORDING_FPS) * RECORDING_FPS - 0.5 + 1e-6),
+  };
+}
+
+/**
+ * The FFmpeg filter that hides these regions in a picture of this size: one split, one cover per region,
+ * and the overlays in series, so the time grows in a straight line with the number of regions. A region
+ * with `from` and `to` is covered only in its frames (coveredFrames), so for a recording this filter must
+ * come right after the step to RECORDING_FPS frames a second, on frames counted from the clip's start.
  */
 export function hideFilter(regions: readonly HiddenRegion[], width: number, height: number): string {
   const edge = coverEdge(width);
   const rects = regions.map((region) => regionRect(region, width, height));
   const covers = rects.map((rect, i) => `[c${i}]${coverFilter(rect, edge)}[m${i}]`);
+  const when = (region: HiddenRegion): string => {
+    const frames = coveredFrames(region);
+    return frames ? `:enable='between(n,${frames.first},${frames.last})'` : '';
+  };
   const overlays = rects.map(
     (rect, i) =>
-      `[${i === 0 ? 'o' : `v${i - 1}`}][m${i}]overlay=${rect.x}:${rect.y}:format=auto${i === rects.length - 1 ? '' : `[v${i}]`}`,
+      `[${i === 0 ? 'o' : `v${i - 1}`}][m${i}]overlay=${rect.x}:${rect.y}:format=auto${when(regions[i]!)}${i === rects.length - 1 ? '' : `[v${i}]`}`,
   );
   return [
     `split=${regions.length + 1}[o]${rects.map((_, i) => `[c${i}]`).join('')}`,

@@ -145,8 +145,25 @@ accurate, because the engine can quote them as evidence.
   `{"SS2": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}], "RC1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`.
   `x`, `y`, `w` and `h` are fractions (0 to 1) of the whole picture as a player shows it: upright, before
   any `zoom` of a storyboard, before any scaling. A region that reaches outside the picture is cut to it.
-  A region of a recording is hidden in every frame of the clip. It cannot be limited to a part of the
-  clip: a region with `from` or `to` is an error. Each region is covered by one opaque block: a dark grey fill (`#262626`) inside a light grey edge
+  A region of a recording is hidden in every frame of the clip, or only in a part of it: add `"from"` and
+  `"to"`, in seconds from the start of the clip as a player shows them, for example
+  `{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05, "from": 12, "to": 15}`. Give both, with `to` after `from`. The
+  region is also hidden in one frame (1/12 s) before and after the part. Give whole seconds that cover all
+  the time the secret shows: the controls of many players show whole seconds only, and a secret that shows
+  outside the part stays visible there. A part is allowed only for a clip in a plain form, which
+  MergeStory checks first: one picture track that starts at 0 with a full picture (a keyframe) and lasts
+  to the end of the clip, in a file that starts at 0. An MP4 or QuickTime file also needs: no tracks but
+  the picture and its sound, the picture track turned on, one piece (Chrome's and Safari's recorders write
+  MP4 in pieces), lengths in the file that are not shorter than its pictures, times that do not jump,
+  and no edit list or one edit at normal speed from the first picture that leaves no picture out (a clip
+  cut without re-encoding, or a recorder that ends its edit list at the start of its last picture, often
+  has one that does). A WebM or Matroska file also needs: every track with a codec, no timing settings on
+  the picture track, and times that do not go back or repeat. Players read the other files in different
+  ways, so for them the run stops and says why: hide the region for the whole clip there, or re-encode
+  the clip. These checks know the files that recorders and FFmpeg write; a file built by hand to show
+  other pictures in other players can still pass them, so use a part only for a recording that you made.
+  A
+  screenshot has no time, so `from` and `to` are an error there. Each region is covered by one opaque block: a dark grey fill (`#262626`) inside a light grey edge
   (`#b0b0b0`), so it shows on a dark picture and on a light one. No pixel of the picture under it is kept,
   so the cover is the same whatever was under it, also in a picture with transparency. It is not a blur,
   because a blurred or pixelated text can sometimes be read back. FFmpeg does this: a screenshot is hidden
@@ -158,7 +175,9 @@ accurate, because the engine can quote them as evidence.
   for. Nothing is skipped. These are errors: an id that
   this command does not have (also one that the limits dropped), an unknown field, a value that is not a
   list, more than 20 regions for one capture, a number that is missing or not finite, `w` or `h` of 0 or
-  less, a region with `from` or `to`, a region with no part inside the picture, an id or
+  less, `from` or `to` on a screenshot, only one of `from` and `to`, a `from` below 0 or a `to` that is
+  not after `from`, a part that starts at or after the clip's end, a part on a clip that is not in the
+  plain form above, a region with no part inside the picture, an id or
   a field given twice, a backslash anywhere in the file (no value needs one), `--redact` given twice, a
   screenshot with hidden regions that is stored turned (a JPEG or PNG with an EXIF orientation: save it
   upright first), and FFmpeg failing to hide a region. A region smaller than 2 pixels grows to 2. MergeStory finds nothing by itself: it hides only the regions that you

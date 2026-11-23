@@ -109,8 +109,12 @@ Your work folder is `~/.mergestory/work/<name>`. Write these files there with yo
 - `redact.json`: the parts of a screenshot or recording that must not show (names, e-mail addresses,
   amounts, account numbers), as `{"SS1": [{"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.05}]}`. The four numbers
   are fractions (0 to 1) of the whole picture, and `SS1` or `RC1` is the first file in name order of
-  `screenshots/` or `recordings/`. A region of a recording is hidden for the whole clip; do not add
-  `"from"` or `"to"`, they are an error. The engine covers each region with a solid grey block in every frame before
+  `screenshots/` or `recordings/`. A region of a recording is hidden for the whole clip, or only from
+  `"from"` to `"to"` (seconds of the clip, both given; whole seconds that cover all the time it shows). A clip
+  that players may read at different times (a picture that starts after 0 or after the sound, more than
+  one picture track, an MP4 in pieces as Chrome and Safari record it, a clip cut without re-encoding) stops the run: hide the
+  region for the whole clip there. An engine of 1.9.0 or older refuses `"from"` and `"to"` with an error.
+  The engine covers each region with a solid grey block in every frame before
   it keeps anything, and it hides only the regions you name: it finds nothing by itself. Be generous with
   the size of a region. A mistake in the file stops the run with an error that names the id. This needs an
   engine newer than 1.7.0. An engine of 1.7.0 or older does not read `redact.json` and gives no error, so

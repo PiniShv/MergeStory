@@ -22,7 +22,8 @@ export interface ContextOptions {
   repro?: ReproFile | null;
   /**
    * Regions to hide, by evidence id of a screenshot or recording of this run: {"SS2": [{x, y, w, h}],
-   * "RC1": [{x, y, w, h}]}, hidden for the whole clip in a recording. Checked strictly when the context is built (see checkRedactions).
+   * "RC1": [{x, y, w, h, from?, to?}]}, hidden for the whole clip in a recording, or only from `from` to `to`.
+   * Checked strictly when the context is built (see checkRedactions).
    */
   redact?: unknown;
   /** Log files: absolute paths, read and checked when the context is built. */

@@ -12,6 +12,7 @@ import {
   COVER_EDGE,
   COVER_FILL,
   coverEdge,
+  coveredFrames,
   coverFilter,
   hideFilter,
   hideInScreenshot,
@@ -58,11 +59,32 @@ describe('hideFilter', () => {
     expect(filter.match(/overlay=/g)).toHaveLength(20);
   });
 
-  it('covers every region in every frame: no overlay has a time limit', () => {
+  it('covers a region without a time in every frame: its overlay has no time limit', () => {
     const filter = hideFilter([region(0, 0, 0.5, 0.5), region(0.5, 0.5, 0.5, 0.5)], 100, 100);
     expect(filter).not.toContain('enable');
     expect(filter).toContain('[o][m0]overlay=0:0:format=auto[v0]');
     expect(filter.endsWith('[v0][m1]overlay=50:50:format=auto')).toBe(true);
+  });
+
+  it('covers a region with a time only in its frames, by frame number', () => {
+    const filter = hideFilter(
+      [{ ...region(0, 0, 0.5, 0.5), from: 1, to: 2 }, region(0.5, 0.5, 0.5, 0.5)],
+      100,
+      100,
+    );
+    expect(filter).toContain("[o][m0]overlay=0:0:format=auto:enable='between(n,11,24)'[v0]");
+    expect(filter.endsWith('[v0][m1]overlay=50:50:format=auto')).toBe(true);
+  });
+});
+
+describe('coveredFrames', () => {
+  it('covers every frame of 12 a second whose picture a player shows from one frame before to one frame after', () => {
+    // Frame k shows the picture of the moment just before (k + 0.5) / 12 s.
+    expect(coveredFrames({ ...region(0, 0, 1, 1), from: 1, to: 2 })).toEqual({ first: 11, last: 24 });
+    expect(coveredFrames({ ...region(0, 0, 1, 1), from: 0, to: 0.01 })).toEqual({ first: 0, last: 0 });
+    // A time exactly on the margin stays inside it.
+    expect(coveredFrames({ ...region(0, 0, 1, 1), from: 0.125, to: 1.375 })).toEqual({ first: 0, last: 17 });
+    expect(coveredFrames(region(0, 0, 1, 1))).toBeNull();
   });
 });
 

@@ -244,7 +244,7 @@ never an address with a host: the checker removes the host if you write one. Do 
 numbers that nobody measured. A `recording` is the opposite: it is real, and the video labels it
 "Recorded". A `log` is real too, and the video labels it "Real output": show output that you supplied, and
 never write output yourself. MergeStory does not look inside a screenshot or a recording. The caller can hide
-regions with `--redact` (a region of a recording is hidden in every frame of the clip), and a scene that shows such a capture carries the badge "Sensitive data masked"; a
+regions with `--redact` (a region of a recording is hidden in every frame of the clip, or only in a part of it), and a scene that shows such a capture carries the badge "Sensitive data masked"; a
 storyboard cannot ask for hiding or undo it. Check a capture for secrets and e-mail addresses before you pass
 it. The lines of a log are masked like code.
 
@@ -464,6 +464,8 @@ Rules of thumb for a good storyboard:
   names in plain words, because the screen shows them. Never read a file path out loud.
 - Keep the strength of the source's words: "should" stays "should", and a plan is not a fact. Say "every",
   "all", "only" or "never" only when the code shows it.
+- A limit on where the change applies (an environment, a customer, a platform, a version) is a claim too.
+  Compare one that the title, ticket or branch name states with the changed files, and say what the files show.
 - Show the key change in the first `under-the-hood` scene as real code. In the review scene, each item is a
   risk that this change introduces, with a `ref`: state the fact, then what to check.
 - Put what the evidence does not settle into `uncertainties`.

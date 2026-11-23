@@ -199,9 +199,15 @@ export interface TestEvidence {
 /**
  * A part of a screenshot or a recording that the video hides. x, y, w and h are fractions (0 to 1) of
  * the whole picture as a player shows it, already cut to the picture. A region of a recording is hidden
- * in every frame of the clip.
+ * in every frame of the clip, or, when it has `from` and `to`, only in the frames of that part of it.
  */
 export interface HiddenRegion {
+  /**
+   * Recordings only: the part of the clip, in seconds as a player shows them, from the clip's start.
+   * Both are set or neither. The frames get one frame of margin on each side (see coveredFrames).
+   */
+  from?: number;
+  to?: number;
   x: number;
   y: number;
   w: number;
@@ -232,7 +238,7 @@ export interface RecordingInput {
   height: number;
   /** "h264", "vp8" or "vp9". */
   codec: string;
-  /** Regions that the video hides in every frame that it cuts. Set from the context's `redact`. */
+  /** Regions that the video hides in the frames that it cuts. Set from the context's `redact`. */
   hidden?: HiddenRegion[];
 }
 

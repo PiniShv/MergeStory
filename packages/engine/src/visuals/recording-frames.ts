@@ -80,21 +80,18 @@ export async function extractFrames(
   await mkdir(outDir, { recursive: true, mode: 0o700 });
   // FFmpeg reads a number such as 1e-7 as an error, so every time is written with three decimals.
   const seconds = (value: number): string => value.toFixed(3);
+  const hidden = recording.hidden ?? [];
   const filter = [
-    // Hidden regions come first, so every picture of the recording is covered before anything else. A zoom
-    // cannot move them, and the copies that the rate step makes (of the first picture of a clip that starts
-    // late, too) are copies of covered pictures. The scale keeps them in place if a clip changes its
-    // picture size after its header.
-    ...(recording.hidden?.length
-      ? [
-          `scale=${recording.width}:${recording.height}`,
-          hideFilter(recording.hidden, recording.width, recording.height),
-        ]
-      : []),
+    // The scale keeps hidden regions in place if a clip changes its picture size after its header.
+    ...(hidden.length ? [`scale=${recording.width}:${recording.height}`] : []),
     // A screen recording has no frames while nothing moves, and this step fills those gaps (and a late
     // start) with the picture that was on screen, so the cut that follows shows the right moment. The last
     // picture is held to the end of the part.
     `fps=${RECORDING_FPS}:start_time=0`,
+    // Hidden regions are drawn on every frame of that clock before anything else: a zoom cannot move them, and
+    // the copies that the rate step and the hold make are covered too. A region for a part of the clip counts
+    // these frames from the clip's start, which is why the input is never sought to the part.
+    ...(hidden.length ? [hideFilter(hidden, recording.width, recording.height)] : []),
     `tpad=stop_mode=clone:stop_duration=${seconds(trim.end)}`,
     `trim=start=${seconds(trim.start)}:end=${seconds(trim.end)}`,
     'setpts=PTS-STARTPTS',
